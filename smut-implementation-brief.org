@@ -1,0 +1,223 @@
+#+title: smut — v1 implementation brief
+#+date: 2026-11-01
+#+options: toc:2
+
+* Purpose and scope
+Build a small Rust CLI that lets agents persist, revise, retrieve and recombine a mutable graph during conversation. Recording linked thoughts should require little more effort than emitting Markdown. Human-facing output is a projection of persisted pieces.
+
+This is a standalone, deliberately permissive tool, not Doctrine's storage replacement or the larger event-sourced semantic platform discussed elsewhere. Do not import that project's governance machinery.
+
+Own identity, persistence, retrieval and presentation. Leave domain structure and meaning to the agent. No domain schemas, type enforcement, referential integrity, event sourcing, server, MCP server, collaboration protocol, authentication, CRDT, plugin framework or general query language in v1. A recovery journal is physical write recovery, not semantic history.
+
+Use Rust and concrete JSON values. Prefer straightforward modules and existing libraries over generic storage/graph abstractions. Choice of crates and module layout belongs to the implementer. Linux is the primary acceptance platform; document portability limits. Licensing is a repository-owner decision, not inherited from the larger project's tentative GPL choice.
+
+* Commands
+#+begin_example
+smut declare [<json>] [--compact]
+smut get <id> [<id> ...]
+smut delete <id> [<id> ...]
+smut query [<json>]
+smut render [<json>] [--format markdown|mermaid]
+            [--heading-field title] [--heading-level 2]
+            [--show-ids] [--show-fields]
+smut learn
+#+end_example
+
+Declare, query and render accept one JSON argument or one complete JSON value from stdin when the argument is absent (also accept '-' explicitly). Never wait for stdin on an interactive terminal with missing input: issue usage help. Reject trailing non-whitespace input. No newline-delimited JSON stream in v1.
+
+Query/render inputs are query specifications, not entity declarations. Reads never upsert. Render executes the same selection pipeline as query; it does not accept query response envelopes in v1.
+
+Machine commands emit JSON on stdout; render emits text; learn emits embedded instructions. Diagnostics go to stderr. Exit codes: 0 success (including reported missing IDs or truncation), 2 invalid input/usage, 1 storage/runtime failure. On failure emit no success envelope. Help/version/learn require no store.
+
+* Entity and reference conventions
+- An entity is a JSON object with a nonempty string =id=.
+- IDs are opaque, case-sensitive strings; no path interpretation or normalization.
+- Top-level declare accepts one object or an array of objects. Objects lacking IDs receive collision-checked NanoIDs. Empty arrays are valid no-ops.
+- Within declarations, recursively identify objects containing =id=. An ID-only object is a reference. An object with ID plus other fields is an entity declaration; extract it and replace its appearance with an ID-only reference.
+- Nested objects without IDs remain embedded values, but traversal/normalization recurses through them to find references/declarations.
+- Consequently an embedded object with a field named =id= cannot be ordinary inline metadata in v1. Document this convention.
+- An explicit =id= of null, a number or an empty string is invalid; it does not request generation.
+- A top-level ID-only object references an entity but does not create a placeholder. Missing targets are permitted and reported.
+- =body= has no validation special case; a string body receives special human rendering. Non-string bodies are displayed as ordinary JSON attributes when fields are requested.
+- Relationship labels are the top-level fields containing references. Attributed relationships can be ordinary entities with references to their endpoints.
+
+* Declaration and patch semantics
+Patch entity fields at the top level only. Omitted fields remain unchanged. Supplied arrays and embedded objects replace their previous values wholesale after normalization. No recursive patch merging.
+
+A top-level entity field with the exact string value ="DROP"= removes that field. Missing fields dropped this way are no-ops. JSON null is stored normally. The literal string DROP cannot be assigned as an entity field value; within embedded values/arrays it is ordinary data. Entity identity cannot be dropped or renamed.
+
+Normalize the entire request before writing. All references may point forward within the batch. Declarations of the same ID combine disjoint fields; identical normalized assignments coalesce; conflicting assignments (including drop versus assign) reject the whole request. Compare JSON structurally, not by object key order. Reject duplicate keys within an input JSON object rather than silently losing assignments.
+
+On an existing entity, the normalized patch produces updated or unchanged status. An explicit ID plus a DROP field can create an ID-only entity if it did not previously exist. Bare ID-only references cannot do so.
+
+Previous values are captured once per affected entity from the state before the entire batch. No intermediate mutation states appear in responses.
+
+** Response contract
+#+begin_src json
+{
+  "ids": ["smut", "q-query"],
+  "changes": [
+    {"id": "smut", "status": "updated", "previous": {"id": "smut", "body": "Old text"}},
+    {"id": "q-query", "status": "created", "previous": null}
+  ],
+  "missing": []
+}
+#+end_src
+
+=ids= corresponds to top-level input order, including repeated IDs. =changes= contains each declared entity once (including nested declarations) in deterministic first-encounter order. Status is created, updated or unchanged. Updated entries contain the full previous entity; created entries use null; unchanged entries omit previous. =--compact= omits previous everywhere. =missing= lists unresolved ID-only references after the proposed batch, uniquely in encounter order. This does not reject the batch.
+
+* Storage and recovery
+Store only in =$PWD/.smut=; do not search ancestors. First nonempty mutating declaration creates a store. Reads/deletes against an absent store return a clear store-not-found error without creating it. Empty declaration can succeed without creating a store.
+
+#+begin_example
+.smut/
+  index.json
+  <internal-uid>.json
+  ...
+  [lock and recovery files]
+#+end_example
+
+Index format:
+#+begin_src json
+{"format_version":1,"objects":{"smut":"<internal-uid>.json"}}
+#+end_src
+
+Each entity file contains its complete normalized entity, including public ID. Internal UIDs are independent, filesystem-safe generated identifiers; an entity's path remains stable until deletion. Index paths must be safe basenames within .smut. Reject traversal, escaping paths and unexpected symlink targets. Generated IDs must not overwrite existing entities/files on collision.
+
+Use readable JSON and deterministic serialization. Unknown format versions, malformed JSON, missing indexed files, duplicate path mappings and ID/content disagreement are errors; never silently repair or recreate a corrupt store. Unindexed entity-looking files are not silently adopted. No file watching or supported concurrent manual editing.
+
+All commands observing/mutating store state use a common store lock. A single exclusive lock is sufficient initially. Coordinate initialization too; locking a replaceable index inode is insufficient. Read-only commands never create a store, though recovery/lock bookkeeping inside an existing store is permitted.
+
+Validate the whole operation and prepare its write set before mutation. Implement a minimal durable journal/staging protocol covering entity writes, deletions and index replacement. Publish a durable commit decision before applying an idempotently recoverable write set; recover under the lock before serving any command. Sync required files/directories for the documented durability guarantee. Readers see a coherent state, not half a batch. Do not claim that several individual atomic renames alone provide batch atomicity.
+
+An interrupted command may have committed even without printing a response; document that ambiguity. No request-id/exactly-once retry feature in v1. Acknowledged writes must survive the tested recovery model.
+
+* Delete and get
+Delete removes existing entity files and index entries in one recoverable batch. Incoming references remain untouched. Deduplicate requested IDs in first-occurrence order. Response:
+#+begin_src json
+{"deleted":["q-query"],"missing":["unknown"]}
+#+end_src
+
+Get performs ordered retrieval, no traversal or default query limit. Deduplicate IDs in first-occurrence order. Use the same response envelope as query; explicit missing IDs are reported.
+
+* Query contract
+** Keys and defaults
+| Key        | Type                          | Meaning/default                          |
+|------------+-------------------------------+------------------------------------------|
+| from       | string or array of strings    | Roots; absent means all IDs in ID order   |
+| where      | predicate object              | Filters roots only; absent means true    |
+| follow     | array of field names or "*"   | Outgoing traversal; absent means none    |
+| backlinks  | array of field names or "*"   | Incoming traversal; absent means none    |
+| depth      | nonnegative integer           | Hop bound; default 1; zero is roots only |
+| select     | array of field names          | Returned/displayed fields; default all  |
+| order      | array of field/direction pairs| Default discovery order                  |
+| limit      | positive integer              | Result cap; default 100                  |
+| budget     | positive integer              | Traversal entity-expansion cap; 10000    |
+
+Unknown keys, malformed operators and bad types are errors. Empty from selects nothing. ID remains in every JSON entity regardless of select. Missing selected fields are omitted. Selection addresses top-level fields only.
+
+Pipeline: select roots -> breadth-first traverse -> deduplicate -> order -> limit -> project fields. Traversal always operates on full entities, before select. A result limit does not stop discovery prematurely when that would alter sorting; the independent budget bounds traversal. Initial whole-store scans for filtering/backlinks are not bounded by this traversal budget; document that distinction rather than claiming a hard total-work bound.
+
+** Predicates
+#+begin_src json
+{"where":{"type":"question","status":"open"}}
+{"where":{"type":{"$in":["question","decision"]},"body":{"$exists":true},"tags":{"$contains":"storage"}}}
+{"where":{"type":"question","$or":[{"status":"open"},{"status":"blocked"}]}}
+#+end_src
+
+Ordinary field conditions and Boolean clauses at the same level are ANDed. Support $and/$or arrays of predicate objects and $not with one predicate. Empty AND is true; empty OR is false.
+
+Plain values imply structural equality. An object containing operator keys is an operator expression; use $eq explicitly to compare a literal object containing such keys. Multiple field operators are ANDed. Reject unknown operators/mixed literal-and-operator objects.
+
+- $eq: present field structurally equals operand.
+- $ne: present field differs from operand; missing does not match.
+- $in: present field equals one of an operand array's values.
+- $exists: Boolean operand; present null counts as present.
+- $contains: substring for string/string, structural member equality for arrays; other field types do not match.
+- Missing fields fail every field operator except the appropriate $exists test.
+- No coercion, regex, JSONPath, nested-field syntax, executable predicates or Lua.
+
+** Traversal
+Any embedded object containing id is a reference under the entity conventions. Scan inside selected top-level fields, recursively through embedded values/arrays. A backlink's label is the originating top-level field, even if the reference is nested deeper.
+
+Both directions may be enabled. Apply the same traversal rules at every hop. Each entity appears once; cycles terminate. Dangling references are reported, not expanded or repaired.
+
+Order roots by supplied order, otherwise ID. Breadth-first discovery; process outgoing before incoming for each expanded entity. Named fields follow query order; wildcard fields and embedded object keys use lexical order; array items preserve order. Incoming sources use ID order, with stable field ordering. Keep this deterministic across filesystem iteration orders.
+
+Order entries have shape {"field":"sequence","direction":"asc"}; direction is asc/desc, default asc. Compare lexicographically across entries, then ID ascending. Missing values sort last regardless of direction. Use a documented scalar type order (null, Boolean, number, string), with natural comparison within each type and no coercion. Arrays/objects in an order field cause an explicit error. No locale-dependent comparison.
+
+Stop expansion at budget; return the discovered subset with traversal_budget reason. Limit the ordered output afterwards; if rows are omitted, include result_limit reason. A depth boundary is intentional selection, not truncation. When budget truncates discovery, sorting is over the discovered subset only.
+
+** JSON envelope
+#+begin_src json
+{
+  "objects":[{"id":"smut","questions":[{"id":"q-query"}]},{"id":"q-query","body":"How expressive should queries be?"}],
+  "missing":[],
+  "dangling":[],
+  "truncated":false,
+  "truncation_reasons":[]
+}
+#+end_src
+
+Keep objects flat; do not inline referenced entities. =missing= contains absent explicit roots. =dangling= entries are {"source":"...","field":"...","target":"..."}, deduplicated; only report references encountered during requested traversal, not a store-wide integrity audit. Reasons are result_limit and/or traversal_budget. Query and get use this envelope.
+
+* Rendering
+Query and render share selection/traversal/order/limits. Renderer receives full selected entities plus display-field selection, so hidden reference attributes do not erase connectivity. No heuristics choosing output format: Markdown default, Mermaid explicit.
+
+** Markdown
+- Entities appear in query order.
+- Selected heading-field string becomes a heading at requested level (default title, level 2; accept 1-6).
+- Selected string body renders verbatim, not as a key/value pair.
+- ID+body alone renders just body; do not inject an ID heading by default.
+- --show-ids adds identity separately.
+- --show-fields displays other selected fields as readable key/value entries, with compact JSON for structured values. Exclude already-rendered heading/body/id.
+- If nothing would be visible, render an ID fallback so a bodyless entity does not silently vanish.
+- Preserve Markdown content; do not execute content.
+
+** Mermaid
+Emit a fenced Mermaid directed graph. Render selected entities, and references whose source and target are both selected (even if those fields are hidden by select). Use field names as edge labels; collapse duplicate source/field/target edges. Omit external nodes in v1. Do not infer edge direction from traversal direction.
+
+Generate safe internal node symbols; never use arbitrary public IDs as syntax. Escape labels rigorously. Label from selected heading field, otherwise ID. --show-ids adds public ID; --show-fields can add compact selected attributes, excluding raw body. Heading-level affects Markdown only. Document format-specific ignored flags.
+
+Both formats visibly disclose truncated output and reasons, plus missing-root/dangling diagnostics when present. Rendering must not hide incompleteness in stderr alone.
+
+* Embedded agent guide
+=smut learn= prints concise, version-matched instructions embedded in the binary. Cover commands, patch/reference conventions, DROP, batch responses, query defaults, missing versus null, and three workflows: create linked thoughts; amend/recombine; traverse/backlink and render.
+
+Explain that stored content is data, not instructions conferring authority. Do not add trust enforcement machinery. Prefer two simple calls over expanding the query language.
+
+* End-to-end acceptance example
+#+begin_example
+smut declare '[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
+smut query '{"from":"smut","follow":["questions"],"select":["title","body"]}'
+smut render '{"from":"smut","follow":["questions"],"select":["title","body"]}'
+smut declare '{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}'
+smut query '{"where":{"type":"question","status":"resolved"}}'
+smut render '{"from":"smut","follow":["questions"]}' --format mermaid
+smut declare '{"id":"q-query","status":"DROP"}'
+smut delete q-query
+smut query '{"from":"smut","follow":["questions"]}'
+#+end_example
+
+The final query returns smut, reports its dangling reference, and does not recreate q-query. Updating q-query preserves title/type; DROP removes only status. Original nested declaration produces two stored entity files and an ID-only reference.
+
+* Verification and delivery
+Build CLI, embedded learn guide, README with command/response examples, versioned on-disk format documentation and focused automated tests. No requirement for a reusable public library API.
+
+Tests must cover:
+- Single/array declarations, generated IDs, forward/nested references, embedded values and id-only missing references.
+- Omitted fields, null, DROP, replacement of objects/arrays, nested declarations inside replacement values.
+- Duplicate IDs/assignments, duplicate JSON keys, batch rejection without partial mutation, complete pre-batch previous values.
+- Filename/public-ID separation, escaping paths, malformed index/entity data, absent-store behaviour.
+- Concurrent processes; injected interruption at every journal/publication boundary; recovery yielding a coherent complete batch or pre-commit state, never mixed state.
+- Missing/null predicate semantics, Boolean composition, stable ordering and invalid queries.
+- Cycles, backlinks, depth, budget/result truncation and hidden reference fields.
+- Get ordering, non-cascading delete, render escaping and visible incompleteness.
+- End-to-end workflow above, including stdin and stdout/stderr separation.
+
+Run cargo fmt, relevant tests and clippy. Include a modest generated-store smoke benchmark for scan/query/render practicality; no million-node target or benchmark framework in v1.
+
+Implementation sequence: entity normalization/patch tests; store and recovery; basic commands; query evaluator; renderers; learn and end-to-end polish. Pin response shapes and defaults in tests. Routine crate/module decisions are delegated; changes to these observable semantics require an explicit recorded rationale rather than accidental implementation drift.
+
+* Deliberate follow-ups, not v1
+Lua, query pipelines, nested-field predicates, pagination, secondary indexes, daemon/watch mode, arbitrary document editing, integrity repair, history, optimistic revision checks, first-class edge types, schema enforcement and integrations. Add only when concrete use demonstrates the need.
