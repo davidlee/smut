@@ -28,7 +28,7 @@ use crate::entity::{ENTITY_ID, scan_refs};
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{self, SortKey};
-use crate::spec::{DEFAULT_DEPTH, Limit, Spec};
+use crate::spec::{DEFAULT_BUDGET, DEFAULT_DEPTH, Limit, Spec};
 use crate::walk::{self, Fields, Walk};
 
 /// An ordered, deduped, post-limit view of the snapshot.
@@ -62,6 +62,9 @@ pub struct Selection<'a> {
 /// Why a selection is incomplete.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reason {
+    /// The traversal budget declined a permitted expansion, so discovery
+    /// stopped (§7.3, §8.3).
+    TraversalBudget,
     /// The result cap omitted rows.
     ResultLimit,
 }
@@ -70,6 +73,7 @@ impl Reason {
     /// The envelope's spelling.
     pub fn as_str(self) -> &'static str {
         match self {
+            Reason::TraversalBudget => "traversal_budget",
             Reason::ResultLimit => "result_limit",
         }
     }
@@ -87,6 +91,7 @@ pub fn select<'a>(store: &'a Entities, spec: &'a Spec) -> Result<Selection<'a>, 
             follow: spec.follow.as_ref(),
             backlinks: spec.backlinks.as_ref(),
             depth: spec.depth,
+            budget: spec.budget,
         },
     )
 }
@@ -110,6 +115,9 @@ pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
             follow: None,
             backlinks: None,
             depth: DEFAULT_DEPTH,
+            // `get` passes the default budget for coherence only: no walk runs,
+            // so no expansion can spend it.
+            budget: DEFAULT_BUDGET,
         },
     )
     .expect("get supplies no sort keys, so no sort value is validated")
@@ -117,11 +125,11 @@ pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
 
 /// Everything one selection request carries.
 ///
-/// One value rather than positional parameters: PHASE-02 adds the traversal
-/// budget and PHASE-03 adds the root predicate to **this same value**, so
-/// clippy's `too_many_arguments` is never the design constraint. Every field
-/// borrows from the specification the caller holds, so a request copies no
-/// request data.
+/// One value rather than positional parameters: PHASE-02 added the traversal
+/// budget as a field here and PHASE-03 adds the root predicate to **this same
+/// value**, so clippy's `too_many_arguments` is never the design constraint.
+/// Every field borrows from the specification the caller holds, so a request
+/// copies no request data.
 struct Request<'a> {
     roots: Option<&'a [Id]>,
     fields: Option<&'a [String]>,
@@ -130,15 +138,8 @@ struct Request<'a> {
     follow: Option<&'a Fields>,
     backlinks: Option<&'a Fields>,
     depth: u64,
+    budget: u64,
 }
-
-/// The traversal budget this phase must not apply.
-///
-/// `budget` is still a key 0.1 refuses, and PHASE-02 makes it real. Until then
-/// every walk is unbounded, so this phase can neither truncate a walk nor set
-/// [`Walk::exhausted`] (EX-3). There is deliberately no budget-shaped parameter
-/// or field to fill in later.
-const UNBOUNDED_BUDGET: u64 = u64::MAX;
 
 /// Roots → walk → order → limit. Both public constructors are this one call.
 fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, Reject> {
@@ -171,7 +172,7 @@ fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, R
             request.follow,
             request.backlinks,
             request.depth,
-            UNBOUNDED_BUDGET,
+            request.budget,
         );
         ids = walked.order.clone();
 
@@ -186,6 +187,16 @@ fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, R
 
     let mut truncated = false;
     let mut reasons = Vec::new();
+
+    // §8.3 fixes the order reasons can occur: discovery stopped first, then
+    // ordered rows omitted. A walk that is not exhausted truncated nothing, and
+    // a depth boundary is never a reason.
+    if let Some(walk) = &walk
+        && walk.exhausted
+    {
+        truncated = true;
+        reasons.push(Reason::TraversalBudget);
+    }
 
     if let Some(cap) = cap
         && ids.len() as u64 > cap
@@ -313,8 +324,8 @@ fn dangling(selection: &Selection<'_>) -> Value {
 }
 
 /// The conditional `traversal` member: `None` exactly when the request started
-/// no walk, which is why `get`, a from/select/order/limit query and a depth-only
-/// query all keep the five 0.1 keys (§8.1).
+/// no walk, which is why `get`, a from/select/order/limit query, a depth-only
+/// query and a budget-only query all keep the five 0.1 keys (§8.1).
 ///
 /// Its three views have three different scopes. `depths` and `edges` are
 /// **result-scoped** — they are derived from the returned objects after the

@@ -1,13 +1,14 @@
-//! The 0.1 query specification: seven accepted keys, and two kinds of refusal.
+//! The query specification: eight accepted keys, and two kinds of refusal.
 //!
-//! `from`, `select`, `order`, `limit`, `follow`, `backlinks` and `depth` are the
-//! whole surface (DEC-011). A traversal key is either the wildcard `"*"` or an
-//! array of top-level field names; the wildcard has that one spelling, because a
-//! mixed array would need a precedence rule between query order and lexical
-//! order that the brief does not give. The new keys imply neither each other nor
-//! a traversal: `depth` without `follow` or `backlinks` parses and is inert.
+//! `from`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth` and
+//! `budget` are the whole surface (DEC-011, §5). A traversal key is either the
+//! wildcard `"*"` or an array of top-level field names; the wildcard has that
+//! one spelling, because a mixed array would need a precedence rule between
+//! query order and lexical order that the brief does not give. The traversal
+//! keys imply neither each other nor a traversal: `depth` or `budget` without
+//! `follow` or `backlinks` parses and is inert.
 //!
-//! Keys a later release will define are refused *by name* with that release, so
+//! A key a later release will define is refused *by name* with that release, so
 //! the refusal is a promise a user can act on; keys nobody planned are refused
 //! plainly as unknown, because naming a release for them would be a guess
 //! presented as a promise. `query {}` is valid and selects everything subject to
@@ -31,9 +32,12 @@ pub const DEFAULT_LIMIT: u64 = 100;
 /// The traversal depth when a specification supplies none (§5).
 pub const DEFAULT_DEPTH: u64 = 1;
 
-/// The keys a later release will accept, and the release to name when refusing
-/// them.
-const FUTURE_KEYS: [&str; 2] = ["where", "budget"];
+/// The traversal budget when a specification supplies none (§5).
+pub const DEFAULT_BUDGET: u64 = 10000;
+
+/// The key a later release will accept, and the release to name when refusing
+/// it.
+const FUTURE_KEYS: [&str; 1] = ["where"];
 
 /// How many results a selection may return.
 ///
@@ -97,9 +101,13 @@ pub struct Spec {
     /// The traversal depth; `0` is roots only, and a depth without `follow` or
     /// `backlinks` starts no traversal.
     pub depth: u64,
+    /// The traversal budget: the entity expansions a walk may perform, checked
+    /// before each one (§7.3). A budget without `follow` or `backlinks` starts
+    /// no traversal and is inert.
+    pub budget: u64,
 }
 
-/// Parses a query specification, rejecting anything 0.1 does not define.
+/// Parses a query specification, rejecting anything it does not define.
 ///
 /// Keys are examined in the spec's own (lexical) order, so a spec with more than
 /// one defect always reports the same one.
@@ -114,6 +122,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
         follow: None,
         backlinks: None,
         depth: DEFAULT_DEPTH,
+        budget: DEFAULT_BUDGET,
     };
 
     for (key, value) in fields {
@@ -125,6 +134,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
             "follow" => spec.follow = Some(parse_fields("follow", value)?),
             "backlinks" => spec.backlinks = Some(parse_fields("backlinks", value)?),
             "depth" => spec.depth = parse_depth(value)?,
+            "budget" => spec.budget = parse_budget(value)?,
             key if FUTURE_KEYS.contains(&key) => {
                 return Err(Reject::FutureSpecificationKey {
                     key: key.to_owned(),
@@ -218,6 +228,13 @@ fn parse_limit(value: &Value) -> Result<u64, Reject> {
     }
 }
 
+fn parse_budget(value: &Value) -> Result<u64, Reject> {
+    match value.as_u64() {
+        Some(budget) if budget > 0 => Ok(budget),
+        _ => Err(invalid("budget", "a positive integer")),
+    }
+}
+
 /// Parses a traversal key's value: the wildcard or a list of field names.
 fn parse_fields(key: &str, value: &Value) -> Result<Fields, Reject> {
     match value {
@@ -307,7 +324,8 @@ mod tests {
     #[test]
     fn an_empty_spec_selects_everything_subject_to_the_default_limit() {
         // Re-cut because the whole `Spec` is compared: the traversal keys add
-        // their own defaults, `None` for both directions and `DEFAULT_DEPTH`.
+        // their own defaults, `None` for both directions, `DEFAULT_DEPTH` and
+        // `DEFAULT_BUDGET`.
         let parsed = spec(json!({})).expect("an empty spec is valid");
 
         assert_eq!(
@@ -320,6 +338,7 @@ mod tests {
                 follow: None,
                 backlinks: None,
                 depth: DEFAULT_DEPTH,
+                budget: DEFAULT_BUDGET,
             }
         );
         assert_eq!(DEFAULT_LIMIT, 100);
@@ -414,9 +433,16 @@ mod tests {
 
     #[test]
     fn each_named_future_key_is_rejected_by_name_citing_the_release() {
-        // EX-12 re-cut: `follow`, `backlinks` and `depth` are accepted now, so
-        // the loop keeps exactly the keys still refused by name.
-        for key in ["where", "budget"] {
+        // DEC-019 re-cut: `budget` became real in this commit, so the loop keeps
+        // exactly the keys still refused by name, and `where` is the last one.
+        //
+        // The one-element loop stays a loop rather than unrolling to a `let`
+        // (clippy's suggestion) because the literal list is what this test pins:
+        // a re-added future key is one element here, and the list is never read
+        // from `FUTURE_KEYS`, which would make the test vacuous if that array
+        // emptied.
+        #[allow(clippy::single_element_loop)]
+        for key in ["where"] {
             let rejection = rejection(json!({key: {}}));
 
             assert_eq!(
@@ -517,10 +543,13 @@ mod tests {
     }
 
     #[test]
-    fn the_acceptance_set_is_exactly_the_seven_keys() {
+    fn the_acceptance_set_is_exactly_the_eight_keys() {
         // Re-cut from `the_acceptance_set_is_exactly_the_four_keys`, whose name
         // and body the widened surface falsified: each accepted key is exercised
-        // with one value its own grammar allows.
+        // with one value its own grammar allows. Re-cut again in PHASE-02
+        // (DEC-019) when `budget` became real: the name claimed seven keys and
+        // the loop omitted `budget`, so both the claim and the list grow by one.
+        // (This re-cut was named by no criterion — reported as a plan defect.)
         for (key, value) in [
             ("from", json!("smut")),
             ("select", json!([])),
@@ -529,6 +558,7 @@ mod tests {
             ("follow", json!("*")),
             ("backlinks", json!(["questions"])),
             ("depth", json!(0)),
+            ("budget", json!(1)),
         ] {
             assert!(spec(json!({key: value})).is_ok(), "{key} is accepted");
         }
@@ -660,6 +690,36 @@ mod tests {
                 Reject::InvalidSpecificationValue {
                     key: "follow".to_owned(),
                     expected: "`*` or an array of top-level field names".to_owned(),
+                },
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    fn budget_is_a_positive_integer_and_starts_no_traversal_by_itself() {
+        // Rules: `budget` counts entity expansions and is a positive integer
+        // (§5, §7.3), and without `follow` or `backlinks` it is inert: it
+        // implies no traversal, exactly as `depth` does.
+        let parsed = spec(json!({"budget": 5})).expect("a positive budget");
+
+        assert_eq!(parsed.budget, 5);
+        assert_eq!(parsed.follow, None);
+        assert_eq!(parsed.backlinks, None);
+
+        for value in [
+            json!(0),
+            json!(-1),
+            json!(1.5),
+            json!(1.0),
+            json!("5"),
+            beyond_u64(),
+        ] {
+            assert_eq!(
+                rejection(json!({"budget": value.clone()})),
+                Reject::InvalidSpecificationValue {
+                    key: "budget".to_owned(),
+                    expected: "a positive integer".to_owned(),
                 },
                 "{value}"
             );

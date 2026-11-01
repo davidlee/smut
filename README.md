@@ -29,11 +29,10 @@ That is two entities and one reference, stored durably as one batch. An agent
 mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
-`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks` and
-`depth` walk the graph, and the envelope reports what the walk found. `where`
-and `budget` arrive later in 0.2, and Mermaid in 1.0; where those would be,
-`smut` refuses by name instead of guessing. The commands below are the whole
-surface.
+`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks`, `depth`
+and `budget` walk the graph, and the envelope reports what the walk found.
+`where` arrives later in 0.2, and Mermaid in 1.0; where those would be, `smut`
+refuses by name instead of guessing. The commands below are the whole surface.
 
 ## Build
 
@@ -99,13 +98,14 @@ attached you get usage instead of a silent wait. Trailing input after the JSON
 value is refused, and so is a duplicate key inside one object.
 
 The specification keys are `from`, `select`, `order`, `limit`, `follow`,
-`backlinks` and `depth`; absent `from` means every entity in id order, absent
-`select` means every field, and no `limit` still caps a result at 100 with
-`"truncated": true` and a reason. `follow` and `backlinks` take `"*"` or an
-array of top-level field names, `depth` defaults to 1 (0 is roots only), and a
-supplied traversal key adds a `traversal` member carrying `depths`, `edges` and
-`frontier`. `get` is selection with the ids you name, no limit and no
-truncation.
+`backlinks`, `depth` and `budget`; absent `from` means every entity in id order,
+absent `select` means every field, and no `limit` still caps a result at 100
+with `"truncated": true` and a reason. `follow` and `backlinks` take `"*"` or
+an array of top-level field names, `depth` defaults to 1 (0 is roots only),
+`budget` defaults to 10000 entity expansions and is inert without a traversal
+key, and a supplied traversal key adds a `traversal` member carrying `depths`,
+`edges` and `frontier`. `get` is selection with the ids you name, no limit and
+no truncation.
 
 `render` flags: `--format markdown` (the only format in 0.1), `--heading-field`
 (default `title`), `--heading-level 1-6` (default 2), `--show-fields`,
@@ -132,9 +132,9 @@ a success envelope.
 - **`1` and `1.0` are distinct for equality and equal for ordering.** In one
   batch they contradict each other and the batch is refused; in an `order` they
   tie, and the tie breaks by id.
-- **`where` and `budget` arrive later in 0.2.** Both are refused by name, with
-  the release that will accept them; `follow`, `backlinks` and `depth` are
-  accepted now. An unrecognised key is reported as unknown, without a promise.
+- **`where` arrives later in 0.2.** It is refused by name, with the release that
+  will accept it; `follow`, `backlinks`, `depth` and `budget` are accepted now.
+  An unrecognised key is reported as unknown, without a promise.
 - **`--` reaches an opaque id.** Ids are opaque, case-sensitive strings and may
   begin with a hyphen, so `smut get -- -weird-id` names that id. Without `--` it
   is a usage error.

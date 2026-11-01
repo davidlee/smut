@@ -532,6 +532,10 @@ fn get_and_non_traversing_specs_keep_the_five_0_1_keys() {
         json!({"from": "hub"}),
         json!({"from": "hub", "select": ["id"], "order": [{"field": "id"}], "limit": 2}),
         json!({"from": "hub", "depth": 2}),
+        // DEC-019 re-cut: `budget` without `follow` or `backlinks` is accepted
+        // and inert (§5), so the key set the compatibility pin compares is
+        // still exactly 0.1's five — the reason this test exists.
+        json!({"from": "hub", "budget": 1}),
     ] {
         let document = envelope_of(&entities, input.clone());
 
@@ -922,4 +926,207 @@ fn the_limit_cuts_depths_and_edges_but_not_the_frontier() {
         "the omitted id takes no edge: {traversal}"
     );
     assert_frontier(&traversal, json!(["d1"]));
+}
+
+// ── §7.3 budget, §8.3 reason order (PHASE-02 VT-1, VT-2) ────────────────────
+
+/// Two children, each with one child: at `depth: 2` three expansions are
+/// permitted — `root`, `left`, `right` — and the two leaves are discovered only
+/// at the boundary.
+fn budget_fan() -> Entities {
+    store(&[
+        json!({"id": "root", "kids": [{"id": "left"}, {"id": "right"}]}),
+        json!({"id": "left", "kids": [{"id": "left-leaf"}]}),
+        json!({"id": "right", "kids": [{"id": "right-leaf"}]}),
+        json!({"id": "left-leaf"}),
+        json!({"id": "right-leaf"}),
+    ])
+}
+
+#[test]
+fn a_budget_equal_to_the_permitted_expansions_completes_the_walk() {
+    // PHASE-02 VT-1 / §7.3 "the check is before the expansion, so a walk that
+    // empties its queue with exactly `budget` expansions is complete and is not
+    // truncated".
+    //
+    // The trap: an off-by-one that treats the last permitted expansion as a
+    // decline reports `traversal_budget` here, and a budget counted against
+    // discoveries rather than expansions cuts the walk long before its queue
+    // empties.
+    let document = envelope_of(
+        &budget_fan(),
+        json!({"from": "root", "follow": ["kids"], "depth": 2, "budget": 3}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(false),
+        "an exact budget omits nothing: {document}"
+    );
+    assert_eq!(
+        document["truncation_reasons"],
+        json!([]),
+        "a depth boundary is not a reason: {document}"
+    );
+    assert!(
+        !document["truncation_reasons"]
+            .as_array()
+            .expect("the reasons are an array")
+            .iter()
+            .any(|reason| reason == "traversal_budget"),
+        "the budget declined no permitted expansion: {document}"
+    );
+
+    let traversal = traversal_member(&document);
+    assert_eq!(
+        traversal["depths"],
+        json!({"root": 0, "left": 1, "right": 1, "left-leaf": 2, "right-leaf": 2}),
+        "every entity within the depth bound was expanded and returned: {traversal}"
+    );
+    assert_frontier(&traversal, json!(["left-leaf", "right-leaf"]));
+}
+
+#[test]
+fn one_fewer_than_the_permitted_expansions_declines_the_next_permitted_one() {
+    // PHASE-02 VT-1 / §10.3 "budget exhausts before a permitted expansion":
+    // `traversal_budget`, and the declined entity is followed by the rest of the
+    // drained queue in discovery order (DEC-013, DEC-015).
+    //
+    // `root` and `left` expand; `right` is the permitted expansion declined, and
+    // `left-leaf` was still queued behind it.
+    let document = envelope_of(
+        &budget_fan(),
+        json!({"from": "root", "follow": ["kids"], "depth": 2, "budget": 2}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(true),
+        "a permitted expansion was declined: {document}"
+    );
+    assert_eq!(
+        document["truncation_reasons"],
+        json!(["traversal_budget"]),
+        "the only omission is the declined discovery: {document}"
+    );
+
+    let traversal = traversal_member(&document);
+    assert_frontier(&traversal, json!(["right", "left-leaf"]));
+}
+
+#[test]
+fn a_budget_that_leaves_only_depth_boundary_nodes_is_complete() {
+    // PHASE-02 VT-1 / §10.3 "budget exhausts with only depth-boundary nodes
+    // left": complete, because the budget bounds expansions and never
+    // discoveries — three discoveries at `depth: 1` cost one expansion.
+    let entities = store(&[
+        json!({"id": "root", "kids": [{"id": "a"}, {"id": "b"}, {"id": "c"}]}),
+        json!({"id": "a"}),
+        json!({"id": "b"}),
+        json!({"id": "c"}),
+    ]);
+
+    let document = envelope_of(
+        &entities,
+        json!({"from": "root", "follow": ["kids"], "depth": 1, "budget": 1}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(false),
+        "nothing a permitted expansion would have reached is left: {document}"
+    );
+    assert_eq!(
+        document["truncation_reasons"],
+        json!([]),
+        "the queue holds only the depth boundary: {document}"
+    );
+
+    let traversal = traversal_member(&document);
+    assert_eq!(
+        traversal["depths"],
+        json!({"root": 0, "a": 1, "b": 1, "c": 1}),
+        "the walk: {traversal}"
+    );
+    assert_frontier(&traversal, json!(["a", "b", "c"]));
+}
+
+#[test]
+fn depth_zero_is_never_budget_truncation() {
+    // PHASE-02 VT-1 / §7.3 "`depth: 0` performs no expansions and is never
+    // budget truncation": two roots and the smallest accepted budget are still
+    // roots only, even though both roots sit in the frontier.
+    let document = envelope_of(
+        &budget_fan(),
+        json!({"from": ["root", "left"], "follow": ["kids"], "depth": 0, "budget": 1}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(false),
+        "roots only expands nothing: {document}"
+    );
+    assert_eq!(
+        document["truncation_reasons"],
+        json!([]),
+        "a boundary root is not a declined expansion: {document}"
+    );
+
+    let traversal = traversal_member(&document);
+    assert_eq!(
+        traversal["depths"],
+        json!({"root": 0, "left": 0}),
+        "the walk: {traversal}"
+    );
+    assert_frontier(&traversal, json!(["root", "left"]));
+}
+
+#[test]
+fn both_reasons_appear_once_in_the_order_they_can_occur() {
+    // PHASE-02 VT-2 (DEF-1) / §8.3 "Reasons are unique and in the order they can
+    // occur: `traversal_budget` first (discovery stopped), then `result_limit`
+    // (ordered rows omitted)".
+    //
+    // Asserted as the ordered vector, never as a set: a reversed or duplicated
+    // pair fails here. Both cuts really happen — the budget of two stops the
+    // walk before `right`, and the limit of one returns the root alone.
+    let document = envelope_of(
+        &budget_fan(),
+        json!({"from": "root", "follow": ["kids"], "depth": 2, "budget": 2, "limit": 1}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(true),
+        "both reasons are real omissions: {document}"
+    );
+
+    let reasons = document["truncation_reasons"]
+        .as_array()
+        .unwrap_or_else(|| panic!("the reasons are an array: {document}"));
+    assert_eq!(
+        document["truncation_reasons"],
+        json!(["traversal_budget", "result_limit"]),
+        "the ordered reasons: {document}"
+    );
+
+    let mut distinct: Vec<&str> = reasons
+        .iter()
+        .map(|reason| reason.as_str().expect("a reason is a string"))
+        .collect();
+    distinct.sort_unstable();
+    distinct.dedup();
+    assert_eq!(
+        distinct.len(),
+        reasons.len(),
+        "one entry per reason, no repeats: {document}"
+    );
+
+    assert_eq!(
+        document["objects"].as_array().map(Vec::len),
+        Some(1),
+        "the limit really omitted a row: {document}"
+    );
+    let traversal = traversal_member(&document);
+    assert_frontier(&traversal, json!(["right", "left-leaf"]));
 }

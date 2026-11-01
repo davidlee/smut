@@ -291,3 +291,62 @@ fn a_complete_traversal_result_carries_no_notice() {
         "no notice at all: {document:?}"
     );
 }
+
+// ── PHASE-02 VT-4: the budget reason beside the dangling lines (§8.3) ───────
+
+/// §8.3's truncation line when a walk stopped on its budget: one line, the
+/// reason's own spelling, and no row count (DEC-009).
+const TRUNCATED_BUDGET: &str = "> truncated: traversal_budget; additional entities omitted";
+
+#[test]
+fn a_budget_truncated_walk_leads_with_its_reason_and_keeps_every_dangling_line() {
+    // §8.3: the reason joins the notice's truncation line, and the dangling
+    // lines follow it, one per triple, in the same safe delimiters. The budget of
+    // one expands the root alone, so the walk declines `left` while `right` is
+    // still queued, and the root's two absent targets are both reported.
+    let entities = store(&[
+        json!({
+            "id": "root",
+            "title": "Root",
+            "kids": [{"id": "left"}, {"id": "right"}],
+            "link": {"id": "gone-one"},
+            "side": {"id": "gone-two"}
+        }),
+        json!({"id": "left", "title": "Left"}),
+        json!({"id": "right", "title": "Right"}),
+    ]);
+
+    let document = rendered(
+        &entities,
+        json!({
+            "from": "root",
+            "follow": ["kids", "link", "side"],
+            "depth": 2,
+            "budget": 1
+        }),
+        &Options::default(),
+    );
+
+    let notice = format!(
+        "{TRUNCATED_BUDGET}\n\
+         > dangling: `root`.`link` -> `gone-one`\n\
+         > dangling: `root`.`side` -> `gone-two`"
+    );
+
+    assert_eq!(first_block(&document), notice, "{document:?}");
+    assert_notice_leads(&document, &notice, "## Root");
+    assert_eq!(
+        document.matches("> truncated: ").count(),
+        1,
+        "one truncation line, and it is the notice's first: {document:?}"
+    );
+    assert_eq!(
+        document.matches("> dangling: ").count(),
+        2,
+        "one line per triple: {document:?}"
+    );
+    assert!(
+        !document.contains("result_limit"),
+        "the only reason is the budget: {document:?}"
+    );
+}

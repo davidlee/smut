@@ -811,3 +811,117 @@ fn a_bad_depth_is_refused_before_any_store_access() {
         );
     }
 }
+
+// ── PHASE-02 VT-3: the budget's grammar and its refusals ─────────────────────
+
+#[test]
+fn a_malformed_budget_is_refused_before_any_store_access() {
+    // §5 "a negative or zero limit/budget … rejects with exit 2 before the store
+    // is opened, locked or created" and "Depth and budget are unsigned": a
+    // zero, negative, fractional, stringly or beyond-`u64` budget is a malformed
+    // value, not a key deferred to a later release, so no refusal may name 0.2.
+    //
+    // A fresh scratch per case: there is no store to reach, so a refusal that
+    // opened one would leave it behind and the exit code would be the "no store"
+    // answer instead of step 1's refusal.
+    let beyond = serde_json::from_str::<Value>("18446744073709551616")
+        .expect("the literal is one JSON number");
+
+    let specifications = [
+        r#"{"budget":0}"#.to_owned(),
+        r#"{"budget":-1}"#.to_owned(),
+        r#"{"budget":1.5}"#.to_owned(),
+        r#"{"budget":1.0}"#.to_owned(),
+        r#"{"budget":"5"}"#.to_owned(),
+        format!(r#"{{"budget":{beyond}}}"#),
+    ];
+
+    for specification in specifications {
+        let scratch = Scratch::new();
+        let ran = smut(&scratch, &["query", &specification]);
+
+        assert_eq!(ran.code, 2, "{specification}: {}", ran.stderr);
+        assert_eq!(
+            ran.stdout, "",
+            "{specification}: a refusal prints no envelope"
+        );
+        assert!(
+            ran.stderr.contains("budget"),
+            "{specification}: the refusal names the key: {}",
+            ran.stderr
+        );
+        assert!(
+            ran.stderr.contains("a positive integer"),
+            "{specification}: the refusal describes the accepted value shape: {}",
+            ran.stderr
+        );
+        assert!(
+            !ran.stderr.contains("0.2"),
+            "{specification}: a malformed value is not a key deferred to a later release: {}",
+            ran.stderr
+        );
+        assert!(
+            !scratch.has_store(),
+            "{specification} was refused before the store was touched"
+        );
+    }
+}
+
+#[test]
+fn an_unknown_key_stays_unknown_and_names_no_release() {
+    // §5 "Unknown keys stay unknown": `FUTURE_KEYS` retires, so `sort` is
+    // reported plainly rather than promised to a release — and `budget`'s
+    // arrival must not turn every unrecognised key into a future key.
+    let scratch = Scratch::new();
+    let ran = smut(&scratch, &["query", r#"{"sort":[{"field":"title"}]}"#]);
+
+    assert_eq!(ran.code, 2, "{}", ran.stderr);
+    assert_eq!(ran.stdout, "", "a refusal prints no envelope");
+    assert!(
+        ran.stderr.contains("sort"),
+        "the refusal names the key: {}",
+        ran.stderr
+    );
+    assert!(
+        !ran.stderr.contains("0.2"),
+        "an unknown key is not deferred to a release: {}",
+        ran.stderr
+    );
+    assert!(
+        !scratch.has_store(),
+        "the refusal happened before the store was touched"
+    );
+}
+
+#[test]
+fn an_accepted_budget_bounds_the_walk_and_an_exact_fit_is_not_truncated() {
+    // §7.3: `budget` counts entity expansions and is checked before expanding,
+    // so a roots-only walk of one permitted expansion fits a budget of one
+    // exactly — and a budget that is honoured is not a truncation.
+    let scratch = Scratch::new();
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"id":"a","title":"A","next":{"id":"b"}}"#],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"B"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let ran = smut(
+        &scratch,
+        &["query", r#"{"from":"a","follow":["next"],"budget":1}"#],
+    );
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let envelope = ran.json();
+    assert_eq!(
+        envelope["truncation_reasons"],
+        json!([]),
+        "the walk expanded exactly its budget: {envelope}"
+    );
+    assert_eq!(
+        envelope["traversal"]["frontier"],
+        json!(["b"]),
+        "the depth boundary holds the discovery: {envelope}"
+    );
+}
