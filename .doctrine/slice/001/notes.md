@@ -180,6 +180,17 @@ fsync points or renderer blocks has the same narrowing that the staged-index mis
 had. The §4.4/§4.5 seam and the stale-snapshot seam listed here before RV-003
 were probed and dissolved by that pass — see above.
 
+**Planning direction from the user, given before the lock** (recorded here because
+it binds `/plan`, not the design text): move to implementation planning rather
+than extend design discussion — the scope is bounded, component responsibilities
+are clear, and the failure cases carry concrete test obligations. The recovery
+protocol is named as the hardest part to implement correctly, so interruption,
+**repeated recovery**, and concurrent-initialisation tests take priority over
+other test layers. The design's durability claims are accepted as *stated*, not
+as *evidenced*: the plan owes implementation evidence for them, and §11.1's
+distinction (code-path ordering asserted by injection, power-loss durability
+assumed) is the line that evidence has to respect.
+
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-01 · reviewing (design run rev 51, pass RV-003 concluded) · uncommitted
