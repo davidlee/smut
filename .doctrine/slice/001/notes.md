@@ -307,6 +307,23 @@ One heavy phase per charter, pairs only for the two pure cores:
   transition was idempotent (`code_start_oid` unchanged at `6e2a1f1`), so only
   the log gained a no-op line; the read-only verbs at this altitude are
   `doctrine slice status SL-001` and `doctrine slice phases` · decided
+- PHASE-02 · `serde`'s `derive` feature stays off (PHASE-01 deferred the call
+  here) · responses are assembled as `serde_json::Value` and every byte form comes
+  from PHASE-01's hand-written wrapper, so nothing in this phase needs derive and
+  `Cargo.toml` is untouched · decided
+- PHASE-02 · the declaration vocabulary (`Decl`, `Op`, and the DROP-sentinel
+  conversion) lives in `src/entity.rs` with `extract`, and `src/declare.rs` adds
+  the fold · keeps the dependency direction `declare → entity`, which matches
+  DEC-005's "normalize is built on extract" · decided
+- PHASE-02 · a top-level empty object `{}` declares nothing — no id generated,
+  no entity created · generating an id for an object with no fields would report
+  a phantom `missing` reference, and the brief's "objects lacking IDs receive
+  NanoIDs" is about declarations, of which `{}` contains none · decided
+- PHASE-02 · `scan_refs` (malformed nested `id`) and `apply` (non-object snapshot
+  value) panic rather than silently repair · both are preconditions of a
+  shell-validated `Entities` snapshot (DEC-001), and the store loader owns turning
+  either into exit 1; the alternatives (skip, or start over) lose corruption or
+  invent data · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
