@@ -47,7 +47,10 @@ cargo build --release
 ./target/release/smut --version   # smut 0.2.0
 ```
 
-Or install it from crates.io: `cargo install smut`.
+Or install it from crates.io: `cargo install smut` — which installs **0.1.1**,
+the release that is published there. This tree is 0.2.0 and is not published, so
+building it is the only way to get the surface below; the 0.1.1 on crates.io has
+none of the five keys 0.2 adds.
 
 The binary is self-contained: `target/release/smut` is the whole program, and
 `smut learn` prints the embedded guide with nothing else installed.

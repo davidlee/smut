@@ -382,6 +382,27 @@ fn the_console_block_carries_the_whole_0_2_example() {
     );
 }
 
+/// The README states this tree's version and the published release's in the same
+/// breath, because `cargo install smut` — the line directly above the claim —
+/// installs 0.1.1, not this tree. Removing the distinction is how the page
+/// over-claims in composition while no single sentence is false (RV-017), so the
+/// pin keeps the honest limit where a reader meets it.
+#[test]
+fn the_readme_names_the_published_release_beside_this_tree() {
+    assert!(
+        README.contains("smut 0.2.0"),
+        "the release paragraph names the version this tree is"
+    );
+    assert!(
+        README.contains("0.1.1") && README.contains("crates.io"),
+        "the install line is qualified by the release crates.io actually carries"
+    );
+    assert!(
+        README.contains("is not published"),
+        "and this tree is not claimed to be published"
+    );
+}
+
 /// crates.io renders the README against its own paths, so a relative link is dead
 /// on the published page — which is where a crate's reader arrives first.
 #[test]

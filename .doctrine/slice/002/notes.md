@@ -9,7 +9,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 fresh-as-of: 2026-11-02 · implementing, slice ready for audit (PHASE-01 `45983c7`;
 PHASE-02 `1324dae` + `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`;
 PHASE-04 `fddbe33`; PHASE-05 `cb46e37`; PHASE-06 `46c6699` + `a6ddb25`;
-PHASE-07 `2b9250b`) · design locked at run rev 62; plan repaired round 1
+PHASE-07 `2b9250b`, with trailing notes `318e6b2` and the install-line
+repair in the trailing docs commit) · design locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -162,7 +163,13 @@ PHASE-07 `2b9250b`) · design locked at run rev 62; plan repaired round 1
   feature vs 333 without) and was negative-controlled. `verify-vt`: PHASE-07
   VT-1/VT-2/VT-3 PASS, 25 PASS across PHASE-01…07. Conformance 26 conformant, 0
   undelivered, 4 undeclared (the review lane's RV-017/018 artefacts). §14.2 fence
-  proven empty by `git diff` against the entering tree.
+  proven empty by `git diff` against the entering tree. One falsification this
+  phase's own rewrite introduced was caught before handback and repaired in
+  the trailing docs commit: the release paragraph opened with `0.2.0` while the `cargo install
+  smut` line under it installs the published 0.1.1, which is exactly the
+  composition over-claim RV-017 named. The Build section now says which release
+  crates.io carries and which this tree is, pinned by
+  `the_readme_names_the_published_release_beside_this_tree`.
 
 ### Learned
 
