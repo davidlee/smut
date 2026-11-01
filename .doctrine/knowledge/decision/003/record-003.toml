@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 3
+slug = "01-journal-name-as-state-commit-durable-decision-state-dependent-validation-atomic-visibility"
+title = "0.1 journal: name-as-state commit, durable decision, state-dependent validation, atomic visibility"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-2: what journal protocol backs the write set, and what durability claim it honestly justifies. The brief mandates interruption testing at every boundary and forbids claiming batch atomicity from individual renames."
+choice = "Name-as-state journal (prepare/commit/done sibling directories, each rename a transition); the commit decision is the prepare->commit rename, durable only after fsync of .smut; replay is total re-execution from staged bytes published by temp+rename; state-dependent validation; protocol-owned .tmp cleanup before store validation; recovery strictly before validation."
+alternatives = ["COMMITTED marker file in one journal dir", " rename-out-of-staging replay", " plain-copy replay", " claiming physical batch atomicity"]
+rationale = "The three names make the state structurally unambiguous and leave no marker to lose; total re-execution needs no inference about what was already applied; staged bytes retained through a durable done rename mean a power loss cannot restore commit after its replay material is gone."
+consequences = ["Apply never begins before the parent fsync; post-commit failure is roll-forward-only; crash injection is test-feature gated and proves process interruption", " not power-loss write ordering; coherence is promised to lock-holding commands only."]
+decided_by = "operator (six amendments) and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

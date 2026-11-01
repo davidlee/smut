@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 4
+slug = "01-pipeline-lock-coverage-initialisation-recovery-before-validation-explicit-inconsistency"
+title = "0.1 pipeline: lock coverage, initialisation, recovery-before-validation, explicit inconsistency"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-7: what the store lock covers and in what order lock, recovery, validation and read/write run. The brief requires a single exclusive lock, initialisation coordinated under it, recovery before serving, and never creating a store for reads or empty declarations."
+choice = "One exclusive flock on a permanent lock inode for every command touching store state; parse before any filesystem access; pre-compute against an empty snapshot so an unwritable or invalid request never creates a store; recover strictly before validation; validate unexplained entries as explicit inconsistency; serialise output under the lock, write after unlocking."
+alternatives = ["shared read locks with upgrade", " trusting the mkdir winner to fsync the parent", " treating an index-less .smut as empty", " cleaning arbitrary *.tmp during recovery"]
+rationale = "Recovery before validation is what keeps a crashed store recoverable instead of refused; the permanent lock inode is why the index inode cannot be the lock; validating unexplained files prevents an entity silently leaving the graph; preparing output under the lock guarantees the response describes the snapshot actually processed."
+consequences = ["A stdout failure after commit cannot undo the commit (documented); every process using a possibly new .smut syncs the parent entry itself; initialisation states have their own interruption tests even though index creation has one path; nothing is promised to a process that does not take the lock."]
+decided_by = "operator (five amendments, two wording corrections) and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

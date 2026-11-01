@@ -1,0 +1,41 @@
+memory_uid = "mem_01a1957016217433b68d54b18d8fb094"
+schema_version = 1
+memory_type = "pattern"
+status = "active"
+title = "Design-run machinery gotchas hit while driving SL-001"
+summary = "Three design-run mechanics that refuse or silently stale if you improvise them: inquiry disposition needs a checkpoint node, editing sections during reviewing stales the pass, and the research baseline hashes the slice scope doc."
+created = "2026-11-01"
+updated = "2026-11-01"
+
+[scope]
+paths = []
+globs = [".doctrine/**"]
+commands = ["design", "slice", "review"]
+tags = ["doctrine", "design-run", "gotcha"]
+workspace = "default"
+repo = "repo:git-root:177d3f579f80c84dc81cd9368759be575b9e64ad"
+repo_id_kind = "local_root"
+repo_id_confidence = "medium"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "1c27597cc08f870569cb57b7eba883781b04fa53"
+ref_name = "refs/heads/main"
+checkout_state_id = "06d1fccb87e76719313736f1fcbc0a04fedb3c56b7e57530950119d017ffc64d"
+base_commit = "2d5ec33e3c6ee70bb9f14d97e03e747f71244826"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+

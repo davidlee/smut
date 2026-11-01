@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 9
+slug = "01-markdown-fields-only-on-request-safe-delimiters-in-document-diagnostics"
+title = "0.1 Markdown: fields only on request, safe delimiters, in-document diagnostics"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-9: exact Markdown layout, fallback and escaping rules, including visible disclosure of truncation and missing roots."
+choice = "Heading from a selected non-empty string heading field; verbatim untrimmed body; other fields only under --show-fields, excluding heading and body only when actually rendered specially; identity as a safely fenced code span and the fallback when nothing is visible; diagnostics in-document; no pre-limit count."
+alternatives = ["always showing attributes", " trimming body bytes for uniform spacing", " single-backtick id wrapping", " a 12-of-40 truncation form requiring a retained pre-limit count"]
+rationale = "Verbatim bytes are the product promise; opaque ids can contain backticks so a fixed fence is unsafe; a count the selection does not retain is not worth widening Selection for."
+consequences = ["Empty or whitespace-only bodies cannot suppress the ID fallback; --heading-field body renders once; trailing newlines in bodies may produce extra blank lines between entities."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

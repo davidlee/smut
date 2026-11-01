@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 10
+slug = "01-documentation-set-readme-versioned-store-format-learn"
+title = "0.1 documentation set: README, versioned store format, learn"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-10: what is documented, and where each piece lives."
+choice = "README with worked example, command table and sharp edges quoting the DEC-003 guarantee; docs/store-format.md versioned as format_version 1 covering layout, serialisation, journal states and fsync obligations, recovery, reserved names and the commit-before-acknowledgement ambiguity; learn limited to the 0.1 surface."
+alternatives = ["paraphrasing the durability guarantee", " documenting unadopted behaviour", " a migration path in 0.1"]
+rationale = "The guarantee has to be quotable verbatim to stay honest; a format doc that drifts from the protocol is worse than none."
+consequences = ["Unknown format_version is exit 1 with no migration; the README states Linux as the acceptance platform and flock as advisory."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

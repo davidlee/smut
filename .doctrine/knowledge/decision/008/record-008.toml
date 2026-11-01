@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 8
+slug = "01-cli-clap-grammar-for-opaque-ids-validate-before-store-access"
+title = "0.1 CLI: clap grammar, -- for opaque ids, validate before store access"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-8: how CLI input is modelled, given a lone dash, varargs commands, and missing stdin on an interactive terminal."
+choice = "clap v4 derive subcommands with usage exit 2; one JSON operand with - for stdin and tty-detection for the absent case; -- terminates flags for opaque ids beginning with a hyphen; spec types and flag combinations validated before any store access; --format mermaid refused naming the planned release."
+alternatives = ["hand-rolled argument parsing", " implicit stdin on a TTY", " single-backtick id delimiters", " naming the tracking item id in user-facing copy"]
+rationale = "clap's usage code already matches the brief; validating the whole request before locking keeps malformed input from creating or recovering a store; -- is the only convention that makes opaque ids starting with a hyphen reachable."
+consequences = ["Mermaid refusal names release 1.0 per the accepted release split; no streaming mode; trailing non-whitespace after a JSON value is an error."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

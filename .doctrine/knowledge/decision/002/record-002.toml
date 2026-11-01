@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 2
+slug = "01-declaration-equality-structural-json-equality-per-field-conflict-canonical-key-order"
+title = "0.1 declaration equality: structural JSON equality, per-field conflict, canonical key order"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-4: what equality decides coalescing and conflict inside a declaration batch, and how it treats key order, null, and numbers. A wrong rule here silently loses or silently rejects assignments."
+choice = "Per-top-level-field operation algebra (Set/Drop) folded over normalised values; structural serde_json equality with no coercion; numbers distinct (1 != 1.0); BTreeMap-backed objects so key order is irrelevant and stored bytes are canonical."
+alternatives = ["numeric cross-type equality", " preserve_order for author-order fidelity", " entity-level conflict detection"]
+rationale = "Field granularity is what makes repeated patches in one batch useful; structural equality needs no coercion ladder and no arbitrary stored representation; canonical key order keeps the store diffable and readable."
+consequences = ["1 vs 1.0 in one batch rejects the batch (documented); first-encounter order inside objects is lexical", " not author order; the literal string DROP cannot be assigned as a top-level field value in 0.1; batch rejection writes nothing."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

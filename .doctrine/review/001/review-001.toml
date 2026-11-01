@@ -1,0 +1,96 @@
+id    = 1
+slug  = "design-review-of-sl-001"
+title = "design review of SL-001"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Hostile self-pass over design.md at revision 29, held to five invariants recorded in the RV brief: (1) every brief-mandated behaviour is stated or delegated by citation to a DEC that states it; (2) no section contradicts another or a decision; (3) an implementor cannot read a section into brief-violating behaviour; (4) diagrams agree with prose and carry the branches that matter; (5) code impact and design-target selectors agree. Probed specifically: §5's pipeline branches against DEC-004 line by line, §4.3–4.4's write set for full determination, §2's module map against §12's table, and §6.1's numeric comparator for the transitivity defect that killed its first version. Three findings raised (one major, two minor), all fixed in the design and verified. The declared set is closed; the human lane's section attestations and the pass disposition remain outstanding."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-001"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "§5 pipeline diagram has no branch for reads or deletes against an absent store"
+detail = 'The §5 flowchart routes every absent-store case through step 2 ("pre-compute against an EMPTY snapshot"), whose left exit is "empty write set → success, store never created". An implementor following the diagram for `smut get x`, `smut query {}`, `smut render` or `smut delete x` in a directory with no `.smut/` would return success with `missing: ["x"]`. DEC-004 says the opposite: absent store plus read or delete is store-not-found, exit 1, nothing created, and only `declare` ever reaches the pre-compute step. The diagram must carry that branch, or the prose must say it explicitly next to the diagram.'
+disposition = "fix-now"
+response = '§5 now carries the branch: the flowchart splits the absent-store case into "no · read or delete → store-not-found · exit 1 · nothing created" and "no · declare → pre-compute", plus a bolded sentence — "Only `declare` ever creates a store", naming get, query, render and delete explicitly, and saying no `missing` list is invented for ids that were never stored. Materialised at revision 35 (sec-5 fingerprint e55d369d61f1).'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§5 now carries the branch: the flowchart splits the absent-store case into "no · read or delete → store-not-found · exit 1 · nothing created" and "no · declare → pre-compute", plus a bolded sentence — "Only `declare` ever creates a store", naming get, query, render and delete explicitly, and saying no `missing` list is invented for ids that were never stored. Materialised at revision 35 (sec-5 fingerprint e55d369d61f1).'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Verified in the materialised design: the split branch and the "Only `declare` ever creates a store" sentence are both present in §5, and the diagram now agrees with DEC-004's read/delete path."""
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The design never states whether every commit stages a fresh index"
+detail = "§4.3 shows `index.json` among the manifest's `puts` and fixes its position in the apply order (puts → index → removals), but no sentence says whether a batch that only updates existing entities — changing no id-to-file mapping — still stages and publishes a fresh index. Two implementations both satisfy the prose while producing different write sets, which matters because the crash-injection suite asserts against the write set and the recovery path treats the manifest as the whole truth. The protocol wants the uniform answer; it should say so."
+disposition = "fix-now"
+response = '§4.3 now states the uniform rule: every commit stages a fresh `index.json`, including a batch that changes no id-to-file mapping, with the rationale (one write-set shape, one shape asserted by the crash suites, no optional member whose absence means "unchanged"). Materialised at revision 35 (sec-4 fingerprint e4d3f1fb26f2).'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§4.3 now states the uniform rule: every commit stages a fresh `index.json`, including a batch that changes no id-to-file mapping, with the rationale (one write-set shape, one shape asserted by the crash suites, no optional member whose absence means "unchanged"). Materialised at revision 35 (sec-4 fingerprint e4d3f1fb26f2).'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: §4.3 states the uniform staging rule explicitly, so the write set is fully determined for update-only batches."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "`src/store/fault.rs` is listed without its feature gate"
+detail = """§2's module map lists `store/fault.rs` beside always-compiled modules, while §12 says the crash and fault injection seam is gated behind a test-only cargo feature and §11.1 says injection is "not an environment-triggered abort compiled into ordinary builds". A reader cannot tell whether the module exists in a release build. Either the map should carry the `#[cfg(feature = "fault-injection")]` annotation, or the design should say the module is always compiled with inert bodies."""
+disposition = "fix-now"
+response = """§2's module map now annotates `store/fault.rs` as `#[cfg(feature = "fault-injection")]` and says plainly that it is absent from a release build rather than inert inside one, which is what §11.1 and §12 already required. Materialised at revision 35 (sec-2 fingerprint 2280b6367e97)."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """§2's module map now annotates `store/fault.rs` as `#[cfg(feature = "fault-injection")]` and says plainly that it is absent from a release build rather than inert inside one, which is what §11.1 and §12 already required. Materialised at revision 35 (sec-2 fingerprint 2280b6367e97)."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the module map carries the feature gate and says the module is absent from a release build, matching §11.1 and §12."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 5
+slug = "01-references-one-predicate-hoisting-with-label-on-the-containing-entity-preorder-error-classes"
+title = "0.1 references: one predicate, hoisting with label on the containing entity, preorder, error classes split"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-3: is reference one predicate defined once, and what exactly counts as a reference and a relationship label. The brief makes any embedded object with an id an entity node, which both declaration and 0.2's traversal must obey."
+choice = "One reference_id predicate plus scan_refs and extract over it; a single recursive normalisation pass with preorder declaration recording; labels are the containing entitys non-id field name after hoisting; request-time id errors are exit 2 while stored-data id errors are corruption exit 1; scan_refs is non-fallible with a validated-entity precondition."
+alternatives = ["iterative fixpoint loop", " label as request path", " scan_refs returning Result and skipping malformed ids", " one error type for request and stored data"]
+rationale = "A single definition is what stops 0.2 from growing a second, divergent notion of a reference; preorder keeps the promised encounter order from depending on recursion order; splitting the error classes keeps exit 2 and exit 1 honest."
+consequences = ["An embedded object carrying id cannot be inline metadata in 0.1 (documented in README and learn); scan_refs must never be called on raw request JSON; declaration order is parent-before-child regardless of finishing order."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

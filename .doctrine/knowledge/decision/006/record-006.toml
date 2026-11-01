@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 6
+slug = "01-ordering-per-key-missing-last-exact-numeric-comparator-total-order-via-id-tiebreak"
+title = "0.1 ordering: per-key missing-last, exact numeric comparator, total order via ID tiebreak"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-5: ordering rules, scalar type order, and how limit truncation is reported. A comparator that is not a total order silently mis-sorts rather than failing, so the numeric rule has to be exact."
+choice = "Per-key missing-last (both missing continues, one missing sorts later regardless of direction, direction applied only to non-equal results, all keys tying breaks on ID ascending); all sort-field values validated before sorting; exact integer/float numeric comparison from the float IEEE-754 representation, never domain-switching; order: [] equals omitted order; result_limit only when rows were actually omitted."
+alternatives = ["missing values appended as a final partition", " domain-switching numeric comparison (integers exact", " mixed pairs as f64)", " always-f64", " reversing the whole comparator for desc"]
+rationale = "Missing-last per key preserves secondary sort keys; domain-switching is cyclic and so not a total order even with the precision loss documented; exact comparison makes ordering consistent with the numeric values actually represented."
+consequences = ["1 and 1.0 are unequal structurally but compare equal for ordering; 0", " 0.0", " -0.0 compare equal and ties break on ID; the numeric comparator carries property tests for totality and transitivity over +-2^53", " i64/u64 extremes", " subnormals and signed zeros."]
+decided_by = "operator (two corrections) and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

@@ -1,0 +1,24 @@
+id    = 2
+slug  = "design-review-of-sl-001"
+title = "design review of SL-001"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """Pass over design.md at revision 37 (materialisation watermark current, twelve sections, zero changes since baseline) — the settled content, after RV-001's three findings were integrated and verified. Re-checked the interactions the fixes displaced: §5's "only declare creates a store" against §7.2 and §8.3 (agree); §4.3's uniform index staging against §11's crash-suite expectations (one shape, consistent); §2's feature gate against §12's Cargo.toml row and §11.1's injection rule (agree); and step 6's recompute rationale, which still holds for every command that reaches it. No new findings. The declared attack surfaces in the brief remain available to the user if they want a formal hostile pass; a later raise would clear this marker and it would be concluded again."""
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-001"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 7
+slug = "01-projection-and-envelope-borrowing-selection-final-boundary-entity-serialisation-id-first"
+title = "0.1 projection and envelope: borrowing selection, final-boundary entity serialisation, id-first canonical order"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-6: how projection and the selection result are separated so the core carries full entities plus a field set while get/query emit a flat non-inlined envelope. Renderers must keep connectivity that select hides."
+choice = "A borrowing Selection (ids, store, field set, missing, truncation) with project and envelope as pure functions in the core; entity serialisation at the final boundary through one shared Entity wrapper; id-first root with lexical remaining keys, lexical embedded objects, arrays in order; pretty files and compact stdout."
+alternatives = ["fully key-sorted entities", " upstream custom Serialize with re-parse", " one textual form for files and stdout", " renderers holding the store for free access"]
+rationale = "Value erases upstream ordering, so the wrapper must act at the byte boundary; a borrowing selection keeps one lifetime and one code path for get and query; the store reference must not become permission to widen results past limit."
+consequences = ["Two byte forms are specified separately (pretty files", " compact stdout); the select set never determines key order; renderers consume structured Selection with serialisation not between selection and rendering."]
+decided_by = "operator (serialisation clarification) and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

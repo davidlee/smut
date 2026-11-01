@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 11
+slug = "01-spec-surface-four-keys-named-future-keys-plain-unknown-keys"
+title = "0.1 spec surface: four keys, named future keys, plain unknown keys"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-001 answer to inq-11: 0.1 query-spec surface, and whether rejecting later keys keeps earlier calls valid."
+choice = "Accept from/select/order/limit with the brief's types; query {} returns all entities subject to the default limit; recognised future keys rejected by name with the release that will accept them; arbitrary unknown keys reported plainly as unknown; representative 0.1 invocations kept as compatibility tests."
+alternatives = ["accepting future keys as no-ops", " naming a release for unrecognised keys", " claiming rejection alone guarantees unchanged behaviour"]
+rationale = "Rejection keeps the syntax additive without guessing at semantics for keys nobody planned; compatibility is a tested property, not a consequence of refusing input."
+consequences = ["A 0.1 call stays valid when the key set widens", " but behaviour is protected by tests rather than by rejection; order entries reject unknown members."]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-001"

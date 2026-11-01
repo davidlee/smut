@@ -27,7 +27,7 @@
 
     agents = {
       url = "github:davidlee/nix-config?dir=flakes/agents";
-      inputs.nixpkgs.follows = "nixpkgs";
+      #inputs.nixpkgs.follows = "nixpkgs";
     };
     # quotient's form-family builder, for quotientForms below.
     quotient = {
@@ -39,6 +39,7 @@
   outputs = inputs @ {
     flake-parts,
     rust-overlay,
+    nixpkgs,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} {
@@ -51,13 +52,8 @@
         "aarch64-darwin"
       ];
 
-      perSystem = {
-        # pkgs,
-        nixpkgs,
-        system,
-        ...
-      }: let
-        pkgs = import nixpkgs {
+      perSystem = {system, ...}: let
+        pkgs = import inputs.nixpkgs {
           inherit system;
           overlays = [rust-overlay.overlays.default];
         };
@@ -93,7 +89,6 @@
         projectPkgs = with pkgs; [
           # Toolchain + dev deps available inside every jail.
           just # the task interface (justfile)
-          rust-bin.beta.latest.default
           rust
           mold
           shellcheck
@@ -226,6 +221,8 @@
           quotient-write = family.write;
         });
       in {
+        _module.args.pkgs = pkgs;
+
         packages = jailPkgs // quotientForms;
 
         devshells.default = {
