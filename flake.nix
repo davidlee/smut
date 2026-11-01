@@ -86,9 +86,8 @@
 
         # -- Customise these for the project --
 
-        projectPkgs = with pkgs; [
-          # Toolchain + dev deps available inside every jail.
-          just # the task interface (justfile)
+        devToolPkgs = with pkgs; [
+          just
           rust
           mold
           shellcheck
@@ -96,8 +95,13 @@
           stdenv.cc
           stdenv.cc.cc.lib
           sccache
-          (agents.codex or codex) # mcp server slave — llm-agents build on linux
         ];
+
+        projectPkgs =
+          devToolPkgs
+          ++ (with pkgs; [
+            (agents.codex or codex) # mcp server slave — llm-agents build on linux
+          ]);
 
         # Sibling repos to bind-mount (for editable deps / source inspection).
         # Each path appears at /workspace/<basename> inside the jail; a host
@@ -223,7 +227,12 @@
       in {
         _module.args.pkgs = pkgs;
 
-        packages = jailPkgs // quotientForms;
+        packages = jailPkgs // quotientForms // {
+          dev-tools = pkgs.buildEnv {
+            name = "smut-dev-tools";
+            paths = devToolPkgs;
+          };
+        };
 
         devshells.default = {
           packages =
