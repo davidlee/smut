@@ -17,6 +17,8 @@ use crate::declare::WriteSet;
 use crate::entity::{ENTITY_ID, Form, serialise_document, serialise_entity};
 use crate::error::StoreError;
 use crate::id::Id;
+use crate::store::boundary::Boundary;
+use crate::store::fs as durable;
 use crate::store::index::Index;
 use crate::store::{INDEX_BASENAME, JOURNAL_STATES, MANIFEST_BASENAME, Snapshot};
 
@@ -285,6 +287,176 @@ fn fresh_basename_from(
     }
 }
 
+/// Commit `write_set` as one batch: stage, decide, apply, clear (§4.3).
+///
+/// The `prepare → commit` rename is the commit decision. A failure before it is
+/// pre-commit: the staging state is discarded and the store is left exactly as
+/// it was. A failure after it is roll-forward-only: the commit state stays for
+/// the next command to replay (§4.5).
+pub fn commit(
+    directory: &Path,
+    snapshot: &Snapshot,
+    write_set: &WriteSet,
+) -> Result<(), StoreError> {
+    let staged = translate(directory, snapshot, write_set)?;
+    let state = directory.join(PREPARE_STATE);
+
+    std::fs::create_dir(&state)
+        .map_err(|source| failure("create_journal_state", &state, source))?;
+
+    if let Err(error) = fill_staging(&state, &staged) {
+        let _ = discard_prepare(directory);
+
+        return Err(error);
+    }
+    if let Err(error) = decide(directory) {
+        let _ = discard_prepare(directory);
+
+        return Err(error);
+    }
+
+    durable::sync_directory(directory, Boundary::ParentDirectorySynced)?;
+    apply(directory, &staged)?;
+    finish(directory)
+}
+
+/// The barrier: every staged put file including `index.json`, and the manifest,
+/// written to completion and fsynced individually, then the staging directory
+/// fsynced so its entries are durable (§4.3).
+fn fill_staging(state: &Path, staged: &Staged) -> Result<(), StoreError> {
+    for (basename, bytes) in &staged.files {
+        let (written, synced) = if basename == INDEX_BASENAME {
+            (Boundary::StagedIndexWritten, Boundary::StagedIndexSynced)
+        } else {
+            (Boundary::StagedPutWritten, Boundary::StagedPutSynced)
+        };
+        let path = state.join(basename);
+
+        durable::write_file(&path, bytes, written)?;
+        durable::sync_file(&path, synced)?;
+    }
+
+    let manifest = state.join(MANIFEST_BASENAME);
+
+    durable::write_file(
+        &manifest,
+        staged.manifest.to_bytes().as_bytes(),
+        Boundary::StagedManifestWritten,
+    )?;
+    durable::sync_file(&manifest, Boundary::StagedManifestSynced)?;
+    durable::sync_directory(state, Boundary::StagingDirectorySynced)
+}
+
+/// The commit decision: one rename, and the only step that makes the batch
+/// committed rather than staged.
+fn decide(directory: &Path) -> Result<(), StoreError> {
+    durable::rename(
+        &directory.join(PREPARE_STATE),
+        &directory.join(COMMIT_STATE),
+        Boundary::CommitRenamed,
+    )
+}
+
+/// Apply the batch in §4.3's order — puts, then the index, then removals — and
+/// make the applied state durable before the state moves again.
+fn apply(directory: &Path, staged: &Staged) -> Result<(), StoreError> {
+    for (basename, bytes) in &staged.files {
+        let at = if basename == INDEX_BASENAME {
+            Boundary::IndexApplied
+        } else {
+            Boundary::PutsApplied
+        };
+
+        publish(directory, basename, bytes, at)?;
+    }
+
+    for basename in staged.manifest.removes() {
+        remove_if_present(directory, basename, Boundary::RemovalsApplied)?;
+    }
+
+    durable::sync_directory(directory, Boundary::RemovalsApplied)
+}
+
+/// Publish `bytes` as `basename`: write its temporary, fsync it, rename it over
+/// the target. The directory fsync is the caller's, once per phase.
+fn publish(directory: &Path, basename: &str, bytes: &[u8], at: Boundary) -> Result<(), StoreError> {
+    let temporary = directory.join(durable::temporary_name(basename));
+
+    durable::write_file(&temporary, bytes, at)?;
+    durable::sync_file(&temporary, at)?;
+    durable::rename(&temporary, &directory.join(basename), at)
+}
+
+/// Move the decided state to `done`, make that name durable, then clear it — in
+/// that order, so a power loss cannot restore `commit` after its replay material
+/// is gone (§4.3).
+fn finish(directory: &Path) -> Result<(), StoreError> {
+    durable::rename(
+        &directory.join(COMMIT_STATE),
+        &directory.join(DONE_STATE),
+        Boundary::DoneRenamed,
+    )?;
+    durable::sync_directory(directory, Boundary::DoneRenamed)?;
+    clear(directory, DONE_STATE, Boundary::CleanupRemoved)
+}
+
+/// Unlink every entry of `directory`'s state, then the state directory itself.
+fn clear(directory: &Path, state: &str, at: Boundary) -> Result<(), StoreError> {
+    let path = directory.join(state);
+
+    for name in names(&path)? {
+        durable::remove_file(&path.join(&name), at)?;
+    }
+
+    durable::remove_directory(&path, at)
+}
+
+/// Discard a staging state, best effort (§4.3).
+///
+/// The error the caller already has is the one the command reports, and a
+/// staging state this could not remove is discarded by the next command's
+/// recovery.
+fn discard_prepare(directory: &Path) -> Result<(), StoreError> {
+    match std::fs::symlink_metadata(directory.join(PREPARE_STATE)) {
+        Ok(metadata) if metadata.is_dir() => {
+            clear(directory, PREPARE_STATE, Boundary::RecoveryPrepareDiscarded)
+        }
+        Ok(_) => Ok(()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(source) => Err(failure("discard_prepare", directory, source)),
+    }
+}
+
+/// Unlink `basename` if it is there: a replay must not depend on what an earlier
+/// attempt already did.
+fn remove_if_present(directory: &Path, basename: &str, at: Boundary) -> Result<(), StoreError> {
+    let path = directory.join(basename);
+
+    match std::fs::symlink_metadata(&path) {
+        Ok(_) => durable::remove_file(&path, at),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(source) => Err(failure(at.as_str(), &path, source)),
+    }
+}
+
+/// The entry names `directory` holds, in lexical order, so nothing here depends
+/// on `readdir` order.
+fn names(directory: &Path) -> Result<Vec<String>, StoreError> {
+    let listing = std::fs::read_dir(directory)
+        .map_err(|source| failure("list_journal", directory, source))?;
+    let mut names = Vec::new();
+
+    for entry in listing {
+        let entry = entry.map_err(|source| failure("list_journal", directory, source))?;
+
+        names.push(entry.file_name().to_string_lossy().into_owned());
+    }
+
+    names.sort();
+
+    Ok(names)
+}
+
 /// Why `basename` may not appear in a manifest (§4.1, §4.4).
 fn reserved_basename(basename: &str) -> Option<&'static str> {
     if basename.is_empty() {
@@ -369,6 +541,60 @@ mod tests {
         fn directory(&self) -> PathBuf {
             self.path.join(crate::store::STORE_DIRECTORY)
         }
+
+        fn store(&self) -> crate::store::Store {
+            crate::store::Store::in_directory(&self.path)
+        }
+
+        /// A store holding two indexed entities: `alpha` and `beta`.
+        fn seeded() -> Self {
+            let scratch = Scratch::new();
+            let directory = scratch.directory();
+
+            fs::write(directory.join(crate::store::LOCK_BASENAME), b"").expect("the lock");
+            fs::write(
+                directory.join("Ab3.json"),
+                entity_bytes(json!({"id": "alpha", "body": "first"})),
+            )
+            .expect("alpha's file");
+            fs::write(
+                directory.join("Zq7.json"),
+                entity_bytes(json!({"id": "beta", "body": "second"})),
+            )
+            .expect("beta's file");
+            fs::write(
+                directory.join(INDEX_BASENAME),
+                Index::new([
+                    (Id::new("alpha"), "Ab3.json".to_owned()),
+                    (Id::new("beta"), "Zq7.json".to_owned()),
+                ])
+                .expect("safe basenames")
+                .to_bytes(),
+            )
+            .expect("the index");
+
+            scratch
+        }
+
+        fn loaded(&self) -> Snapshot {
+            self.store().load().expect("a healthy store")
+        }
+
+        fn listing(&self) -> Vec<String> {
+            let mut names: Vec<String> = fs::read_dir(self.directory())
+                .expect("the store directory")
+                .map(|entry| {
+                    entry
+                        .expect("a directory entry")
+                        .file_name()
+                        .to_string_lossy()
+                        .into_owned()
+                })
+                .collect();
+            names.sort();
+
+            names
+        }
     }
 
     impl Drop for Scratch {
@@ -394,6 +620,10 @@ mod tests {
             put: puts,
             remove: removes.iter().map(|id| Id::new(*id)).collect(),
         }
+    }
+
+    fn entity_bytes(entity: Value) -> Vec<u8> {
+        serialise_entity(&entity, Form::File).into_bytes()
     }
 
     #[test]
@@ -626,5 +856,149 @@ mod tests {
         )
         .expect_err("one id cannot be put and removed");
         assert!(matches!(both, StoreError::InvalidWriteSet { .. }), "{both}");
+    }
+
+    #[test]
+    fn the_commit_orders_the_barrier_the_apply_and_the_clear_steps() {
+        use crate::store::fs::call_record::{Call, take};
+
+        let scratch = Scratch::seeded();
+        let snapshot = scratch.loaded();
+
+        take();
+        commit(
+            &scratch.directory(),
+            &snapshot,
+            &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+        )
+        .expect("the batch commits");
+        let calls = take();
+
+        let directory = scratch.directory();
+        let prepare = directory.join(PREPARE_STATE);
+        let commit_state = directory.join(COMMIT_STATE);
+        let done = directory.join(DONE_STATE);
+        let temporary = |basename: &str| directory.join(crate::store::fs::temporary_name(basename));
+
+        assert_eq!(
+            calls,
+            vec![
+                Call::Write(prepare.join("Ab3.json")),
+                Call::SyncFile(prepare.join("Ab3.json")),
+                Call::Write(prepare.join(INDEX_BASENAME)),
+                Call::SyncFile(prepare.join(INDEX_BASENAME)),
+                Call::Write(prepare.join(MANIFEST_BASENAME)),
+                Call::SyncFile(prepare.join(MANIFEST_BASENAME)),
+                Call::SyncDirectory(prepare.clone()),
+                Call::Rename {
+                    from: prepare,
+                    to: commit_state.clone(),
+                },
+                Call::SyncDirectory(directory.clone()),
+                Call::Write(temporary("Ab3.json")),
+                Call::SyncFile(temporary("Ab3.json")),
+                Call::Rename {
+                    from: temporary("Ab3.json"),
+                    to: directory.join("Ab3.json"),
+                },
+                Call::Write(temporary(INDEX_BASENAME)),
+                Call::SyncFile(temporary(INDEX_BASENAME)),
+                Call::Rename {
+                    from: temporary(INDEX_BASENAME),
+                    to: directory.join(INDEX_BASENAME),
+                },
+                Call::Remove(directory.join("Zq7.json")),
+                Call::SyncDirectory(directory.clone()),
+                Call::Rename {
+                    from: commit_state,
+                    to: done.clone(),
+                },
+                Call::SyncDirectory(directory.clone()),
+                Call::Remove(done.join("Ab3.json")),
+                Call::Remove(done.join(INDEX_BASENAME)),
+                Call::Remove(done.join(MANIFEST_BASENAME)),
+                Call::RemoveDirectory(done),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_commit_publishes_every_put_and_removal_and_leaves_no_journal_behind() {
+        let scratch = Scratch::seeded();
+        let snapshot = scratch.loaded();
+
+        commit(
+            &scratch.directory(),
+            &snapshot,
+            &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+        )
+        .expect("the batch commits");
+
+        let reloaded = scratch.loaded();
+        assert_eq!(reloaded.entities().len(), 1);
+        assert_eq!(
+            reloaded.entities()[&Id::new("alpha")]["body"],
+            json!("changed")
+        );
+        assert_eq!(reloaded.index().basename(&Id::new("beta")), None);
+        assert_eq!(scratch.listing(), ["Ab3.json", "index.json", "lock"]);
+    }
+
+    #[cfg(feature = "fault-injection")]
+    #[test]
+    fn a_barrier_failure_before_the_decision_discards_the_staging_state() {
+        use crate::store::fault::{Faults, arm};
+
+        let scratch = Scratch::seeded();
+        let snapshot = scratch.loaded();
+        let before = scratch.listing();
+
+        {
+            let _armed = arm(Faults::failing_at(Boundary::StagedManifestSynced));
+            let error = commit(
+                &scratch.directory(),
+                &snapshot,
+                &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+            )
+            .expect_err("the barrier fails");
+
+            assert!(
+                error.to_string().contains("staged_manifest_synced"),
+                "{error}"
+            );
+        }
+
+        assert_eq!(
+            scratch.listing(),
+            before,
+            "a pre-commit failure left the store exactly as it was"
+        );
+    }
+
+    #[cfg(feature = "fault-injection")]
+    #[test]
+    fn a_failure_after_the_decision_leaves_the_commit_state_behind() {
+        use crate::store::fault::{Faults, arm};
+
+        let scratch = Scratch::seeded();
+        let snapshot = scratch.loaded();
+
+        {
+            let _armed = arm(Faults::failing_at(Boundary::ParentDirectorySynced));
+            let error = commit(
+                &scratch.directory(),
+                &snapshot,
+                &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+            )
+            .expect_err("the decision's fsync fails");
+
+            assert!(
+                error.to_string().contains("parent_directory_synced"),
+                "{error}"
+            );
+        }
+
+        assert!(scratch.listing().contains(&COMMIT_STATE.to_owned()));
+        assert!(!scratch.listing().contains(&PREPARE_STATE.to_owned()));
     }
 }

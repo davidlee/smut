@@ -86,6 +86,22 @@ pub fn remove_file(path: &Path, at: Boundary) -> Result<(), StoreError> {
     Ok(())
 }
 
+/// Unlink `path`, a directory that holds nothing.
+pub fn remove_directory(path: &Path, at: Boundary) -> Result<(), StoreError> {
+    #[cfg(feature = "fault-injection")]
+    crate::store::fault::checkpoint(at).map_err(|source| failure(at, path, source))?;
+
+    fs::remove_dir(path).map_err(|source| failure(at, path, source))?;
+
+    #[cfg(test)]
+    call_record::record(call_record::Call::RemoveDirectory(path.to_path_buf()));
+
+    #[cfg(feature = "fault-injection")]
+    crate::store::fault::arrive(at);
+
+    Ok(())
+}
+
 /// Publish `bytes` as `basename` in `directory`, durably: write the temporary,
 /// fsync it, rename it into place, then fsync the directory that holds it.
 ///
@@ -229,6 +245,7 @@ pub(crate) mod call_record {
         SyncDirectory(PathBuf),
         Rename { from: PathBuf, to: PathBuf },
         Remove(PathBuf),
+        RemoveDirectory(PathBuf),
     }
 
     thread_local! {
@@ -401,6 +418,22 @@ mod tests {
 
         remove_file(&to, Boundary::RecoveryCleanupRemoved).expect("unlink");
         assert!(!to.exists());
+    }
+
+    #[test]
+    fn remove_directory_unlinks_an_empty_directory_and_keeps_a_full_one() {
+        let scratch = Scratch::new();
+        let path = scratch.path().join("journal.done");
+        fs::create_dir(&path).expect("a state directory");
+        fs::write(path.join("Ab3.json"), b"{}").expect("a staged file");
+
+        let failure = remove_directory(&path, Boundary::CleanupRemoved)
+            .expect_err("the directory is not empty");
+        assert!(failure.to_string().contains("cleanup_removed"), "{failure}");
+
+        remove_file(&path.join("Ab3.json"), Boundary::CleanupRemoved).expect("unlink");
+        remove_directory(&path, Boundary::CleanupRemoved).expect("unlink the empty directory");
+        assert!(!path.exists());
     }
 
     #[test]
