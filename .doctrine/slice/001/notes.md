@@ -193,7 +193,7 @@ assumed) is the line that evidence has to respect.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · cf57949
+fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · f16167d
 
 ### Produced
 
