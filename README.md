@@ -1,6 +1,6 @@
 # smut
 
-![smut - cli graph db](./smut.jpg)
+![smut - cli graph db](https://github.com/davidlee/smut/raw/main/smut.jpg)
 
 `smut` is the flagrantly permissive graph database CLI for agents.
 

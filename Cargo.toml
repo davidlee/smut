@@ -11,7 +11,7 @@ keywords = ["json", "graph", "cli", "markdown", "notes"]
 categories = ["command-line-utilities", "database"]
 # Project governance, the implementation brief and the Nix devshell are not part
 # of the crate; the code, its tests, its documents and the README image are.
-exclude = [".doctrine/", ".pi/", "AGENTS.md", "smut-implementation-brief.org", "flake.nix", "flake.lock"]
+exclude = [".doctrine/", ".pi/", "AGENTS.md", "smut-implementation-brief.org", "smut.jpg", "flake.nix", "flake.lock"]
 
 [lib]
 name = "smut"
