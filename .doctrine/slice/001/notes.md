@@ -451,11 +451,42 @@ One heavy phase per charter, pairs only for the two pure cores:
   `tests/durability_crash.rs:18`), and the seat carries it to the human; the
   phase is not complete-with-a-hole, it is complete-with-a-review-pending ·
   decided
+- charter-5 · PHASE-06 stayed on the plan's exact paths — `src/render_markdown.rs`
+  and `tests/render.rs` new, `src/lib.rs` one `pub mod` line — and left
+  `src/error.rs` untouched · the renderer refuses nothing: its one precondition
+  (`truncated` implies at least one reason) is `select`'s own invariant and is
+  asserted the way `project_one` asserts its precondition, so no `Reject`
+  variant was owed · decided
+- PHASE-06 · `render_markdown::Options` (`heading_field`, `heading_level`,
+  `show_fields`, `show_ids`; default `title`/2/false/false) is the renderer's
+  input, and `--heading-level`'s 1–6 rejection stays PHASE-07's · EX-1 puts the
+  layout at the renderer while PHASE-07's EX-1 explicitly owns the flag's parse,
+  so the renderer repeats `#` the given number of times and validates no range ·
+  decided
+- PHASE-06 · the document is one flat block list joined by a blank line — the
+  notice block, then each entity's blocks — so "one blank line between
+  entities" and "the notice is the first block" are the same join rather than
+  two rules that could drift apart · decided
+- PHASE-06 · `--heading-field id` renders the id as heading text, attributes
+  iterate the entity's own lexical key order and honour `select`, and `id` is
+  never an attribute · not named by the bar; identity is always selected
+  (DEC-001 rule 8) and DEC-007 fixes the lexical key order, so the two follow
+  from records rather than inventing a rule · decided
+- PHASE-06 · VT-1…VT-3 read `UNATTRIBUTABLE — keyword present but <file> not
+  modified by this slice` while the phase was `in_progress`, and resolved to
+  PASS on the `completed` flip that captured `code_end_oid` · attribution walks
+  the phase's recorded `[code_start_oid, code_end_oid)` span, so an
+  `UNATTRIBUTABLE` row mid-phase is the open boundary working, not a red row ·
+  decided
+- PHASE-06 · the worker's note that `entity::Form::Stdout` already appends a
+  trailing newline while `render` ends the document in one is handed forward
+  rather than fixed here · the shell is PHASE-07's and printing a third newline
+  would be that phase's defect · deferred to PHASE-07
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 4 close (PHASE-01…PHASE-05 complete, VH-1
-outstanding on a human) · `0e2a519`
+fresh-as-of: 2026-11-01 · charter 5 close (PHASE-01…PHASE-06 complete, VH-1
+outstanding on a human) · `f5d0773`
 
 ### Produced
 
@@ -464,15 +495,24 @@ outstanding on a human) · `0e2a519`
   (7 commits, `e08bb7f…3fc8086`); PHASE-04 the store format, index, lock,
   validation and pipeline seam (5 commits, `8403ac1…49d81d7`); PHASE-05 the
   journal, its recovery and its interruption evidence (7 commits,
-  `7d841fd…0e2a519`). `docs/` and `README.md` remain undelivered by design —
-  PHASE-08.
-- `just check` green at every close; after PHASE-05: 197 lib + 4 bin + 5
-  `tests/selection.rs` + 12 `tests/store_corruption.rs` + 0 (default-gated)
-  durability = **218** on default features, and 210 + 4 + 44 + 5 + 12 = **275**
-  with `--features fault-injection`. The durability target executes 44 tests
-  under the feature and 0 by construction under the default build.
-- `slice verify-vt` green for every row PHASE-01…PHASE-05 own (18/18); later
+  `7d841fd…0e2a519`); PHASE-06 the Markdown renderer and its notice evidence
+  (6 commits, `5d3af21…f5d0773`). `docs/` and `README.md` remain undelivered by
+  design — PHASE-08.
+- `just check` green at every close; after PHASE-06: 226 lib + 4 bin + 5
+  `tests/render.rs` + 5 `tests/selection.rs` + 12 `tests/store_corruption.rs` +
+  0 (default-gated) durability = **252** on default features, and 239 + 4 + 44 +
+  5 + 5 + 12 = **309** with `--features fault-injection`. The durability target
+  executes 44 tests under the feature and 0 by construction under the default
+  build.
+- `slice verify-vt` green for every row PHASE-01…PHASE-06 own (21/21); later
   phases red because their files do not exist yet.
+- `src/render_markdown.rs` renders a `Selection` from `Options { heading_field,
+  heading_level, show_fields, show_ids }`: heading only when the field is
+  selected, a string and non-empty (newlines collapsed); body verbatim and
+  untrimmed; attributes only under `show_fields`; `code_span` fences with
+  longest-backtick-run + 1 and pads at the edges; the visibility fallback; and
+  the completeness notice as the first block of a flat block list. No refusal,
+  no filesystem, no clock, no entropy.
 - The protocol now exists end to end: `src/store/journal.rs` drives
   `prepare → commit → done` through `store::fs` only, `Store::run` recovers before
   validating and publishes a write set, and the single boundary registry has 22
@@ -522,9 +562,29 @@ outstanding on a human) · `0e2a519`
   killing the harness is to re-exec `std::env::current_exe()` with
   `--exact <test path>` and the abort variable set, then assert the child died by
   signal. Ten-plus boundary tests can share one driver this way.
+- (unminted) A "the notice leads the document" guarantee is testable without
+  parsing Markdown: `document.split("\n\n").next()` is the first block, so
+  asserting it equals the notice, plus `starts_with`, plus
+  `find(body) > find(notice)`, tests *position* rather than the notice's text —
+  and moving the notice after the content fails it. Verify the negative control
+  once by moving the code, then revert.
+- (unminted) Safe code spans per CommonMark: fence = longest internal backtick
+  run + 1, and pad with one space when the content begins or ends with a
+  backtick (or both begins and ends with a space); a fixed single-backtick span
+  cannot delimit opaque ids.
+- (unminted) `verify-vt` reports a live phase's own rows `UNATTRIBUTABLE —
+  keyword present but <file> not modified by this slice` until the `completed`
+  flip records `code_end_oid`; the rows resolve on the flip, so an
+  `UNATTRIBUTABLE` row mid-phase is the open boundary, not a failing row.
 
 ### Open
 
+- PHASE-06 leaves nothing open of its own: VT-1…VT-3 green with no `VA-`/`VH-`
+  row to carry. Its one forward note is on PHASE-07 (next item).
+- PHASE-06's hand-back candidate (unminted): `entity::Form::Stdout` already
+  appends a trailing newline and `render_markdown::render` ends a non-empty
+  document with one, so PHASE-07 must not print a third — that phase's shell is
+  where it is in scope.
 - **VH-1 outstanding** (PHASE-05, by seat decision): a human reads
   `tests/durability_crash.rs` against §4.3/§4.4/§4.5 and confirms every named
   boundary has an interruption test, that repeated recovery is explicit, and that
@@ -544,8 +604,9 @@ outstanding on a human) · `0e2a519`
   refuses — the refusal lives on the pipeline path only; a non-UTF-8 entry inside
   a journal state directory is handled by lossy name; §4.3's two post-decision
   `.smut` fsyncs are not independently injectable without two more registry names.
-- PHASE-06 needs nothing from PHASE-05 except the notice's placement rule: the
-  journal phase added no rendering surface and did not touch `select`.
+- PHASE-06 needed nothing from PHASE-05 beyond the notice's placement rule, as
+  predicted: the journal phase added no rendering surface and did not touch
+  `select`, so the renderer consumed the PHASE-03 `Selection` unchanged.
 - QUE (unminted — id reservation needs an authenticated remote push, which this
   checkout cannot do): should design §12 and §11.4 be amended for the lib target
   and the pre-existing README? The plan departs from the table and records why in
