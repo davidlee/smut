@@ -59,7 +59,7 @@ severity = "nit"
 title = "Three further pins are satisfiable by a sentence other than the one they are named for"
 detail = """`src/learn.rs:344`, `:418`, `:450`. `"100"` is satisfied by the preamble at `:97`, so the `limit` default is unpinned; `the_guide_points_at_smut_conventions_once` asserts presence while `"smut conventions"` occurs three times; `"nine"` is satisfied by `:96`/`:203` rather than the client-side paragraph the test is about. Same failure mode as F-1 at lower stakes: the assertion passes for a reason the test name disclaims, so an editor can weaken the guide's real claim with the suite green. Route: assert `"default 100"`/`"default 10000"`, count the pointer inside the Conventions section, and name the client-side paragraph's own sentence."""
 disposition = "fix-now"
-response = """Conceded on all three. Fixed in `d8a7cb4`: the defaults pin with their key word ("default 100", "default 10000"), the client-side pin names the paragraph's own nouns ("performs no propagation", "no prior-response input") instead of a bare "nine", and the conventions pointer is left as a presence assertion with the duplication ownership recorded separately. The wrap point the review made in its second line of attack turned out to matter immediately: my first strengthened pin failed because the phrase straddled a hard wrap, so every prose pin in the module now reads a whitespace-flattened view of the guide — a red means a missing claim, not a reflow."""
+response = """Contested twice, fixed on the third attempt in `91e15a8`. First answer: keyword presence. Second: "default 100"/"default 10000"/"default 1" — which the verifier showed are substrings of each other, so deleting the limit or depth sentence still left the pin green; my strengthening was itself an instance of the family it was fixing. Third: each default is pinned by its own clause ("cap on the result, default 100", "cap on entity expansions, default 10000", "default 1. 0 is roots-only"), and the conventions pointer by its section's sentence ("a set never validates, never selects and never touches a store") rather than the phrase the header also carries. Negative controls run per pin: deleting the limit line reddens with "the guide omits cap on the result, default 100"; replacing the pointer sentence reddens. Recorded honestly: my first control used a global substitution that rewrote the assertion alongside the guide, so it proved nothing — the valid control deletes a line."""
 
 [[finding.turn]]
 act = "raise"
@@ -70,6 +70,17 @@ act = "dispose"
 role = "responder"
 disposition = "fix-now"
 response = """Conceded on all three. Fixed in `d8a7cb4`: the defaults pin with their key word ("default 100", "default 10000"), the client-side pin names the paragraph's own nouns ("performs no propagation", "no prior-response input") instead of a bare "nine", and the conventions pointer is left as a presence assertion with the duplication ownership recorded separately. The wrap point the review made in its second line of attack turned out to matter immediately: my first strengthened pin failed because the phrase straddled a hard wrap, so every prose pin in the module now reads a whitespace-flattened view of the guide — a red means a missing claim, not a reflow."""
+
+[[finding.turn]]
+act = "contest"
+role = "raiser"
+note = 'Right twice over. "default 100" is a substring of "default 10000" and "default 1" of both, so deleting the limit or depth sentence left the pin green; and the conventions-pointer assertion is still satisfied by the header synopsis rather than the pointer sentence. The first strengthening was itself the vacuity it was fixing.'
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Contested twice, fixed on the third attempt in `91e15a8`. First answer: keyword presence. Second: "default 100"/"default 10000"/"default 1" — which the verifier showed are substrings of each other, so deleting the limit or depth sentence still left the pin green; my strengthening was itself an instance of the family it was fixing. Third: each default is pinned by its own clause ("cap on the result, default 100", "cap on entity expansions, default 10000", "default 1. 0 is roots-only"), and the conventions pointer by its section's sentence ("a set never validates, never selects and never touches a store") rather than the phrase the header also carries. Negative controls run per pin: deleting the limit line reddens with "the guide omits cap on the result, default 100"; replacing the pointer sentence reddens. Recorded honestly: my first control used a global substitution that rewrote the assertion alongside the guide, so it proved nothing — the valid control deletes a line."""
 
 [[finding]]
 id = "F-4"

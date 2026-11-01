@@ -101,7 +101,7 @@ response = """The contest was right and my previous answer was wrong. The rename
 
 [[finding]]
 id = "F-4"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The binary-driving test harness is now copied into a sixth file"
 detail = "`tests/predicates.rs:445-556` (`Scratch`, `Ran`, `run`, `smut`). `struct Scratch` appears in nine test files and the full harness set in five (`cli_contract.rs:20-125`, `compatibility.rs:31-130`, `predicates.rs:445-556`, `readme_example.rs`, `traversal.rs:180-282`); PHASE-03 added the sixth copy deliberately and recorded the decision in the C3 autonomy log. A change to the scratch-store protocol or to the one-compact-JSON-line contract must now be made in five places, and the copied `assert_one_json_line` is the shared definition of a machine-readable reply. Test-only, per-crate, and consistent with the repo's existing pattern — hence nit. Route: no edit now; consolidating to `tests/common/mod.rs` is a phase that already touches the affected files, and PHASE-07 owns the fence."
@@ -117,6 +117,11 @@ act = "dispose"
 role = "responder"
 disposition = "tolerated"
 response = "Tolerated, with the reason the reviewer itself supplied and one addition. PHASE-03 added the sixth copy deliberately and logged it; the repo has no `tests/common` by design and each suite is its own binary, so a shared module would be a new test-only crate surface. Consolidating would touch five files that no current phase owns, and PHASE-07 EX-5 proves its fence by diff over the files it names. The cost is real and named: `assert_one_json_line` is now defined in five places, so a change to the one-compact-JSON-line contract is a five-site edit. If it is ever consolidated, it is one commit at a phase that already touches all five."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified as a decision rather than a change: the sixth copy of the scratch-store harness is a recorded decision in the C3 autonomy log, consistent with the repo's per-file pattern (plan.md:154-158, no tests/common), and consolidation would touch five files no phase owns. The cost is named — assert_one_json_line is defined five times — so a future change to the machine-readable reply contract is a five-site edit. Accepted."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
