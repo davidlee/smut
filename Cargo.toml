@@ -2,6 +2,16 @@
 name = "smut"
 version = "0.1.0"
 edition = "2024"
+description = "A permissive notebook for an agent's mutable entity graph: declare linked JSON entities, read them back as JSON or Markdown."
+license = "GPL-3.0-only"
+repository = "https://github.com/davidlee/smut"
+homepage = "https://doctrinal.systems"
+readme = "README.md"
+keywords = ["json", "graph", "cli", "markdown", "notes"]
+categories = ["command-line-utilities", "database"]
+# Project governance, the implementation brief and the Nix devshell are not part
+# of the crate; the code, its tests, its documents and the README image are.
+exclude = [".doctrine/", ".pi/", "AGENTS.md", "smut-implementation-brief.org", "flake.nix", "flake.lock"]
 
 [lib]
 name = "smut"

@@ -40,6 +40,8 @@ cargo build --release
 ./target/release/smut --version   # smut 0.1.0
 ```
 
+Or install it from crates.io: `cargo install smut`.
+
 The binary is self-contained: `target/release/smut` is the whole program, and
 `smut learn` prints the embedded guide with nothing else installed.
 
@@ -173,3 +175,9 @@ Editing `.smut/` by hand is not supported.
 `smut learn` prints the embedded guide: the conventions, the response shapes, the
 workflows, and the rules in the order you hit them. It needs no store, and it is
 version-matched to the build that prints it.
+
+## License
+
+`smut` is free software under the GNU General Public License, version 3
+(GPL-3.0-only): you may redistribute it and/or modify it under those terms, and
+it comes with no warranty. See [LICENSE](LICENSE) for the full text.
