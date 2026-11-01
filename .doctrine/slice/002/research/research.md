@@ -182,14 +182,41 @@ rather than recommendations:
 
 - the provenance shape is a conditional `traversal` member (DEC-012), kept
   additive for 0.1 callers (DEC-019);
-- the conventions ship as two sets with fixed-id seeds, and the epistemic
-  schema waits on operator approval (DEC-017);
+- the conventions ship with fixed-id seeds (DEC-017);
 - the fixture is a normalised array plus provenance, gated by a privacy
   read-through before commit (DEC-018).
 
-Nothing in the pre-design evidence is retracted; the decisions are the answer
-the evidence asked for. The baseline is restamped after this update so planning
-starts from a current advisory.
+### Later revision (2026-11-01) — the conventions scope reduced
+
+Two changes landed after the decisions above, and this section records them
+rather than leaving the advisory describing a design that no longer exists:
+
+- **One set ships, not two** (DEC-017 narrowed; `IMP-004` created). The
+  `epistemic-records` set was removed from 0.2 because every open question about
+  it was a *content* decision for one domain, not mechanism: which statuses
+  exist, whether a citation needs an entity, whose a claim is. The draft, the
+  thread-3 evidence and those five questions are preserved on `IMP-004`, which
+  gets its own design conversation. The mechanism the research endorsed is
+  untouched — embedded prose, fixed-id versioned seed, `--format json`, pipe
+  through `declare`, never validated, never auto-selected — and adding a set
+  later is a file plus a match arm. The **operator schema-approval gate is gone
+  with the set**, so the conventions section now gets ordinary review rather
+  than approval; the epistemic question lives on `IMP-004`.
+- **What survives the deferral, and why it is not taxonomy.** The
+  retracted-versus-superseded distinction moved into the shipped set as
+  lifecycle advice, with the store's own `vocab` as the evidence — exactly the
+  drift finding 6 above named, kept because it is advice for any store rather
+  than a schema for one domain.
+- **Seed ownership, stated precisely.** The seed supplies `body`, so a
+  hand-amended body is replaced on re-install; the design now says so and points
+  at the mechanism's own report of it: `declare`'s reply carries the prior
+  entity under `previous` (absent under `--compact`), so a client can recover
+  what the overwrite took. Verified against `src/declare.rs` and `src/learn.rs`,
+  not assumed from prose.
+
+Nothing in the pre-design evidence is retracted, and the deferral removes
+content rather than evidence. The baseline is restamped after this update so
+planning starts from a current advisory.
 - The edge set was corrected during review to the induced subgraph of the
   **returned** entities (DEC-014 amended), derived after the limit. That applies
   the research finding — the renderer should project the envelope, not derive

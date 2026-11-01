@@ -1,0 +1,189 @@
+# Implementation plan for SL-002 — the authored, durable phase plan.
+#
+# This is the single source of each phase's objective, criteria, verification,
+# and links. Runtime status lives separately under .doctrine/state/ (phase
+# tracking) — never record progress here. Hand-edit freely: the tool reads this
+# file but does not rewrite it.
+schema  = "doctrine.plan.overview"
+version = 1
+slice   = "SL-002"
+
+# Canonical spec/requirement links — cite ids, never restate what they say. The
+# plan reader does not model these yet, so nothing downstream consumes them.
+[specs]
+primary       = []
+collaborators = []
+
+[requirements]
+targets      = []
+dependencies = []
+
+# Sequencing follows the scope's declared work order (finding-smut-19): the
+# walker first because it is the risk, then truncation, then the independent
+# predicate interpreter, then data, then the user-facing surfaces, then the
+# release gates. Each phase ends with a green tree; every traversal phase lands
+# with the envelope shape DEC-012 fixes, because accepting a traversal key
+# without emitting its provenance is a silent lie.
+
+[[phase]]
+id        = "PHASE-01"
+name      = "The walker, its labels and the provenance it carries"
+objective = "Make follow, backlinks and depth real: a breadth-first walk over full entities that consumes `entity::scan_refs`, and the conditional `traversal` member (depths, edges, frontier) that exists because the walk knew it. `budget` stays a refused future key until PHASE-02, so every phase ships a coherent request surface."
+entrance_criteria = [
+  { id = "EN-1", text = "The design is locked and `design.md` §4–§8 describe the walk this phase builds." },
+  { id = "EN-2", text = "The research baseline is current: `doctrine verify research-current --slice 2` reports current." },
+  { id = "EN-3", text = "0.1's suite is green on the entering tree, so any regression is attributable." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "`follow` and `backlinks` accept `\"*\"` or an array of top-level field names; `[\"*\"]` is refused naming the string form; a supplied `follow: []` is a traversal (member present) where an absent key is not (§5, §10.3)." },
+  { id = "EX-2", text = "`depth` is an unsigned integer, default 1; `depth: 0` is roots-only and valid; a negative or fractional depth refuses the whole request before any store access." },
+  { id = "EX-3", text = "The walk is breadth-first over full entities: each entity expands at most once, a self-reference is discovered once, cycles terminate, and the walk returns Walk with order, depths, frontier, dangling and exhausted (§4, §7.1)." },
+  { id = "EX-4", text = "For each expanded entity, outgoing is processed entirely before incoming; named traversal fields apply in query order (the scan's lexical order is grouped by the requested list, never trusted); incoming sources are visited in ID order (§7.1, §7.4 rules 1, 2, 5)." },
+  { id = "EX-5", text = "`traversal` appears exactly when `follow` or `backlinks` was supplied — including an empty array — carrying depths (returned id to minimum discovery depth, roots 0), edges and frontier (discovery order, not cut by the limit); it is absent for `get`, for `query {}` and for a query using only from/where/select/order/limit, so a non-traversing envelope keeps exactly 0.1's five keys (DEC-012, DEC-019)." },
+  { id = "EX-6", text = "`edges` is the induced subgraph of the returned entities, derived after `limit` from full entities: a returned node never expanded still contributes, an edge in a field the traversal did not name appears when both endpoints return, `select` hiding a reference field cannot erase connectivity, and dangling targets are not edges (DEC-014, §7.2, §8.2)." },
+  { id = "EX-7", text = "`dangling` carries the walk's requested-field triples of source, field and target, deduped, in encounter order, not cut to returned sources; a root present but failing `where` is not missing, and a supplied root absent from the store is (§7.2, §8.2, §10.3)." },
+  { id = "EX-8", text = "The walker consumes `entity::reference_id` and `entity::scan_refs`; no second interpretation of a reference exists in the new code (§10.1 invariant 1)." },
+  { id = "EX-9", text = "`Selection` grows an optional walk; `envelope` and the Markdown notice stay pure functions of it, `Selection.ids` remains the only order a renderer may walk, and `get` never traverses; `src/lib.rs` exports `walk`." },
+  { id = "EX-10", text = "The tree ends green: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` pass, with the 0.1 compatibility pin still green." },
+]
+verification = [
+  { id = "VT-1", expects = "walker unit tests cover both directions, label filtering, cycles, self-references, dedupe, discovery order, and the depth boundary as frontier rather than truncation", test_file = "src/walk.rs", keywords = ["pub fn walk", "pub struct Walk", "frontier", "dangling"], waived = false },
+  { id = "VT-2", expects = "determinism tests assert named-field query order against a lexical-order scan, wildcard lexical order, array order, outgoing before incoming, incoming source ID order, and an identical envelope from a rebuilt store with shuffled index entries and filenames", test_file = "tests/traversal.rs", keywords = ["follow", "backlinks", "depth", "shuffled"], waived = false },
+  { id = "VT-3", expects = "envelope tests assert the presence condition for `traversal` including `follow: []`, and that depths and frontier carry only returned-or-discovered ids per DEC-013", test_file = "tests/traversal.rs", keywords = ["traversal", "depths", "frontier"], waived = false },
+  { id = "VT-4", expects = "induced-edge tests assert an edge in an unrequested field, an edge between two returned nodes neither of which was expanded, and that a `select` hiding a reference field leaves edges intact", test_file = "tests/traversal.rs", keywords = ["induced", "select", "edge"], waived = false },
+  { id = "VT-5", expects = "grammar tests assert the wildcard accepted as a whole value, an array element `\"*\"` refused naming the string form, an unknown field name accepted, and bad depth types refused before store access", test_file = "tests/cli_contract.rs", keywords = ["follow", "backlinks", "depth"], waived = false },
+  { id = "VT-6", expects = "the 0.1 pin is asserted unchanged and an additivity pin sits beside a 0.2 traversal query", test_file = "tests/compatibility.rs", keywords = ["pinned", "traversal"], waived = false },
+  { id = "VA-1", expects = "no module other than `src/entity.rs` interprets a reference: grep for ad-hoc id probing in the new walker returns nothing, and expansion calls `scan_refs`" },
+]
+
+[[phase]]
+id        = "PHASE-02"
+name      = "Budget, truncation, the reason order and the notice"
+objective = "Let a caller bound the walk without being lied to about why it stopped: `budget` counts entity expansions, is checked before expanding, and sets `traversal_budget` only when a permitted expansion was declined (DEC-015). Retire FUTURE_KEYS entirely and disclose the diagnostics in the Markdown notice."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01's exits hold: traversal keys are accepted and the `traversal` member is emitted with its three views." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "`budget` is a positive unsigned integer, default 10000; 0, negative, fractional and out-of-range values refuse the whole request; without `follow` or `backlinks` it is accepted and inert (§5)." },
+  { id = "EX-2", text = "The budget counts entity expansions, not discoveries or edge visits, and the check precedes the expansion, so a walk that empties its queue with exactly `budget` expansions is complete (§7.3)." },
+  { id = "EX-3", text = "`traversal_budget` appears only when a node the depth bound would have allowed expanding was declined; reasons are unique and ordered `traversal_budget` then `result_limit` (§8.3, DEC-015)." },
+  { id = "EX-4", text = "A declined expansion puts that node and the rest of the queue into frontier in discovery order; `depth: 0` and a budget leaving only depth-boundary nodes are complete and set `truncated: false` (§7.3, §10.3)." },
+  { id = "EX-5", text = "`FUTURE_KEYS` no longer exists: a key 0.2 does not know is reported plainly, naming no release (§5)." },
+  { id = "EX-6", text = "The Markdown leading notice discloses `traversal_budget` and prints one line per dangling triple in the same safe-delimiter form as missing ids, so no stored body can absorb it; depths, edges and frontier are not printed (§8.3)." },
+  { id = "EX-7", text = "The tree ends green: fmt, clippy `-D warnings`, `cargo test`, compatibility pin." },
+]
+verification = [
+  { id = "VT-1", expects = "boundary tests: a budget exactly equal to the expandable set is complete, one fewer truncates, only depth-boundary nodes remaining is complete, and the frontier holds the declined node plus the drained queue", test_file = "tests/traversal.rs", keywords = ["budget", "traversal_budget", "frontier"], waived = false },
+  { id = "VT-2", expects = "reason-order and uniqueness tests place `traversal_budget` before `result_limit` when both occur", test_file = "tests/traversal.rs", keywords = ["truncation_reasons", "result_limit"], waived = false },
+  { id = "VT-3", expects = "`budget: 0`, negative, fractional and huge values are refused with exit 2 before store access, and an unknown key is refused by name", test_file = "tests/cli_contract.rs", keywords = ["budget", "unknown"], waived = false },
+  { id = "VT-4", expects = "the render test asserts the leading notice names `traversal_budget` and each dangling triple in a delimiter form a stored body cannot absorb", test_file = "tests/render.rs", keywords = ["dangling", "traversal_budget"], waived = false },
+  { id = "VA-1", expects = "`FUTURE_KEYS` is absent from `src/` and no refusal message names a future release" },
+]
+
+[[phase]]
+id        = "PHASE-03"
+name      = "Predicates over roots"
+objective = "Add the brief's closed predicate language as a pure interpreter over one entity's top-level fields, filtering roots only and before traversal (§6, DEC-016), with every refusal the grammar promises."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-02's exits hold: the walk and its truncation semantics are in place, so `where` can be positioned at roots without disturbing discovery." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "The five operators hold exactly as §6.3 states: `$eq` and `$ne` require presence; `$in` compares against the operand array's values; `$exists` decides presence and treats present null as present; `$contains` means substring for a string field and structural membership for an array field, and matches nothing else." },
+  { id = "EX-2", text = "Missing fields fail every operator except `$exists`; there is no coercion, regex, JSONPath, nested-field syntax or executable predicate (§6.3)." },
+  { id = "EX-3", text = "Disambiguation is exact: no dollar key means `$eq`; only dollar keys means an operator object with its operators ANDed; a mix is refused naming the field; a literal object carrying dollar keys is comparable only through explicit `$eq`; a field whose own name begins with a dollar sign is unaddressable (§6.2)." },
+  { id = "EX-4", text = "`$and`, `$or` and `$not` compose with their empty-array identities (true and false), an empty `where` is true, and an unknown dollar-prefixed operator is refused naming the key (§6.2)." },
+  { id = "EX-5", text = "`where` filters roots only and runs before traversal: a discovered entity that fails `where` is still returned, a supplied root that fails `where` is omitted and not missing, and `where` never sees a discovered entity (§7.1, §10.1 invariant 2)." },
+  { id = "EX-6", text = "Every malformed predicate rejects the whole request with exit 2 before the store is opened, locked or created (§5)." },
+  { id = "EX-7", text = "The tree ends green: fmt, clippy `-D warnings`, `cargo test`, compatibility pin; `src/lib.rs` exports `predicate`." },
+]
+verification = [
+  { id = "VT-1", expects = "predicate unit tests cover the AST, the parser's disambiguation cases and the five operators' hold conditions, including structural equality (object key order irrelevant, the integer 1 distinct from the float 1.0)", test_file = "src/predicate.rs", keywords = ["pub enum Predicate", "pub enum Condition"], waived = false },
+  { id = "VT-2", expects = "integration tests cover missing versus present-null for every operator, empty `$and` and `$or`, mixed-object refusal, the `$eq` escape for a literal object with dollar keys, `$in` operand type refusal and `$exists` operand type refusal", test_file = "tests/predicates.rs", keywords = ["$exists", "$contains", "$eq"], waived = false },
+  { id = "VT-3", expects = "roots-only tests assert that a discovered entity failing `where` is returned, a filtered root is neither returned nor missing, and filtering happens before traversal", test_file = "tests/predicates.rs", keywords = ["where", "missing"], waived = false },
+  { id = "VA-1", expects = "no predicate code path reaches storage or the clock: `src/predicate.rs` imports neither `crate::store` nor a filesystem module" },
+]
+
+[[phase]]
+id        = "PHASE-04"
+name      = "The acceptance fixture, and the privacy gate it must clear"
+objective = "Promote the first-use store to a committed, normalised entity array plus provenance (DEC-018), after the operator's read-through, so acceptance tests and the guide's example run against real data in a clean checkout."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-03's exits hold; the acceptance queries the fixture must answer (backlinks on `part-of` at depth 2, then `where`) are executable against any store." },
+  { id = "EN-2", text = "The operator's privacy read-through is arranged; the phase cannot close without its recorded outcome." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "`tests/fixtures/interview/entities.json` is one normalised array of the first-use store's entities, declared into a scratch store by the tests; nothing in the suite reads `interview.local` and no `.smut` internals are committed (DEC-018)." },
+  { id = "EX-2", text = "A provenance note beside the array records the source snapshot, what the read-through removed or resolved, and who resolved it — the design does not assume what that read finds (§11)." },
+  { id = "EX-3", text = "`tests/fixture.rs` asserts the properties the acceptance cases need: a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place, a settled finding, a mutually-referencing cluster, and no retracted record claimed." },
+  { id = "EX-4", text = "The committed array's counts are recorded in this phase's runtime sheet and its provenance note, not taken from §2, so the sheet and the data agree." },
+  { id = "EX-5", text = "The tree ends green: fmt, clippy `-D warnings`, `cargo test` with the fixture suite included." },
+]
+verification = [
+  { id = "VT-1", expects = "the fixture suite declares the committed array into a scratch store, asserts the properties of EX-3, and answers the two-call acceptance query (open questions under session) by id", test_file = "tests/fixture.rs", keywords = ["entities.json", "part-of", "backlinks"], waived = false },
+  { id = "VH-1", expects = "the operator's privacy verdict is recorded before the fixture commit: anything private removed, or the fixture not committed (DEC-018)" },
+  { id = "VA-1", expects = "`git status` shows no `.smut` internals added, and the provenance note names the read-through's outcome" },
+]
+
+[[phase]]
+id        = "PHASE-05"
+name      = "The conventions command"
+objective = "Ship `smut conventions` as printed advice with a pipeable seed: one set, no store, no validation, no heuristic selection, and a fixed-id versioned declaration whose supplied fields a re-install replaces (DEC-017)."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-04's exits hold, and the CLI routing and the `learn` text-command precedent are in place to follow." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "`smut conventions` with no argument lists exactly one set, one line each; a named set prints as prose; an unknown name exits 2 naming the sets; `--format json` with no name exits 2 because a listing is not a declaration (§9.1)." },
+  { id = "EX-2", text = "`--format json` emits one entity with the fixed id `conventions-hygiene`, type convention, the release version, title and body built from the same embedded prose, so no second copy can drift (§9.3)." },
+  { id = "EX-3", text = "The seed round-trips through `declare` as an upsert: re-install replaces every field the seed supplies — body included — keeps a field the user added, and the reply's `previous` carries the replaced body for the updated entry, `--compact` omitting it (§9.3, §13.1)." },
+  { id = "EX-4", text = "The command opens no store, takes no lock, never validates, never re-installs and never selects a set heuristically; it is pure text like `learn` (§9.1, §10.1 invariant 9)." },
+  { id = "EX-5", text = "The shipped set is the eight hygiene items of §9.2 — including rule 7's retracted-versus-superseded distinction with `vocab` as the evidence — and the printed prose states that the seeded body is advice a re-install replaces." },
+  { id = "EX-6", text = "The tree ends green: fmt, clippy `-D warnings`, `cargo test`, compatibility pin; `src/lib.rs` exports `conventions`." },
+]
+verification = [
+  { id = "VT-1", expects = "conventions tests cover listing, prose, unknown name, the json round-trip through `declare`, the fixed id and version, and that no store is created or read", test_file = "tests/conventions.rs", keywords = ["conventions", "conventions-hygiene", "format"], waived = false },
+  { id = "VT-2", expects = "the re-install test asserts a user-added field survives while an amended seeded body is replaced, and that the reply's `previous` carries the replaced body, absent under `--compact`", test_file = "tests/conventions.rs", keywords = ["previous", "body"], waived = false },
+  { id = "VA-1", expects = "`src/conventions.rs` opens no snapshot and takes no lock; grep shows no store or lock usage on the command path" },
+]
+
+[[phase]]
+id        = "PHASE-06"
+name      = "The guide: the idioms, and the example the tests run"
+objective = "Make `learn` the normative home of the 0.2 surface and the two-call composition with its completeness guard (DEC-016), with direction stated and the shipped example being the one `tests/fixture.rs` executes."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-05's exits hold and the fixture from PHASE-04 is committed, so the guide's example can be asserted rather than described." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "`learn` teaches the 0.2 keys with defaults and the roots-only rule, the predicate summary including missing versus null, traversal labels as top-level fields in both directions, depth and budget, the `traversal` provenance member and the truncation reasons, and one pointer line to `smut conventions` (§9.4)." },
+  { id = "EX-2", text = "The recipe is normative with its direction: containment is child to container, so which questions hang off this session is backlinks on `part-of` at depth 2, and the guide says why the follow variant answers a different question (§9.4, DEC-016)." },
+  { id = "EX-3", text = "The completeness guard is stated as part of the recipe: the first response's truncation reasons are read before its ids are fed back, because the second call cannot see what the first dropped (§9.4, DEC-016)." },
+  { id = "EX-4", text = "0.1's notice that where and traversal arrive in 0.2 is gone, and the guide states what `budget` does not bound: the per-hop whole-store scan for backlinks (§8.3, §12)." },
+  { id = "EX-5", text = "The guide's example is the example the fixture test runs, so a hand-written example cannot drift from the store's direction (§13.1 Guide row)." },
+  { id = "EX-6", text = "The tree ends green: fmt, clippy `-D warnings`, `cargo test`, compatibility pin." },
+]
+verification = [
+  { id = "VT-1", expects = "guide unit tests assert the 0.2 keys, defaults, the roots-only rule, the predicate summary's missing-versus-null line, both traversal directions, the traversal member, the conventions pointer, and the absence of the 0.1 release notice", test_file = "src/learn.rs", keywords = ["backlinks", "part-of", "traversal"], waived = false },
+  { id = "VT-2", expects = "the fixture test executes the shipped example: backlinks on `part-of` at depth 2 from session reaches the eight open questions, the follow variant reaches none, and the guard inspects both reasons before extracting ids", test_file = "tests/fixture.rs", keywords = ["backlinks", "follow", "part-of"], waived = false },
+  { id = "VA-1", expects = "the guide names no behaviour the code does not have: every key, member and reason it mentions exists in `src/spec.rs` or `src/select.rs`" },
+]
+
+[[phase]]
+id        = "PHASE-07"
+name      = "README, the gates and the closure sweep"
+objective = "Finish the release surface and prove it: README carries the 0.2 examples and the honest limits, every acceptance scenario of §13.3 runs, all gates pass, and the slice is reconciled against its own selectors."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-06's exits hold: behaviour and its sentences are both in place, so the README describes what exists." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "README replaces the 0.1/0.2 boundary example with the brief's query example through Markdown (traverse, filter, render, delete a reference, see it dangling), keeps Mermaid named as 1.0, and documents conventions, backlink cost and provenance (§14.1)." },
+  { id = "EX-2", text = "All six acceptance scenarios of §13.3 pass, including the depth-1 wildcard walk, the budget-of-one two-root case, the conventions round-trip with the deferred name refused by name, and the over-cap composition where a naive helper and the guarded conclusion must differ." },
+  { id = "EX-3", text = "`cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` and `cargo test --features fault-injection` pass, with the gate asserting the injected suites executed a non-zero number of tests." },
+  { id = "EX-4", text = "`doctrine slice conformance` is run and every non-conformant selector cell is explained in the phase sheet, not silently accepted (§13.2, scope closure item 6)." },
+  { id = "EX-5", text = "`Cargo.toml` and `Cargo.lock` carry 0.2.0 with no dependency change; `docs/store-format.md`, `justfile` and `flake.nix` are unchanged because neither the on-disk format nor the build changed." },
+  { id = "EX-6", text = "The tree ends green and the slice is ready for audit: no phase sheet left in progress, and no criterion satisfied only by prose." },
+]
+verification = [
+  { id = "VT-1", expects = "the six acceptance scenarios are executable tests, each producing the state it names rather than a polite approximation (an empty follow with an induced edge between roots, depth 0, an empty budget-ending queue, the over-cap composition)", test_file = "tests/fixture.rs", keywords = ["composition", "result_limit", "truncated"], waived = false },
+  { id = "VT-2", expects = "README's query example is the one the suite runs, and the Mermaid step is still named as 1.0", test_file = "README.md", keywords = ["traversal", "conventions", "1.0"], waived = false },
+  { id = "VA-1", expects = "the fault-injection run reports a non-zero executed test count for the injected suites, so the gate is not vacuous" },
+  { id = "VA-2", expects = "`doctrine slice conformance` output is recorded in the phase sheet with each non-conformant cell's explanation" },
+]
