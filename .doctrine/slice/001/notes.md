@@ -596,6 +596,13 @@ One heavy phase per charter, pairs only for the two pure cores:
   scenario's "the fixture is unrecovered" assertion rests on the current
   behaviour and would invert if `/audit` rules that `load()` must refuse ·
   deferred to `/audit`
+- PHASE-08 · one file beyond the plan's three — `tests/readme_example.rs` — added
+  to keep EX-4 true after the phase: it reads the README's single `console`
+  block out of `README.md`, runs each command in a scratch store, and compares
+  JSON as parsed values (never bytes, since the entity-root ordering inside
+  `objects` is open for `/audit`), `render` as exact text, and a `smut: ` line as
+  exit-non-zero plus that stderr · the charter invited the file and asked for
+  this line; it is the only `.doctrine` write this worker made · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
