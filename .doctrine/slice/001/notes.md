@@ -542,6 +542,15 @@ One heavy phase per charter, pairs only for the two pure cores:
   `Store::in_directory(..)` sits in the `Invocation::Request` arm; `Learn`, `Help`
   and `Version` are `Invocation` variants, so no store is constructible on their
   path · decided
+- seat · envelope key ordering for entity roots inside `objects` is left for
+  `/audit` rather than ruled here · DEC-007 says "entity serialisation at the
+  final boundary through one shared Entity wrapper; id-first root", while the
+  envelope path emits projected `Value`s lexically: entity *files* are id-first
+  (`id, body, kind, title`) but `query`/`get` objects are not
+  (`{"body":"First.","id":"smut"}`). The brief's response examples put `id`
+  first, the design's mechanism clause says one shared wrapper — but reading
+  either way changes a documented output byte, which is a conformance question
+  for a review, not a seat improvisation. Evidence below · deferred
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
@@ -710,3 +719,16 @@ outstanding on a human) · `585096d`
 - QUE (unminted): §4.3 names neither the post-apply nor the post-done `.smut`
   fsync, so both borrow a neighbour's boundary name. A design touch should name
   them; the implementation records the borrowing rather than inventing names.
+- For `/audit`: **is an envelope's entity root id-first under DEC-007?** Measured
+  on the built binary at PHASE-07 close, in a scratch store with
+  `declare {"declarations":[{"id":"smut","body":"First.","kind":"note","title":"Alpha"}]}`:
+  the entity *file* is `id, body, kind, title` (id-first), while
+  `query {"from":["smut"],"select":["body"]}` emits
+  `{"dangling":[],"missing":[],"objects":[{"body":"First.","id":"smut"}],…}` —
+  lexical inside `objects`, so the "one shared Entity wrapper" is applied to
+  files only, not to the stdout envelope. Top-level response keys are lexical
+  too, which is a separate, already-logged decision. If the review finds the
+  wrapper must be shared, the fix is local (`select`'s envelope path through
+  `entity`'s stdout form) but it changes documented output bytes, so it must be
+  ordered before PHASE-08's README examples are finalised or those examples
+  regenerate by being re-run.
