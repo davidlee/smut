@@ -280,6 +280,27 @@ One heavy phase per charter, pairs only for the two pure cores:
 
 - run · seat is pi, tiers are pi subagents, agent defs outside the repo · the
   human asked for this path rather than `/dispatch` · decided
+- PHASE-01 · boundary registry given its home as an ungated inline `pub mod
+  boundary` in `src/store/mod.rs` rather than a new `src/store/boundary.rs` ·
+  keeps the charter's path list exact ("nothing else in src/ yet") while giving
+  the registry one home that `journal.rs` consumes in PHASE-05 · decided
+- PHASE-01 · rustfmt's default 4-space *source* indent accepted, no
+  `rustfmt.toml` added · §4.2's 2-space rule is about the JSON bytes (held:
+  `serde_json::to_string_pretty` with the 2-space default), and repo-wide
+  formatting style is not this phase's call · decided
+- PHASE-01 · `serde` declared without the `derive` feature; `entity.rs`
+  implements `Serialize` by hand over `Value` · DEC-007 arranges keys at the
+  final serialisation boundary, so derive was not needed; adding the flag later
+  is a feature on a declared crate, not a new dependency · deferred to PHASE-02
+- PHASE-01 · `Cargo.lock` is modified by the Cargo.toml change but §12's
+  design-target selectors (`src/**`, `tests/**`, `docs/**`, `README.md`,
+  `Cargo.toml`, `justfile`) omit it, so `slice conformance` reports it
+  undeclared · a §12 errata of the same kind as the README and lib-target ones
+  already recorded in `plan.md`, not a phase defect · deferred to `/audit` →
+  `/reconcile`
+- PHASE-01 · `--help` advertises only `--help`/`--version` · the 0.1 grammar
+  lands with `src/cli.rs` in PHASE-07 (EX-7 says that phase completes the
+  grammar), and help text listing unwired commands would lie · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
