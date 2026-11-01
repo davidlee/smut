@@ -7,12 +7,18 @@
 
 use serde::Serialize;
 use serde::ser::{SerializeMap, SerializeSeq, Serializer};
-use serde_json::Value;
+use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 
 use crate::error::Reject;
+use crate::id::Id;
 
 /// The entity's public key. The entity root carries it first.
 pub const ENTITY_ID: &str = "id";
+
+/// The literal string that removes a top-level entity field, and only that: below
+/// the top level it is ordinary data (DEC-002).
+const DROP: &str = "DROP";
 
 /// The single definition of an entity node (DEC-005): an object with a member
 /// `id` whose value is a nonempty string. Presence is the whole test; field count
@@ -94,6 +100,132 @@ fn collect_refs<'a>(label: &'a str, value: &'a Value, found: &mut Vec<(&'a str, 
         }
         _ => {}
     }
+}
+
+/// One top-level field operation of a declared entity (DEC-002).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Op {
+    /// The field takes this normalised value.
+    Set(Value),
+    /// The field is removed; dropping an absent field is a no-op.
+    Drop,
+}
+
+/// A declaration found by [`extract`]: an entity id and its normalised top-level
+/// field operations.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Decl {
+    /// The declared entity's public id.
+    pub id: Id,
+    /// One operation per top-level field, in the canonical (lexical) order.
+    pub ops: BTreeMap<String, Op>,
+}
+
+impl Decl {
+    /// The declared entity as a value, with `id` in place and dropped fields
+    /// absent, so the shared reference scan can read it.
+    pub fn entity(&self) -> Value {
+        let mut fields = Map::new();
+        fields.insert(
+            ENTITY_ID.to_owned(),
+            Value::String(self.id.as_str().to_owned()),
+        );
+
+        for (name, op) in &self.ops {
+            if let Op::Set(value) = op {
+                fields.insert(name.clone(), value.clone());
+            }
+        }
+
+        Value::Object(fields)
+    }
+}
+
+/// Normalises one value: hoists every declaration it contains, replaces each
+/// hoisted occurrence with an id-only reference, and converts a top-level field's
+/// `"DROP"` into [`Op::Drop`].
+///
+/// One recursive pass over finite JSON, each occurrence visited once. The returned
+/// declarations are in **preorder**: a parent precedes the declarations it
+/// contains, so the promised first-encounter order cannot come from how recursion
+/// happens to finish (DEC-005).
+pub fn extract(value: &Value) -> Result<(Value, Vec<Decl>), Reject> {
+    match value {
+        Value::Object(fields) => match reference_id(value)? {
+            Some(id) => hoist(id, fields),
+            None => {
+                let mut replacement = Map::new();
+                let mut declarations = Vec::new();
+
+                for (key, child) in fields {
+                    let (normalised, nested) = extract(child)?;
+                    replacement.insert(key.clone(), normalised);
+                    declarations.extend(nested);
+                }
+
+                Ok((Value::Object(replacement), declarations))
+            }
+        },
+        Value::Array(items) => {
+            let mut replacement = Vec::with_capacity(items.len());
+            let mut declarations = Vec::new();
+
+            for item in items {
+                let (normalised, nested) = extract(item)?;
+                replacement.push(normalised);
+                declarations.extend(nested);
+            }
+
+            Ok((Value::Array(replacement), declarations))
+        }
+        scalar => Ok((scalar.clone(), Vec::new())),
+    }
+}
+
+/// Hoists the entity node `fields` names as `id`: its non-`id` members become one
+/// operation each, and the value that stands in its place is the id-only
+/// reference.
+fn hoist(id: &str, fields: &Map<String, Value>) -> Result<(Value, Vec<Decl>), Reject> {
+    let mut ops = BTreeMap::new();
+    let mut nested = Vec::new();
+
+    for (key, child) in fields {
+        if key == ENTITY_ID {
+            continue;
+        }
+
+        let (normalised, declarations) = extract(child)?;
+        let op = if is_drop_sentinel(&normalised) {
+            Op::Drop
+        } else {
+            Op::Set(normalised)
+        };
+
+        ops.insert(key.clone(), op);
+        nested.extend(declarations);
+    }
+
+    let reference = Value::Object(Map::from_iter([(
+        ENTITY_ID.to_owned(),
+        Value::String(id.to_owned()),
+    )]));
+
+    if ops.is_empty() {
+        return Ok((reference, Vec::new()));
+    }
+
+    let mut declarations = Vec::with_capacity(nested.len() + 1);
+    declarations.push(Decl {
+        id: Id::new(id),
+        ops,
+    });
+    declarations.extend(nested);
+
+    Ok((reference, declarations))
+}
+
+fn is_drop_sentinel(value: &Value) -> bool {
+    matches!(value, Value::String(text) if text == DROP)
 }
 
 fn describe_id(value: &Value) -> String {
@@ -415,5 +547,163 @@ mod reference_tests {
 
         assert_eq!(scan_refs(&entity).count(), 0);
         assert_eq!(scan_refs(&json!({"id": "a"})).count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod extract_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn ids(declarations: &[Decl]) -> Vec<String> {
+        declarations
+            .iter()
+            .map(|declaration| declaration.id.to_string())
+            .collect()
+    }
+
+    fn ops(declaration: &Decl) -> Vec<(String, Op)> {
+        declaration
+            .ops
+            .iter()
+            .map(|(field, op)| (field.clone(), op.clone()))
+            .collect()
+    }
+
+    #[test]
+    fn an_id_only_object_extracts_to_a_pure_reference() {
+        let (replacement, declarations) = extract(&json!({"id": "a"})).expect("id-only is valid");
+
+        assert_eq!(replacement, json!({"id": "a"}));
+        assert!(declarations.is_empty());
+    }
+
+    #[test]
+    fn a_declaration_hoists_and_its_occurrence_becomes_a_reference() {
+        let (replacement, declarations) =
+            extract(&json!({"id": "a", "refs": [{"id": "b", "note": {"id": "c", "body": "x"}}]}))
+                .expect("a nested declaration chain is valid");
+
+        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(ids(&declarations), vec!["a", "b", "c"]);
+        assert_eq!(
+            ops(&declarations[0]),
+            vec![("refs".to_owned(), Op::Set(json!([{"id": "b"}])))]
+        );
+        assert_eq!(
+            ops(&declarations[1]),
+            vec![("note".to_owned(), Op::Set(json!({"id": "c"})))]
+        );
+        assert_eq!(
+            ops(&declarations[2]),
+            vec![("body".to_owned(), Op::Set(json!("x")))]
+        );
+    }
+
+    #[test]
+    fn a_parent_is_recorded_before_the_declarations_it_contains() {
+        let (_, declarations) = extract(
+            &json!({"id": "a", "zeta": {"id": "c", "body": 3}, "alpha": {"id": "b", "body": 2}}),
+        )
+        .expect("siblings are valid");
+
+        assert_eq!(ids(&declarations), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn an_embedded_object_without_an_id_stays_embedded() {
+        let (replacement, declarations) = extract(&json!({
+            "id": "a",
+            "meta": {"status": "x", "list": [1, {"id": "b", "body": "y"}]},
+        }))
+        .expect("an embedded value is valid");
+
+        assert_eq!(
+            replacement,
+            json!({"id": "a"}),
+            "the hoisted occurrence stands in as an id-only reference"
+        );
+        assert_eq!(ids(&declarations), vec!["a", "b"]);
+        assert_eq!(
+            ops(&declarations[0]),
+            vec![(
+                "meta".to_owned(),
+                Op::Set(json!({"status": "x", "list": [1, {"id": "b"}]}))
+            )]
+        );
+    }
+
+    #[test]
+    fn arrays_are_replaced_wholesale_including_inside_arrays() {
+        let (replacement, declarations) =
+            extract(&json!({"id": "a", "x": [[{"id": "b", "body": 1}], "plain"]}))
+                .expect("an array of arrays is valid");
+
+        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(ids(&declarations), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn the_drop_sentinel_holds_only_as_a_top_level_field_value() {
+        let (replacement, declarations) = extract(&json!({
+            "id": "a",
+            "status": "DROP",
+            "meta": {"status": "DROP", "list": ["DROP"]},
+        }))
+        .expect("the sentinel is ordinary data below the top level");
+
+        assert_eq!(
+            replacement,
+            json!({"id": "a"}),
+            "a declaration's occurrence is always the id-only reference"
+        );
+        assert_eq!(
+            ops(&declarations[0]),
+            vec![
+                (
+                    "meta".to_owned(),
+                    Op::Set(json!({"status": "DROP", "list": ["DROP"]}))
+                ),
+                ("status".to_owned(), Op::Drop),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_declaration_whose_only_field_is_a_drop_is_still_a_declaration() {
+        let (replacement, declarations) = extract(&json!({"id": "a", "status": "DROP"}))
+            .expect("a drop-only declaration is valid");
+
+        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(ids(&declarations), vec!["a"]);
+        assert_eq!(ops(&declarations[0]), vec![("status".to_owned(), Op::Drop)]);
+    }
+
+    #[test]
+    fn an_embedded_value_without_any_id_reports_no_declarations() {
+        let value = json!({"body": "x", "meta": {"k": [1, 2]}});
+        let (replacement, declarations) = extract(&value).expect("plain data is valid");
+
+        assert_eq!(replacement, value);
+        assert!(declarations.is_empty());
+    }
+
+    #[test]
+    fn an_invalid_id_is_rejected_wherever_it_appears() {
+        for (value, found) in [
+            (json!({"id": null}), "null"),
+            (json!({"id": 5}), "a number"),
+            (json!({"id": ""}), "an empty string"),
+            (json!({"id": "a", "meta": {"id": false}}), "a boolean"),
+            (json!({"id": "a", "list": [{"id": ["x"]}]}), "an array"),
+        ] {
+            assert_eq!(
+                extract(&value),
+                Err(Reject::InvalidId {
+                    found: found.to_owned()
+                }),
+                "{value}"
+            );
+        }
     }
 }
