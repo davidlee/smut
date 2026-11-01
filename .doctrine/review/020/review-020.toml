@@ -1,0 +1,95 @@
+id    = 20
+slug  = "code-review-of-sl-002-phase-06-the-guide-the-example-the-tests-run-and-the-seats-repair-batch"
+title = "code review of SL-002 PHASE-06 — the guide, the example the tests run, and the seat's repair batch"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "reviewer"
+responder = "implementer"
+rounds_base = 0
+contests_base = 0
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "open"
+severity = "minor"
+title = "The label-vocabulary pin cannot fail on the deletion it names"
+detail = """`src/learn.rs:407-413`, against `:148` and `:215`. Deleting the "Labels and rendering" section leaves the test green: `"bounded"` also occurs in the budget paragraph ("no number in this specification makes them bounded") and `"handful"` in the Conventions paragraph ("a handful of labels"). PHASE-06 EX-1/VT-1 names that test as the proof of the vocabulary and bounded-render advice, so a pin that survives deleting its own subject certifies nothing — the exact DEF-3 class the slice notes record, now its fourth instance. Route: pin the section's own unique phrases ("Render in bounded chunks", "Keep the label vocabulary to a handful")."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-2"
+status = "open"
+severity = "minor"
+title = "Two rules are written twice across two shipped surfaces, and the guide both asserts and defers them"
+detail = """`src/learn.rs:207-212` with `:215-217`, against `src/conventions/hygiene.md:15-16` and `:25`. Near-verbatim duplication of "keep the label vocabulary to a handful", "define each in one line", "normalise", "render in bounded chunks", "a human channel" — and `learn` hands the same advice to the conventions sets two paragraphs after stating it. Design §9.2 items 5/8 and §9.4 both mandate the material, so this is design-sanctioned overlap rather than a criterion breach: it is drift exposure. Nothing can see the two surfaces disagree — the guide's pins are keyword checks and the set's pin is byte-for-byte against its own embedded file. Route: record the ownership decision rather than rewrite; narrowing the guide to the *why* would re-read EX-1, which is a criterion question, not a repair."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-3"
+status = "open"
+severity = "nit"
+title = "Three further pins are satisfiable by a sentence other than the one they are named for"
+detail = """`src/learn.rs:344`, `:418`, `:450`. `"100"` is satisfied by the preamble at `:97`, so the `limit` default is unpinned; `the_guide_points_at_smut_conventions_once` asserts presence while `"smut conventions"` occurs three times; `"nine"` is satisfied by `:96`/`:203` rather than the client-side paragraph the test is about. Same failure mode as F-1 at lower stakes: the assertion passes for a reason the test name disclaims, so an editor can weaken the guide's real claim with the suite green. Route: assert `"default 100"`/`"default 10000"`, count the pointer inside the Conventions section, and name the client-side paragraph's own sentence."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-4"
+status = "open"
+severity = "nit"
+title = 'The module doc calls the guide "version-free" while the guide names 0.2'
+detail = """`src/learn.rs:3`, `:12-14` against `:129`. "Descriptive and version-free" / "A version-free banner is the honest one" versus the guide's own "cannot be filtered at all in 0.2"; design §9.4 says `learn` "remains descriptive and version-bound", and the banner's version figure was dropped with no criterion (a recorded decision in the C5 rows). Comments are this repo's audit trail, and §9.4's "version-bound" now has no referent anywhere in the guide. Route: one word in the module doc, and leave the locked design's phrasing to the audit rather than rewriting it mid-slice."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-5"
+status = "open"
+severity = "nit"
+title = "The clusters-drift deferral is recorded only in the note that says it is on a list"
+detail = """`tests/fixtures/interview/PROVENANCE.md:120-126`. The operator's ruled deferral covers the design's *line numbers*; `notes.md` `### Open` records DEF-1/2/3 but not "mutually-referencing clusters", so "is on the deferred-drift list for reconcile" is self-referential — it reads as tracked while nothing tracks it. Route: one bullet under `notes.md` `### Open` naming design §2's sentence and EX-3's "cluster" noun."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-6"
+status = "open"
+severity = "nit"
+title = "The fixture-to-`scan_refs` agreement is a regression guard, not evidence about this data"
+detail = '`tests/fixture.rs:303-322`. Both walks encode the same rule (an object with a string `id` is a leaf, arrays positional) and both collapse to a `BTreeSet` of targets, so labels are never compared — and every reference in `entities.json` is a flat `[{"id": ...}]` list, a shape on which the two definitions cannot differ. It is NOT vacuous (a change to either algorithm reddens it), but it proves the definitions have not diverged yet rather than that either is right over this data; the discriminating embedded case already lives at `src/walk.rs:590`. Route: keep the assertion, soften the comment from evidence to regression guard. This is a fair correction to my own RV-019 F-2 disposition, which claimed more for it than it does.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-7"
+status = "open"
+severity = "nit"
+title = "A compatibility test cites a PHASE-08 that does not exist"
+detail = """`tests/compatibility.rs:498` says "the guide's content is PHASE-08's to write". SL-002 has seven phases and PHASE-06 wrote the guide. Outside this diff but on the same path, and it is the kind of stale forward reference that sends a later reader looking for a phase that was never planned. Route: name PHASE-06. Reviewed here because it is the guide's own claim about who owns it."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
