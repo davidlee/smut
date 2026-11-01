@@ -1,0 +1,100 @@
+id = 2
+slug = "smut-0-2-graph-release"
+title = "smut 0.2 — graph release: predicates and traversal"
+status = "design"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[relationships]
+needs = []                      # slice→work hard prerequisite
+after = []                      # slice→work soft sequence: { to, rank }
+
+[[selector]]
+selector = "src/**"
+intent = "scope-relevant"
+
+[[selector]]
+selector = "tests/**"
+intent = "design-target"
+
+[[selector]]
+selector = "README.md"
+intent = "design-target"
+
+[[selector]]
+selector = "docs/**"
+intent = "scope-relevant"
+
+[[selector]]
+selector = "justfile"
+intent = "scope-relevant"
+
+[[selector]]
+selector = "src/spec.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/predicate.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/walk.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/select.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/error.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/conventions.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/conventions/**"
+intent = "design-target"
+
+[[selector]]
+selector = "src/learn.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/render_markdown.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/cli.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/main.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "src/lib.rs"
+intent = "design-target"
+
+[[selector]]
+selector = "Cargo.toml"
+intent = "design-target"
+
+[[selector]]
+selector = "Cargo.lock"
+intent = "design-target"
+
+[[relation]]
+label = "fulfils"
+target = "IMP-001"
+
+# STRUCTURAL relations are uniform `[[relation]]` rows, never a typed
+# `[relationships]` axis. Slices carry no typed STRUCTURAL
+# relation axes — the `[relationships]` table above holds only the dep/seq payload
+# (`needs`/`after`). Author a structural edge with the `doctrine link` verb
+# — it validates the (source, label) pair and resolves the target:
+#   doctrine link SL-NNN specs SPEC-NNN
+#   doctrine link SL-NNN governed_by ADR-NNN
+# `doctrine inspect SL-NNN` renders the inbound + outbound edges.

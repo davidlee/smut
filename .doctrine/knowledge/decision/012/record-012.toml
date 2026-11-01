@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 12
+slug = "traversal-provenance-conditional-envelope-member"
+title = "Traversal provenance: one conditional `traversal` envelope member"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "IMP-001's only new design question: what a traversal result carries beyond objects. prop-result-provenance recommended nodes, induced edges, unexpanded frontier and minimum depth."
+choice = "One conditional top-level `traversal` member holding `depths` (returned id -> minimum discovery depth), `edges` (induced, both endpoints returned, deduped, discovery order) and `frontier` (discovered but unexpanded, not cut by the limit). The member is absent when no traversal is requested."
+alternatives = ["A per-object `depth` member inside `objects` — collides with user fields and breaks the flat-entity rule", "One `result` object duplicating nodes and edges — two accounts of one fact", "An always-present `traversal` member — breaks the pinned 0.1 envelope"]
+rationale = "The frontier is the only information that exists nowhere else after the process exits; edges are the single derivation the 1.0 renderer and clients share; a conditional member leaves every 0.1 response identical."
+consequences = ["`traversal` appears iff follow or backlinks is supplied", "`depths` and `edges` are cut to returned ids; `frontier` is not", "Returning the edge set is a 0.2 deliverable of 1.0's Mermaid renderer, which is still built in IMP-002"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

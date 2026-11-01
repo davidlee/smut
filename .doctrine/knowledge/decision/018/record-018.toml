@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 18
+slug = "first-use-store-normalised-fixture"
+title = "The first-use store ships as a normalised JSON fixture with provenance, not `.smut` internals"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "IMP-001: the store is a better acceptance fixture than anything synthetic, 66 entities with a backlinks hit and miss; it is untracked, so promotion was this item's decision."
+choice = "Commit tests/fixtures/interview/entities.json (66 entities as one array) plus PROVENANCE.md. Tests declare it into a scratch store. Do not commit UIDs, index, lock or journal files."
+alternatives = ["Commit a copy of .smut internals", "Keep the fixture untracked and depend on interview.local", "Synthesise a graph instead"]
+rationale = "A normalised array is reviewable, has no private format, and exercises the declare path; provenance makes the origin and the vocab staleness explicit."
+consequences = ["The fixture is acceptance evidence", " not product data", " Tests build a scratch store rather than reading the working tree", " A fresh agent reads the fixture for private content and the operator resolves anything found before the commit", " The ephemeral .smut internals are never committed"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

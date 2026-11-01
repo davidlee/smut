@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 17
+slug = "conventions-two-sets-fixed-id-seeds"
+title = "Conventions: two sets, fixed-id seeds the store owns"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "prop-conventions-library: shape endorsed (separate command, print never write, never checkable, no auto-selection); contents and domain list were drafts, with evidence only for epistemic records."
+choice = "Ship `hygiene` and `epistemic-records` only. Each set is embedded prose, printed; `--format json` emits one entity with a fixed id and version so re-install upserts; the store owns it after installation; never validated or auto-selected."
+alternatives = ["Ship six domain sets now", "Generate a fresh id per install", "Ship a checkable convention format"]
+rationale = "Only epistemic records has evidence; fixed ids make re-install an update rather than a duplicate; the pipe is the whole mechanism, preserving the tool's permissiveness."
+consequences = ["No social-graph or dependency set in 0.2", " The store may amend its installed copy; the binary never reads it back", " A set is added later as a file plus a match arm", " The epistemic-records schema is drafted in the design and the operator approves it before the set ships"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

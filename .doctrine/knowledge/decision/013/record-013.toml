@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 13
+slug = "frontier-discovered-but-never-expanded"
+title = "Frontier: discovered but never expanded, and independent of the result limit"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "prop-result-provenance: the frontier is the part that exists nowhere else once the process exits; depth and budget both cut the walk and truncated:true does not say where."
+choice = "Frontier = every discovered-but-unexpanded entity, in discovery order, deduped. Unexpanded by depth boundary or by budget exhaustion. Limit does not affect it; dangling targets never appear."
+alternatives = ["Frontier = only nodes cut by depth", "Frontier = only nodes cut by budget", "Frontier = all discovered nodes (including expanded ones)"]
+rationale = "One definition covers both cut causes without implying truncation; keeping it pre-limit preserves the residue even when the result cap omits rows."
+consequences = ["Depth-cut nodes are frontier without setting truncated", "Budget-cut nodes are frontier and set traversal_budget (DEC-015)", "The frontier may name ids absent from objects"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

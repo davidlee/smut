@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 16
+slug = "two-call-idiom-normative-in-learn"
+title = "The two-call idiom is normative in `learn`; conventions carry the principle, not a second recipe"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "finding-smut-18: `where` stays roots-only and the two calls compose; finding-smut-17: a fix without its sentence in the guide is not a fix."
+choice = "`learn` carries the recipe (traverse for ids with select:[id], then filter those ids as roots) plus the 0.2 surface. Conventions state the principle and point at learn; they do not repeat the recipe."
+alternatives = ["Put the recipe only in conventions", "Put the full recipe in both", "Add a richer query so one call suffices"]
+rationale = "One normative copy of a procedure avoids drift; learn is version-bound and guaranteed to match the release; conventions remain advisory."
+consequences = ["The 0.1 tests asserting 0.2 is unadvertised invert", "A label vocabulary and bounded-render advice enter the guide", "The guide stays one document"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

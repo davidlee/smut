@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 15
+slug = "budget-counts-expansions-traversal-budget-on-decline"
+title = "Budget counts entity expansions; traversal_budget only when expansion was declined"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "The brief says stop expansion at budget and that a depth boundary is not truncation; the unit and the reporting condition have to be explicit or the reason lies."
+choice = "Budget counts entity expansions (one scan per entity, both directions). Check before expanding; on exhaustion the rest of the queue is frontier. `traversal_budget` only when an expansion the depth bound allowed was actually declined."
+alternatives = ["Budget counts discovered entities", "Budget counts edge visits", "Hitting the budget exactly still truncates"]
+rationale = "Expansion is the expensive unit; reporting only a real omission mirrors result_limit and keeps a complete walk from claiming truncation."
+consequences = ["`depth: 0` is never budget truncation", "Both reasons can fire, budget then limit", "Budget bounds neither the root scan nor the per-expansion backlink scan"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

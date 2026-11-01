@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 14
+slug = "edges-induced-among-returned-objects"
+title = "Edges: induced among returned objects, deduped, result order, dangling excluded"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "Mermaid needs the edge set and the brief requires hidden reference fields to keep connectivity; deriving it twice is the duplication this slice exists to remove."
+choice = "The induced subgraph of the returned objects: for each returned id in result order, scan its full entity, keep edges whose target is also returned, dedupe by (source, field, target) in first-occurrence order. Derived after the limit and before projection; dangling targets excluded."
+alternatives = ["Edges among all discovered entities (leaks limit-omitted ids)", "Edges only when the reference field is selected (breaks hidden-field connectivity)", "A second edge derivation for the renderer in 1.0"]
+rationale = "Both endpoints returned keeps the set renderable and consistent with the result cap; deriving before projection makes `select` unable to erase connectivity; one derivation serves clients and 1.0."
+consequences = ["The walker does not record edges", " Edges are derived from the returned entities", " not from the expansions", " A returned but unexpanded node contributes its edges", " An edge in an unrequested field is included when both endpoints are returned", " Select cannot erase connectivity and the limit cannot leak an omitted node"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"

@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 19
+slug = "02-additive-grammar-and-compatibility-recuts"
+title = "0.2 grammar and envelope are additive; compatibility tests are re-cut, not deleted"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "DEC-011 keeps 0.1 calls valid and compatibility is tested, not assumed; tests/compatibility.rs pins the whole parsed 0.1 envelope including its key set."
+choice = "Five keys become accepted; unknown keys stay unknown; non-traversing envelopes keep exactly the 0.1 keys (traversal is conditional per DEC-012). Keep the 0.1 query pin, convert the `where` refusal test into an acceptance test, and pin additivity beside a 0.2 query."
+alternatives = ["Leave the `where` refusal test in place", "Add `traversal` unconditionally", "Treat syntactic validity alone as compatibility"]
+rationale = "The property to preserve is an unchanged 0.1 response, not a refusal that 0.2 is expected to remove; a comment records the re-cut."
+consequences = ["`query {}` stays byte-identical", "`traversal_budget` can appear only on a traversing request", "The re-cut compatibility test is deliberate, not a deletion"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-002"
