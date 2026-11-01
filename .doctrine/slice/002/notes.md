@@ -458,3 +458,188 @@ evidence and was the sole writer. Design untouched, design run not reopened.
   command was run, because the 0.1 suite says nothing about the plan. The full
   disposition table is in `/tmp/sl002-plan-review-integration.md` (session
   artefact, not committed).
+
+## Implementation run — proposed 2026-11-02 (awaiting operator adaptation)
+
+**Status: proposed, not assented, not started.** No phase is open; nothing in
+`src/` has been touched for 0.2; HEAD `3e5b6ae`, tree clean, branch `main`.
+
+### Routing and the seat
+
+Governing skill: **`/super-orchestrator`** (pi-native tiering in the main
+worktree), with `/phase-plan` + `/execute` as the per-phase stage under it.
+`/dispatch` was the alternative and is **unavailable in this checkout**, not
+merely unchosen: `bwrap` is absent and `.agents/skills/dispatch-spawn`'s sole
+spawn path (`scripts/spawn-confined.sh`) does not exist, so dispatch fails
+closed (`bwrap-unavailable`) with no unconfined fallback. Reported, not routed
+around. `/capsule-driver` is the same tiering shaped for a Claude harness
+(`CLAUDE_CODE_*` env, `TaskStop`, `AskUserQuestion`); the pi equivalents are
+installed (`sub-orchestrator` with `allowNestedSubagents`, plus `worker`,
+`delegate`, `scout`, `reviewer`, `researcher`), so the pi-native sibling is the
+honest choice.
+
+| tier | seat | does |
+| --- | --- | --- |
+| seat | this session, operator attached | charters, reads handbacks, holds gates, never implements |
+| sub-orchestrator | fresh `sub-orchestrator` per charter | `/phase-plan`s the sheet, owns lifecycle, runs gates, commits owned paths |
+| worker | `worker`/`delegate` per bounded task | tests (red first) and implementation |
+
+If nested spawning is denied to a child, that is a capability blocker to report,
+not permission to implement inline.
+
+### Environment facts (probed, not assumed)
+
+- `cargo 1.100.0-beta.7`; gates are `justfile`: `fmt --check`, clippy
+  `--all-targets -- -D warnings` **and** `--all-features`, `cargo test`, then
+  `cargo test --features fault-injection`.
+- Suite present: `tests/{cli_contract,compatibility,concurrency,durability_crash,readme_example,render,roundtrip,selection,store_corruption}.rs`.
+  `tests/fixtures/` does not exist yet (PHASE-04 creates it).
+- `DOCTRINE_WORKER` unset; single worktree; **one writer at a time** is a
+  precondition of the green-tree invariant, not a preference.
+- The plan's entrance criteria make the seven phases a **total serial chain** —
+  every phase names its predecessor — so no batch is parallelisable. Charters
+  group phases; they never overlap.
+- `doctrine dispatch status --slice 2`: `dispatch branch not found` (expected);
+  `dispatch plan-next` reads `next: PHASE-01`.
+- Fixture lead time is the schedule risk: the DEC-018 read-through is the long
+  pole and gated work, so it is requested at G0, not at the start of PHASE-04.
+
+### Charter schedule
+
+| charter | phases | why this boundary |
+| --- | --- | --- |
+| C1 | PHASE-01 | Heaviest (14 EX, 9 VT) **and** interface-setting: `Walk`, the `select::run` input value (EX-13), the notice trigger (EX-14), the README re-record (EX-11). Everything after consumes these. |
+| C2 | PHASE-02 → PHASE-03 | Two ordinary phases, serial inside the charter. Ends where the query surface is complete and `FUTURE_KEYS` has retired. |
+| C3 | PHASE-04 | Alone, by construction: it carries the plan's only `VH` and its negative outcome blocks PHASE-06/07. |
+| C4 | PHASE-05 → PHASE-06 | Two ordinary phases; ends where behaviour and its sentences agree and the guide's example is the one the fixture test runs. |
+| C5 | PHASE-07 | Alone: the release proof (six scenarios, four gates, conformance diff, version, §14.2 diff). |
+
+Boundaries are committed, green, and handed over (fresh seat context) — never
+mid-phase. PHASE-01 alone in C1 is the deliberate cost of its interface weight;
+splitting it remains an **escalation**, never a resequencing.
+
+### Verification cadence
+
+Per phase, at the sub-orchestrator tier and spot-checked at the seat:
+
+1. `/phase-plan` expands the runtime sheet; `slice phase 2 PHASE-NN --status
+   in_progress` (flag, not positional).
+2. Contract changes: tests written from the criterion and observed **red for the
+   right reason** before implementation; the reason is quoted in the sheet.
+3. Gates on the phase tree: fmt, both clippy configurations, `cargo test`, and
+   `--features fault-injection` (non-vacuity asserted at PHASE-07 `VA-1`).
+4. `doctrine slice verify-vt 2` after the phase commit. `FAIL`/`UNATTRIBUTABLE`
+   for unstarted phases is expected; a `Fail` on a *completed* phase halts.
+5. Adversarial-checks pass: the new suite is run against a deliberately wrong
+   implementation where the criterion is a negative control (induced-edge order,
+   budget-before-expansion, roots-only `where`), so a green is not vacuous.
+6. Commit: path-limited, one commit per phase (trailing knowledge/notes commits
+   allowed), sheet flipped `completed`, harvest refreshed in this file.
+
+Seat review is **not** every diff. Mandatory seat review on a tripwire: a deleted
+or renamed test without a DEC-019 reason, a waived or uncheckable VT, an
+out-of-scope path touched, `Deviations: NONE` on a delta that plainly deviates,
+or a green whose evidence names no command. PHASE-01's envelope tests and
+PHASE-04's provenance note are read at the seat regardless — one is the release's
+central claim, the other is outward-facing personal data.
+
+### Operator gates
+
+| gate | when | what the operator decides |
+| --- | --- | --- |
+| G0 | now | Adapt/assent this schedule **and** the envelope below; dispose the two open decisions (privacy negative outcome; design line drift) or defer them to G1. Also: who performs the DEC-018 read-through, and with what model exposure — raw store contents must not reach a subagent's context without an explicit ruling. |
+| G1 | before PHASE-04's fixture commit | The privacy verdict itself (`VH-1`): publish, redact, synthesise, or ship no fixture. Blocks PHASE-06/07. |
+| G2 | before PHASE-07's commit | The release surface: README claims, the conformance table's unexplained cells, and `0.2.0` as it will be described. |
+| halt | after PHASE-07 | The seat stops; `/audit` is a separate stage. |
+
+RV-012 F-4's verification is the raiser's act and is **not** in this run's
+envelope; it surfaces at audit if still open.
+
+## Authority envelope (SL-002, 2026-11-02 — binding for this run)
+
+An auditor tests later decisions against this. Two lists, and the boundary is
+the test: *can I reverse it inside the phase, with no change to what the release
+means or ships?*
+
+### Decide, record, continue — I act, then log under `## Autonomy log`
+
+1. **Implementation anatomy inside the design's named surface**: module
+   decomposition, private types and helpers, field and variant names beyond the
+   members §4/§8 enumerate, and where a helper lives (`src/walk.rs` vs
+   `src/select.rs`). No new public API, no new module outside §14.1's touch-set.
+2. **Function signatures**: the shape of `select::run`'s single input value
+   (EX-13 fixes *one value*, not its fields), `Walk`'s constructor, the
+   interpreter's entry point. Signatures are mine; the pipeline's order is the
+   design's.
+3. **Test anatomy**: test-function names, module layout within the mandated
+   `test_file`, and whether a new suite copies `tests/cli_contract.rs`'s
+   `Scratch` (the plan's answer: copy it; no `tests/common` is created in 0.2).
+   VT `test_file` and keyword sets are fixed by the plan.
+4. **Commit granularity and message shape**: one commit per phase, path-limited,
+   plus trailing notes/knowledge commits; repo's `type(sl-002): …` convention.
+5. **Appended criteria**: new `EX-`/`VT-`/`VA-` ids appended (never renumbered,
+   never reused), and appended task rows in the runtime sheet.
+6. **Criterion-text precision**: a wording change that preserves the obligation
+   (naming the helper, the exact literal, the assertion site), and correcting a
+   VT path/keyword that the tree proves wrong — including a keyword that would
+   certify nothing. A wording change that *narrows* the obligation is #4 below.
+7. **Re-cutting a falsified test** (DEC-019) where a criterion already names it:
+   the test is renamed/re-asserted with its reason in the module, never deleted.
+   A falsified test **no** criterion names is a plan defect: I record it, fix it
+   the same way, and report it in the handback rather than pretending it was
+   covered.
+8. **Fixture mechanics that are not the verdict**: array normalisation and sort
+   order, `PROVENANCE.md`'s shape, the declaring helper's form, which of EX-3's
+   properties get their own assertion. The verdict and the redaction content are
+   the operator's (G1).
+9. **Additive strictness**: running clippy `--all-features` and the
+   fault-injection suite at every phase, not only PHASE-07. Adding checks is
+   never an escalation; removing one always is.
+10. **Prose the plan mandates** (`learn`, README, conventions prose, provenance
+    note): wording is mine where the sentence asserts only behaviour that exists
+    (`VA-1` is the check); the recipe's direction, the guard's clauses and the
+    no-propagation limit are fixed by §9.4/`DEC-016` and are not rewritable.
+11. **Worker operation**: brief composition, model inheritance from the
+    operator's configuration, one focused rebrief per worker, and recording a
+    worker miss. Two failed attempts on one phase ends #7 below.
+
+### Stop and escalate — I do not decide these
+
+1. **Any design deviation or semantic change**, and anything that would need the
+   locked design run reopened (locked, no outbound stage edge: it is an operator
+   act). Includes "the design says X and the code needs Y".
+2. **Scope change**: a behaviour no criterion asks for; touching a §14.2
+   unchanged path (`src/entity.rs`, `src/order.rs`, `src/store/**`,
+   `docs/store-format.md`, `justfile`, `flake.nix`); a new crate or dependency;
+   `format_version` or the on-disk format; projecting the edge set into a
+   renderer (IMP-002's work).
+3. **Plan shape**: phase insertion, split, merge, reorder or deletion
+   (PHASE-01's split included), or renumbering/deleting/retitling criteria.
+4. **Weakening**: dropping or waiving a criterion for schedule; marking a phase
+   complete on a red, partial or unrun gate; relaxing a bound, determinism rule,
+   guard or negative control; accepting a `verify-vt` `Fail` on a completed
+   phase.
+5. **The two outstanding operator decisions**: the privacy gate's negative
+   outcome (redacted subset / synthetic store / no committed fixture — changes
+   what ships) and reopening the design run for the §1/§2/§9.4 line drift.
+6. **Outward-facing or hard-to-reverse acts**: committing the personal fixture
+   (the G1 verdict itself is the operator's), pushing, publishing, or describing
+   0.2 anywhere outside this repo.
+7. **A red I cannot attribute**: the same phase failing after two
+   sub-orchestrator attempts, a conflicting writer in a phase-owned path, a CLI
+   refusal that needs a new user act, or a criterion that cannot be satisfied as
+   written. Report with the evidence; do not reinterpret the criterion.
+8. **Review-ledger acts**: disposing, verifying, contesting or concluding any
+   `RV` finding (RV-012 F-4 included) is the raiser's/operator's seat. My
+   surface is this envelope, the phase sheets and this file.
+
+**The invariant protected throughout**: every phase ends on a green tree, and a
+charter never opens on a red or half-landed one.
+
+## Autonomy log
+
+One row per envelope decision actually taken: phase · decision · reason ·
+decided / deferred / escalated. Empty until a phase opens.
+
+| date | phase | decision | class | reason |
+| --- | --- | --- | --- | --- |
