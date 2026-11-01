@@ -16,58 +16,98 @@ ref   = "SL-002"
 
 [[finding]]
 id = "F-1"
-status = "open"
+status = "answered"
 severity = "major"
 title = "The walker test module still says it is expected to be RED and that the keys are refused"
 detail = """`tests/traversal.rs:10-15` (also `:41-42`, `:442`). Expected: a committed test file's module doc describes the file as it is in this commit. Observed, verbatim: "This file is expected to be RED until the walker lands. 0.1's `spec::parse` refuses `follow`, `backlinks` and `depth` by name, so every walk test stops at that refusal ... Once parsing accepts the keys, the same tests fail on the envelope's missing `traversal` member until the walker exists." Plus `walked`'s doc "or the red this file expects: first the parse refusal, then a missing member" (`:41-42`) and `traversal_member`'s "or the red this file expects" (`:442`). Against the tree: `src/spec.rs:125-127` accepts all three keys and all 20 tests in the file drive a green walk, so none of that narration is true. This is the file VT-2 certifies against and the paragraph asserts the inverse of what it proves; left in the committed file it invites a later worker to "restore" a refusal the design has retired — the DEC-019 failure mode in the opposite direction. Route: fix-now — replace `:10-15` with one sentence stating the file is green against the walker and naming the six determinism rules it pins; drop the two "the red this file expects" clauses."""
+disposition = "fix-now"
+response = 'Conceded. `tests/traversal.rs` is now green against the walker: the module doc states that `follow`, `backlinks` and `depth` are accepted and the `traversal` member is present, and the two "the red this file expects" clauses on `walked` and `traversal_member` are gone. Fixed in `b499a60`. The drafting artefact was the red-first pass: the file was authored red and its narration was never re-cut when the walker landed — which is DEC-019 applied to prose, and exactly the failure mode this review exists to catch.'
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Conceded. `tests/traversal.rs` is now green against the walker: the module doc states that `follow`, `backlinks` and `depth` are accepted and the `traversal` member is present, and the two "the red this file expects" clauses on `walked` and `traversal_member` are gone. Fixed in `b499a60`. The drafting artefact was the red-first pass: the file was authored red and its narration was never re-cut when the walker landed — which is DEC-019 applied to prose, and exactly the failure mode this review exists to catch.'
 
 [[finding]]
 id = "F-2"
-status = "open"
+status = "answered"
 severity = "major"
 title = "`smut learn` prints statements the binary now contradicts, and no criterion re-cuts them"
 detail = """`src/learn.rs:88-89` and `:110-111`. Verbatim: "where, follow, backlinks, depth and budget arrive in 0.2, and are refused here / by name with that release." and "Reporting dangling references belongs to / traversal, which arrives in 0.2." Against the tree: `follow`, `backlinks` and `depth` are accepted (`src/spec.rs:125-127`) and dangling references are reported (`src/select.rs:293`), so the shipped guide's own answer is false for three of the five keys it names. This is a plan gap, not only a code defect: EX-11's rationale ("accepting `follow` falsifies it in this commit") applies to this prose verbatim, yet §14.1 assigns `src/learn.rs` to PHASE-06 and PHASE-06 EX-4 presumes the notice still exists at its entrance. Raised route: tolerated with a named home (PHASE-06 EX-4). Responder route: fix-now — a released surface stays false for three charters otherwise, the edit is two clauses, and PHASE-06 rewrites the guide wholesale regardless."""
+disposition = "tolerated"
+response = "Conceded as a true defect and as a plan gap, then routed rather than fixed now: the plan has no criterion that re-cuts `src/learn.rs`'s prose in PHASE-01/02/03, and PHASE-06 EX-4 owns the guide's rewrite. My first position was fix-now on the grounds that it read as two clauses. Reading the guide falsified that: the stale text is the key list, the 0.2 notice, the envelope description and the dangling sentence — i.e. the guide section PHASE-06 rewrites wholesale with its own re-cut test and its own VT. A partial repair now would be rewritten in two phases and would leave a half-truthful guide in the meantime. Evidence, not preference, flipped the disposition. Residual, accepted: until PHASE-06 lands, `smut learn` overstates what is refused. Bounded and named: PHASE-06 EX-1/EX-4 and its VT-1 (which asserts the notice is absent). PHASE-06's charter carries an explicit instruction to prove no sentence in `learn` claims a working key is refused. Recorded in the slice notes as a plan gap, not an oversight."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Conceded as a true defect and as a plan gap, then routed rather than fixed now: the plan has no criterion that re-cuts `src/learn.rs`'s prose in PHASE-01/02/03, and PHASE-06 EX-4 owns the guide's rewrite. My first position was fix-now on the grounds that it read as two clauses. Reading the guide falsified that: the stale text is the key list, the 0.2 notice, the envelope description and the dangling sentence — i.e. the guide section PHASE-06 rewrites wholesale with its own re-cut test and its own VT. A partial repair now would be rewritten in two phases and would leave a half-truthful guide in the meantime. Evidence, not preference, flipped the disposition. Residual, accepted: until PHASE-06 lands, `smut learn` overstates what is refused. Bounded and named: PHASE-06 EX-1/EX-4 and its VT-1 (which asserts the notice is absent). PHASE-06's charter carries an explicit instruction to prove no sentence in `learn` claims a working key is refused. Recorded in the slice notes as a plan gap, not an oversight."
 
 [[finding]]
 id = "F-3"
-status = "open"
+status = "answered"
 severity = "major"
 title = "The README presents a published version as carrying traversal"
 detail = '`README.md:32-36` against `README.md:42`, `:45` and `Cargo.toml:3`. Observed: "`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks` and `depth` walk the graph..." followed at `:45` by "Or install it from crates.io: `cargo install smut`", with `version = "0.1.1"` in `Cargo.toml:3` and `--version` recording `smut 0.1.1` at `:42`. Against the record: 0.1.1 is published and immutable and has no traversal (`SL-001` notes). Because PHASE-01 did not move the version (PHASE-07 EX-5 owns the bump), the version string can no longer distinguish this tree from the artifact on crates.io, and a reader who follows `:45` gets "follow is not supported in 0.1; it arrives in 0.2" for the keys `:32` says walk the graph. No single sentence is false; the composition overclaims. This is the front door, and it is the one line EX-11 told this commit to re-cut to name the keys actually refused now. Route: fix-now — one clause distinguishing this tree from the published 0.1.1.'
+disposition = "fix-now"
+response = 'Conceded. `README.md` now opens with "This tree is 0.1.1 plus the 0.2 traversal work — not the published patch release", names that the crates.io 0.1.1 has none of it, and keeps the version-bump promise for 0.2.0 where PHASE-07 EX-5 owns it. Fixed in `b499a60`. The reviewer is right that the composition overclaimed while no single sentence did: a reader following `cargo install smut` would get a refusal for the keys the same page advertises.'
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Conceded. `README.md` now opens with "This tree is 0.1.1 plus the 0.2 traversal work — not the published patch release", names that the crates.io 0.1.1 has none of it, and keeps the version-bump promise for 0.2.0 where PHASE-07 EX-5 owns it. Fixed in `b499a60`. The reviewer is right that the composition overclaimed while no single sentence did: a reader following `cargo install smut` would get a refusal for the keys the same page advertises.'
 
 [[finding]]
 id = "F-4"
-status = "open"
+status = "answered"
 severity = "minor"
 title = "A test comment cites a defect record that existed in no artefact at that commit"
 detail = """`tests/selection.rs:278-281`, verbatim: "...the earlier position of `traversal_budget` is asserted where that reason is introduced, PHASE-02's reason-order test in `tests/traversal.rs`; this is recorded plan defect DEF-1, and this comment is the re-cut's reason." At `45983c7`, `DEF-1` appeared nowhere except that comment and the diff — not in `plan.toml`, `plan.md`, `notes.md`, `design.md`, nor any ledger under `.doctrine/review/`. The underlying gap is real and should be recorded, not merely referenced: `VT-9` requires the reason order when both reasons occur, which is unsatisfiable at PHASE-01 because `traversal_budget` cannot occur while `budget` is a refused key. Status since raising: the seat recorded DEF-1 in `notes.md` `## Harvest`/`### Open` at `7a0c717` (after this review's snapshot), so the citation is now true; the remaining repair is to name PHASE-02's test inline so the comment is self-contained rather than pointing at an id."""
+disposition = "fix-now"
+response = "Conceded, and partly overtaken by the seat's C1-close commit: `DEF-1` is now recorded in `.doctrine/slice/002/notes.md` (`## Harvest` / `### Open`) at `7a0c717`, one commit after the reviewed tree, so the citation is true in the repository even though it was dangling at `45983c7`. The comment was also stale in a second way the review did not have to see — it claimed `budget` was still a refused key, which PHASE-02 made false the next day. It now names PHASE-02's `both_reasons_appear_once_in_the_order_they_can_occur` inline and carries its DEC-019 reason. Fixed in `b499a60`."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Conceded, and partly overtaken by the seat's C1-close commit: `DEF-1` is now recorded in `.doctrine/slice/002/notes.md` (`## Harvest` / `### Open`) at `7a0c717`, one commit after the reviewed tree, so the citation is true in the repository even though it was dangling at `45983c7`. The comment was also stale in a second way the review did not have to see — it claimed `budget` was still a refused key, which PHASE-02 made false the next day. It now names PHASE-02's `both_reasons_appear_once_in_the_order_they_can_occur` inline and carries its DEC-019 reason. Fixed in `b499a60`."
 
 [[finding]]
 id = "F-5"
-status = "open"
+status = "answered"
 severity = "minor"
 title = "Two comments in `src/select.rs` give PHASE-02 opposite instructions about the budget"
 detail = """`src/select.rs:139-140` against `src/select.rs:120-121`, `src/walk.rs:92`, `src/walk.rs:106`. Observed, verbatim: "There is deliberately no budget-shaped parameter or field to fill in later." But `walk::walk` already takes `budget: u64` (`src/walk.rs:92`), `Walker` already holds `budget: u64` (`src/walk.rs:106`), and `Request`'s own doc four lines earlier says "PHASE-02 adds the traversal budget ... to this same value" (`src/select.rs:120-121`). The sentence reads as "there is no budget hook, do not make one", the opposite of what the same file tells the next phase — the kind of comment a later worker follows into a second refactor. Route: fix-now — rewrite it to say there is no placeholder field in `Request`, and PHASE-02 adds one and threads it where the constant sits."""
+disposition = "fix-now"
+response = 'Conceded, and already closed by PHASE-02 rather than by this batch: adding the budget field meant rewriting that doc block, so the sentence "There is deliberately no budget-shaped parameter or field to fill in later" no longer exists (`grep` over `src/` returns nothing), and the surviving text says PHASE-02 added the field to this same value. No edit was needed in `b499a60`; the finding is dispositioned fixed with the phase as its agent. Residual risk noted: the finding is a reminder that a comment promising "nothing to fill in" is a promise the next phase contradicts by design.'
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Conceded, and already closed by PHASE-02 rather than by this batch: adding the budget field meant rewriting that doc block, so the sentence "There is deliberately no budget-shaped parameter or field to fill in later" no longer exists (`grep` over `src/` returns nothing), and the surviving text says PHASE-02 added the field to this same value. No edit was needed in `b499a60`; the finding is dispositioned fixed with the phase as its agent. Residual risk noted: the finding is a reminder that a comment promising "nothing to fill in" is a promise the next phase contradicts by design.'
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

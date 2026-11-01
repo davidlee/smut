@@ -6,8 +6,9 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · implementing (PHASE-01 committed at `45983c7`;
-PHASE-02…07 planned) · design locked at run rev 62; plan repaired round 1
+fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
+`4a192e7`; R1 repaired `b499a60`; PHASE-03…07 planned) · design locked at run
+rev 62; plan repaired round 1
 
 ### Produced
 
@@ -900,3 +901,99 @@ earlier phase legitimately used the word*. Vacuity is not a property of the plan
 at authoring time; it has to be re-checked at every phase boundary against the
 tree as it now is. From C2 on, the seat re-reads the next phase's keyword set
 against the post-phase tree before chartering, and DEF-3 is the reason.
+
+## C2 close — seat verification (2026-11-02)
+
+The charter was `PHASE-02 → PHASE-03`. It delivered **PHASE-02 only**: the
+harness's 30-minute wall killed the child after it had committed the phase,
+recorded the conformance boundary (`515c6f8..4a192e7`) and run `verify-vt`, and
+before it wrote any notes. Same failure shape as C1 — **two charters, two
+timeouts, one phase each** — so the run's charter size changes from here: one
+phase per child. Nothing was rerun; the phase's own commits stand.
+
+**Verified at the seat:**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` / clippy ×2 | clean |
+| `cargo test` | 13 suites, all pass (429 tests total; `tests/traversal.rs` 30, `cli_contract` 35) |
+| `cargo test --features fault-injection` | green (run by the child; the seat re-ran the default suite) |
+| `doctrine slice verify-vt 2` | PHASE-01 9/9 and PHASE-02 4/4 **PASS** |
+| §14.2 fence | delta touches `README.md`, `src/select.rs`, `src/spec.rs`, `tests/{cli_contract,render,traversal}.rs` — no `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix` |
+| end-to-end smoke (seat, hand-built store) | see below |
+
+**The smoke test found the semantics right, and one thing the suite already
+knew.** With `a→{b,c}`, `b→a`, `c→d`:
+
+- `depth 3` unbounded: `depths {a:0,b:1,c:1,d:2}`, four edges, `frontier []`.
+- `budget 1`: `a` expanded, `b`/`c` discovered but declined → `frontier ["b","c"]`,
+  `truncated true`, `reasons ["traversal_budget"]` — so the check precedes the
+  expansion (EX-2) and the declined node *and the rest of the queue* are in the
+  frontier in discovery order (EX-4).
+- `budget 2`: `b` expanded, `c` declined → `frontier ["c"]`.
+- `depth 0`: `frontier ["a"]`, `truncated false` — the root is discovered but not
+  expanded, so the depth cut puts it in the frontier and is not truncation
+  (DEC-013/EX-4). Counter-intuitive on first read, correct on the wording.
+- `budget` without `follow`/`backlinks`: accepted, inert, **no** `traversal`
+  member (DEF-2 discharged).
+- `budget: 0` and `budget: -1`: exit 2, "budget must be a positive integer",
+  before any store access.
+
+**DEF-1 and DEF-2 are discharged**, not merely deferred:
+`both_reasons_appear_once_in_the_order_they_can_occur` exists in
+`tests/traversal.rs`, and PHASE-02's `EX-1` inert-budget case is asserted.
+`FUTURE_KEYS` is now `["where"]` — one entry, and PHASE-03 retires it.
+
+**A design-consistent non-change worth recording:** PHASE-02's `EX-6` (the notice
+gains the `traversal_budget` line) required **no edit to
+`src/render_markdown.rs`**. PHASE-01 made the notice join
+`selection.reasons` generically, so the new variant prints as
+`> truncated: traversal_budget; additional entities omitted` with no second
+account of reasons. The criterion is satisfied by construction; a phase that had
+added a bespoke line would have created the duplication this run exists to
+avoid.
+
+## R1 — the repair batch, and one position flipped (2026-11-02)
+
+RV-017 (`6d71911`) raised five prose findings against PHASE-01; all five are
+disposed and the batch landed as `b499a60`:
+
+- **F-1, F-3, F-4 fixed.** `tests/traversal.rs`'s module doc no longer claims the
+  file is expected to be RED; the README distinguishes this tree from the
+  published 0.1.1 instead of advertising traversal beside `cargo install smut`;
+  `tests/selection.rs`'s comment names PHASE-02's both-reasons test inline
+  instead of citing a bare `DEF-1`.
+- **F-5 was already closed by PHASE-02**, which rewrote the contradicting doc
+  block when it added the budget field. Dispositioned fixed with the phase as its
+  agent.
+- **F-2 flipped from my first position to the reviewer's.** I had overridden the
+  reviewer's "tolerate until PHASE-06" on the theory that `learn`'s stale text was
+  two clauses and cheap to fix. Reading the guide falsified that: the stale text
+  is the key list, the 0.2 notice, the envelope description **and** the dangling
+  sentence — the section PHASE-06 rewrites wholesale, with its own re-cut test and
+  VT. A partial repair now would be rewritten in two phases and would leave a
+  half-truthful guide in between. Tolerated, routed to PHASE-06 EX-1/EX-4, with
+  the window and its owner named. **Evidence flipped the position; the review's
+  route was right and mine was a guess about scope.**
+
+### Plan gap recorded (not papered over)
+
+**GAP-1.** No criterion in PHASE-01, PHASE-02 or PHASE-03 re-cuts `src/learn.rs`
+prose, although each phase falsifies some: PHASE-01 accepts three keys and starts
+reporting dangling references, PHASE-02 accepts `budget`, PHASE-03 will retire the
+by-name refusal entirely. EX-11's rationale ("accepting `follow` falsifies it in
+this commit") is scoped to the README, and §14.1 assigns `learn` to PHASE-06 — so
+a shipped guide overstates what is refused for three phases by design, not by
+accident. PHASE-06 EX-1/EX-4 close it; PHASE-06's charter carries the explicit
+check ("no sentence in `learn` claims a working key is refused"). Recorded here so
+the auditor sees a named gap with an owner rather than a discovery at audit.
+
+### Autonomy log additions
+
+| date | phase | decision | class | reason |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | C2 | **One phase per charter** from here; the plan's charter grouping survives only as the review-batch boundary | decided (#11, charter mechanics) | Two children, two 30-minute walls, one phase each. Grouping phases in one child bought nothing and cost the notes write both times. Phases, order and criteria are unchanged — this is charter size, not plan shape |
+| 2026-11-02 | PHASE-01 | RV-017 repair batch landed by the seat (`b499a60`) with no child active | decided (#7, #10, #12) | No writer was alive; four fixes were prose and test comments with the evidence in hand; leaving known-false statements in the tree until C3 opened served nothing |
+| 2026-11-02 | PHASE-01 | F-2 tolerated → PHASE-06, over my own earlier fix-now position | decided (#12) | The guide's staleness is the whole section PHASE-06 rewrites; a partial repair would be replaced in two phases |
+| 2026-11-02 | PHASE-02 | PHASE-02's own autonomy decisions are **unrecorded**: the child was killed before writing them | gap, disclosed | The diff, the criteria and the seat's verification stand in their place; the sheet (gitignored) may hold its own notes. An auditor should read this as a missing record, not a missing decision |
+| 2026-11-02 | C2 | C2 committed `515c6f8` (IDE-001, smut vs cordage) mid-charter | noted | A backlog idea captured through the project's own sink, unrelated to PHASE-02 source; harmless, but it is why the PHASE-02 boundary's `code_start_oid` is a doc commit |
