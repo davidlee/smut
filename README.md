@@ -29,10 +29,12 @@ That is two entities and one reference, stored durably as one batch. An agent
 mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
-`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks`, `depth`
-and `budget` walk the graph, and the envelope reports what the walk found.
-`where` arrives later in 0.2, and Mermaid in 1.0; where those would be, `smut`
-refuses by name instead of guessing. The commands below are the whole surface.
+This tree is **0.1.1 plus the 0.2 traversal work** — not the published patch
+release: `follow`, `backlinks`, `depth` and `budget` walk the graph, and the
+envelope reports what the walk found. The 0.1.1 on crates.io has none of them,
+and the version moves to 0.2.0 when the release is complete. `where` arrives
+later in 0.2, and Mermaid in 1.0; where those would be, `smut` refuses by name
+instead of guessing. The commands below are the whole surface.
 
 ## Build
 

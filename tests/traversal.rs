@@ -7,12 +7,9 @@
 //! entities live under shuffled filenames (the "stable across filesystem
 //! iteration" rule).
 //!
-//! **This file is expected to be RED until the walker lands.** 0.1's
-//! `spec::parse` refuses `follow`, `backlinks` and `depth` by name, so every walk
-//! test stops at that refusal — `follow is not supported in 0.1; it arrives in
-//! 0.2` — and never in a compile error. Once parsing accepts the keys, the same
-//! tests fail on the envelope's missing `traversal` member until the walker
-//! exists.
+//! This file is green against the walker: `follow`, `backlinks` and `depth` are
+//! accepted keys and the envelope carries its `traversal` member, so the tests
+//! below assert §7's ordering rules directly rather than a refusal.
 
 use std::fs;
 use std::io::Write;
@@ -38,8 +35,7 @@ fn store(entities: &[Value]) -> Entities {
         .collect()
 }
 
-/// The envelope's `traversal` member for `input`, or the red this file expects:
-/// first the parse refusal, then a missing member.
+/// The envelope's `traversal` member for `input`.
 fn walked(entities: &Entities, input: Value) -> Value {
     let specification = spec::parse(&input)
         .unwrap_or_else(|reject| panic!("the walker specification is refused: {reject}"));
@@ -439,7 +435,7 @@ fn envelope_of(entities: &Entities, input: Value) -> Value {
     envelope(&selection)
 }
 
-/// The envelope's `traversal` member, or the red this file expects.
+/// The envelope's `traversal` member.
 fn traversal_member(document: &Value) -> Value {
     document
         .get("traversal")

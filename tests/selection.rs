@@ -273,12 +273,13 @@ fn depths_and_edges_are_result_scoped_while_frontier_and_dangling_are_walk_scope
 #[test]
 fn truncation_reasons_stays_unique_and_names_only_the_result_limit() {
     // §8.3 orders reasons as they can occur: `traversal_budget` first, then
-    // `result_limit`. `budget` is still a refused key in this phase — PHASE-02
-    // makes it real — so a truncated traversal query can only report
-    // `["result_limit"]`. The earlier position of `traversal_budget` is
-    // asserted where that reason is introduced, PHASE-02's reason-order test in
-    // `tests/traversal.rs`; this is recorded plan defect DEF-1, and this comment
-    // is the re-cut's reason.
+    // `result_limit`. This store can only truncate by the result limit, so the
+    // earlier position is out of reach here; PHASE-02's
+    // `both_reasons_appear_once_in_the_order_they_can_occur` in
+    // `tests/traversal.rs` asserts the pair and their order. DEF-1, recorded in
+    // the slice notes: PHASE-01 could not assert a reason the budget key could
+    // not yet produce, so the re-cut keeps the reachable half rather than
+    // deleting the test.
     let store = store(&[
         json!({"id": "root", "next": [{"id": "one"}, {"id": "two"}]}),
         json!({"id": "one"}),
