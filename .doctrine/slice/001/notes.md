@@ -1103,3 +1103,17 @@ toolchain. Perishable, as that record says of itself.
 **Disposition.** Product evidence, not audit evidence. Captured in IMP-001's body
 and two new backlog items; the store itself is *not* promoted into the repo — as
 a 0.2 acceptance fixture it is IMP-001's decision, not SL-001's.
+
+### 0.1.1 — the published page's links (2026-11-01)
+
+`ISS-001`, resolved in the patch release the owner then published: the README's
+two remaining relative links (`docs/store-format.md`, `LICENSE`) absolutised to
+`https://github.com/davidlee/smut/blob/main/…`, and the guard that stops the next
+one — `tests/readme_example.rs::every_readme_link_is_absolute_or_an_anchor` —
+landed with it, proved to bite on a deliberately relative link before being
+trusted. Version `0.1.1` (`Cargo.toml`, the README's `--version` line and
+`tests/cli_contract.rs`'s assertion move together).
+
+Not audit-covered and not a reconcile write: it is release mechanics on a
+published artefact, found after `/reconcile` and fixed before `/close`. The
+slice's design, plan and ledger are untouched by it.

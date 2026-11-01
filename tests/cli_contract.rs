@@ -515,7 +515,7 @@ fn help_and_version_exit_zero_and_touch_no_store() {
 
     let version = smut(&scratch, &["--version"]);
     assert_eq!(version.code, 0, "{}", version.stderr);
-    assert_eq!(version.stdout, "smut 0.1.0\n");
+    assert_eq!(version.stdout, "smut 0.1.1\n");
 
     assert!(
         !scratch.has_store(),

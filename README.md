@@ -37,7 +37,7 @@ by name instead of guessing. The commands below are the whole surface.
 
 ```sh
 cargo build --release
-./target/release/smut --version   # smut 0.1.0
+./target/release/smut --version   # smut 0.1.1
 ```
 
 Or install it from crates.io: `cargo install smut`.
@@ -140,7 +140,8 @@ a success envelope.
 ## What smut promises
 
 The store is written through a journal. Its bytes, its states and its fsync
-obligations are described in [docs/store-format.md](docs/store-format.md), and
+obligations are described in
+[the store format document](https://github.com/davidlee/smut/blob/main/docs/store-format.md), and
 this is the guarantee that protocol licenses, quoted in full:
 
 > Under the documented filesystem and fsync assumptions, cooperating commands
@@ -180,4 +181,6 @@ version-matched to the build that prints it.
 
 `smut` is free software under the GNU General Public License, version 3
 (GPL-3.0-only): you may redistribute it and/or modify it under those terms, and
-it comes with no warranty. See [LICENSE](LICENSE) for the full text.
+it comes with no warranty. See
+[the licence text](https://github.com/davidlee/smut/blob/main/LICENSE) for the
+full text.

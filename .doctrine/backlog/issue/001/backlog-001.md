@@ -58,3 +58,26 @@ check is a `select` over the README's own bytes.
   *before* this became visible, because a newcomer reads the repo, not crates.io.
 - DEC-010 (documentation set) is not violated — the documents exist and are
   correct; only the published *render* of the links is broken.
+
+## Resolution (0.1.1)
+
+Both links absolutised to `https://github.com/davidlee/smut/blob/main/…`, with
+readable anchor text ("the store format document", "the licence text") rather
+than the URL repeated as the label.
+
+The guard the item asked for landed with it, in the file that already pins the
+README: `tests/readme_example.rs::every_readme_link_is_absolute_or_an_anchor`
+requires every link target in `README.md` to be `https://`, `http://` or an
+in-page anchor. Verified to bite: swapping one link back to `LICENSE` fails the
+test by name and offset; restoring it passes.
+
+Landed as `0.1.1` — the version had to move anyway, because `0.1.0` is immutable
+on crates.io, so the fix could not reach the published page otherwise.
+
+Checked before the fix went out: `just check` green (0 warnings, 355 default /
+412 under `--features fault-injection`), `cargo publish --dry-run` clean.
+
+The general lesson is worth keeping: the repo is not the artefact a new user
+meets. Anything a published page renders — links, images, code fences — has to be
+checked against *that* page, and the check belongs in a test rather than in
+release-day vigilance.

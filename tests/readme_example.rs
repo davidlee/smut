@@ -6,11 +6,16 @@
 //! beside it. Editing the README's transcript without re-running it fails here.
 //!
 //! **What "matches" means for JSON.** A recorded output that parses as JSON is
-//! compared as a parsed value, not as bytes: whether an entity root inside an
-//! envelope is id-first is an open review question, so a byte pin here would
-//! pre-empt it. `render`'s Markdown is settled and is compared exactly. A
-//! recorded output beginning `smut: ` is a diagnostic: that command must fail,
-//! write nothing to stdout, and print exactly that line on stderr.
+//! compared as a parsed value, not as bytes: `render`'s Markdown and the JSON
+//! envelopes are both compared structurally, so a reordering that changes no
+//! value does not fail here — the byte form of an entity node is pinned where it
+//! belongs, in `src/entity.rs` and `tests/cli_contract.rs`. A recorded output
+//! beginning `smut: ` is a diagnostic: that command must fail, write nothing to
+//! stdout, and print exactly that line on stderr.
+//!
+//! **The README also has to survive publication.** crates.io renders it against
+//! its own paths, so a relative link is dead on the published page; one test here
+//! requires every link target to be absolute.
 
 use std::fs;
 use std::io::Write;
@@ -257,5 +262,37 @@ fn the_worked_example_ends_with_the_0_2_refusal() {
         last.output.contains("0.2"),
         "the refusal names the release: {}",
         last.output
+    );
+}
+
+/// crates.io renders the README against its own paths, so a relative link is dead
+/// on the published page — which is where a crate's reader arrives first.
+#[test]
+fn every_readme_link_is_absolute_or_an_anchor() {
+    let mut checked = 0;
+
+    for (at, _) in README.match_indices("](") {
+        let target = README[at + 2..]
+            .split(')')
+            .next()
+            .unwrap_or_default()
+            .split_whitespace()
+            .next()
+            .unwrap_or_default();
+
+        assert!(
+            target.starts_with("https://")
+                || target.starts_with("http://")
+                || target.starts_with('#'),
+            "a relative link does not resolve where this file is published \
+             (offset {at}): {target}"
+        );
+
+        checked += 1;
+    }
+
+    assert!(
+        checked >= 3,
+        "the README still carries its links: {checked}"
     );
 }
