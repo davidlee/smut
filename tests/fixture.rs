@@ -281,18 +281,39 @@ fn the_committed_array_declares_into_a_store_that_reads_back_the_same_entities()
 
     // A limit above any plausible count, so the read-back count is the store's
     // and not the default cap's.
-    let envelope = declared.query(&json!({"limit": 400, "select": ["id"]}));
+    let envelope = declared.query(&json!({"limit": 400}));
 
     assert_eq!(
         envelope["truncated"],
         json!(false),
         "the whole store fits under the requested limit: {envelope}"
     );
+    // The round trip is structural, not arithmetic: a normalisation that dropped
+    // a field, coerced a value or reordered an array inside one entity would
+    // leave a count assertion green while falsifying PROVENANCE's claim. The
+    // query's default order is ascending id and the committed array is sorted by
+    // id, so the two sides align without further sorting.
     assert_eq!(
-        ids_of(&envelope).len(),
-        declared.entities.len(),
-        "the store reads back one entity per element of the committed array"
+        &envelope["objects"],
+        &Value::Array(declared.entities.clone()),
+        "the store reads back the committed array entity for entity"
     );
+
+    // And the fixture's own reference walk is forced to agree with the crate's,
+    // so the properties below are statements about the walker's relation rather
+    // than about a second definition that happens to look like it.
+    for entity in &declared.entities {
+        let mine = targets_of(entity);
+        let theirs: BTreeSet<&str> = smut::entity::scan_refs(entity)
+            .map(|(_, target)| target)
+            .collect();
+        assert_eq!(
+            mine, theirs,
+            "the fixture's reference walk agrees with `entity::scan_refs` on {}:
+             two definitions of a reference would make these properties vacuous",
+            entity["id"]
+        );
+    }
 }
 
 #[test]

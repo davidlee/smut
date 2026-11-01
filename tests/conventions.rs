@@ -168,6 +168,16 @@ fn a_named_set_prints_the_embedded_prose_verbatim() {
         printed.stdout, EMBEDDED,
         "the prose is the embedded file, byte for byte"
     );
+
+    // The set tells the reader which id a re-install will overwrite, so that id
+    // must be the one the seed actually emits: a renamed set whose prose still
+    // named the old id would send the reader to an entity nothing updates.
+    let seed = smut(&scratch, &["conventions", "hygiene", "--format", "json"]).json();
+    let id = seed["id"].as_str().expect("the seed carries a string id");
+    assert!(
+        printed.stdout.contains(id),
+        "the printed set names the id the seed emits ({id})"
+    );
 }
 
 #[test]

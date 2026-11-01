@@ -115,6 +115,20 @@ Design §2's source figures (66 entities, 44 reference targets, 22 unreferenced)
 agree with the array. Where a test needs a count it takes it from the array or
 from an acceptance property, never from a document.
 
+Two qualifications an auditor should read rather than re-derive:
+
+- **No cluster references another cluster.** Every `type: cluster` entity's only
+  reference is `part-of` to `session`, so the "mutually-referencing" property the
+  suite pins is a pair of non-cluster entities — `finding-smut-17` and
+  `prop-conventions-library`, verified in both directions. Design §2 and EX-3
+  describe the source store as holding mutually-referencing clusters; the data
+  does not, and the noun is recorded here rather than quietly changed. The design
+  sentence is locked and is on the deferred-drift list for reconcile.
+- **The round trip is structural, not arithmetic.** The suite asserts the store
+  reads back the committed array entity for entity (not merely one entity per
+  element), so a normalisation that dropped a field, coerced a value or reordered
+  an array inside one entity fails the test rather than the note.
+
 ## References
 
 - `design.md` §2 (the store as product evidence), §11 (the privacy residual),

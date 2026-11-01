@@ -112,8 +112,10 @@ pub fn listing() -> String {
         .collect()
 }
 
-/// One set's seed: an ordinary entity declaration, ordered by `id`, `type`,
-/// `version`, `title`, `body`.
+/// One set's seed: an ordinary entity declaration. The fields are supplied in the
+/// order `id`, `type`, `version`, `title`, `body`, but `id` is hoisted and the
+/// rest print lexically (§4.2's entity-node rule), so the bytes read `id`, `body`,
+/// `title`, `type`, `version`.
 ///
 /// The id is fixed — `conventions-<name>` — so the pipe is an upsert and never a
 /// duplicate, and the version is the crate's, so the seed cannot be stale against
@@ -159,8 +161,8 @@ fn title_of(set: &Set) -> String {
     format!("Conventions: {sentence}")
 }
 
-/// The seed's body: the embedded prose, less the one trailing newline the shell
-/// writes when it prints that same prose.
+/// The seed's body: the embedded prose, less any trailing newline the shell writes
+/// when it prints that same prose.
 fn body_of(set: &Set) -> String {
     set.prose.trim_end_matches('\n').to_owned()
 }
