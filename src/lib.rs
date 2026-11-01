@@ -9,4 +9,5 @@ pub mod declare;
 pub mod entity;
 pub mod error;
 pub mod id;
+pub mod numeric;
 pub mod store;
