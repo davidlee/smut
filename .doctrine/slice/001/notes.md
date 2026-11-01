@@ -124,9 +124,51 @@ this slice, so the predicate language is *not* designed here. inq-5 and inq-6 ar
 narrowed to the ordering and projection halves that 0.1 does need, and a new node
 records the 0.1 query-spec surface and its forward compatibility.
 
+## RV-002 integration (reviewing · 2026-11-01)
+
+RV-002 was concluded over revision 37 with three findings raised on it: F-1
+(blocker) commit protocol omits the durability barrier for staged recovery
+material; F-2 (major) `normalize` cannot enforce existing-ID collision avoidance
+through its declared API; F-3 (major) appending diagnostics after verbatim
+Markdown can hide incompleteness.
+
+All three verified against the artefact and disposed `design-wrong`, route
+`review` — they are defects in the design text, repaired in prose rather than
+deferred to an instrument. Repairs landed in revisions 38–42 (stage back to
+drafting, eight sections re-declared, materialised at 42) and touched DEC-001,
+DEC-003 and DEC-009 in their prose and facets:
+
+- **F-1** — §4.3 requires every staged file and the manifest written and fsynced
+  individually, then the prepare directory fsynced, before the rename; barrier
+  failure is pre-commit (discard, store untouched), the asymmetry with
+  roll-forward-only being explicit. §4.4, §4.6, §10 and §11.1 follow.
+- **F-2** — `normalize` takes the entity map it must not collide with; the
+  snapshot-aware `IdSource` alternative is recorded as rejected. §3.4, §5,
+  §8.1, §9 follow; §11.1 gains the two collision cases.
+- **F-3** — the completeness notice leads the document, before any entity
+  content, with the boundary stated: smut's own notice cannot be absorbed, and
+  stored bodies absorbing each other remains accepted. §8.3, §9, §11.1 follow.
+
+`review.scope` re-read the scope against all eleven decisions and sharpened
+three assertions (generation collision set, staged durability, unabsorbable
+disclosure); `review.selectors` confirmed §12 commits to the recorded set with
+nothing moved. Re-entering reviewing opened **RV-003** over revision 45.
+
+**What a further pass would probe** (`review.passes`): the three repairs for what
+they displaced. Specifically — §4.3's barrier against §5 step 7's commit order,
+and whether the initialisation path in §5.1 reaches the same barrier; §4.4's
+"incomplete staged set is corruption" against §4.5's "the commit decision
+stands", which is a refusal in one section and a promise in the other and needs
+one owner; the knowingly-stale snapshot at §5 step 2 now that `normalize` takes
+it, and whether every consumer of that `Batch` knows ids drawn there are
+recomputed; whether the notice-first rule holds when a selection yields no
+entities at all, and whether DEC-010's `learn` guide text absorbs the changed
+presentation rule; and whether §12's module map still names an owner for the
+barrier's ordering (fs.rs) rather than leaving it implied by prose.
+
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (design run rev 37, pass RV-002) · bcd1389
+fresh-as-of: 2026-11-01 · reviewing (design run rev 45, pass RV-003) · uncommitted
 
 ### Produced
 
@@ -148,6 +190,10 @@ fresh-as-of: 2026-11-01 · reviewing (design run rev 37, pass RV-002) · bcd1389
   `store/fault.rs` ungated) — all fixed, verified, concluded. The pass went stale
   over the fixes, so the run was taken back to drafting and re-entered,
   opening RV-002 over the settled content, concluded with no new findings.
+- RV-002, second round: 1 blocker + 2 majors from an external pass, all
+  `design-wrong`/`review`, integrated in revisions 38–42 across eight sections
+  and DEC-001/003/009. Re-entered reviewing at 43; `review.scope` and
+  `review.selectors` discharged; **RV-003** opened over rev 45.
 - Commits: `acf53fc` (design run, decisions, review ledgers). No source code yet.
 - `.doctrine` committed with the artefacts, not separately.
 - Verification gate: **N/A** — no source code and `justfile` has no `gate`
@@ -170,11 +216,18 @@ fresh-as-of: 2026-11-01 · reviewing (design run rev 37, pass RV-002) · bcd1389
 
 ### Open
 
-- **Awaiting the user's review choice** — this is *not* in the run: `/inquisition`
-  hostile pass, an external adversarial reviewer (prompt to be written), or
-  straight to `/plan`. All three leave the same gate work: 12 section
-  attestations, a `review-disposed` naming **RV-002**, then `design-accepted`.
+- A design that states an obligation its declared API cannot discharge (F-2) is
+  not a detail to carry into implementation: the rule and the signature have to
+  agree before the boundary is load-bearing. Same shape as F-3 — a guarantee an
+  attacker-supplied input can silently defeat is not a guarantee, so place it
+  where no input precedes it.
+- **Awaiting the user's review choice on RV-003** — a hostile pass via
+  `/inquisition`, an external adversarial reviewer (attack prompt to be written
+  from the RV-003 brief), or waive the second round and move to `/plan`. All three
+  leave: 12 section attestations, a `review-disposed` naming **RV-003**, then
+  `design-accepted`. RV-002 additionally needs its three findings verified by the
+  raiser, or they sit answered forever.
 - `proptest` dev-dependency proposed in §12, beyond the five settled crates —
   unvetoed, not yet objected to.
-- Design-run residual: `review.scope`, `review.selectors`, `review.passes`
-  runbook steps outstanding, plus the three lock conditions above.
+- First-write path §5.1 vs the §4.3 barrier is the sharpest unprobed seam;
+  recorded under `review.passes` above.

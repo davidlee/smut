@@ -37,7 +37,8 @@ the brief's contracts exactly:
 
 1. **Entity model and declaration** — JSON objects with a nonempty string `id`;
    recursive reference/declaration extraction inside embedded values;
-   collision-checked NanoID generation for ID-less top-level objects; the
+   NanoID generation for ID-less top-level objects, checked against stored,
+   explicit and same-batch ids; the
    documented consequence that an embedded object carrying an `id` cannot be
    ordinary inline metadata.
 2. **Patch semantics** — top-level field patching, omission preserves, wholesale
@@ -46,7 +47,8 @@ the brief's contracts exactly:
    pre-batch `previous` values.
 3. **Store** — `$PWD/.smut` index + per-entity files, internal UID/public ID
    separation, path safety, deterministic readable JSON, a single exclusive
-   lock, a durable journal/staging recovery protocol with idempotent pre-commit
+   lock, a durable journal/staging recovery protocol whose staged replay
+   material is durable before the commit decision, with idempotent pre-commit
    and post-commit recovery, and the documented guarantee it licenses: atomic
    visibility through locking and recovery, carrying its
    commit-before-acknowledgement ambiguity.
@@ -63,7 +65,8 @@ the brief's contracts exactly:
    are kept as compatibility tests.
 6. **Markdown renderer** — heading field/level, verbatim string body,
    `--show-ids`, `--show-fields` with compact JSON, ID fallback when nothing is
-   visible, and visible disclosure of truncation and missing roots.
+   visible, and disclosure of truncation and missing roots that stored content
+   cannot hide.
 7. **Embedded `learn` guide** — concise, version-matched instructions covering
    the 0.1 surface only: commands, patch/reference conventions, `DROP`, batch
    responses, query defaults, missing versus null, and the write/amend/render

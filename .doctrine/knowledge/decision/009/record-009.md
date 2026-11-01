@@ -58,12 +58,31 @@ over uniform spacing; the README says so once rather than the renderer trimming.
 
 ## Diagnostics
 
-In the document, after a blank line, never only on stderr:
+**First block of the document**, before any entity content, never only on
+stderr:
 
 ```text
 > truncated: result_limit; additional entities omitted
 > missing: `a`, `b`
 ```
+
+Leading placement is not cosmetic, and it is settled by RV-002 F-3. Bodies are
+emitted verbatim, so a stored body ending in an unclosed HTML comment or an
+unclosed fenced code block absorbs everything that follows it in a rendered
+document. A notice appended after the content would then be disclosed in the
+bytes and hidden on the page — an escape of the brief's disclosure requirement
+through ordinary stored data, needing no script and no malformed store. Nothing
+precedes a leading notice, so nothing stored can swallow it.
+
+**The guarantee is exactly that narrow.** Bodies may still absorb *each other*:
+an unclosed fence in one entity swallows the next. That is accepted, not denied,
+because escaping or inspecting body bytes to prevent it would cost the verbatim
+fidelity this record establishes above. What is guaranteed is that smut's own
+completeness notice reaches the page; what is not guaranteed is that stored
+Markdown cannot alter how later entities render. The README says so once.
+
+The 1.0 Mermaid renderer inherits the rule, not the instance: its own
+completeness notice must sit where no stored content can absorb it.
 
 No `12 of 40 shown` form: that needs a pre-limit count the selection does not
 retain, and this cut does not warrant widening `Selection` for a number.

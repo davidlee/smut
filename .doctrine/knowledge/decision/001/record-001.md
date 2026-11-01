@@ -1,15 +1,17 @@
 # Boundary contract — 0.1 pure core / imperative shell
 
-Settled with the operator on 2026-11-01 (approved A and B, amended in five
-particulars). This is the load-bearing shape of the whole design: everything
-else in 0.1 is either above this line (semantics) or below it (persistence).
+Settled with the operator on 2026-11-01 (approved A and B, amended in six
+particulars; the sixth is RV-002 F-2 — occupied ids became an argument to
+`normalize` rather than a silent gap between the rule and the signature). This is
+the load-bearing shape of the whole design: everything else in 0.1 is either
+above this line (semantics) or below it (persistence).
 
 ## The core's surface
 
 ```rust
 type Entities = BTreeMap<Id, Value>;          // validated snapshot, public ids only
 
-fn normalize(input: &Value, ids: &mut dyn IdSource) -> Result<Batch, Reject>;
+fn normalize(store: &Entities, input: &Value, ids: &mut dyn IdSource) -> Result<Batch, Reject>;
 fn apply(store: &Entities, batch: Batch) -> Result<Outcome, Reject>;
 fn plan_delete(store: &Entities, ids: &[Id]) -> (Response, WriteSet);
 fn parse_spec(input: &Value) -> Result<Spec, Reject>;
@@ -24,7 +26,7 @@ second complete snapshot; no consumer needs one.
 
 | Crossing | It is | It is not |
 | --- | --- | --- |
-| in | `Entities` — every entity, keyed by public id | a store handle, index, uid or path |
+| in | `Entities` — every entity, keyed by public id; into `apply`, `select`, `plan_delete` and `normalize`, which reads only its keys | a store handle, index, uid or path |
 | in | `Value` — an already-parsed request | bytes, or anything unparsed |
 | in | `IdSource` — injected id allocation | an ambient RNG call |
 | out | `WriteSet { put: Vec<Value>, remove: Vec<Id> }` | filesystem operations |
@@ -45,13 +47,16 @@ second complete snapshot; no consumer needs one.
    stored entity ids, paths stay inside `.smut`, the format version is known and
    the index and files agree. The journal record stays entirely content-blind:
    paths, bytes and a delete list.
-3. **`IdSource` has an explicit collision contract.** A generated id avoids:
-   (a) existing entity ids in the snapshot, (b) every explicit id anywhere in
-   the request, including forward references, (c) every other id generated for
-   the same batch. The core pre-scans explicit ids before generating, then draws
-   candidates until one is unseen. A generated collision must never become an
-   accidental upsert. Corpus-wide this makes `normalize` *deterministic with a
-   supplied id source* — not strictly pure.
+3. **`IdSource` has an explicit collision contract, and the snapshot is an
+   argument.** A generated id avoids: (a) existing entity ids in the snapshot,
+   (b) every explicit id anywhere in the request, including forward references,
+   (c) every other id generated for the same batch. (a) is why `normalize` takes
+   the snapshot: the occupied set is a fact it must consult, not one it can be
+   handed by a caller who forgets. The core pre-scans explicit ids before
+   generating, then draws candidates until one is unseen. A generated collision
+   must never become an accidental upsert — a rule the core cannot enforce is a
+   rule the shell will eventually break. Corpus-wide this makes `normalize`
+   *deterministic with a supplied id source* — not strictly pure.
 4. **`get` is not a defaulted query specification.** It reuses the selection
    engine through an internal constructor that (a) disables traversal and
    (b) bypasses the 100-result default. Passing a normal defaulted spec would
@@ -90,3 +95,7 @@ second complete snapshot; no consumer needs one.
 - Returning the post-batch snapshot to the shell — rejected: no consumer.
 - Cloning entities into `Selection` — rejected: ownership cost with no benefit,
   and it invites the projection-inside-selection fusion.
+- A snapshot-aware `IdSource` instead of a `normalize` argument — rejected: it
+  moves an obligation the core must not be able to break into a caller
+  convention that fails silently, and it makes invariant 6 untestable without a
+  fake standing in for the snapshot.

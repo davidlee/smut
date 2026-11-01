@@ -214,11 +214,18 @@ rather than textual.
 
 Generated ids avoid existing entity ids in the snapshot, every explicit id
 anywhere in the request (including forward references), and every other id
-generated for the same batch (DEC-001). The core pre-scans explicit ids, then
-draws candidates until one is unseen; the shell separately guarantees uid
+generated for the same batch (DEC-001). `normalize` therefore takes the snapshot
+it must not collide with and reads occupied ids from its keys — the empty map at
+pre-compute, the loaded snapshot at recompute (§5) — then pre-scans explicit ids
+and draws candidates until one is unseen; the shell separately guarantees uid
 uniqueness against the filesystem. This makes `normalize` *deterministic with a
-supplied id source* rather than strictly pure — the concession that keeps tests
+supplied id source* rather than strictly pure, the concession that keeps tests
 reproducible without an ambient RNG.
+
+The occupied set is an **argument, not a property of the injected source**: an
+obligation the core must not be able to break does not belong in a caller
+convention, and a rule whose enforcement the core cannot test is a rule the
+shell will eventually break (RV-002 F-2).
 
 <!-- doctrine:section sec-4 -->
 ## 4. Store: format and commit
@@ -273,7 +280,7 @@ three journal directories exists, and each rename is a transition.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> prepare: mkdir + staged bytes + manifest
+    [*] --> prepare: mkdir + staged bytes + manifest + fsync each
     prepare --> commit: rename — THE COMMIT DECISION
     commit --> done: apply + fsync(.smut)
     done --> [*]: unlink tree
@@ -296,6 +303,24 @@ therefore always the same shape, the crash suites assert one shape rather than
 two, and the protocol never has an optional member whose absence means
 "unchanged".
 
+**The replay material is durable before the decision to replay it.** The rename
+publishes *staged bytes*, not bytes written where they will be read: recovery
+replays from the staging directory, so a durable `commit` name over non-durable
+staging is either a refusal of a batch that was committed or a republication of
+torn bytes. Before the rename, therefore:
+
+1. every staged entity file and `manifest.json` is written to completion and
+   fsynced **individually**;
+2. `journal.prepare/` itself is fsynced, making its directory entries durable;
+3. only then is the rename performed, and `.smut/` fsynced to make the decision
+   durable.
+
+A parent-directory fsync does not carry its children. Any barrier failure
+*before* the rename is a **pre-commit** failure: nothing has been published, so
+exit 1, discard `journal.prepare/`, and leave the store exactly as it was. This
+is the opposite treatment to failure after the rename (§4.5), and the asymmetry
+is the point.
+
 **The commit decision is not the same as its durability.**
 
 | point | logical status | recovery finds |
@@ -303,6 +328,11 @@ two, and the protocol never has an optional member whose absence means
 | before the rename | nothing published | `prepare` — discard; the store is exactly as it was |
 | rename done, parent fsync not yet successful | **uncertain after power loss** | `prepare` or `commit`; both are coherent |
 | parent fsync successful | durable commitment | `commit` — must roll forward |
+
+The middle row is coherent **only because of the barrier above**: `commit` is a
+findable state that can be replayed to completion, which requires every staged
+byte to be durable already. Without that ordering the table would describe a
+state recovery cannot honour.
 
 Applying never begins before that parent fsync succeeds. Symmetrically,
 `.smut/` is fsynced after the `commit → done` rename *before* any journal content
@@ -330,7 +360,10 @@ that keeps a crashed store recoverable instead of refused.
 Replay is a total re-execution: each staged file is written to `<name>.tmp`,
 fsynced, and renamed over its target; each removal is unlinked again. Nothing is
 inferred from what is missing, so there is no silent-repair path at all. Nothing
-in recovery or cleanup resolves a symlink.
+in recovery or cleanup resolves a symlink. Replay reads staged bytes that §4.3
+made durable before the decision that depends on them, so an incomplete staged
+set under a durable `commit` is corruption, never a crash outcome a user is
+expected to tolerate.
 
 A crash between writing `<name>.tmp` and renaming it leaves a temporary outside
 the journal; recovery removes it before validation, so the strict
@@ -347,8 +380,9 @@ forward.
 
 > Under the documented filesystem and fsync assumptions, cooperating commands
 > observe whole batches. Before application begins, the commit decision is made
-> durable. Interrupted committed batches are replayed before any command serves
-> store state. Failure before acknowledgement may leave the outcome uncertain;
+> durable, together with every staged byte that decision commits to.
+> Interrupted committed batches are replayed before any command serves store
+> state. Failure before acknowledgement may leave the outcome uncertain;
 > successfully acknowledged batches are durable.
 
 That is **atomic visibility through locking and recovery** on top of non-atomic
@@ -403,7 +437,9 @@ Steps 1, 2 and 6 exist for specific reasons:
   untouched — including one that is entirely references.
 - **6** exists because step 2 ran against an empty snapshot. The lock may have
   been won by a process that created the store and committed a first batch
-  meanwhile, so the recomputation is the authoritative one.
+  meanwhile, so the recomputation is the authoritative one. `normalize` is
+  handed the snapshot each pass runs against, so "empty" is a fact of *this*
+  pass rather than an ambient assumption (§3.4).
 
 ### 5.1 Initialisation
 
@@ -550,7 +586,7 @@ renderer bypass `limit`.
 | risk | mitigation |
 | --- | --- |
 | `flock` is advisory, so an editor or `cat >` can corrupt the store | Documented as unsupported; the README states that nothing is promised to a process that does not take the lock. `flock` is also unreliable on some network filesystems — stated in the portability note rather than solved |
-| Process-abort tests prove replay and cleanup, not power-loss write ordering | Stated explicitly wherever the guarantee is claimed; fsync obligations are documented per step, and the tests claim only what they measure. Simulating filesystem failure is out of scope for 0.1 and named as such |
+| Process-abort tests prove replay and cleanup, not power-loss write ordering | Stated explicitly wherever the guarantee is claimed; fsync obligations are documented per step, and the barrier order is asserted by **injected** fsync failure, which proves the code path and not the hardware. Simulating filesystem failure is out of scope for 0.1 and named as such |
 | The numeric comparator is subtle enough to be silently wrong | Exact comparison in one small module; property tests for totality and transitivity over ±2⁵³, i64/u64 extremes, subnormals and signed zeros; the cyclic alternative is recorded so nobody reintroduces it |
 | Crash injection could leak into production builds | Gated behind a test-only cargo feature, not an environment variable in ordinary builds |
 | The `normalize → write-set → commit → reload` seam is untested by either side's unit tests | A small dedicated integration suite owns that seam; it is the one place where "all units pass" can still mean a broken system |
@@ -573,10 +609,10 @@ layer below exists because some failure is invisible to the others.
 
 | layer | where | proves |
 | --- | --- | --- |
-| core unit | `src/**` `#[cfg(test)]`, no fs | declaration algebra, hoisting and preorder, equality and conflict, ordering, projection, envelope, Markdown layout and encoding, spec validation |
+| core unit | `src/**` `#[cfg(test)]`, no fs | declaration algebra including generated-id collision against the passed snapshot, hoisting and preorder, equality and conflict, ordering, projection, envelope, Markdown layout and encoding including a leading notice ahead of a body that ends in an unclosed comment or fence, spec validation |
 | property | `numeric.rs`, `declare.rs` | numeric comparator **totality and transitivity**; the fold is idempotent and coalescing; normalisation is deterministic for a given id source |
-| integration | `tests/**` spawning the binary via `CARGO_BIN_EXE_smut` | exit codes, stdout/stderr separation, stdin and `-`, `--`, the TTY heuristic, full command envelopes |
-| durability | `tests/durability_crash.rs`, test-feature-gated injection | interruption at every named boundary, replay, cleanup, and recovery of an already-interrupted recovery; plus injected short writes, failed fsync, failed rename and failed unlink |
+| integration | `tests/**` spawning the binary via `CARGO_BIN_EXE_smut` | exit codes, stdout/stderr separation, stdin and `-`, `--`, the TTY heuristic, full command envelopes; a forced collision between a generated candidate and a stored id, and a concurrent initialisation that leaves the empty-snapshot precheck stale |
+| durability | `tests/durability_crash.rs`, test-feature-gated injection | interruption at every named boundary, replay, cleanup, and recovery of an already-interrupted recovery; the pre-commit barrier order — staged file, manifest and prepare-directory fsync all before the rename, with barrier failure leaving nothing published; plus injected short writes, failed fsync, failed rename and failed unlink |
 | concurrency | `tests/concurrency.rs` | two simultaneous first declarations, termination before the first lock acquisition, and one process recovering another's transaction |
 | corruption | `tests/store_corruption.rs` | malformed index or entity, missing indexed file, duplicate path mapping, id/content disagreement, unexplained entry, unknown format version, two journal directories, symlink escape |
 | compatibility | `tests/compatibility.rs` | representative 0.1 invocations keep working when the spec surface widens in 0.2 |
@@ -605,9 +641,9 @@ filename/public-id separation, escaping paths, malformed index and entity data,
 absent-store behaviour (corruption + integration); concurrent processes and
 injected interruption at every journal boundary (durability + concurrency);
 missing/`null` semantics, ordering, invalid queries (core unit); get ordering,
-non-cascading delete, render escaping and visible incompleteness (integration +
-core unit); the end-to-end workflow with stdin and stdout/stderr separation
-(integration).
+non-cascading delete, render escaping and visible incompleteness including the
+absorbing-body counterexample (integration + core unit); the end-to-end workflow
+with stdin and stdout/stderr separation (integration).
 
 ### 11.4 Gates
 
@@ -695,10 +731,17 @@ Keep selection small.
   because public ids are opaque. Ids are never joined ambiguously with commas.
 - **Separators do not trim body bytes.** A body ending in newlines may produce
   extra blank lines between entities; verbatim fidelity wins over uniform spacing.
-- **Diagnostics belong in the document**, after a blank line, never only on
-  stderr: `> truncated: result_limit; additional entities omitted` and
-  `> missing: `a`, `b``. There is no `N of M shown` form — that needs a pre-limit
-  count the selection deliberately does not retain.
+- **Diagnostics open the document** — first block, before any entity content,
+  never only on stderr: `> truncated: result_limit; additional entities
+  omitted` and `> missing: `a`, `b``. Leading placement is not cosmetic. Bodies
+  are emitted verbatim, so a stored body ending in an unclosed HTML comment or
+  an unclosed fence absorbs everything after it in a rendered document; a
+  trailing notice would be disclosed in the bytes and hidden on the page.
+  Nothing precedes the notice, so nothing stored can swallow it. The guarantee
+  is exactly that narrow: bodies may still absorb *each other*, because
+  escaping them would cost verbatim fidelity — accepted and stated, not denied.
+  There is no `N of M shown` form — that needs a pre-limit count the selection
+  deliberately does not retain.
 
 `--format markdown` is the default and the only value in 0.1; `mermaid` is
 refused with exit 2 and the message *"not supported in 0.1; planned for 1.0"*,
@@ -757,7 +800,9 @@ representative 0.1 invocations are kept as compatibility tests.
 4. Recovery strictly precedes validation, every time, under the lock.
 5. The lock file is never replaced, renamed or unlinked.
 6. A generated id never collides with an existing, explicit or previously
-   generated id — a generated collision can never become an upsert.
+   generated id — a generated collision can never become an upsert. The snapshot
+   is an argument to `normalize`, so the rule is enforceable where it is stated
+   (§3.4).
 7. Batch rejection writes nothing and reports no `previous` values.
 8. `select` hides fields from output but never from the store or from projection's
    inputs.
@@ -786,6 +831,7 @@ representative 0.1 invocations are kept as compatibility tests.
 | same id declared twice, conflicting fields | whole batch rejected |
 | `1` then `1.0` in one batch, same field | conflict — rejected (distinct values) |
 | body is whitespace only | not visible; ID fallback rendered |
+| body ends in an unclosed comment or fence | the completeness notice still leads the document; later entities may be absorbed by that body |
 | id containing backticks | safely fenced code span in Markdown |
 | `order` names a field absent from every entity | all tie; ID order |
 | `limit` exactly equal to the result count | not truncated |
@@ -804,15 +850,15 @@ restatement.
 
 | decision | settles |
 | --- | --- |
-| DEC-001 | The core/shell boundary: pure functions over an id-keyed snapshot, write sets in public-ID space, total `Reject`, deterministic-with-supplied-ID-source generation, borrowing selection |
+| DEC-001 | The core/shell boundary: pure functions over an id-keyed snapshot, write sets in public-ID space, total `Reject`, deterministic-with-supplied-ID-source generation that takes the snapshot it must avoid, borrowing selection |
 | DEC-002 | Declaration equality: per-field `Set`/`Drop` fold, structural JSON equality, numbers distinct, canonical key order |
-| DEC-003 | Journal: state-as-directory-name, the commit decision and its durability as separate concerns, state-dependent validation, protocol-owned temporaries, atomic visibility |
+| DEC-003 | Journal: state-as-directory-name, replay material durable before the commit decision, the decision and its durability as separate concerns, state-dependent validation, protocol-owned temporaries, atomic visibility |
 | DEC-004 | Pipeline: one exclusive lock on a permanent inode, recovery before validation, two-phase initialisation, unexplained entries as inconsistency, output prepared under the lock |
 | DEC-005 | References: one predicate, hoisting, label on the containing entity, preorder recording, request-error versus stored-corruption split |
 | DEC-006 | Ordering: per-key missing-last, exact numeric comparison, ID tiebreak, `result_limit` only on real omission |
 | DEC-007 | Projection and envelope: borrowing selection, final-boundary serialisation, id-first canonical form, flat non-inlined output |
 | DEC-008 | CLI: clap grammar, `--` for opaque ids, whole-request validation before store access, `--format` refusal naming a release |
-| DEC-009 | Markdown: fields only on request, safe delimiters, fallback on visibility, in-document diagnostics, no pre-limit count |
+| DEC-009 | Markdown: fields only on request, safe delimiters, fallback on visibility, diagnostics leading the document so stored content cannot absorb them, no pre-limit count |
 | DEC-010 | Documentation set: README, versioned store format, `learn`; commit-before-acknowledgement ambiguity |
 | DEC-011 | Spec surface: four keys, named future keys, plain unknown keys, compatibility protected by tests |
 

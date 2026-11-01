@@ -7,16 +7,16 @@ title = "0.1 boundary: public-ID write sets, total Reject, deterministic ID sour
 record_kind = "decision"
 status = "accepted"
 created = "2026-10-31"
-updated = "2026-10-31"
+updated = "2026-11-01"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "SL-001 answer to inq-1: what is the 0.1 pure core, and what crosses its boundary. The brief fixes behaviour but leaves the mechanism, and the boundary decides every downstream test seam."
-choice = "Four pure functions over an id-keyed entity snapshot (normalize, apply, plan_delete, select) plus pure spec parsing and Markdown projection. Write sets are expressed in public-ID space; Selection borrows full entities; the core's only error type is Reject; IdSource is injected with an explicit collision contract."
-alternatives = ["uid-keyed write sets", " a shared flattened error enum", " returning the post-batch snapshot", " cloning entities into Selection"]
+choice = "Four pure functions over an id-keyed entity snapshot (normalize, apply, plan_delete, select) plus pure spec parsing and Markdown projection. Write sets are expressed in public-ID space; Selection borrows full entities; the core's only error type is Reject; IdSource is injected with an explicit collision contract, and normalize takes the snapshot whose occupied ids it must avoid."
+alternatives = ["uid-keyed write sets", " a shared flattened error enum", " returning the post-batch snapshot", " cloning entities into Selection", " a snapshot-aware IdSource instead of a normalize argument"]
 rationale = "Keeps the core name-blind and storage-blind so it cannot represent a storage failure; keeps the journal content-blind so patch semantics can change without touching the commit protocol; keeps projection downstream of selection so 0.2's Mermaid edges survive select."
 consequences = ["Core tests need no filesystem; shell interruption tests need no patch semantics; a small integration suite must cover the normalize -> write-set -> commit -> reload seam that neither side's unit tests reach; user-input rejection is exit 2 whichever layer detects it."]
-decided_by = "operator (approved A+B, five amendments) and agent"
+decided_by = "operator (approved A+B, six amendments) and agent"
 decided_on = "2026-11-01"
 
 [evidence]                      # free-text citations (supports / contradicts / notes)

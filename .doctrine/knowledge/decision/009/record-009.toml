@@ -12,10 +12,10 @@ tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "SL-001 answer to inq-9: exact Markdown layout, fallback and escaping rules, including visible disclosure of truncation and missing roots."
-choice = "Heading from a selected non-empty string heading field; verbatim untrimmed body; other fields only under --show-fields, excluding heading and body only when actually rendered specially; identity as a safely fenced code span and the fallback when nothing is visible; diagnostics in-document; no pre-limit count."
-alternatives = ["always showing attributes", " trimming body bytes for uniform spacing", " single-backtick id wrapping", " a 12-of-40 truncation form requiring a retained pre-limit count"]
-rationale = "Verbatim bytes are the product promise; opaque ids can contain backticks so a fixed fence is unsafe; a count the selection does not retain is not worth widening Selection for."
-consequences = ["Empty or whitespace-only bodies cannot suppress the ID fallback; --heading-field body renders once; trailing newlines in bodies may produce extra blank lines between entities."]
+choice = "Heading from a selected non-empty string heading field; verbatim untrimmed body; other fields only under --show-fields, excluding heading and body only when actually rendered specially; identity as a safely fenced code span and the fallback when nothing is visible; diagnostics in the document and leading, so no stored body can absorb them; no pre-limit count."
+alternatives = ["always showing attributes", " trimming body bytes for uniform spacing", " single-backtick id wrapping", " a 12-of-40 truncation form requiring a retained pre-limit count", "diagnostics appended after the content"]
+rationale = "Verbatim bytes are the product promise; opaque ids can contain backticks so a fixed fence is unsafe; a count the selection does not retain is not worth widening Selection for; an appended notice is absorbable by an unclosed comment or fence in stored content, and a guarantee stored data can hide is not a guarantee."
+consequences = ["Empty or whitespace-only bodies cannot suppress the ID fallback; --heading-field body renders once; trailing newlines in bodies may produce extra blank lines between entities; stored bodies may absorb each other but never smut's own completeness notice."]
 decided_by = "operator and agent"
 decided_on = "2026-11-01"
 

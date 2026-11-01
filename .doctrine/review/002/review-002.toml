@@ -17,8 +17,88 @@ act = "conclude"
 role = "raiser"
 note = """Pass over design.md at revision 37 (materialisation watermark current, twelve sections, zero changes since baseline) — the settled content, after RV-001's three findings were integrated and verified. Re-checked the interactions the fixes displaced: §5's "only declare creates a store" against §7.2 and §8.3 (agree); §4.3's uniform index staging against §11's crash-suite expectations (one shape, consistent); §2's feature gate against §12's Cargo.toml row and §11.1's injection rule (agree); and step 6's recompute rationale, which still holds for every command that reaches it. No new findings. The declared attack surfaces in the brief remain available to the user if they want a formal hostile pass; a later raise would clear this marker and it would be concluded again."""
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Adversarial review of all twelve materialised SL-001 design sections at revision 37 against the root implementation brief, SL-001 scope, DEC-001 through DEC-011, and RV-001 dispositions. Rechecked RV-001 fixes as resolved. Probed declaration normalization/equality, ID allocation, API boundaries, initialization/concurrency, journal durability and recovery ordering, selection/order/projection, Markdown diagnostics, CLI and test gates. Raised one blocker and two major design gaps; left open for responder. No implementation, crash or power-loss execution was performed. Linux fsync semantics checked against the Linux manual."
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-001"
+
+[[finding]]
+id = "F-1"
+status = "answered"
+severity = "blocker"
+title = "Commit protocol omits the durability barrier for staged recovery material"
+detail = "Expected: before publishing a durable commit decision, every staged entity/index file and manifest, and their directory entries, must be durable. Observed: design §4.3 (lines 273-310) and DEC-003 specify writing staged bytes then renaming prepare to commit and fsyncing .smut, but never require fsync of staged files, manifest, or journal.prepare itself. The parent-directory fsync does not establish durability of the child's contents. A conforming implementation can persist journal.commit then lose its manifest or a staged file on power failure; §4.4 must refuse it as corrupt and cannot roll forward. This is a missing ordering obligation in the design, not an observed implementation failure. Repair: explicitly require successful write_all and file fsync for each staged file and manifest, then journal-directory fsync, before prepare-to-commit; retain existing parent fsync before apply. Specify pre-commit treatment on any barrier failure and fault-injection assertions for the order. Linux fsync reference: https://man7.org/linux/man-pages/man2/fsync.2.html ."
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against §4.3, §4.4, DEC-003 and the brief's sync obligation. The observation holds: the design enumerated its fsync points and omitted the staged material, while recovery replays staged bytes and refuses a commit whose staged set is incomplete — so a durable commit name over non-durable staging is either a refusal of a batch that was committed or a republication of torn bytes. Repair, design revision 42: §4.3 now requires, before the prepare-to-commit rename, a completed write and per-file fsync of every staged entity file and the manifest, then an fsync of the prepare directory itself so its entries are durable, and only then the rename with the existing parent fsync. Any barrier failure before the rename is pre-commit: exit 1, discard prepare, store untouched — the asymmetry with the roll-forward-only post-commit case is stated as the point. DEC-003 gains the barrier in its choice, rationale and consequences; §4.4 states that a durable commit therefore always has complete replay material, so an incomplete staged set is corruption rather than a tolerated crash outcome; §4.6's claim names the replay material; §11.1 makes the barrier order an asserted fault-injection obligation and §10 says what that proves.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against §4.3, §4.4, DEC-003 and the brief's sync obligation. The observation holds: the design enumerated its fsync points and omitted the staged material, while recovery replays staged bytes and refuses a commit whose staged set is incomplete — so a durable commit name over non-durable staging is either a refusal of a batch that was committed or a republication of torn bytes. Repair, design revision 42: §4.3 now requires, before the prepare-to-commit rename, a completed write and per-file fsync of every staged entity file and the manifest, then an fsync of the prepare directory itself so its entries are durable, and only then the rename with the existing parent fsync. Any barrier failure before the rename is pre-commit: exit 1, discard prepare, store untouched — the asymmetry with the roll-forward-only post-commit case is stated as the point. DEC-003 gains the barrier in its choice, rationale and consequences; §4.4 states that a durable commit therefore always has complete replay material, so an incomplete staged set is corruption rather than a tolerated crash outcome; §4.6's claim names the replay material; §11.1 makes the barrier order an asserted fault-injection obligation and §10 says what that proves.
+"""
+
+[[finding]]
+id = "F-2"
+status = "answered"
+severity = "major"
+title = "normalize cannot enforce existing-ID collision avoidance through its declared API"
+detail = "Expected: §3.4 and §8.1 invariant 6 require the core to reject generated candidates already in the loaded snapshot. Observed: DEC-001's core signature is normalize(input: &Value, ids: &mut dyn IdSource), with no snapshot or existing-ID set; only apply receives Entities. The same record explicitly assigns pre-scanning and candidate rejection to the core, while §2 keeps the shell out of declaration semantics. With existing id x and an injected candidate sequence [x,y], normalize has no declared information with which to skip x; apply can accidentally upsert x or must reject/re-normalize through an unspecified protocol. Recomputing under the lock does not supply the absent argument. Repair: add an explicit occupied-ID input to normalize (from the authoritative locked snapshot), or define and document a snapshot-aware IdSource allocation contract and ownership of the reserved set. Pin an integration case forcing collision with an existing id and another case where concurrent initialization makes the empty-snapshot precheck stale. Verified API/contract mismatch; no implementation exists to exercise."
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against DEC-001 rule 3 and its surface block, §3.4, §8.1 invariant 6 and §5 steps 2 and 6. The observation holds and the contract contradicted itself: rule 3 requires generated ids to avoid existing entity ids while normalize received no snapshot with which to know them. Repair, design revision 42, takes the finding's first option: normalize now takes the entity map it must not collide with and reads occupant ids from its keys — the empty map at pre-compute, the loaded snapshot at recompute — so invariant 6 is enforced inside the function that must obey it. The second option, a snapshot-aware id source, is recorded as a rejected alternative in DEC-001 with its reason: it pushes an obligation the core must not be able to break into a caller convention that fails silently, and leaves the contract untestable without a fake standing in for the snapshot. §3.4, §5 and §8.1 are reworded to match. The two cases the finding asks for are recorded in §11.1 as test obligations: a forced collision between a generated candidate and a stored id, and a concurrent initialisation that makes the empty-snapshot precheck stale.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against DEC-001 rule 3 and its surface block, §3.4, §8.1 invariant 6 and §5 steps 2 and 6. The observation holds and the contract contradicted itself: rule 3 requires generated ids to avoid existing entity ids while normalize received no snapshot with which to know them. Repair, design revision 42, takes the finding's first option: normalize now takes the entity map it must not collide with and reads occupant ids from its keys — the empty map at pre-compute, the loaded snapshot at recompute — so invariant 6 is enforced inside the function that must obey it. The second option, a snapshot-aware id source, is recorded as a rejected alternative in DEC-001 with its reason: it pushes an obligation the core must not be able to break into a caller convention that fails silently, and leaves the contract untestable without a fake standing in for the snapshot. §3.4, §5 and §8.1 are reworded to match. The two cases the finding asks for are recorded in §11.1 as test obligations: a forced collision between a generated candidate and a stored id, and a concurrent initialisation that makes the empty-snapshot precheck stale.
+"""
+
+[[finding]]
+id = "F-3"
+status = "answered"
+severity = "major"
+title = "Appending diagnostics after verbatim Markdown can hide incompleteness"
+detail = "Expected: the brief and §7.1 require visibly disclosed missing roots and truncation. Observed: §7.1 and DEC-009 emit arbitrary body/string-field Markdown verbatim and put diagnostics after it with only a blank line. A valid body ending with an unclosed HTML comment ('<!--') absorbs all following diagnostics in a rendered Markdown document; an unclosed fenced code block also changes their interpretation. This does not require script execution. For example, select a stored body '<!--' with limit 1 while a second row exists: the raw output contains a truncation notice but the rendered document hides it. Repair: place the completeness notice before any untrusted verbatim content, or define a rendering boundary that demonstrably prevents content swallowing the notice while preserving body bytes. Add rendering cases for unclosed comments/fences and raw string attributes. This is a design-level counterexample, not a runtime test result."
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against §7.1, DEC-009 and the brief's disclosure requirement. The counterexample holds and is reachable with ordinary stored data: a body ending in an unclosed HTML comment or an unclosed fence absorbs everything after it, so a notice appended after the content is disclosed in the bytes and hidden on the page. Repair, design revision 42, places the completeness notice first, before any entity content, so no stored byte can precede and absorb it, and states the boundary explicitly: smut guarantees that its own notice cannot be absorbed, and does not claim that stored bodies cannot absorb other entities, because escaping body bytes would break verbatim fidelity. DEC-009 carries the ordering, the reason and the rejected alternative of appending; §8.3 gains the resolved edge case; §11.1 gains the render cases the finding names — an unclosed comment and an unclosed fence with a truncated selection; and the rule is stated as inherited by the 1.0 Mermaid renderer.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified against §7.1, DEC-009 and the brief's disclosure requirement. The counterexample holds and is reachable with ordinary stored data: a body ending in an unclosed HTML comment or an unclosed fence absorbs everything after it, so a notice appended after the content is disclosed in the bytes and hidden on the page. Repair, design revision 42, places the completeness notice first, before any entity content, so no stored byte can precede and absorb it, and states the boundary explicitly: smut guarantees that its own notice cannot be absorbed, and does not claim that stored bodies cannot absorb other entities, because escaping body bytes would break verbatim fidelity. DEC-009 carries the ordering, the reason and the rejected alternative of appending; §8.3 gains the resolved edge case; §11.1 gains the render cases the finding names — an unclosed comment and an unclosed fence with a truncated selection; and the rule is stated as inherited by the 1.0 Mermaid renderer.
+"""
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

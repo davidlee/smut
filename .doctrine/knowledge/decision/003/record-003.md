@@ -1,7 +1,9 @@
 # Journal protocol, state validation, and the durability guarantee
 
-Settled with the operator on 2026-11-01, amended in six particulars. The
-machinery is small; the guarantee is what has to be exact.
+Settled with the operator on 2026-11-01, amended in six particulars and once
+more for RV-002 F-1 — the durability barrier that makes the replay material
+durable before the decision that depends on it. The machinery is small; the
+guarantee is what has to be exact.
 
 ## State is a directory name
 
@@ -9,7 +11,7 @@ Under the lock, at most one of three sibling directories exists in `.smut/`.
 Each rename is a state transition:
 
 ```
-                mkdir + write staged bytes + manifest
+                mkdir + write staged bytes + manifest + fsync each
    (nothing) ────────────────────────────────────────▶ journal.prepare/
                                                               │
                                           rename  ← THE COMMIT DECISION
@@ -32,6 +34,28 @@ final basename, plus `manifest.json`:
 
 The manifest **is** the write set; the staged directory is its materialisation.
 
+## The replay material is durable before the decision
+
+The `prepare → commit` rename publishes **staged bytes**, not bytes written where
+they will be read: recovery replays *from the staging directory*. A durable
+`commit` name over non-durable staging is therefore either a refusal of a batch
+that was committed or a republication of torn bytes — and the guarantee in this
+record forbids both. The barrier is:
+
+1. every staged entity file and `manifest.json` is written to completion and
+   fsynced **individually**;
+2. `journal.prepare/` itself is fsynced, making its directory entries durable;
+3. only then is the `prepare → commit` rename performed, and `.smut/` fsynced
+   to make the decision durable.
+
+A parent-directory fsync does not carry its children; file contents and
+directory entries are separate obligations, in the same way `commit → done`
+and journal deletion are. Any barrier failure **before** the rename is a
+**pre-commit** failure: nothing has been published, so report exit 1, discard
+`journal.prepare/`, and leave the store exactly as it was. That is the opposite
+treatment to failure after the rename, which is roll-forward-only — and the
+asymmetry is the point.
+
 ## The commit decision is not the same as its durability
 
 | point | logical status | recovery on next command |
@@ -39,6 +63,11 @@ The manifest **is** the write set; the staged directory is its materialisation.
 | before the `prepare → commit` rename | nothing published | discard `prepare` — the store is exactly as it was |
 | rename succeeded, parent fsync **not** yet successful | **uncertain after power loss** | may find `prepare` or `commit`; both outcomes are coherent |
 | parent fsync succeeded | durable commitment | must roll forward |
+
+The middle row is coherent **only because of the barrier above**: `commit` is a
+findable state that can be replayed to completion, which requires every staged
+byte to be durable already. Without that ordering the table would describe a
+state recovery cannot honour.
 
 **Applying never begins before that parent fsync succeeds.** The fourth step is
 the only one that licenses publishing bytes.
