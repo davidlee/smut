@@ -286,9 +286,9 @@ filesystem, not proven by this project.
 > state. Failure before acknowledgement may leave the outcome uncertain;
 > successfully acknowledged batches are durable.
 
-That is **atomic visibility through locking and recovery** on top of non-atomic
-physical publication. It is not claimed that a group of renames is atomic on any
-real filesystem.
+That is **atomic visibility through locking and recovery**, on top of non-atomic
+physical publication. It is deliberately not claimed that a group of renames is
+atomic on any real filesystem.
 
 The uncertainty is named precisely, and its direction matters:
 

@@ -137,9 +137,9 @@ a success envelope.
 
 ## What smut promises
 
-The store is written through a journal, and its bytes are described in
-[docs/store-format.md](docs/store-format.md). The guarantee, in the words of the
-document that defines it:
+The store is written through a journal. Its bytes, its states and its fsync
+obligations are described in [docs/store-format.md](docs/store-format.md), and
+this is the guarantee that protocol licenses, quoted in full:
 
 > Under the documented filesystem and fsync assumptions, cooperating commands
 > observe whole batches. Before application begins, the commit decision is made
@@ -148,15 +148,15 @@ document that defines it:
 > state. Failure before acknowledgement may leave the outcome uncertain;
 > successfully acknowledged batches are durable.
 
-That is atomic visibility through locking and recovery on top of non-atomic
-physical publication: it is not claimed that a group of renames is atomic on any
-real filesystem, and no claim is made about what a power loss leaves on the disk
-beyond the documented fsync assumptions.
+That is **atomic visibility through locking and recovery**, on top of non-atomic
+physical publication. It is deliberately not claimed that a group of renames is
+atomic on any real filesystem, and no claim is made about what a power loss
+leaves on the disk beyond the documented fsync assumptions.
 
-The uncertainty is commit-before-acknowledgement. A command can die after its
-batch was committed and before its success response reached you, so an
-interrupted command's effect is *unknown* rather than undone. An acknowledged
-batch — exit 0, response printed — is committed and durable.
+The uncertainty the guarantee names is commit-before-acknowledgement. A command
+can die after its batch was committed and before its success response reached
+you, so an interrupted command's effect is *unknown* rather than undone. An
+acknowledged batch — exit 0, response printed — is committed and durable.
 
 ## Portability
 
