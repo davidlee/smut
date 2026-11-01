@@ -1,0 +1,475 @@
+id    = 4
+slug  = "sl-001-audit-implementation-against-design-plan-and-governance"
+title = "SL-001 audit: implementation against design, plan and governance"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Conformance audit of SL-001 at head abf690e (9/9 phases complete, lifecycle at audit), against design.md's twelve sections, DEC-001…011, the plan's 9 phases and their EN/EX/VT/VA/VH bar, the brief's exit-code and stream contract, and the slice's own recorded hand-backs.
+
+Examined: just check (0 warnings, both feature configurations); doctrine check gate and prove; doctrine validate; slice verify-vt (28/28); slice conformance (32/32/2/0) and its selector registry; the built binary by hand in scratch stores for declaration semantics (patch, DROP, conflict, generated ids, hoisting, missing), envelope and projection, exits 0/1/2, streams, TTY and pipe paths, and the corruption shapes the loader refuses; the durability suite's registry-to-test coverage (22 names, 15 interrupted_at__*, 8 recovery_interrupted__*) and its code-path-ordering claim; README/docs/store-format/learn claims against behaviour; and the phase sheets' recorded findings for anything durable not yet in notes.md.
+
+Dispositioned 17 findings: 3 fix-now landed inside the audit with tests (F-1 serialisation wrapper, F-2 closed-stdout exit, F-3 gate recipes), 5 design-wrong handed to reconcile with a structured brief (F-1's DEC-007/§4.2 clarification, F-4 selectors, F-6 §12 errata, F-7 unnamed fsyncs, F-9 brief-example boundary), 6 tolerated with rationale, 2 aligned, and 2 human reads raised as owed work and left non-terminal pending the human's reply (PHASE-05/VH-1, PHASE-08/VH-1). This pass examined the machines; it does not discharge the two human criteria."""
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-001"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Projected entities bypass the shared wrapper: envelope entity roots are lexical, not id-first"
+detail = """
+Expected: §4.2/DEC-007's mechanism clause — "entity serialisation at the final boundary through one shared Entity wrapper … used for stored entity files and for projected entities alike", with the entity root naming id first and its remaining keys lexical.
+Observed on the built binary at abf690e, in a scratch store: an entity *file* is `{"id":"smut","body":"First.","kind":"note","title":"Alpha"}` (id first), but `query {"from":["smut"],"select":["body","title"]}` emits `{"dangling":[],…,"objects":[{"body":"First.","id":"smut","title":"Alpha"}],…}` — lexical inside `objects`, so the shared wrapper is applied to files only.
+Cause: `src/entity.rs`'s `Canonical` carries an `id_first` flag that `render` sets only for `serialise_entity`'s single root; the stdout document path (`serialise_document` → `Form::Stdout`, reached from `cli.rs::serialise`) renders every object lexically. The same entity therefore serialises two ways depending on where it appears, which is exactly what "one shared wrapper" exists to prevent.
+Blast radius if repaired: `objects[]`, `changes[]` entries and `changes[].previous` (each carries a nonempty string id, i.e. an entity node by DEC-005's predicate); index.json/manifest.json carry no entity node and keep their bytes; entity files are unchanged. JSON key order is semantically insignificant, so no consumer breaks — but the README's `console` transcript and `docs/store-format.md`'s canonical-bytes section both have to follow the ruling."""
+disposition = "fix-now"
+response = """Accepted: the code is the defect, not the design. DEC-007's mechanism clause names one shared wrapper "used for stored entity files and for projected entities alike", and §4.2 states one ordering convention; the build applies it at the file root only. Fix, in this unit of work, TDD: make the ordering structural — an entity node (an object whose id is a nonempty string, DEC-005's one predicate) names id first *wherever it appears*, every other object stays lexical — which collapses `serialise_entity`/`serialise_document` into one wrapper and removes the root-flag that produced the divergence. Pinned by a unit test on the envelope path and by the README's console transcript being regenerated against the built binary. `docs/store-format.md`'s canonical-bytes section gains the one sentence that says projected entities use the same wrapper. The design clarification this rests on (an embedded entity node is not an "embedded ordinary object") goes in the reconciliation brief."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Accepted: the code is the defect, not the design. DEC-007's mechanism clause names one shared wrapper "used for stored entity files and for projected entities alike", and §4.2 states one ordering convention; the build applies it at the file root only. Fix, in this unit of work, TDD: make the ordering structural — an entity node (an object whose id is a nonempty string, DEC-005's one predicate) names id first *wherever it appears*, every other object stays lexical — which collapses `serialise_entity`/`serialise_document` into one wrapper and removes the root-flag that produced the divergence. Pinned by a unit test on the envelope path and by the README's console transcript being regenerated against the built binary. `docs/store-format.md`'s canonical-bytes section gains the one sentence that says projected entities use the same wrapper. The design clarification this rests on (an embedded entity node is not an "embedded ordinary object") goes in the reconciliation brief."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed and verified at 78a7eb1: an entity node (nonempty string id, reference_id's predicate) names id first wherever it appears; serialise_entity/serialise_document collapsed into one `serialise`, so the root flag that caused the divergence is gone. Green pin: tests/cli_contract.rs::a_projected_entity_is_serialised_by_the_same_wrapper_as_a_stored_one (real spawned binary, byte assertion on objects[]), plus entity.rs's `an_entity_node_names_its_id_first_wherever_it_appears` and the reworded `an_embedded_ordinary_object_is_lexical_and_is_not_hoisted` (fixture now a genuine ordinary object, i.e. one without a nonempty string id). `just check` green; README transcript regenerated from the release build (tests/readme_example.rs green); docs/store-format.md states the rule is structural. The design/DEC-007 clarification this rests on goes to the reconciliation brief."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "A closed stdout panics with exit 101, outside the brief's 0/1/2 exit table"
+detail = """
+Expected: §7.2 — Reject → 2, StoreError → 1, success → 0 — and §5.3, which says a stdout failure after a commit is documented, not engineered around.
+Observed: `smut get smut | true` prints the Rust panic message ("failed printing to stdout: Broken pipe (os error 32)") on stderr and exits 101. `src/main.rs` uses `print!`, whose failure path is a panic; a reader that closes the pipe early is ordinary use (the same defect is recorded in notes.md's PHASE-07 hand-back, where it was ruled outside that phase's bar).
+The prepared bytes are already complete at that point (§5.3), so the honest outcomes are: delivered (0) or delivery failed (1). A panic is neither, and it is the one exit code the brief does not name."""
+disposition = "fix-now"
+response = "Accepted: a panic is outside the exit table and a closed pipe is ordinary use. Fix, in this unit of work: `main` writes the already-prepared bytes with a fallible write instead of `print!`, and a failed write exits 1 — the delivery-failure code the brief already names — with a diagnostic only when the error is not BrokenPipe, since `| head -1` is not an error worth reporting. Pinned by a unit test over a writer that fails, not by a signal test."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Accepted: a panic is outside the exit table and a closed pipe is ordinary use. Fix, in this unit of work: `main` writes the already-prepared bytes with a fallible write instead of `print!`, and a failed write exits 1 — the delivery-failure code the brief already names — with a diagnostic only when the error is not BrokenPipe, since `| head -1` is not an error worth reporting. Pinned by a unit test over a writer that fails, not by a signal test."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed and verified at 35b62ed: `emit` writes the prepared bytes fallibly and exits 1 on failure, reporting only non-BrokenPipe errors. Unit tests: a_closed_stdout_exits_one_rather_than_panicking_and_says_nothing, any_other_output_failure_exits_one_and_is_reported_on_stderr, a_delivered_response_keeps_its_own_exit_code_and_writes_its_diagnostic. Measured on the built binary: `smut get a b | true` exits 1 with empty stderr (was 101 with a panic message); an ordinary invocation still exits 0 and prints one line."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "`doctrine check gate` and `doctrine check prove` refuse: the justfile has no gate/prove recipe"
+detail = """
+Expected: the per-phase and prove-clean cadences to resolve to this project's own gate. `doctrine check --help`: `gate` is "End-of-phase cadence. Unconfigured ⇒ `just gate`"; `prove` is "Non-mutating prove-clean cadence … Unconfigured ⇒ `just prove`".
+Observed: `doctrine check gate` → `error: justfile does not contain recipe 'gate'`. The justfile defines `build`, `test`, `lint`, `fmt` and `check` only (§11.4 / PHASE-01/EX-6 named `just check`, which is correct as a project gate but is not the name the doctrine lifecycle invokes).
+So the audit's own "run `doctrine check gate`" step cannot pass in this repo, and a future phase-close hook would fail for a reason unrelated to the code."""
+disposition = "fix-now"
+response = "Accepted: the justfile is the project's gate surface, and the lifecycle's cadence names are part of that surface. Fix, in this unit of work: `gate: check` and `prove: check` in the justfile — both cadences are the same non-mutating sequence, and aliasing them keeps one definition of the gate rather than a second one that can drift. Verified by `doctrine check gate` and `doctrine check prove` both exiting 0 afterwards."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Accepted: the justfile is the project's gate surface, and the lifecycle's cadence names are part of that surface. Fix, in this unit of work: `gate: check` and `prove: check` in the justfile — both cadences are the same non-mutating sequence, and aliasing them keeps one definition of the gate rather than a second one that can drift. Verified by `doctrine check gate` and `doctrine check prove` both exiting 0 afterwards."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Fixed and verified at dfc6e37: `gate: check` and `prove: check` in the justfile. `doctrine check gate` and `doctrine check prove` both exit 0 now (they refused with "justfile does not contain recipe 'gate'"/"'prove'" before), and `just check` remains the single definition of the gate."""
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "§12's selector registry omits Cargo.lock, so `slice conformance` reports it undeclared"
+detail = """
+Expected: every path the design's declared change actually touches is in the design-target selector set (`src/**`, `tests/**`, `docs/**`, `README.md`, `Cargo.toml`, `justfile`).
+Observed: `doctrine slice conformance 1` — undeclared (2): `.doctrine/slice/001/notes.md`, `Cargo.lock`; conformant (32); undelivered (0). Changing `Cargo.toml`'s dependency set necessarily rewrites `Cargo.lock`, which is a committed file in this repo, so the omission is an erratum in the design's code-impact table rather than scope creep.
+Fix surface: the load-bearing verb is the selector registry (`doctrine slice selector add SL-001 Cargo.lock --intent design-target`); `design.md §12`'s row is the human mirror."""
+disposition = "design-wrong"
+response = """Accepted: the design's code-impact table is what the selector registry mirrors, so the omission is the design's. Reconciliation brief — per-slice: add `Cargo.lock` to the registry (`doctrine slice selector add SL-001 Cargo.lock --intent design-target`, the load-bearing verb `slice conformance` reads) and mirror it in `design.md §12`'s selector list and Cargo.toml row ("rewrites `Cargo.lock`"). After that the undeclared cell is empty except the item in F-5."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """Accepted: the design's code-impact table is what the selector registry mirrors, so the omission is the design's. Reconciliation brief — per-slice: add `Cargo.lock` to the registry (`doctrine slice selector add SL-001 Cargo.lock --intent design-target`, the load-bearing verb `slice conformance` reads) and mirror it in `design.md §12`'s selector list and Cargo.toml row ("rewrites `Cargo.lock`"). After that the undeclared cell is empty except the item in F-5."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; brief entry written (selector add + §12 mirror)."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "nit"
+title = "`.doctrine/slice/001/notes.md` reads undeclared: process record, not an implementation path"
+detail = """
+Observed: `slice conformance` lists `.doctrine/slice/001/notes.md` as undeclared, from the eight phase boundaries recorded in git.
+This is a conformance-measure artefact rather than a hazard: notes.md is the slice's own durable run record — every phase's `/harvest` writes it, and no design declares that a phase will edit its own notes. Adding it to `design-target` would misdescribe the design's code impact (that selector set is the implementation surface the design predicts), and `design.md §6`'s prose mirror would then claim the design targets its own record. Tolerated deliberately, with the redeclaration recorded rather than silently skipped."""
+disposition = "tolerated"
+response = """Tolerated deliberately: `notes.md` is the slice's own durable run record, written by every phase's harvest; no design predicts that a phase edits its own notes, and adding it to `design-target` would make the code-impact selector set stop meaning "the implementation surface". The conformance cell is a measure artefact, and the redeclaration is recorded here rather than silently dropped."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = """Tolerated deliberately: `notes.md` is the slice's own durable run record, written by every phase's harvest; no design predicts that a phase edits its own notes, and adding it to `design-target` would make the code-impact selector set stop meaning "the implementation surface". The conformance cell is a measure artefact, and the redeclaration is recorded here rather than silently dropped."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed as a measure artefact; rationale recorded, no write owed."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "minor"
+title = "§12 calls README.md new and omits the lib target — two plan errata never folded into the design"
+detail = """
+Expected: the locked design's code-impact table to describe the paths as the implementation found them.
+Observed: §12 says "All paths are new except `justfile` and `Cargo.toml`" and lists `README.md` as new — but the owner's README and `smut.jpg` predate the slice (PHASE-08 edited around a 383-byte brand block, `cmp`-identical). §12's module map also lists no `src/lib.rs`, while §11.1 places three test layers under `tests/**`, which cannot reach a binary-only crate.
+Both were recorded as plan errata (`plan.md` §"The four things this plan had to decide for itself" 1–2) and the plan is the honest record; the design still reads as if they were not true. These are factual errata, not architecture: folding them in changes no mechanism."""
+disposition = "design-wrong"
+response = "Accepted: the design's code-impact table is wrong about two paths, and the plan's record is the honest one. Reconciliation brief — per-slice, two direct edits to `design.md §12`: (a) the intro sentence stops calling `README.md` new — it is edited around the owner's pre-existing brand copy; (b) the module map gains `src/lib.rs` (library target exposing the modules; the binary stays a thin dispatcher) with §11.1's `tests/**` layers as its reason. No mechanism changes."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = "Accepted: the design's code-impact table is wrong about two paths, and the plan's record is the honest one. Reconciliation brief — per-slice, two direct edits to `design.md §12`: (a) the intro sentence stops calling `README.md` new — it is edited around the owner's pre-existing brand copy; (b) the module map gains `src/lib.rs` (library target exposing the modules; the binary stays a thin dispatcher) with §11.1's `tests/**` layers as its reason. No mechanism changes."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; brief entry written (two §12 direct edits)."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "§4.3/§4.4 leave three `.smut` fsyncs unnamed, so the implementation borrows a neighbour's boundary name"
+detail = """
+Expected: the design's protocol sections to name every durable step the interruption evidence has to distinguish.
+Observed: §4.3 names the staged puts and manifest, the staging directory and the post-rename parent fsync, but not the post-apply `fsync(.smut)` that precedes the `commit → done` rename, nor the `fsync(.smut)` after the `done` rename before cleanup; §4.4's recovery recipe ("replay, rename to `done`, fsync, clear") omits the fsync after replay and before the rename. The implementation therefore reuses `RemovalsApplied`, `DoneRenamed` and `RecoveryDoneRenamed` as boundary names for these four steps (notes.md, PHASE-05 autonomy log: "all four are post-decision steps with the same roll-forward reaction").
+The borrowing is defensible and the tests pass, but a boundary name is the audit's unit of evidence: a shared name means a step cannot be interrupted in isolation, which is precisely what §4.3 claims the barrier tests do for every member. The design should name them and say why they share a name, or the registry should grow four names."""
+disposition = "design-wrong"
+response = "Accepted as a design gap with a real cost: a boundary name is the audit's unit of evidence, and four post-decision steps sharing three names means they cannot be interrupted in isolation — the tests are right to exist, the protocol text is what is incomplete. Reconciliation brief — per-slice, `design.md §4.3` names the post-apply and post-done `.smut` fsyncs (and says the roll-forward reactions are identical, if the shared names stand), and `§4.4`'s recovery recipe gains the fsync after replay and before its `commit → done` rename, with why it mirrors §4.3's apply rule. Whether the registry grows four names is an implementation choice the design text should leave room for, not pre-empt."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = "Accepted as a design gap with a real cost: a boundary name is the audit's unit of evidence, and four post-decision steps sharing three names means they cannot be interrupted in isolation — the tests are right to exist, the protocol text is what is incomplete. Reconciliation brief — per-slice, `design.md §4.3` names the post-apply and post-done `.smut` fsyncs (and says the roll-forward reactions are identical, if the shared names stand), and `§4.4`'s recovery recipe gains the fsync after replay and before its `commit → done` rename, with why it mirrors §4.3's apply rule. Whether the registry grows four names is an implementation choice the design text should leave room for, not pre-empt."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; brief entry written (§4.3/§4.4)."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "minor"
+title = "Design review RV-003 reads STALE at audit entry"
+detail = """
+Observed: `doctrine design show SL-001 --format status` reports RV-003 STALE — 16 changes since the declared baseline. Evidence that this is not drift in the reviewed text: the last commit touching `design.md` is `c32f316` (the self-pass that closed RV-003), which precedes both plan commits (`5224e4a`, `f16167d`) and all seven implementation charters. The hashed path-set is the slice's selectors (`src/**`, `tests/**`, `docs/**`, `README.md`, `Cargo.toml`, `justfile`), i.e. exactly the files the implementation rewrote — so staleness here is the re-prime signal on a closed review, not evidence that the design moved after it was attested.
+Ruling: no re-review is owed, and none is available — the design run is locked and its pass concluded by disposition. The design *text* is nonetheless owed the errata above, which is a reconcile write, not a review."""
+disposition = "tolerated"
+response = "Tolerated, on evidence rather than tolerance: the reviewed text has not moved since RV-003 was attested — the last `design.md` commit (`c32f316`) precedes the plan and every implementation charter — so the stale cell is the warm-cache path-set (`src/**` etc.) being rewritten by exactly the implementation it predicted. No re-review is owed, and none is available: the design run is locked and its pass is concluded. The design text does owe the errata (F-4, F-6, F-7, F-9), which is a reconcile write."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Tolerated, on evidence rather than tolerance: the reviewed text has not moved since RV-003 was attested — the last `design.md` commit (`c32f316`) precedes the plan and every implementation charter — so the stale cell is the warm-cache path-set (`src/**` etc.) being rewritten by exactly the implementation it predicted. No re-review is owed, and none is available: the design run is locked and its pass is concluded. The design text does owe the errata (F-4, F-6, F-7, F-9), which is a reconcile write."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed against git: design.md last moved at c32f316, before the plan and all charters; stale cache is the rewritten selector path-set."
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "minor"
+title = "The brief's v1 acceptance example is not 0.1-runnable, and no slice artefact says so"
+detail = """
+Expected: the brief is product authority ("The brief is the whole canon", design §1). Its *Query contract* documents `where`, `follow`, `backlinks`, `depth` and `budget` as v1, and its end-to-end acceptance flow uses `follow` twice and `where` once.
+Observed: 0.1 refuses all five by name (`smut: follow is not supported in 0.1; it arrives in 0.2`, exit 2), by design — §1 defers the predicate language and traversal to IMP-001. So the brief's acceptance example cannot be run verbatim against this build. The run handled this honestly in behaviour (the README's worked example is the brief's flow truncated at the 0.1 boundary and ends by *showing* the refusal; `tests/compatibility.rs` pins the runnable prefix and both refusals) but recorded the divergence only in `notes.md`.
+Gap: a reader holding the brief and the build has no slice artefact telling them the brief's v1 is delivered across 0.1/0.2/1.0. Fix surface: `design.md §1` (or `slice-001.md`) states the split and names the acceptance-example boundary; the brief itself is untouched."""
+disposition = "design-wrong"
+response = "Accepted: the gap is in the slice's artefacts, not the brief — the brief's v1 is delivered across 0.1/0.2/1.0 by IMP-001/IMP-002, and the design says so in prose about the *feature set* while never saying it about the brief's own acceptance example. Reconciliation brief — per-slice: `design.md §1`'s out-of-scope paragraph gains one sentence naming the boundary (the brief's end-to-end example uses `follow`/`where`, so its 0.1-runnable prefix is what the README pins and its traversal steps are 0.2's), and `slice-001.md`'s scope carries the same sentence if it is not there already. The brief file is not edited."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = "Accepted: the gap is in the slice's artefacts, not the brief — the brief's v1 is delivered across 0.1/0.2/1.0 by IMP-001/IMP-002, and the design says so in prose about the *feature set* while never saying it about the brief's own acceptance example. Reconciliation brief — per-slice: `design.md §1`'s out-of-scope paragraph gains one sentence naming the boundary (the brief's end-to-end example uses `follow`/`where`, so its 0.1-runnable prefix is what the README pins and its traversal steps are 0.2's), and `slice-001.md`'s scope carries the same sentence if it is not there already. The brief file is not edited."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; brief entry written (§1 + slice scope)."
+
+[[finding]]
+id = "F-10"
+status = "answered"
+severity = "major"
+title = "PHASE-05/VH-1 is undischarged: no human read of tests/durability_crash.rs against §4.3–§4.5"
+detail = """
+The plan's PHASE-05/VH-1 expects a human to read `tests/durability_crash.rs` against design §4.3/§4.4/§4.5 and confirm three things: every named boundary has an interruption test, repeated recovery is explicit, and the file claims only code-path ordering.
+Mechanical half is seat-verified and green (22 registry names, 15 `interrupted_at__*`, 8 `recovery_interrupted__*`, 44 executed under the feature and 0 by default by construction, `just check` green). The *human* half has not happened: notes.md records the seat closing the phase "complete-with-a-review-pending" and carrying VH-1 to the human.
+This is an outstanding human obligation, not a passed criterion, and it must not be read as discharged by this audit's mechanical re-run."""
+disposition = "fix-now"
+response = "Accepted as owed work, not as a passed criterion. The mechanical half is re-verified and green; the read is the human's. Disposition is fix-now because it must be discharged before this release is called closed: the audit seat presents the 22-row boundary → test table (regenerable from `src/store/mod.rs`'s registry and the suite's own test names) plus the file's one-line code-path-ordering claim, and asks for a plain confirmation. On that reply this finding is verified with the human's answer as its basis; if the human declines, it re-disposes to follow-up with a backlog chore instead."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Accepted as owed work, not as a passed criterion. The mechanical half is re-verified and green; the read is the human's. Disposition is fix-now because it must be discharged before this release is called closed: the audit seat presents the 22-row boundary → test table (regenerable from `src/store/mod.rs`'s registry and the suite's own test names) plus the file's one-line code-path-ordering claim, and asks for a plain confirmation. On that reply this finding is verified with the human's answer as its basis; if the human declines, it re-disposes to follow-up with a backlog chore instead."
+
+[[finding]]
+id = "F-11"
+status = "answered"
+severity = "major"
+title = "PHASE-08/VH-1 is undischarged: no human read of README.md as a newcomer"
+detail = """
+PHASE-08/VH-1 expects a human to read `README.md` as a newcomer: that the worked example runs, that the sharp edges match what they hit, and that the quoted guarantee is the design's own wording.
+Mechanical half is evidence: the README's single `console` block is pinned by `tests/readme_example.rs` (it parses the block out of the README, runs each command in a scratch store, compares JSON as parsed values and `render` as text), and the guarantee `diff`s three-way identical across `design.md §4.6`, `README.md` and `docs/store-format.md`. The newcomer read itself has not happened.
+Outstanding human obligation, not a passed criterion."""
+disposition = "fix-now"
+response = "Accepted as owed work, not as a passed criterion. The mechanical half is pinned by `tests/readme_example.rs`; the newcomer read is the human's. Disposition is fix-now for the same reason as F-10: the audit seat lays out the route through the README (sections, the runnable worked-example command sequence, the quoted guarantee, one code location per sharp edge) and asks for a plain confirmation, after which this is verified against the human's reply — or re-disposed to follow-up if declined."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Accepted as owed work, not as a passed criterion. The mechanical half is pinned by `tests/readme_example.rs`; the newcomer read is the human's. Disposition is fix-now for the same reason as F-10: the audit seat lays out the route through the README (sections, the runnable worked-example command sequence, the quoted guarantee, one code location per sharp edge) and asks for a plain confirmation, after which this is verified against the human's reply — or re-disposed to follow-up if declined."
+
+[[finding]]
+id = "F-12"
+status = "verified"
+severity = "minor"
+title = "`Store::load` accepts a live journal state that recovery would refuse"
+detail = """
+Expected (§8.1 invariant 4): recovery strictly precedes validation, every time, under the lock.
+Observed: `Store::load` treats a *regular file* named `journal.commit` and a *directory*-shaped live journal state as explained entries, so a direct `load()` returns the pre-decision state silently; the refusal lives on the pipeline path (`Store::run` → `recover` → `load`), which is the only path a command takes. Measured: with `.smut/journal.commit/` present, `smut query` refuses (exit 1, "the staging directory does not hold …"), i.e. no command reaches the lax path.
+Tolerated, with the reason recorded: `load` is an internal seam, not a documented API — the lib target exists so `tests/**` can drive the store in-process (§11.1), and `tests/concurrency.rs`'s cross-process fixture rests on exactly this behaviour ("the fixture is unrecovered"). Making `load` refuse would need a new `StoreError` variant and would invert that fixture; the invariant it would protect is already held one frame up, where every command runs it."""
+disposition = "tolerated"
+response = "Tolerated with the reason recorded: the invariant (`recovery strictly before validation, every time`) is a *pipeline* invariant and every command runs the pipeline; `load` is an internal seam the lib target exposes for `tests/**`, not a documented API, and the one fixture that depends on its current behaviour (`tests/concurrency.rs`'s cross-process recovery scenario) would invert if `load` refused. Hardening it would add a `StoreError` variant to protect an invariant already held one frame up. The narrower honest cost is that a future test could call `load` and believe it validated — noted in the synthesis, not engineered around."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Tolerated with the reason recorded: the invariant (`recovery strictly before validation, every time`) is a *pipeline* invariant and every command runs the pipeline; `load` is an internal seam the lib target exposes for `tests/**`, not a documented API, and the one fixture that depends on its current behaviour (`tests/concurrency.rs`'s cross-process recovery scenario) would invert if `load` refused. Hardening it would add a `StoreError` variant to protect an invariant already held one frame up. The narrower honest cost is that a future test could call `load` and believe it validated — noted in the synthesis, not engineered around."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; tolerated with the pipeline-vs-seam rationale on the response."
+
+[[finding]]
+id = "F-13"
+status = "verified"
+severity = "minor"
+title = "Nested entity-node ids in stored content are unvalidated"
+detail = """
+Expected (§5.2's list, PHASE-04/EX-5): validation covers what the index explains — id equal to the index key — and what it does not.
+Observed: a stored entity holding `"refs":[{"id":1}]` is accepted; `query` emits it verbatim and exits 0. That is a corrupt-but-index-consistent nested id surviving into output. The risk notes.md recorded ("can reach a `scan_refs` panic") does **not** reproduce: `scan_refs` is called only from `declare.rs` on a *normalised request* declaration, whose nested ids `reference_id` already validated as `Reject` — stored content is never scanned in 0.1.
+Tolerated for 0.1 and named for 0.2: nothing in 0.1 reads a nested id as an edge, so the value is inert data; §5.2's list is the whole 0.1 bar and it does not name nested shapes. The obligation it leaves is 0.2's — traversal must validate stored node ids before using them, which belongs with IMP-001 rather than a late widening of PHASE-04."""
+disposition = "tolerated"
+response = "Tolerated for 0.1, named for 0.2. §5.2's list is the whole 0.1 validation bar and it does not name nested reference shapes; nothing in 0.1 reads a nested id as an edge, so the value is inert data and the recorded panic is unreachable. The obligation is 0.2's: traversal must validate stored entity-node ids before it follows them. `docs/store-format.md` already scopes its promise to the 0.1 rule, so no documentation claims otherwise."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Tolerated for 0.1, named for 0.2. §5.2's list is the whole 0.1 validation bar and it does not name nested reference shapes; nothing in 0.1 reads a nested id as an edge, so the value is inert data and the recorded panic is unreachable. The obligation is 0.2's: traversal must validate stored entity-node ids before it follows them. `docs/store-format.md` already scopes its promise to the 0.1 rule, so no documentation claims otherwise."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; 0.2 obligation named, no 0.1 bar item."
+
+[[finding]]
+id = "F-14"
+status = "verified"
+severity = "nit"
+title = "Duplicate `objects` keys in index.json collapse at parse"
+detail = """
+Observed: `{"format_version":1,"objects":{"x":"A.json","x":"A.json"}}` parses and the store loads (exit 0); serde's map keeps the last occurrence, so a duplicate key is silently dropped before validation sees it.
+Downstream effect checked, not assumed: when the two occurrences name *different* basenames, the dropped mapping's file becomes an entry the index does not explain, which §5.2 refuses by name — so the collapse cannot silently lose an entity, it converts one corruption into another (a worse-named one). Refusing duplicate JSON keys needs the custom `DeserializeSeed`/`Visitor` that DEC-006 scopes to declaration input.
+Tolerated: no silent loss, and the 0.1 load path's promise (refuse, never repair) still holds."""
+disposition = "tolerated"
+response = """Tolerated: the collapse cannot silently lose an entity — the dropped mapping's file becomes an unexplained entry, which the loader refuses by name — so the 0.1 promise ("refuse, never repair") survives, at the cost of a less accurate refusal. Refusing duplicate keys in `index.json` needs the same custom visitor DEC-006 scopes to declaration input; that is a hardening, not a 0.1 bar item."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = """Tolerated: the collapse cannot silently lose an entity — the dropped mapping's file becomes an unexplained entry, which the loader refuses by name — so the 0.1 promise ("refuse, never repair") survives, at the cost of a less accurate refusal. Refusing duplicate keys in `index.json` needs the same custom visitor DEC-006 scopes to declaration input; that is a hardening, not a 0.1 bar item."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed downstream: a dropped mapping surfaces as an unexplained entry and is refused."
+
+[[finding]]
+id = "F-15"
+status = "verified"
+severity = "minor"
+title = "A symlinked `.smut/lock` is followed"
+detail = """
+Expected: the design's symlink posture — §4.1/§5.2 refuse symlinked entity files and `index.json` ("the store never follows one"), and §5.1 says the lock is opened without truncation and never replaced, renamed or unlinked.
+Observed: replacing `.smut/lock` with a symlink to `/tmp/reallock` is accepted; `declare` succeeds and the symlink is left in place, so the lock is flock'd through the link. `O_NOFOLLOW` is absent from the open.
+Tolerated with rationale: no bytes are ever read from or written to the lock (it is an empty flock target, opened without truncation), so following a link cannot corrupt store data; the residual harm is lock-domain confusion in a `.smut` directory a user has deliberately tampered with, which is outside the threat model (§8.2: single user, single host) and already documented as unsupported ("editing .smut/ by hand is not supported"). A race-free refusal needs `O_NOFOLLOW` and therefore `libc`, which §12's declared dependency set does not permit."""
+disposition = "tolerated"
+response = """Tolerated, on the same posture the design takes elsewhere: no bytes flow through the lock (empty, opened without truncation, never replaced), so a followed symlink cannot corrupt store data; the residual is lock-domain confusion in a store the user has tampered with, which §8.2 puts outside the threat model and the portability note already calls unsupported. A race-free refusal needs `O_NOFOLLOW` and therefore `libc`, which §12's declared dependency set does not include — so "fix it now" would cost a design change for a hazard the design has already excluded."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = """Tolerated, on the same posture the design takes elsewhere: no bytes flow through the lock (empty, opened without truncation, never replaced), so a followed symlink cannot corrupt store data; the residual is lock-domain confusion in a store the user has tampered with, which §8.2 puts outside the threat model and the portability note already calls unsupported. A race-free refusal needs `O_NOFOLLOW` and therefore `libc`, which §12's declared dependency set does not include — so "fix it now" would cost a design change for a hazard the design has already excluded."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed; no bytes flow through the lock, and O_NOFOLLOW would cost a declared-dependency change."
+
+[[finding]]
+id = "F-16"
+status = "verified"
+severity = "nit"
+title = "`spec.rs` reports a mistyped known-0.2 key as a named-future refusal rather than a type error"
+detail = """
+Observed: `query '{"where":1}'` → `smut: where is not supported in 0.1; it arrives in 0.2`, exit 2.
+This matches §7.3 and DEC-011 exactly: recognised future keys are rejected **by name, with the release that will accept them**, and the key is rejected as unknown-to-0.1 before its value is type-checked. Reporting a 0.2 key's value shape in 0.1 would name a grammar this build does not implement. Nothing to fix; recorded so the note in notes.md is dispositioned rather than carried."""
+disposition = "aligned"
+response = "Aligned: observed behaviour is what §7.3 and DEC-011 require — a recognised future key is rejected by name with the release that will accept it, before its value is type-checked. Nothing to change; the notes.md item is dispositioned rather than carried forward."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = "Aligned: observed behaviour is what §7.3 and DEC-011 require — a recognised future key is rejected by name with the release that will accept it, before its value is type-checked. Nothing to change; the notes.md item is dispositioned rather than carried forward."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed aligned against §7.3/DEC-011."
+
+[[finding]]
+id = "F-17"
+status = "verified"
+severity = "nit"
+title = "Nothing populates `dangling` in 0.1"
+detail = """
+Observed: every envelope carries `"dangling":[]`; no path computes it.
+Design-conformant: §6.3 and DEC-007 keep it "structurally [] in 0.1 … so the envelope shape does not change in 0.2", and `docs/store-format.md` plus the learn guide say plainly that 0.1 does not report it. The check that mattered — that no documentation claims dangling detection — was made and holds."""
+disposition = "aligned"
+response = "Aligned: §6.3 and DEC-007 keep `dangling` structurally empty in 0.1 so the envelope shape does not change in 0.2, and both the format document and the learn guide say 0.1 does not populate it. Verified that no shipped prose claims it does."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = "Aligned: §6.3 and DEC-007 keep `dangling` structurally empty in 0.1 so the envelope shape does not change in 0.2, and both the format document and the learn guide say 0.1 does not populate it. Verified that no shipped prose claims it does."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed aligned against §6.3/DEC-007 and checked against the shipped prose."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

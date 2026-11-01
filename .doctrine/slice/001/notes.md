@@ -633,8 +633,9 @@ One heavy phase per charter, pairs only for the two pure cores:
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · **audit** (all 9 phases complete; 28/28 verification
-rows PASS; lifecycle `started → audit` committed as `eb26398`) · head `eb26398`
+fresh-as-of: 2026-11-01 · **audit complete** (RV-004: 17 findings — 3
+`fix-now` landed, 5 `design-wrong` to reconcile, 6 `tolerated`, 2 `aligned`, 2
+human reads outstanding; 28/28 verification rows PASS) · head `984cc46`
 
 ### Produced
 
@@ -733,6 +734,30 @@ rows PASS; lifecycle `started → audit` committed as `eb26398`) · head `eb2639
   `.doctrine/slice/001/notes.md`), **0 undelivered**; `doctrine validate` clean;
   tree clean; 77 commits since `b0eac66`. Boundary table for every phase is in
   `.doctrine/state/slice/001/boundaries.toml` (gitignored runtime state).
+- **The audit (RV-004) landed three fixes**, each its own commit and each with a
+  test that fails without it: `78a7eb1` — the serialisation wrapper is now
+  structural (an entity node names `id` first *wherever it appears*), so a
+  projected entity in a response's `objects` array serialises exactly as its file
+  does, and `serialise_entity`/`serialise_document` collapsed into one
+  `serialise`; `35b62ed` — the shell writes prepared bytes fallibly, so a closed
+  stdout exits 1 instead of panicking with 101; `dfc6e37` — `gate: check` and
+  `prove: check` in the justfile, so `doctrine check gate`/`prove` answer at all.
+  After them: **354** default / **411** with `--features fault-injection`,
+  `just check` green with 0 warnings, `verify-vt` 28/28, `doctrine check gate`
+  and `prove` exit 0.
+- The README's `console` transcript was regenerated from the release build after
+  `78a7eb1` (`tests/readme_example.rs` compares its JSON lines as parsed values,
+  so only the bytes moved), and `docs/store-format.md`'s canonical-bytes section
+  now says the wrapper's subject is the entity node, not the root position.
+- **RV-004 is the audit's record**: `.doctrine/review/004/` carries the 17
+  findings, the `## Synthesis` and the `## Reconciliation Brief`. Six findings are
+  `tolerated` with their rationale on the ledger (`Store::load`'s laxness, nested
+  stored ids, duplicate index keys, the symlinked lock, and both conformance cells
+  the audit declines to "fix" by widening a selector), two are `aligned`
+  (`spec.rs`'s named-future refusal, empty `dangling`), and five are
+  `design-wrong`: §12's omission of `Cargo.lock`, the two §12 path errata, the
+  three unnamed `.smut` fsyncs, the brief-example boundary, and the
+  §4.2/DEC-007 clarification the serialisation fix rests on.
 
 ### Learned
 
@@ -805,12 +830,39 @@ rows PASS; lifecycle `started → audit` committed as `eb26398`) · head `eb2639
   `{"id":"x"}` and both `missing` and `dangling` stay `[]`, because nothing
   traverses), and `smut render '{"from":"smut"}'` prints a bare heading when the
   entity has no body. Running the examples is what found them.
+- (unminted) The fault seam's arming is **thread-scoped** (a thread-local
+  override over a process-wide, once-read environment). A process-wide seam
+  behind a mutex flaked when the feature suite ran in parallel: one test's
+  armed boundary was reached by another's write. The thread-local form removes
+  the class rather than serialising around it, and `SMUT_FAULT_*` stays the
+  cross-process door the durability suite uses.
+- (unminted) `std::env::set_var` is `unsafe` in edition 2024, so a fault seam
+  cannot be configured by mutating the environment from a test: make the
+  configuration a value type with a pluggable lookup, and no test needs
+  `unsafe`.
+- (unminted) cargo's own `unused_dependencies` lint is a *manifest* warning, not
+  a rustc lint — `clippy -D warnings` does not fail on it, so "0 warnings" can be
+  true while `Cargo.toml` still declares a dependency nothing calls yet. Check
+  the two separately.
+- (unminted) Mutation probes are worth running and reverting inside a review, not
+  only a phase: PHASE-06 reverted an appended notice and a fixed single-backtick
+  fence to confirm the tests fail, which is the cheap negative control for "the
+  notice leads" and "the fence is safe".
+- (unminted) A conformance cell can be a **measure artefact**. `design-target`
+  selectors model the design's predicted *implementation* surface; a slice's own
+  `notes.md` legitimately reads `undeclared` in every doctrine slice, so widening
+  the selector set to silence it would misdescribe the design.
+- (unminted) `review new` — and every minting verb — needs a writable remote.
+  With no push credentials, `[reservation] reach = "local"` in
+  `.doctrine/doctrine.toml` is the sanctioned fallback (values `local | shared |
+  auto`; `auto` does *not* fall back on an auth failure — it fails like
+  `shared`).
 - (unminted) "The shell adds no trailing newline" is one rule instead of three:
   the byte boundary (`Form::Stdout`, `render`) owns the single `\n`, and `main`
   writes with `print!`. Pinning it with a count assertion
   (`stdout.matches('\n').count()`) catches both a missing and a doubled newline.
 
-### Open
+### Open at audit entry (dispositioned in RV-004 — see "Audit outcome" below)
 
 - PHASE-08 leaves nothing open against its own bar: `EX-1…EX-4` hold,
   `VT-1`/`VT-2` green, `VH-1` carried to the human. Its two forward notes are the
@@ -898,3 +950,32 @@ rows PASS; lifecycle `started → audit` committed as `eb26398`) · head `eb2639
   `entity`'s stdout form) but it changes documented output bytes, so it must be
   ordered before PHASE-08's README examples are finalised or those examples
   regenerate by being re-run.
+
+### Audit outcome (RV-004, 2026-11-01)
+
+`doctrine review show RV-004` is the ledger; this is the index.
+
+- **Fixed in the audit (3).** F-1 the shared serialisation wrapper
+  (`78a7eb1`); F-2 a closed stdout exiting 1 instead of panicking (`35b62ed`);
+  F-3 the lifecycle's `gate`/`prove` cadence recipes (`dfc6e37`).
+- **Owed to reconcile (5, `design-wrong`).** §12's selector omission of
+  `Cargo.lock` (F-4); §12's two path errata — README is edited, not new, and the
+  lib target is missing (F-6); §4.3/§4.4's three unnamed `.smut` fsyncs (F-7);
+  the brief's acceptance-example boundary (F-9); §4.2's mirror of the wrapper
+  clarification, plus a one-sentence REV modify of DEC-007 (F-1). The
+  `## Reconciliation Brief` in RV-004 is the structured handoff.
+- **Tolerated with rationale (6).** `Store::load` accepting a live journal state
+  (F-12); nested stored entity-node ids (F-13); duplicate `objects` keys (F-14);
+  the symlinked `.smut/lock` (F-15); `notes.md` reading undeclared (F-5); the
+  design review's stale cache (F-8).
+- **Aligned (2).** `spec.rs`'s named-future refusal for a mistyped 0.2 key
+  (F-16); empty `dangling` (F-17).
+- **Outstanding human obligations (2), not discharged by the audit.**
+  PHASE-05/VH-1 — a human reads `tests/durability_crash.rs` against
+  §4.3/§4.4/§4.5; PHASE-08/VH-1 — a human reads `README.md` as a newcomer. Both
+  ledger findings are `fix-now` and non-terminal until the human answers; the
+  lifecycle stays at `audit` until they do, which is the honest position rather
+  than a false close.
+- **Environment posture recorded**: `[reservation] reach = "local"` in
+  `.doctrine/doctrine.toml` because this checkout cannot push reservation refs;
+  revert to `shared` when the remote is writable.
