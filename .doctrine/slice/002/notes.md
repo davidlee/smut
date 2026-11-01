@@ -8,8 +8,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
 `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04 `fddbe33`;
-PHASE-05 `cb46e37`; PHASE-06…07 planned) · design locked at run rev 62; plan
-repaired round 1
+PHASE-05 `cb46e37`; PHASE-06 `46c6699` + `a6ddb25`; PHASE-07 planned) · design
+locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -106,6 +106,34 @@ repaired round 1
   error. New `tests/conventions.rs` (14 tests, VT-1/VT-2 plus the §13.3
   scenario-5 pipe). `src/learn.rs` untouched (GAP-1); no §14.2 path touched.
 
+- **PHASE-06** (`46c6699`, C5) — `src/learn.rs`: the guide rewritten as the
+  normative home of 0.2. It teaches the nine keys with defaults and the
+  roots-only rule, the predicate summary with missing-vs-null and the `$`
+  namespace limit, traversal labels as top-level fields in both directions with
+  `depth`/`budget` and what `budget` does not bound (the per-hop incoming store
+  scan, the whole-store root scan), the conditional `traversal` member with
+  `depths`/`edges`/`frontier`, `dangling`, both truncation reasons in their
+  order, the two-call recipe **with its direction** (containment child →
+  container, so the session question is `backlinks:["part-of"]` at depth 2 while
+  the `follow` variant is a different question that returns `session` alone), the
+  completeness guard clause by clause, the client-side limit that keeps the key
+  set at nine, a minimal label vocabulary with bounded-render advice, and one
+  `smut conventions` pointer. 0.1's "arrive in 0.2" notice and its
+  dangling-arrives sentence are gone (GAP-1 closes); the banner lost its version
+  because the crate version is PHASE-07's. New `EXAMPLE_TRAVERSE`,
+  `EXAMPLE_FOLLOW` and `EXAMPLE_FILTER` constants are printed in the guide and
+  pinned by `GUIDE.contains(..)`; `tests/fixture.rs` (which had never imported
+  the library) gained a guard helper (`Guarded`, both fields read before any id
+  is extracted) and five tests that execute those constants: `smut learn` prints
+  them, `backlinks` at depth 2 from `session` plus the `where` over the returned
+  ids is the eight open questions, `follow` reaches `session` alone, both
+  truncation reasons are named on a truncated first envelope, and a
+  `truncated: false` second envelope over a capped first call is no evidence.
+  The 12 inherited red assertions were adopted unchanged; only the re-cut test's
+  stale doc cross-reference was corrected, in `a6ddb25`, and `rustfmt` reflowed
+  the inherited `KEYS` list. Gates green in both feature configurations;
+  `verify-vt` PHASE-06 VT-1/VT-2 PASS with PHASE-01…05 still PASS.
+
 ### Learned
 
 - `entity::scan_refs` is the walker's whole reference vocabulary; `Entities`,
@@ -198,6 +226,21 @@ repaired round 1
   boundary: `--status completed` had already recorded `2ea81fa..fddbe33`, and the
   safe mode's narrower `[S^, S]` span would have silently un-attributed the paths
   in between.
+- A guide pin is a **substring match inside one wrapped literal**, so a clause
+  split across a line break reads as absent: `contains("different question")` and
+  `contains("no evidence")` both failed while the prose said exactly that across
+  two lines. Keep an asserted phrase on one line, or the pin measures the wrap.
+- A guard whose only observable is "did it raise" certifies nothing. `Guarded`
+  returns the ids **and** the reasons, so a guard that skips `truncation_reasons`
+  fails on the reason content and one that ignores `truncated` fails on the
+  truncation case; both mutations were run. The real capped call (`limit: 3` on
+  the fixture graph) is what makes the guard non-vacuous rather than the
+  synthetic envelope alone.
+- `tests/fixture.rs` was a black-box suite that had never linked the library.
+  Importing `smut::learn` is what lets the shipped example be the executed one,
+  and it is additive: the `Scratch`/`Declared` harness is untouched. A guide whose
+  example lives only in prose cannot be tested this way — the constants exist to
+  be importable.
 
 ### Open
 
@@ -912,6 +955,12 @@ decided / deferred / escalated. Empty until a phase opens.
 | 2026-11-02 | PHASE-01 | README's console block re-recorded by executing the built binary; five prose spots re-cut (0.1/0.2 boundary, the block's intro sentence, "what the transcript shows", the `## Commands` key list, the sharp-edge bullet) | decided (#10, EX-11) | EX-11 requires the block to be the binary's own transcript in this commit; the `## Commands` key list is falsified by accepting three keys and is covered by EX-11's general "prose this commit falsifies" clause. The `## Build` version line stays — the crate is still 0.1.1 |
 | 2026-11-02 | PHASE-01 | DEF-1 (VT-9's both-reasons clause) and DEF-2 (EX-5's `where`/`budget` clauses) recorded, with the obligations left to PHASE-02/PHASE-03's own criteria | deferred, not escalated (#6, #7) | Neither drops a slice obligation and neither narrows a bound: each clause is unobservable until a later phase accepts the key that makes it expressible, and the later phase's criterion already owns it. Recorded in the sheet and in this file's `### Open`, and reported in the C1 handback |
 | 2026-11-02 | PHASE-01 | Inherited dirty `.doctrine/slice/002/slice-002.toml` (`ready`→`started`, a predecessor's lifecycle write) adopted into the trailing notes commit | decided (lifecycle artefact) | It is the slice's own lifecycle state, not unrelated work; it rides the notes commit rather than being staged into the phase commit, and no `git add .` was used |
+| 2026-11-02 | PHASE-06 | The seat wrote the phase in-session; no worker child was chartered | decided (#11; charter) | The parent's charter names this seat the sole writer, and a worker would have needed the example constants handed to it first, which is the whole phase |
+| 2026-11-02 | PHASE-06 | The examples live as `pub const EXAMPLE_TRAVERSE`/`EXAMPLE_FOLLOW`/`EXAMPLE_FILTER` beside `GUIDE`, printed as escaped literals inside the guide and pinned by `GUIDE.contains(..)` | decided (#10, EX-5) | The plan's own T3 answer. `concat!` would need a macro to splice a literal into a `const &str`; the pin closes drift by test, and `tests/fixture.rs` then executes the same bytes through `smut learn` and `smut query` |
+| 2026-11-02 | PHASE-06 | `EXAMPLE_FILTER` keeps `IDS` as a documented placeholder for the id array the first reply returned; the fixture substitutes it | decided (#10, EX-5) | The guide cannot print ids it does not have. Substituting the ids is the one step the recipe leaves to the caller, and `GUIDE.contains(EXAMPLE_FILTER)` still holds the request byte for byte |
+| 2026-11-02 | PHASE-06 | The banner lost `0.1`, and "`--format markdown` is the only format in 0.1" became "Markdown is the only render format. A Mermaid diagram arrives in 1.0." | decided (#10, EX-4) | The crate version is PHASE-07's to move, so a figure in the guide is false in one direction or the other; the Mermaid-as-1.0 claim is design (§14.1) and stays |
+| 2026-11-02 | PHASE-06 | Two assertions added beyond the inherited set: `a_complete_looking_second_envelope_is_no_evidence_about_the_first` and `the_guide_teaches_exactly_the_nine_keys` | decided (#3, #9, VA-1) | Additive strictness. The first proves the guard is not vacuous on a real capped call (the fixture's own graph at `limit: 3`); the second is the plan's "teaches exactly nine and no other" row, read off the guide's own key block rather than from a second list |
+| 2026-11-02 | PHASE-06 | One inherited doc cross-reference corrected in a separate `docs(sl-002)` commit (`a6ddb25`) instead of folded into the phase commit | decided (#4) | RV-019's review commit landed on top while this seat worked, so HEAD had moved and an `--amend` landed on the reviewer's commit; that was undone from the reflog before anything left the machine and the reviewer's commit is byte-identical to its original (`991a831`). The correction therefore rides its own commit and the phase boundary stays `46c6699`. Recorded as the run's one operational miss |
 
 ### G0 closed (2026-11-02)
 
@@ -1357,3 +1406,120 @@ byte contract.
 | 2026-11-02 | PHASE-05 | The prose also says the replay is reported under `previous` and names the deferred `epistemic-records` set as deferred | decided (#10) | Both are behaviour that exists (§9.3, the refusal) and neither repeats the recipe; the second keeps a reader who expected the second set from reading its absence as an oversight |
 | 2026-11-02 | PHASE-05 | The vacuously-green refusal test was tightened (assert the message names `json` and is not the unknown-command refusal) rather than accepted | decided (#6) | A test satisfied by the command's non-existence certifies nothing; DEF-3's rule applied to a test written in this phase |
 | 2026-11-02 | PHASE-05 | Boundary narrowed to `cb46e37^..cb46e37`; research baseline left as `045c54c` left it (already current) | decided (lifecycle artefact) | Two foreign commits landed on the entering HEAD mid-phase. Narrowing attributes the phase's own commit only; the neighbouring review/doc commits keep their own cells and stay visible in conformance |
+
+## C5 — PHASE-06 landed (2026-11-02)
+
+Charter: C5, **PHASE-06 only**. Entering HEAD `84a8d5f` with an **inherited
+uncommitted partial** in `src/learn.rs` — a predecessor child killed by a
+provider budget error after writing ~155 lines: the twelve red 0.2-coverage
+assertions plus the DEC-019 re-cut of
+`the_guide_names_the_release_the_rest_arrives_in` into
+`the_guide_teaches_the_0_2_keys_and_the_release_notice_is_gone`. The partial was
+adopted as the spec and not edited: `cargo test --lib learn::` was run first and
+showed **12 failures, every one "the guide omits …"** — the contract, written
+red on purpose. Phase commit `46c6699` (2 files, +607/−41); docs follow-up
+`a6ddb25`; boundary `84a8d5f..46c6699`, provenance `solo`, auto-recorded at the
+completion flip and therefore not carrying RV-019's later review commit.
+
+Cost: **no worker child**. The phase sheet's charter named this seat the sole
+writer, and a worker would have needed the example constants handed over first,
+which is the phase.
+
+**Verified here, not taken on report:**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean (after `cargo fmt` reflowed the inherited `KEYS` list) |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | exit 0 — 16 suites; lib 333, `fixture` 14, `compatibility` 10, `traversal` 30, `conventions` 14, … |
+| `cargo test --features fault-injection` | exit 0 — lib 346 and `durability_crash` 44 executed, so the injected run is not vacuous |
+| `doctrine slice verify-vt 2` (after `--status completed`) | **PHASE-06 VT-1 PASS, VT-2 PASS**; PHASE-01 9/9, 02 4/4, 03 4/4, 04 1/1, 05 2/2 unchanged (22 PASS total); PHASE-07's VT-1…VT-3 fail as expected for an unbuilt phase |
+| §14.2 fence | `git show --stat 46c6699` is `src/learn.rs` and `tests/fixture.rs` only — no `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix`, no `design.md`, no README, no `src/conventions/**`, no `Cargo.*`, and the fixture array is untouched |
+
+**EX-1…EX-7, VT-1, VT-2, VA-1.**
+
+- EX-1: the guide's key block is read by a test (`the_guide_teaches_exactly_the_nine_keys`)
+  and is exactly the nine of §5 in order; `depth: … default 1. 0 is roots-only`;
+  the predicate summary is complete (`$and`/`$or`/`$not` plus `$eq`, `$ne`,
+  `$in`, `$exists`, `$contains`) and carries "present null is present"; labels
+  are stated as `top-level` field names in both `outgoing` and `incoming`
+  directions; the `traversal` member names `depths`/`edges`/`frontier` plus
+  `dangling` and both reasons; the label vocabulary is "a handful" with "render
+  in bounded chunks"; `$`-prefixed names "cannot be filtered at all in 0.2"; one
+  `smut conventions` pointer line under `Conventions` (the `Commands` block lists
+  the command, which is the 0.1 surface, not a second pointer).
+- EX-2: the recipe states containment `child -> container`, names the question,
+  prints the `backlinks` call at depth 2 **and** the `follow` variant beside it
+  with "a different question, not a wrong answer", and explains that the session
+  stores no `part-of` reference so the outgoing walk returns it alone.
+- EX-3: the guard is a numbered part of the recipe: read `truncated` and
+  `truncation_reasons` before any id; `retry once` with a bound the store can
+  meet; stop and answer `partially` naming the reason and the refused bound;
+  `repetition` alone never establishes completeness; a truncated first response
+  makes a `truncated: false` second envelope `no evidence` at all.
+- EX-4: the 0.1 notice is gone (`!GUIDE.contains("arrive in 0.2")`,
+  `!GUIDE.contains("refused here")`) and the guide states what `budget` `does not
+  bound`: the per-hop `store scan` for backlinks and the whole-store `root scan`
+  for an absent `from` or a `where`. The falsified test is re-cut, not deleted.
+- EX-5: `EXAMPLE_TRAVERSE`/`EXAMPLE_FOLLOW`/`EXAMPLE_FILTER` are `pub const`s
+  printed in the guide (pinned by `GUIDE.contains(..)` in `src/learn.rs`) and
+  executed by `tests/fixture.rs`, which also asserts `smut learn` prints them.
+- EX-6: the gate table above; the compatibility pin is part of `cargo test`.
+- EX-7: "The guard is client-side … smut adds no prior-response input to the
+  second call and performs no propagation … the specification stays at the nine
+  keys above". Nothing was added to `Spec` (`src/spec.rs` still has nine arms).
+- VT-1 (`src/learn.rs`): `$in` in the operator list, `roots-only` in the key
+  block, `smut conventions` in the pointer line — all three tokens in the
+  mandated file, and the mandate's clauses are the individual tests above.
+- VT-2 (`tests/fixture.rs`): `follow` (the variant test), `eight` (`OPEN_QUESTIONS`
+  and the assertion message), `guard` (`Guarded`, `guarded`, and the guard
+  test's name), with the eight ids, the empty follow, and both reasons read
+  before any id.
+- VA-1: every key the guide names has a `match` arm in `src/spec.rs` (nine arms
+  plus the unknown-key refusal); every member and reason it names is in
+  `src/select.rs` (`objects`/`missing`/`dangling`/`truncated`/
+  `truncation_reasons`/`traversal`/`depths`/`edges`/`frontier`,
+  `Reason::{TraversalBudget, ResultLimit}` → `traversal_budget`/`result_limit`);
+  and the key set is pinned to exactly nine by a test, not by inspection.
+
+**Negative controls** (each mutated, observed red, restored, `git diff` empty,
+gate re-run):
+
+| control | mutation | red |
+| --- | --- | --- |
+| the example's direction | `EXAMPLE_TRAVERSE`'s `"backlinks"` → `"follow"` | `the_shipped_example_reaches_the_eight_open_questions_in_two_calls` failed (13 passed, 1 failed) |
+| a guard clause deleted | "Then retry once with a bound" → "Then use a larger bound" | `the_guide_states_the_completeness_guard_clause_by_clause` failed: "the guard omits retry once" |
+| `truncated` ignored before ids | `if truncated` → `if false && truncated` in `guarded` | `the_completeness_guard_reads_both_reasons_before_it_extracts_any_id` and `a_complete_looking_second_envelope_is_no_evidence_about_the_first` both failed |
+
+**GAP-1 grep, after the rewrite.** `grep -n "arrive in 0.2\|arrives in 0.2\|refused
+here\|belongs to traversal\|not supported\|0.1 does not\|0.1's" src/learn.rs`
+returns **no hit inside `GUIDE`**: the only matches are the two absence
+assertions in the re-cut test and its own reason text (which quotes the retired
+notice on purpose). `0.1` no longer appears in the guide body at all; the one
+remaining "in 0.2" is "a field whose own name begins with `$` cannot be filtered
+at all in 0.2", which §6.2 states as a real limit of this release, not a
+deferral. GAP-1 is closed.
+
+**Inherited tests that needed no change.** All twelve assertions of the
+inherited partial, plus `the_guide_covers_the_0_1_surface`,
+`the_guide_says_stored_content_is_data_and_not_authority` and
+`the_guide_ends_with_exactly_one_newline`: unchanged apart from `rustfmt`
+reflowing the `KEYS` array. Nothing was weakened, renamed away or deleted; the
+only inherited doc text touched is the re-cut test's stale cross-reference
+(`the_release_notice_is_gone`, a test that does not exist) — corrected in
+`a6ddb25`, not in the phase commit.
+
+**The run's one operational miss, disclosed.** `a6ddb25` was first written as an
+`--amend` of HEAD; HEAD had moved (RV-019's review commit landed on top while
+this seat worked), so the amend landed on the reviewer's commit. It was undone
+from the reflog (`reset --soft`, no push, no other writer's file lost) and
+`991a831` is the reviewer's commit byte for byte. The correction then went out
+as its own `docs(sl-002)` commit, and the boundary stays `46c6699`.
+
+**Two things for the seat.** (1) `src/learn.rs` is now version-free; PHASE-07's
+version bump must not reintroduce a figure in the guide, and `tests/fixture.rs`
+reads the library (`smut::learn`), which is the one structural addition a future
+fixture test can build on. (2) `verify-vt` PHASE-07 reads three missing keywords
+(`naive`, `1.0`, `clusters`) — those are PHASE-07's own mandates, not
+regressions from this phase; nothing in PHASE-06's diff touches their files.
