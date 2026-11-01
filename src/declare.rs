@@ -213,6 +213,7 @@ pub fn normalize(
         ids.push(id.clone());
 
         if found.is_empty() {
+            // Nothing was hoisted, so the root was an id-only reference.
             encounters.push(id);
         } else {
             for declaration in &found {
@@ -255,10 +256,11 @@ pub fn normalize(
 /// Folds `batch`'s declarations and applies them against `store`.
 ///
 /// Disjoint fields of one id combine and identical assignments coalesce; a
-/// field given two incompatible operations refuses the whole batch, which is why
-/// the fold happens before anything is computed and why nothing is written when
-/// it fails (DEC-002). `previous` is read from the pre-batch snapshot: the full
-/// entity for an update, `null` for a creation, absent for an unchanged entity.
+/// field given two incompatible operations refuses the whole batch. The fold runs
+/// before anything else is computed, so a refusal leaves the snapshot untouched
+/// and produces no `previous` values to report (DEC-002). `previous` is read from
+/// the pre-batch snapshot: the full entity for an update, `null` for a creation,
+/// absent for an unchanged entity.
 pub fn apply(store: &Entities, batch: Batch) -> Result<Outcome, Reject> {
     let folded = fold(batch.declarations)?;
     let mut changes = Vec::new();
@@ -751,6 +753,33 @@ mod tests {
         );
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Created"]);
+    }
+
+    #[test]
+    fn the_two_spellings_of_one_declaration_coalesce() {
+        // DEC-002's worked example: the nested declaration and the top-level one
+        // normalise to the same thing, so the repeated `refs` assignments agree.
+        let outcome = applied(
+            &Entities::new(),
+            json!([
+                {"id": "q", "refs": [{"id": "t", "label": "x"}]},
+                {"id": "q", "refs": [{"id": "t"}]},
+                {"id": "t", "label": "x"},
+            ]),
+            &[],
+        );
+
+        assert_eq!(
+            change_texts(&outcome.response.changes),
+            vec!["q:Created", "t:Created"]
+        );
+        assert_eq!(
+            outcome.write_set.put,
+            vec![
+                json!({"id": "q", "refs": [{"id": "t"}]}),
+                json!({"id": "t", "label": "x"})
+            ]
+        );
     }
 
     #[test]
