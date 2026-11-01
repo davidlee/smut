@@ -384,3 +384,69 @@ checked against the mechanism rather than against its own prose.
 - **Lesson, third time paid for:** any edit adopted mid-pass stales that pass.
   Edit while in `drafting`, or accept the round trip and a fresh ledger — the
   ordering is cheaper than the ledger.
+
+## Plan review round: obligations and sequencing (2026-11-02)
+
+Two read-only reviewers audited the plan as authored (commit `ab1011b`) against
+the locked design and the tree; an integrator adjudicated every finding on
+evidence and was the sole writer. Design untouched, design run not reopened.
+
+- **Reviewer A — obligation coverage.** 236 obligations enumerated across
+  §1–§15, the scope objectives and the closure items: COVERED 197, WEAK 35,
+  VACUOUS 1, MISSING 2, MISTRANSCRIBED 1; findings F1–F18. Verdict on the plan:
+  not executable as-is.
+- **Reviewer B — sequencing and codebase fit.** Verdict **BLOCK**: B1 (accepting
+  `follow` falsifies the executed README transcript, which design §14.1 assigns
+  to PHASE-07, so PHASE-01's "tree green" was unreachable) and B2 (`FUTURE_KEYS`
+  retired at PHASE-02 while `where` was still refused *by name* as a future key,
+  breaking six asserting sites and contradicting the shipped guide). Majors
+  M1–M8, minors m1–m10; 20 premises verified TRUE against the source.
+- **Dispositions:** 38 findings, CONCEDED 36, ESCALATED 2, REJECTED 0. Nothing
+  was accepted on a reviewer's authority: each premise was re-checked against
+  `design.md` or the source (the "already green" keyword sets, `FUTURE_KEYS`,
+  `select::run`'s five parameters and the absent `clippy.toml`, the notice's
+  `None` return, the five clusters in the source store, the `where`-refusal
+  pins).
+- **Repaired (plan only).** B1: the README console block is re-recorded at
+  PHASE-01 (`EX-11`) and `tests/readme_example.rs` re-cut beside it, so PHASE-01
+  can end green; PHASE-07 extends the example. B2: `FUTURE_KEYS` retires at
+  PHASE-03, the phase accepting its last key; PHASE-01 keeps `where` and
+  `budget` by name, PHASE-02 keeps `where`. M1/M3/M8: every assertion a phase
+  falsifies is named in a criterion — `src/spec.rs`'s five-key loop, the
+  `where`-refusal pins in `tests/compatibility.rs`, `tests/cli_contract.rs` and
+  `tests/selection.rs`, the `FutureSpecificationKey` rows in `src/error.rs`, and
+  `learn`'s 0.1-promise test — re-cut, never deleted (DEC-019). M6: the
+  `select::run` interface decision is now taken at PHASE-01 (`EX-13`). M7: the
+  notice's trigger, line order and literal triple form are PHASE-01's (`EX-14`),
+  dangling-only case included; PHASE-02 adds only the `traversal_budget` line.
+  m1: the walk is unbounded (`u64::MAX`) until `budget` exists, so PHASE-01
+  cannot truncate silently. Also: edge dedupe and result order, sibling `where`
+  keys ANDed, §13.3 scenarios 1/3, §12:788's blanket row obligation and the four
+  §10.3 rows it was missing, the guide's remaining guard clauses and its
+  no-propagation limit, the `$`-prefixed field limit, the label vocabulary,
+  `--format text`, the seed's version source (`env!("CARGO_PKG_VERSION")`),
+  `src/conventions/hygiene.md`, duplicate-label collapse, `Walk`'s derives, and
+  §14.2's unchanged set proven by diff where no selector watches the path.
+  Appended, never renumbered: PHASE-01 `EX-11…EX-14`, `VT-7…VT-9`; PHASE-03
+  `EX-8`, `VT-4`; PHASE-06 `EX-7`; PHASE-07 `VT-3`.
+- **Vacuous mandates fixed.** Every VT whose keywords already existed on the
+  entering tree was retargeted or re-keyed (`README.md` prose → the suite that
+  executes it; `pub fn walk`/`pub enum Predicate` → `#[test]` plus a behavioural
+  token; the two pre-green guide and compatibility sets). Every row written this
+  round was checked the same way: no VT is satisfiable by its own keywords on
+  the current tree.
+- **Escalated, not written into the plan.** (1) The privacy read-through's
+  negative outcome (§11, DEC-018): a redacted fixture, a synthetic one, or no
+  committed fixture changes what the release ships, so PHASE-04 `EX-2` only
+  records that the decision blocks PHASE-06/PHASE-07. (2) `design.md`'s line
+  references drift from the source: `§1`/`§2` cite `src/entity.rs:31,60` where
+  `scan_refs` is at `:71`, and `§9.4` cites `learn.rs:113` where the dangling
+  sentence is `:111`. Both are design-text corrections for the next design
+  revision; no plan criterion cites them.
+- **Verification.** `doctrine slice phases 2` re-materialised all seven sheets
+  (state tree regenerated to force it; only the objective lines changed) and
+  `doctrine slice verify-vt 2` parsed all 25 mandates — FAIL/UNATTRIBUTABLE
+  only, which is correct before implementation. Nothing was built; no `cargo`
+  command was run, because the 0.1 suite says nothing about the plan. The full
+  disposition table is in `/tmp/sl002-plan-review-integration.md` (session
+  artefact, not committed).
