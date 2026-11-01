@@ -8,9 +8,68 @@ title = "design review of SL-001"
 facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
 raiser    = "raiser"
 responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Self-conducted hostile pass over the material as it stood at revision 49, on the five lead seams recorded under review.passes in the slice notes, plus the repaired passages themselves.
+
+Probed and dissolved, each against the design text:
+1. §4.4's "incomplete staged set is corruption" against §4.5's roll-forward-only. Not a contradiction: §4.4 validates then replays, so a missing staged file under a durable commit can only come from non-protocol interference, while §4.5 governs a failure after a validated manifest. The two own different failures.
+2. §4.3's barrier against §5's pipeline: step 7 is a pointer to the protocol, so the barrier is reached by one code path including the first-write path of §5.1, which creates the store and then commits through the ordinary protocol.
+3. The knowingly-stale snapshot at §5 step 2 now that normalize takes it: the pre-compute's only product is the empty-write-set decision, and §5 step 7's recompute is authoritative, so a candidate id drawn there can never be persisted. No observable inconsistency.
+4. Notice-first when the selection yields no entities: §6.2 rules out truncation with no rows, and DEC-009 keeps diagnostics for the zero-entity case, so the notice leads an otherwise empty document.
+5. §12's ownership of the barrier: store/fs.rs is the durable-write helper and store/journal.rs sequences it; the design names the owner, so this is a mapping rather than a gap.
+
+Raised one finding, found in the repaired text rather than in the section that repair was meant to fix: §11.1 disclaimed the barrier-order coverage its own durability row asserted. Repaired at revision 49, disposed, verified.
+
+After that pass the raiser contested RV-002 F-1 — the barrier recipe named entity files and the manifest but not the staged index. Upheld; repaired at revision 51 in §4.3, §11.1 and DEC-003, with the class swept. That repair moved §4 and §11 again after this pass ran, so this pass's conclusion covers the material at amendment, and the outstanding attestations are the surface where the moved text is re-read.
+"""
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-001"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "minor"
+title = "§11.1 disclaims the barrier-order assertion its own durability row now carries"
+detail = """
+Expected: §11.1 states what each layer proves without contradicting itself, so an implementer knows whether the barrier order of §4.3 is asserted anywhere.
+
+Observed: the durability row (amended at revision 41 for RV-002 F-1) now claims "the pre-commit barrier order — staged file, manifest and prepare-directory fsync all before the rename, with barrier failure leaving nothing published". Three paragraphs later the section closes: "The suite claims only what it measures: that replay and cleanup are correct after process interruption, not that write ordering survives power loss." Read plainly, the closing sentence denies that write ordering is measured at all, which withdraws the row above it. The two claims are reconcilable — injected fsync failure proves the code path issues the syscalls in order and reacts to their failure; it does not prove the kernel or the disk honours fsync — but the paragraph does not say so, so the design currently asserts and disclaims the same thing eight lines apart.
+
+Repair: make the closing paragraph carry the distinction explicitly (code-path ordering is asserted by injection; power-loss durability is assumed, not measured), and let §10's risk row point at it rather than restating it in different words.
+
+This is a stale projection introduced by the F-1 repair, caught by probing the repaired text rather than the pass that produced it.
+"""
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified — the contradiction is real and it is mine: the durability row asserts barrier-order coverage while the section's closing sentence disclaims write-ordering coverage, eight lines apart. Repair, revision 49: §11.1's closing paragraph now separates the two claims in kind — code-path ordering asserted by injected fsync failure (the syscalls are issued in the barrier order, and a barrier failure publishes nothing), power-loss durability assumed and not measured (injection cannot prove the kernel or disk honours the calls). §10's risk row now points at that distinction rather than restating it in different words, so the two tiers cannot drift into disagreement again. The row and the paragraph now say one thing between them.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+route = "review"
+response = """
+Verified — the contradiction is real and it is mine: the durability row asserts barrier-order coverage while the section's closing sentence disclaims write-ordering coverage, eight lines apart. Repair, revision 49: §11.1's closing paragraph now separates the two claims in kind — code-path ordering asserted by injected fsync failure (the syscalls are issued in the barrier order, and a barrier failure publishes nothing), power-loss durability assumed and not measured (injection cannot prove the kernel or disk honours the calls). §10's risk row now points at that distinction rather than restating it in different words, so the two tiers cannot drift into disagreement again. The row and the paragraph now say one thing between them.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair read back in design.md at revision 49: §11.1 lists the two claims separately and §10 defers to it. The finding is answered."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

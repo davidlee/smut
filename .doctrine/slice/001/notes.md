@@ -154,21 +154,35 @@ three assertions (generation collision set, staged durability, unabsorbable
 disclosure); `review.selectors` confirmed §12 commits to the recorded set with
 nothing moved. Re-entering reviewing opened **RV-003** over revision 45.
 
+**RV-003** (self-conducted, concluded): probed the five lead seams from
+`review.passes` and dissolved all five — §4.4-refuse vs §4.5-roll-forward own
+different failures; step 7 delegates the barrier so the first-write path reaches
+it; the pre-compute snapshot's only product is the empty-write-set decision; the
+notice leads even a zero-entity document; §12 does name the barrier's owner. It
+raised one minor: §11.1 disclaimed the barrier-order coverage its own durability
+row asserted — repaired at 49, verified.
+
+**The contest worth remembering.** The raiser contested RV-002 F-1: my barrier
+recipe said "every staged entity file and manifest.json" and silently dropped the
+staged `index.json`, which every commit stages. The general claim above the
+recipe said every staged byte; the recipe — the thing an implementer follows — was
+wrong. Repaired at 51 in §4.3, §11.1 and DEC-003, with the class swept: the two
+numbered recipes and DEC-003's facet were the only narrow enumerations; §4.4 and
+§4.6's general claims were already correct.
+
 **What a further pass would probe** (`review.passes`): the three repairs for what
-they displaced. Specifically — §4.3's barrier against §5 step 7's commit order,
-and whether the initialisation path in §5.1 reaches the same barrier; §4.4's
-"incomplete staged set is corruption" against §4.5's "the commit decision
-stands", which is a refusal in one section and a promise in the other and needs
-one owner; the knowingly-stale snapshot at §5 step 2 now that `normalize` takes
-it, and whether every consumer of that `Batch` knows ids drawn there are
-recomputed; whether the notice-first rule holds when a selection yields no
-entities at all, and whether DEC-010's `learn` guide text absorbs the changed
-presentation rule; and whether §12's module map still names an owner for the
-barrier's ordering (fs.rs) rather than leaving it implied by prose.
+they displaced, and the moved passages since. Specifically — §4.3's barrier
+against §5 step 7's commit order, and whether the initialisation path in §5.1
+reaches the same barrier; whether the notice-first rule holds when a selection
+yields no entities at all, and whether DEC-010's `learn` guide text absorbs the
+changed presentation rule; and whether any *other* enumeration of staged files,
+fsync points or renderer blocks has the same narrowing that the staged-index miss
+had. The §4.4/§4.5 seam and the stale-snapshot seam listed here before RV-003
+were probed and dissolved by that pass — see above.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (design run rev 45, pass RV-003) · uncommitted
+fresh-as-of: 2026-11-01 · reviewing (design run rev 51, pass RV-003 concluded) · uncommitted
 
 ### Produced
 
@@ -194,6 +208,9 @@ fresh-as-of: 2026-11-01 · reviewing (design run rev 45, pass RV-003) · uncommi
   `design-wrong`/`review`, integrated in revisions 38–42 across eight sections
   and DEC-001/003/009. Re-entered reviewing at 43; `review.scope` and
   `review.selectors` discharged; **RV-003** opened over rev 45.
+- RV-003 self-pass concluded over rev 49 (1 minor raised, repaired, verified);
+  RV-002 F-1 contested by the raiser over the staged-index omission and repaired
+  at 51, with the class swept. Final materialisation at revision 51.
 - Commits: `acf53fc` (design run, decisions, review ledgers). No source code yet.
 - `.doctrine` committed with the artefacts, not separately.
 - Verification gate: **N/A** — no source code and `justfile` has no `gate`
@@ -221,12 +238,9 @@ fresh-as-of: 2026-11-01 · reviewing (design run rev 45, pass RV-003) · uncommi
   agree before the boundary is load-bearing. Same shape as F-3 — a guarantee an
   attacker-supplied input can silently defeat is not a guarantee, so place it
   where no input precedes it.
-- **Awaiting the user's review choice on RV-003** — a hostile pass via
-  `/inquisition`, an external adversarial reviewer (attack prompt to be written
-  from the RV-003 brief), or waive the second round and move to `/plan`. All three
-  leave: 12 section attestations, a `review-disposed` naming **RV-003**, then
-  `design-accepted`. RV-002 additionally needs its three findings verified by the
-  raiser, or they sit answered forever.
+- **Awaiting the gate**: RV-002 F-1 needs the raiser's verify (answered at rev
+  51); then 12 section attestations, a `review-disposed` naming **RV-003** as
+  conducted, then `design-accepted`. All user-lane.
 - `proptest` dev-dependency proposed in §12, beyond the five settled crates —
   unvetoed, not yet objected to.
 - First-write path §5.1 vs the §4.3 barrier is the sharpest unprobed seam;

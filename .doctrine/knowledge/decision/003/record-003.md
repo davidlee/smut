@@ -42,8 +42,9 @@ they will be read: recovery replays *from the staging directory*. A durable
 that was committed or a republication of torn bytes — and the guarantee in this
 record forbids both. The barrier is:
 
-1. every staged entity file and `manifest.json` is written to completion and
-   fsynced **individually**;
+1. **every staged put file** — each entity file the write set puts, and
+   `index.json`, which every commit stages — **and `manifest.json`**, written to
+   completion and fsynced **individually**;
 2. `journal.prepare/` itself is fsynced, making its directory entries durable;
 3. only then is the `prepare → commit` rename performed, and `.smut/` fsynced
    to make the decision durable.

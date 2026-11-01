@@ -309,8 +309,9 @@ replays from the staging directory, so a durable `commit` name over non-durable
 staging is either a refusal of a batch that was committed or a republication of
 torn bytes. Before the rename, therefore:
 
-1. every staged entity file and `manifest.json` is written to completion and
-   fsynced **individually**;
+1. **every staged put file** — every entity file the write set puts, and
+   `index.json`, which every commit stages (§4.3) — **and `manifest.json`**, is
+   written to completion and fsynced **individually**;
 2. `journal.prepare/` itself is fsynced, making its directory entries durable;
 3. only then is the rename performed, and `.smut/` fsynced to make the decision
    durable.
@@ -586,7 +587,7 @@ renderer bypass `limit`.
 | risk | mitigation |
 | --- | --- |
 | `flock` is advisory, so an editor or `cat >` can corrupt the store | Documented as unsupported; the README states that nothing is promised to a process that does not take the lock. `flock` is also unreliable on some network filesystems — stated in the portability note rather than solved |
-| Process-abort tests prove replay and cleanup, not power-loss write ordering | Stated explicitly wherever the guarantee is claimed; fsync obligations are documented per step, and the barrier order is asserted by **injected** fsync failure, which proves the code path and not the hardware. Simulating filesystem failure is out of scope for 0.1 and named as such |
+| Process-abort tests prove replay and cleanup, not power-loss write ordering | Stated explicitly wherever the guarantee is claimed, with the code-path versus power-loss distinction drawn in §11.1; fsync obligations are documented per step. Simulating filesystem failure is out of scope for 0.1 and named as such |
 | The numeric comparator is subtle enough to be silently wrong | Exact comparison in one small module; property tests for totality and transitivity over ±2⁵³, i64/u64 extremes, subnormals and signed zeros; the cyclic alternative is recorded so nobody reintroduces it |
 | Crash injection could leak into production builds | Gated behind a test-only cargo feature, not an environment variable in ordinary builds |
 | The `normalize → write-set → commit → reload` seam is untested by either side's unit tests | A small dedicated integration suite owns that seam; it is the one place where "all units pass" can still mean a broken system |
@@ -612,15 +613,24 @@ layer below exists because some failure is invisible to the others.
 | core unit | `src/**` `#[cfg(test)]`, no fs | declaration algebra including generated-id collision against the passed snapshot, hoisting and preorder, equality and conflict, ordering, projection, envelope, Markdown layout and encoding including a leading notice ahead of a body that ends in an unclosed comment or fence, spec validation |
 | property | `numeric.rs`, `declare.rs` | numeric comparator **totality and transitivity**; the fold is idempotent and coalescing; normalisation is deterministic for a given id source |
 | integration | `tests/**` spawning the binary via `CARGO_BIN_EXE_smut` | exit codes, stdout/stderr separation, stdin and `-`, `--`, the TTY heuristic, full command envelopes; a forced collision between a generated candidate and a stored id, and a concurrent initialisation that leaves the empty-snapshot precheck stale |
-| durability | `tests/durability_crash.rs`, test-feature-gated injection | interruption at every named boundary, replay, cleanup, and recovery of an already-interrupted recovery; the pre-commit barrier order — staged file, manifest and prepare-directory fsync all before the rename, with barrier failure leaving nothing published; plus injected short writes, failed fsync, failed rename and failed unlink |
+| durability | `tests/durability_crash.rs`, test-feature-gated injection | interruption at every named boundary, replay, cleanup, and recovery of an already-interrupted recovery; the pre-commit barrier order — every staged put file including `index.json`, the manifest, and the prepare directory fsynced before the rename, with barrier failure leaving nothing published; injected fsync failure on each of those separately, including a failed index fsync; plus injected short writes, failed rename and failed unlink |
 | concurrency | `tests/concurrency.rs` | two simultaneous first declarations, termination before the first lock acquisition, and one process recovering another's transaction |
 | corruption | `tests/store_corruption.rs` | malformed index or entity, missing indexed file, duplicate path mapping, id/content disagreement, unexplained entry, unknown format version, two journal directories, symlink escape |
 | compatibility | `tests/compatibility.rs` | representative 0.1 invocations keep working when the spec surface widens in 0.2 |
 
 Crash injection lives behind a **test-only cargo feature**, not an
 environment-triggered abort compiled into ordinary builds. The suite claims only
-what it measures: that replay and cleanup are correct after process interruption,
-not that write ordering survives power loss.
+what it measures, and the two claims differ in kind.
+
+- **Code-path ordering is asserted.** With an injected fsync failure, the
+  durability layer observes that every staged put file — entity files and
+  `index.json` — the manifest and the prepare directory are synced before the
+  rename, and that a barrier failure publishes nothing. Each of those fsyncs is
+  failed separately, so a missing one is a failing test rather than an untested
+  line.
+- **Power-loss durability is assumed, not measured.** Injection proves the code
+  issues those calls in that order and reacts correctly when they fail; it cannot
+  prove the kernel or the disk honours them, and nothing here claims it does.
 
 ### 11.2 The seam that unit tests miss
 
