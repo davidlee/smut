@@ -70,3 +70,13 @@ sits in the backlog and not in a release.
 ISS-002 (`id` reserved in nested objects) shares the root cause — identity is
 expressed by one bare key name in a value tree — and any redesign of how identity
 is written should weigh both together.
+
+## Effect of ADR-001 — 2026-11-01
+
+`smut_id` is the identity key, and it does not decide this idea either way: renames
+would be just as absent, and just as tempting, under the new spelling. What it does
+change is the *urgency*. If the minting verb (ISS-003) lands, generated ids become
+the easy default everywhere, and the pressure to tidy a bad semantic id drops
+sharply — ids stop being commitments because they stop being chosen by hand. That
+argues for keeping this idea deferred until the minting verb and the key rename have
+been lived with.

@@ -5,8 +5,8 @@ id = 2
 slug = "id-is-reserved-in-every-nested-object-so-a-payloads-own-id-cannot-be-stored"
 title = "id is reserved in every nested object, so a payload's own id cannot be stored"
 kind = "issue"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "triaged"
+resolution = ""
 created = "2026-11-01"
 updated = "2026-11-01"
 tags = ["data-model", "reserved-keys"]
@@ -20,3 +20,7 @@ tags = ["data-model", "reserved-keys"]
 needs    = []                   # item→item hard prerequisite
 after    = []                   # item→item soft sequence: { to, rank? }
 triggers = []                   # watched source globs: { globs, note? }
+
+[[relation]]
+label = "governed_by"
+target = "ADR-001"

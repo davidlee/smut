@@ -68,3 +68,28 @@ the change is format-wide rather than cosmetic.
 IDE-002 (renaming with referential stability) shares the root cause: identity is
 expressed by a bare key in a value tree. If either is ever taken, they should be
 decided together — one format migration, not two.
+
+## Decided — 2026-11-01
+
+ADR-001 (accepted) resolves this item the first way: **the identity key becomes
+`smut_id`**, in entity files, declarations and references, so bare `id` is ordinary
+data at any depth with no reservation and no special case. The operator's reasoning,
+recorded because it is the whole argument: brevity loses slightly, but the collision
+is worth more to solve, `smut_id` is not bad to type, and it will never conflict with
+anything.
+
+That closes the question this item asked (whether taking `id` is worth it) and
+leaves two implementation questions to the design, both named in the ADR:
+
+- **Old stores.** The format version moves and the loader refuses an older store by
+  version with a message naming the migration, rather than reading both spellings.
+  Two spellings of identity is the ambiguity this change exists to remove, and the
+  store's standing rule is that validation reports and never repairs.
+- **Envelope vocabulary.** Entity-shaped objects carry `smut_id` (files, `objects[]`,
+  `changes[].previous`); response-only keys (`ids`, `changes[].id`,
+  `edges[].source`/`target`) are envelope vocabulary and are recommended to keep
+  their names.
+
+Still open here, and only here: none of the *behaviour* changes — the three
+outcomes measured above (silent hoist, reference-and-missing, exit 2) are what a
+domain `id` will simply stop encountering.

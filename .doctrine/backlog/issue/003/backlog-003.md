@@ -73,3 +73,21 @@ Decided together with ISS-002 (`id` reserved at depth) and IDE-002 (rename and
 referential stability). All three are the same question asked from three sides —
 how identity is expressed in a value tree, and who chooses the name — and answering
 one alone would very likely have to be undone by the next.
+
+## Direction — 2026-11-01
+
+ADR-001 (accepted) settles the key: identity becomes `smut_id`, so bare `id` is
+ordinary data at any depth. That removes the reservation this item's cure had to
+work around and makes the **minting verb** the direction, on the operator's
+judgement:
+
+- Placeholders and declare-me markers are rejected as "cleverness which only
+  amounts to a partial solution" — each buys one case by reserving another
+  spelling, which is the cost smut is now paying to be rid of.
+- The unreserved-id race is accepted, recorded for completeness: a minted id that
+  the store gains before the declaring batch would turn the declaration into an
+  upsert. Expected never to occur in smut's lifetime; noted, not designed for.
+
+What this item still owes is the verb's own shape: how many ids one call returns,
+whether it takes a count or nothing, and what its response looks like beside the
+existing envelopes.
