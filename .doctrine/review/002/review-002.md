@@ -37,3 +37,26 @@ impact and the design-target selectors agree.
   every command that reaches it.
 
 **Out of scope.** Implementation planning, and the contents of IMP-001 / IMP-002.
+
+## Synthesis
+
+**Overall:** acceptable — technically ready for implementation planning.
+
+**Synopsis:** The reviewed design now supplies the missing durability barrier for
+all staged put files (explicitly including the index), the manifest and staging
+directory; gives normalization the snapshot needed to avoid generated-ID
+collisions; and places completeness diagnostics before verbatim Markdown.
+Final repair verification examined revision 51. These are design-level checks,
+not implementation, crash-test or power-loss evidence. Recovery and concurrent
+initialization remain the highest-risk implementation work. The managed design
+run's current review freshness and human acceptance requirements remain separate
+from this review's technical verdict.
+
+**Haiku:**
+Pages wait on disk
+Names checked before ink settles
+Warnings lead the page
+
+Harvest sweep: findings and repair evidence remain on RV-002; durable choices
+remain in DEC-001, DEC-003 and DEC-009. No additional work or knowledge record
+is needed from this bounded verification.

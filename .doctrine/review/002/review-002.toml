@@ -27,12 +27,17 @@ act = "conclude"
 role = "raiser"
 note = "Repair verification against current materialised design (run revision 46), DEC-001/003/009 and all three RV-002 responses. F-2 and F-3 verified at design level; F-1 contested solely because both concrete pre-commit recipes omit the staged index from per-file fsync. No implementation or power-loss tests. This concludes the repair pass; responder action remains on F-1."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Final repair verification against revision 51: explicit staged-index fsync checked in both normative recipes and per-index failure coverage checked in §11.1. All three RV-002 findings now verified. Design is technically ready for planning in reviewer judgment; current managed run separately reports stale RV-003 and pending user section review, review disposition and design acceptance. No user acceptance recorded by this review and no runtime verification claimed."
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-001"
 
 [[finding]]
 id = "F-1"
-status = "answered"
+status = "verified"
 severity = "blocker"
 title = "Commit protocol omits the durability barrier for staged recovery material"
 detail = "Expected: before publishing a durable commit decision, every staged entity/index file and manifest, and their directory entries, must be durable. Observed: design §4.3 (lines 273-310) and DEC-003 specify writing staged bytes then renaming prepare to commit and fsyncing .smut, but never require fsync of staged files, manifest, or journal.prepare itself. The parent-directory fsync does not establish durability of the child's contents. A conforming implementation can persist journal.commit then lose its manifest or a staged file on power failure; §4.4 must refuse it as corrupt and cannot roll forward. This is a missing ordering obligation in the design, not an observed implementation failure. Repair: explicitly require successful write_all and file fsync for each staged file and manifest, then journal-directory fsync, before prepare-to-commit; retain existing parent fsync before apply. Specify pre-commit treatment on any barrier failure and fault-injection assertions for the order. Linux fsync reference: https://man7.org/linux/man-pages/man2/fsync.2.html ."
@@ -76,6 +81,11 @@ Repair, revision 51: §4.3 step 1 and DEC-003's matching step now read "every st
 
 Class swept, not just the instance: enumerated every place the design or the decisions list what the barrier covers — the general claims in §4.3, §4.4 and §4.6 already say every staged byte and are correct; the two numbered recipes and the facet were the only narrow ones, and both are fixed. No other section lists staged file kinds.
 """
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED at design revision 51. Read the amended response, materialised §4.3 step 1 and DEC-003 matching barrier: both now explicitly cover every staged put file including index.json, plus manifest.json; directory fsync precedes commit rename and parent fsync precedes application. §11.1 names separate injected failures for each fsync including index fsync. This closes the remaining index omission and preserves the prior repair's pre/post-commit distinction. Source/design verification only; implementation and crash/power-loss tests have not been performed."
 
 [[finding]]
 id = "F-2"
