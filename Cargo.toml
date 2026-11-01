@@ -12,7 +12,7 @@ name = "smut"
 path = "src/main.rs"
 
 [dependencies]
-clap = "4"
+clap = { version = "4", features = ["derive"] }
 fs4 = "1"
 nanoid = "0.5"
 serde = "1"
