@@ -74,15 +74,81 @@ pub enum Reject {
 /// The store could not be read or written: exit 1.
 #[derive(Debug)]
 pub enum StoreError {
-    /// A filesystem step failed, named by the protocol boundary it belongs to.
+    /// A filesystem step failed, named by the protocol boundary it belongs to or
+    /// by the store operation that reached it.
     FileSystem {
         /// The boundary the failing step belongs to, as registered in
-        /// [`crate::store::boundary`].
+        /// [`crate::store::boundary`], or the store operation that failed.
         step: &'static str,
         /// The path the step was working on.
         path: PathBuf,
         /// What the operating system reported.
         source: io::Error,
+    },
+    /// There is no store to read: a read or delete never creates one (DEC-004).
+    Absent {
+        /// The store directory that is not there.
+        path: PathBuf,
+    },
+    /// A store entry is not the shape the format defines, and is never repaired.
+    Corrupt {
+        /// The entry that is wrong, for the message.
+        entry: String,
+        /// What is wrong with it.
+        reason: String,
+    },
+    /// The index declares a format version this build does not read.
+    UnknownFormatVersion {
+        /// The version the index declares, for the message.
+        found: String,
+        /// The version this build reads.
+        expected: u64,
+    },
+    /// A basename is not one safe path component inside the store (§4.1).
+    UnsafeBasename {
+        /// The basename that was refused.
+        basename: String,
+        /// Why it is unsafe.
+        reason: &'static str,
+    },
+    /// Two public ids claim the same file.
+    DuplicatePathMapping {
+        /// The file both ids claim.
+        basename: String,
+        /// The id that claimed it first, or the one just inserted.
+        key: String,
+        /// The other id in the clash.
+        other: String,
+    },
+    /// An entity file disagrees with the index key that maps it.
+    IdDisagreement {
+        /// The entity file.
+        entry: String,
+        /// The public id the index maps the file to.
+        key: String,
+        /// The `id` the file itself holds, for the message.
+        found: String,
+    },
+    /// An entry in the store directory that nothing explains (§5.2).
+    UnexplainedEntry {
+        /// The entry that is not explained.
+        entry: String,
+    },
+    /// An entry is a symlink, and the store never resolves one (§4.1).
+    SymlinkedEntry {
+        /// The entry that is a symlink.
+        entry: String,
+    },
+    /// The store's lock is held by another process.
+    Locked {
+        /// The lock file that is held.
+        path: PathBuf,
+    },
+    /// A protocol step this build does not carry out, refused rather than
+    /// silently skipped.
+    NotYetImplemented {
+        /// The step's name in [`crate::store::boundary`].
+        step: &'static str,
     },
 }
 
@@ -169,6 +235,48 @@ impl fmt::Display for StoreError {
             StoreError::FileSystem { step, path, source } => {
                 write!(formatter, "{step} failed for {}: {source}", path.display())
             }
+            StoreError::Absent { path } => {
+                write!(formatter, "no store at {}", path.display())
+            }
+            StoreError::Corrupt { entry, reason } => {
+                write!(formatter, "{entry} is not a valid store entry: {reason}")
+            }
+            StoreError::UnknownFormatVersion { found, expected } => write!(
+                formatter,
+                "the store index has format_version {found}, and this build reads only \
+                 {expected}"
+            ),
+            StoreError::UnsafeBasename { basename, reason } => {
+                write!(formatter, "unsafe store basename {basename}: {reason}")
+            }
+            StoreError::DuplicatePathMapping {
+                basename,
+                key,
+                other,
+            } => write!(
+                formatter,
+                "the index maps {key} and {other} to the same file {basename}"
+            ),
+            StoreError::IdDisagreement { entry, key, found } => write!(
+                formatter,
+                "the entity file {entry} holds id {found}, and the index maps it to {key}"
+            ),
+            StoreError::UnexplainedEntry { entry } => write!(
+                formatter,
+                "unexpected entry in the store: {entry} is not explained by the index, \
+                 and is never adopted or repaired"
+            ),
+            StoreError::SymlinkedEntry { entry } => write!(
+                formatter,
+                "the store entry {entry} is a symlink, and the store never follows one"
+            ),
+            StoreError::Locked { path } => {
+                write!(formatter, "the store at {} is locked", path.display())
+            }
+            StoreError::NotYetImplemented { step } => write!(
+                formatter,
+                "the store cannot {step} yet: this build does not publish a store change"
+            ),
         }
     }
 }
@@ -192,6 +300,48 @@ mod tests {
             path: PathBuf::from(".smut/journal.prepare/Ab3.json"),
             source: io::Error::other("no space left on device"),
         }
+    }
+
+    /// Every refusal the store can raise, one of each variant.
+    fn every_store_refusal() -> Vec<StoreError> {
+        vec![
+            sample_store_failure(),
+            StoreError::Absent {
+                path: PathBuf::from(".smut"),
+            },
+            StoreError::Corrupt {
+                entry: "index.json".to_owned(),
+                reason: "malformed JSON".to_owned(),
+            },
+            StoreError::UnknownFormatVersion {
+                found: "2".to_owned(),
+                expected: 1,
+            },
+            StoreError::UnsafeBasename {
+                basename: "../escape.json".to_owned(),
+                reason: "a basename cannot hold a path separator",
+            },
+            StoreError::DuplicatePathMapping {
+                basename: "Ab3.json".to_owned(),
+                key: "alpha".to_owned(),
+                other: "beta".to_owned(),
+            },
+            StoreError::IdDisagreement {
+                entry: "Ab3.json".to_owned(),
+                key: "alpha".to_owned(),
+                found: "\"beta\"".to_owned(),
+            },
+            StoreError::UnexplainedEntry {
+                entry: "Zq7.json".to_owned(),
+            },
+            StoreError::SymlinkedEntry {
+                entry: "Ab3.json".to_owned(),
+            },
+            StoreError::Locked {
+                path: PathBuf::from(".smut/lock"),
+            },
+            StoreError::NotYetImplemented { step: "commit" },
+        ]
     }
 
     #[test]
@@ -267,6 +417,76 @@ mod tests {
         for (error, expected) in cases {
             assert_eq!(error.exit_code(), expected, "{error}");
         }
+    }
+
+    #[test]
+    fn every_store_refusal_is_exit_one() {
+        for refusal in every_store_refusal() {
+            let message = refusal.to_string();
+
+            assert!(!message.is_empty(), "a refusal says what failed");
+            assert_eq!(
+                Error::Store(refusal).exit_code(),
+                STORE_FAILURE,
+                "{message}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_store_refusal_names_the_entry_it_is_about() {
+        let absent = StoreError::Absent {
+            path: PathBuf::from(".smut"),
+        };
+        assert!(absent.to_string().contains(".smut"), "{absent}");
+
+        let version = StoreError::UnknownFormatVersion {
+            found: "2".to_owned(),
+            expected: 1,
+        };
+        assert!(version.to_string().contains("format_version"), "{version}");
+        assert!(version.to_string().contains('2'), "{version}");
+
+        let baseline = StoreError::UnsafeBasename {
+            basename: "../escape.json".to_owned(),
+            reason: "a basename cannot hold a path separator",
+        };
+        assert!(
+            baseline.to_string().contains("../escape.json"),
+            "{baseline}"
+        );
+
+        let duplicate = StoreError::DuplicatePathMapping {
+            basename: "Ab3.json".to_owned(),
+            key: "alpha".to_owned(),
+            other: "beta".to_owned(),
+        };
+        for named in ["Ab3.json", "alpha", "beta"] {
+            assert!(duplicate.to_string().contains(named), "{duplicate}");
+        }
+
+        let disagreement = StoreError::IdDisagreement {
+            entry: "Ab3.json".to_owned(),
+            key: "alpha".to_owned(),
+            found: "\"beta\"".to_owned(),
+        };
+        for named in ["Ab3.json", "alpha", "beta"] {
+            assert!(disagreement.to_string().contains(named), "{disagreement}");
+        }
+
+        let unexplained = StoreError::UnexplainedEntry {
+            entry: "Zq7.json".to_owned(),
+        };
+        assert!(
+            unexplained.to_string().contains("Zq7.json"),
+            "{unexplained}"
+        );
+
+        let symlinked = StoreError::SymlinkedEntry {
+            entry: "Ab3.json".to_owned(),
+        };
+        assert!(symlinked.to_string().contains("Ab3.json"), "{symlinked}");
+        assert!(symlinked.to_string().contains("symlink"), "{symlinked}");
     }
 
     #[test]
