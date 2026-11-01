@@ -8,7 +8,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
 `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04 `fddbe33`;
-PHASE-05…07 planned) · design locked at run rev 62; plan repaired round 1
+PHASE-05 `cb46e37`; PHASE-06…07 planned) · design locked at run rev 62; plan
+repaired round 1
 
 ### Produced
 
@@ -90,6 +91,20 @@ PHASE-05…07 planned) · design locked at run rev 62; plan repaired round 1
   negative control amputating one cluster's `part-of` edge turned exactly the two
   containment assertions red. Gates green in both feature configurations; no
   source path touched, `src/learn.rs` untouched (GAP-1).
+
+- **PHASE-05** (`cb46e37`, C4) — `src/conventions.rs`: the one-set registry
+  (`Set`, `HYGIENE`, `SETS`), `Ask` (`List`/`Prose`/`Seed`) resolved before it is
+  carried so the answer is infallible text, `listing()`, `seed()` under the fixed
+  id `conventions-hygiene` with `type: convention`, the crate's version and a
+  title derived from the prose's own heading. The prose is
+  `include_str!("conventions/hygiene.md")`, so §9.2's eight items — item 7's
+  `retracted`/`superseded`/`supersedes`/`vocab` among them — ship as one copy
+  printed three ways. `src/cli.rs` grows `conventions [NAME] [--format
+  text|json]` and `Invocation::Conventions`, routed in `src/main.rs` on the
+  no-store chain; `src/error.rs` gains `UnknownConvention` (naming the sets) and
+  `UnknownConventionFormat`, both exit 2. `--format json` with no name is a usage
+  error. New `tests/conventions.rs` (14 tests, VT-1/VT-2 plus the §13.3
+  scenario-5 pipe). `src/learn.rs` untouched (GAP-1); no §14.2 path touched.
 
 ### Learned
 
@@ -1217,3 +1232,128 @@ was correct.
 | 2026-11-02 | PHASE-04 | Redeclared the cluster ids and the eight question ids as literals in `tests/fixture.rs` and `PROVENANCE.md` | decided (#8) | They are acceptance properties from §13.1/§13.3 scenario 2, not counts of the fixture; asserting by id is what makes the composition claim testable. No *total* count is hardcoded — the suite compares against the array's own length |
 | 2026-11-02 | PHASE-04 | Boundary left as the auto-bound `2ea81fa..fddbe33` after `record-delta --commit fddbe33` refused to narrow it | decided (lifecycle artefact) | The refusal is right: the two review-lane doc commits sit between start and end and appear in conformance's undeclared cell, which is honest. Narrowing would have un-attributed nothing useful and moved those paths silently |
 | 2026-11-02 | PHASE-04 | Research advisory left unrestamped (same reason as C3/PHASE-03) | deferred, recorded (not escalated) | Plan-stage drift, not design drift; no charter authority to restamp mid-phase |
+
+## C4 — PHASE-05 landed (2026-11-02)
+
+Charter: C4, **PHASE-05 only**. Entering HEAD `306b721`, tree clean, PHASE-05
+already `in_progress` — a predecessor child had expanded the runtime sheet and
+died before writing source. The sheet was re-read, found sound, and kept as
+authored; the build started at the tests. Phase commit `cb46e37` (7 files,
++945/−5): `src/conventions.rs` 281 lines, `src/conventions/hygiene.md` 46,
+`tests/conventions.rs` 538, and 85 changed lines across `src/cli.rs`,
+`src/error.rs`, `src/lib.rs`, `src/main.rs`.
+
+Boundary: auto-bound at completion as `77bb56a..cb46e37`, which swept in two
+foreign commits that landed on the entering HEAD while this seat worked —
+`23c8980` (review lane, `.doctrine/review/**`) and `045c54c` (the research
+baseline restamp). Neither touches source or tests, so this was not a
+conflicting writer, but neither is this phase's work; `record-delta --start
+cb46e37^ --end cb46e37` narrowed the record to the phase's own commit. (The
+inherited `.doctrine` dirt recorded at charter time resolved itself: `045c54c`
+is that restamp, and `doctrine verify research-current --slice 2` reports
+current on the closing tree.)
+
+Cost: **no worker child**. The whole surface is ~330 lines of new source in one
+coherent area, and a worker would have needed all of §9 plus the 0.1 patch
+semantics to produce it — the failure mode the predecessor demonstrated. Built
+by this seat; envelope #11.
+
+**Verified here, not taken on report:**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | exit 0 — 16 suites, 481 tests; `conventions` 14/14, lib 320 |
+| `cargo test --features fault-injection` | exit 0 — 16 suites, 538 tests; `store::fault` 3/3 executed, so the injected run is not vacuous |
+| `doctrine slice verify-vt 2` (after the phase was flipped `completed`) | **PHASE-05 VT-1 PASS, VT-2 PASS**; PHASE-01 9/9, 02 4/4, 03 4/4, 04 1/1 unchanged; PHASE-06 (VT-2 `follow` absent) and PHASE-07 (VT-1/2/3) fail as expected for unbuilt phases |
+| §14.2 fence | `git show --stat cb46e37` is `src/{cli,conventions,error,lib,main}.rs`, `src/conventions/hygiene.md`, `tests/conventions.rs` — no `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix`, no `design.md`, no `src/learn.rs`, no `Cargo.*`, no README |
+| VA-1 | grep over `src/conventions.rs` for `Store`/`Snapshot`/`lock()`/`std::fs`/`std::path` in code returns nothing (the only hits are the module doc saying there is none); the prose is `include_str!("conventions/hygiene.md")`, so it is the file the `src/conventions/**` selector matches |
+
+**Red was observed before the command existed**, for the right reason: 14 tests,
+all failing with `smut: unknown command: conventions` and exit 2 — not a compile
+error. One test passed vacuously in that state (`--format json` with no name also
+exits 2 when the command does not exist), so it was tightened to assert the
+refusal names `json` and is *not* the unknown-command refusal; it then failed,
+and 0/14 were green before implementation.
+
+**EX-1…EX-6, VT-1, VT-2, VA-1.**
+
+- EX-1: listing is one line for one set (`hygiene  general structure and
+  relations`), prose for a named set, unknown name exit 2 naming `hygiene`
+  (`epistemic-records` explicitly, so the deferred set is not half-shipped),
+  `--format text` byte-identical to no flag for both forms, `--format json` with
+  no name exit 2, and `dot`/`yaml`/`JSON`/`markdown` each a usage error naming
+  themselves.
+- EX-2: one object, `id: conventions-hygiene`, `type: convention`,
+  `version == env!("CARGO_PKG_VERSION")` (prints `0.1.1` on this tree — PHASE-07
+  owns the bump, which is why it is not pinned), `title: Conventions: general
+  hygiene` derived from the embedded heading, `body` the embedded text, one
+  compact line ending in one newline. Five fields, no more.
+- EX-3: `tests/conventions.rs` runs the real pipe — seed → `declare`, seed again
+  (`unchanged`, still one entity), amend `body` + add `owner`, seed again
+  (`updated`, `previous.body` = the amendment, `previous.owner` = `ops`), and
+  the stored `body` back to the seeded text with `owner` intact; `--compact`
+  omits `previous` and the replaced text appears nowhere. 0.1's patch semantics
+  did this already: nothing was re-implemented.
+- EX-4: no store is created by any of the four forms, and all four still answer
+  correctly with a decoy file sitting at `.smut` — every command that opened it
+  would exit 1. No validation, no re-install, no heuristic set choice.
+- EX-5: eight numbered items, asserted by count and order; item 7 carries
+  `retracted`, `superseded`, `supersedes` and `vocab`; the prose says the seeded
+  body is advice a re-install replaces and points at `smut learn` for the
+  two-call recipe while containing no query JSON at all.
+- EX-6: `src/lib.rs` exports `conventions`; both feature configurations green.
+- VT-1: `tests/conventions.rs` carries `conventions-hygiene` and
+  `epistemic-records`, and its JSON round-trip is the `json` case.
+- VT-2: the re-install test carries `previous` and `compact` and asserts exactly
+  the pair §13.1 promises (amended seeded field replaced, user field kept).
+- VA-1: the two rows above.
+
+**The quoted prose.** Item 7: *"Distinguish a withdrawn record from a replaced
+one. `retracted` means the content is withdrawn and kept as a record of its own
+error; `superseded` means something newer replaced it, and `supersedes` is the
+edge that makes it so. A store that says `superseded` retired something "with
+its retraction intact" has collapsed the two, and a `where` on either status then
+lies — the store this release is built from does exactly that, and its own
+`vocab` is the evidence that it was needed."* The re-install caveat: *"Re-installing
+replaces every field the seed supplies — `body` included — and leaves the fields
+you added alone. The seeded body is therefore advice, not a record: keep an
+amendment by editing under a different id or by keeping it outside the seeded
+fields, or expect the next install to replace it. The replacement is reported
+rather than warned about: the reply to that `declare` carries the entity as it
+stood before the batch, `body` included, under `previous`, and `--compact` drops
+that field."*
+
+**Negative controls** (each mutated, observed red, restored, gate re-run):
+
+| control | mutation | red |
+| --- | --- | --- |
+| the command opens a store | `main.rs`'s `Conventions` arm calls `Store::in_directory(..).load()?` and takes its lock before answering | 4 tests failed with `smut: no store at …/.smut` (exit 1 vs 0) |
+| `previous` omits the replaced body | `declare.rs`'s `Change::to_json` drops the `previous` insert | `a_re_install_…_reports_the_previous` failed: `previous` `Null` vs `"Our house rule: one label per relation."` |
+| one of §9.2's eight items dropped | item 5 deleted from `hygiene.md` | the eight-item test failed, listing 7 items with the gap at 5→6 |
+
+After restoring, `git diff` on all three files was empty and every gate above
+was re-run on the restored tree.
+
+**Two things for the seat.** (1) `Reject::InvalidUsage` is reused for
+`--format json` with no name — the design names two new refusals and this is a
+usage error, not a third; its message carries the `smut: ` prefix and a trailing
+newline itself, because that arm prints the message verbatim. (2) The seed's
+JSON keys serialise lexically (`body` first, `id` second) because
+`serde_json::Map` is a `BTreeMap`; the entity is order-insensitive, `declare`
+reads it either way, and §9.3's printed example is illustrative rather than a
+byte contract.
+
+### Autonomy log additions (C4 · PHASE-05)
+
+| date | phase | decision | class | reason |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | PHASE-05 | Everything built by this seat; no worker child chartered | decided (#11) | One coherent area of ~330 new lines; briefing a worker needed all of §9 plus 0.1's patch semantics, which is the context the predecessor child lost. The plan's split (tests, then source) was followed by hand, tests first |
+| 2026-11-02 | PHASE-05 | `Invocation::Conventions(conventions::Ask)`; `Ask` resolved (and refused) at parse time, so `main.rs`'s arm is infallible text like `Learn` | decided (#1, #2) | Keeps DEC-004 step 1 whole — every refusal happens before a store could exist — and keeps the no-store chain structural rather than a promise |
+| 2026-11-02 | PHASE-05 | Two new refusals only: `UnknownConvention { found, sets }` and `UnknownConventionFormat { format }`; `--format json` with no name reuses `Reject::InvalidUsage` | decided (#1, #6) | The design names exactly two new refusals. The name-carrying refusal keeps `error.rs` free of the registry, and a missing name is a usage error, which is what `InvalidUsage` already means |
+| 2026-11-02 | PHASE-05 | `hygiene.md`'s H1 is `# General hygiene`; `title` is that heading in sentence case behind `Conventions: `, `body` is the file text less one trailing newline | decided (#1, #6) | §9.3's example fixes the title and the body's derivation; deriving both from the one embedded string is what stops a second copy drifting |
+| 2026-11-02 | PHASE-05 | The prose also says the replay is reported under `previous` and names the deferred `epistemic-records` set as deferred | decided (#10) | Both are behaviour that exists (§9.3, the refusal) and neither repeats the recipe; the second keeps a reader who expected the second set from reading its absence as an oversight |
+| 2026-11-02 | PHASE-05 | The vacuously-green refusal test was tightened (assert the message names `json` and is not the unknown-command refusal) rather than accepted | decided (#6) | A test satisfied by the command's non-existence certifies nothing; DEF-3's rule applied to a test written in this phase |
+| 2026-11-02 | PHASE-05 | Boundary narrowed to `cb46e37^..cb46e37`; research baseline left as `045c54c` left it (already current) | decided (lifecycle artefact) | Two foreign commits landed on the entering HEAD mid-phase. Narrowing attributes the phase's own commit only; the neighbouring review/doc commits keep their own cells and stay visible in conformance |
