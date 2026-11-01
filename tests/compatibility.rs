@@ -495,7 +495,8 @@ fn learn_writes_a_non_empty_guide_and_touches_no_store() {
 
     let ran = run(&scratch, &["learn"]);
 
-    // The guide's content is PHASE-08's to write; only its shape is pinned here.
+    // The guide's content is PHASE-06's, which wrote it; only its shape is pinned
+    // here. (This comment named a PHASE-08 that was never planned — RV-020 F-7.)
     assert_eq!(ran.code, 0, "{}", ran.stderr);
     assert!(ran.stderr.is_empty(), "{}", ran.stderr);
     assert!(!ran.stdout.trim().is_empty(), "learn prints a guide");

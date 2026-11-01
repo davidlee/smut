@@ -1569,3 +1569,97 @@ reads the library (`smut::learn`), which is the one structural addition a future
 fixture test can build on. (2) `verify-vt` PHASE-07 reads three missing keywords
 (`naive`, `1.0`, `clusters`) — those are PHASE-07's own mandates, not
 regressions from this phase; nothing in PHASE-06's diff touches their files.
+
+## C6 close — PHASE-07, and the slice at 7/7 (seat verification)
+
+PHASE-07 landed as `2b9250b` (feat) + `318e6b2` + `6e8e6fa` (docs). The phase
+child reported that its `--amend` briefly swept a staged review-ledger symlink into
+its commit; it caught it with `git show --name-only`, undid it with `reset --soft`
+and re-committed path-limited. Verified at the seat: no review artefact is inside
+any PHASE-07 commit, and the ledger files are intact.
+
+**Seat verification (my own runs on the final tree):**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | 16 suites, all pass |
+| `cargo test --features fault-injection` (child) | 44 in `durability_crash`, lib 346 vs 333 — the gated suite executed |
+| `doctrine slice verify-vt 2` | **25 PASS, 0 Fail, 0 unattributable** across PHASE-01…07 |
+| version | `Cargo.toml` and `Cargo.lock` both `0.2.0`; the lock's only change is that line — no dependency moved |
+| §14.2 fence | the PHASE-07 delta touches `README`, `Cargo.*`, `src/cli.rs`, `src/error.rs`, five test files — none of `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix` |
+
+**The VA-1 gate is not vacuous, and that was proved rather than asserted:** the
+phase child ran the same assertion over a log with `44 → 0` and got `GATE FAIL`,
+exit 1.
+
+### Conformance: 26 conformant, 0 undelivered, 4 undeclared
+
+`doctrine slice conformance 2` reports **undelivered 0** — every declared selector
+has its file. The four undeclared cells are review-lane artefacts:
+`.doctrine/review/017/review-017.toml` (modified) and the three `review/018` files
+(added). They are the review ledgers this run created, and §14.2's `design-target`
+selectors cover source and docs, not process evidence. **Explanation, not an
+exception:** the review lane was added at G0, after the selector set was authored,
+so the ledgers could not have been declared. They are evidence for the audit, not
+delivered surface, and the distinction is why undelivered is the number to read.
+
+## The review lane, closed out
+
+Four passes, all raised by an independent read-only seat and verified by a second
+one — never self-verified by the responder:
+
+| pass | subject | findings | outcome |
+| --- | --- | --- | --- |
+| RV-017 | PHASE-01 | 5 (3 major, 2 minor) | 4 fixed, 1 tolerated to PHASE-06 (now closed) |
+| RV-018 | PHASE-02+03 | 4 (1 minor, 3 nit) | 3 fixed, 1 tolerated (harness copies) |
+| RV-019 | PHASE-04+05 | 7 (2 minor, 5 nit) | 5 fixed, 1 aligned by PHASE-06, 1 recorded |
+| RV-020 | PHASE-06 | 7 (2 minor, 5 nit) | 6 fixed, 1 recorded (duplication ownership) |
+
+**No blocker, no major, no wrong result** was found in 23 findings. Every pass
+verified the release's central invariants positively — one reference
+interpretation, the roots-only position, budget-before-expansion, predicate purity,
+the example being the one the tests run — and every finding was a statement the
+tree had already falsified.
+
+### The one pattern worth carrying to audit
+
+**Four findings, in four different passes, are the same defect: an assertion that
+cannot fail.**
+
+1. **DEF-3** — PHASE-03's `VT-4` keywords were both already in the target file, so
+   `verify-vt` reported PASS three phases early.
+2. **The `roots-only` token** — PHASE-03 wrote the keyword as prose while the suite
+   spelled it "roots only", so the mandate had no evidence.
+3. **RV-018 F-3** — a test renamed to `the_nine_keys_are_each_accepted` with a
+   comment claiming exclusivity was owned elsewhere; neither owner probed anything
+   but `sort`, so set identity was enforced by nothing. (My repair, caught by the
+   verifier.)
+4. **RV-020 F-1** — the label-vocabulary pin's keywords both occurred elsewhere in
+   the guide, so deleting the section it is named for left it green.
+
+The common cause is mechanical, not careless: **a keyword list is a contract
+against a document that keeps changing.** A VT keyword authorises a search, and a
+search cannot tell you whether the subject it found is the subject you meant.
+The run's answers, in order of strength: assert a token only the intended sentence
+can produce (F-1's repair); make the subject impossible to delete silently
+(`faaa83b`'s refusal loop); flatten the text so a reflow is not mistaken for a
+missing claim (`guide()`); and run the mutation — delete the subject, expect red —
+which is the only one that proves it.
+
+### Open, and going to reconcile
+
+- **Design §2's "mutually-referencing clusters"** does not hold of the committed
+  array: no cluster references another (every cluster's only reference is
+  `part-of` to `session`), so the suite pins the pair `finding-smut-17` ↔
+  `prop-conventions-library`. Recorded in `PROVENANCE.md` and here rather than
+  quietly changed. Same class as the line-number drift: a locked-design sentence
+  the data falsifies, for the operator's deferred reconcile.
+- **RV-020 F-2, recorded decision, no rewrite:** `learn` and
+  `src/conventions/hygiene.md` both state the label-vocabulary and bounded-render
+  rules, because §9.2 items 5/8 and §9.4 each mandate them. **Ownership, for the
+  next editor: `hygiene.md` owns the rule and `learn` owns the why** (every label
+  is a field `follow`, `backlinks` and `where` must be told). Nothing currently
+  detects the two drifting apart — the sets are pinned byte-for-byte and the
+  guide by keyword — so a reword in one is a manual review duty, not a test.

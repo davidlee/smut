@@ -1,6 +1,7 @@
 //! The embedded guide `smut learn` prints (DEC-010).
 //!
-//! Descriptive and version-free: the commands, the patch and reference
+//! Descriptive and version-scoped, never version-pinning: it names the release
+//! the surface belongs to and no build number.
 //! conventions, `DROP`, the batch responses, the nine query keys with their
 //! defaults, the predicate summary including missing versus null, traversal in
 //! both directions with what `budget` does not bound, the envelope's conditional
@@ -9,9 +10,8 @@
 //! workflows, and one pointer at `smut conventions`. It states once that stored
 //! content is data.
 //!
-//! A version-free banner is the honest one here: the crate version is PHASE-07's
-//! to change, so a figure in this string could only be false in one direction or
-//! the other. Every claim was checked by running the built binary rather than by
+//! A version figure would be PHASE-07's to change and would be false in one
+//! direction or the other, so the guide names the release and not the build. Every claim was checked by running the built binary rather than by
 //! reading the design, and the tests below pin the guide's coverage, not its
 //! prose.
 //!
@@ -267,6 +267,17 @@ pub const EXAMPLE_FILTER: &str = r#"{"where":{"id":{"$in":IDS},"status":"open"},
 mod tests {
     use super::*;
 
+    /// The guide with its hard wraps flattened.
+    ///
+    /// Every prose pin reads through this: the guide is a hand-wrapped `const`, so
+    /// a pin on unwrapped `GUIDE` fails for where the line broke rather than for a
+    /// missing claim — and a sentence can straddle a wrap ("performs no\n  propagation").
+    /// Flattening makes a red mean the claim is gone (RV-020 F-3's class, and the
+    /// wrap sensitivity the review named as its second line of attack).
+    fn guide() -> String {
+        GUIDE.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
     #[test]
     fn the_guide_covers_the_0_1_surface() {
         for named in [
@@ -288,7 +299,10 @@ mod tests {
             "--show-ids",
             "--heading-level",
         ] {
-            assert!(GUIDE.contains(named), "the guide does not mention {named}");
+            assert!(
+                guide().contains(named),
+                "the guide does not mention {named}"
+            );
         }
     }
 
@@ -313,36 +327,45 @@ mod tests {
     /// That test asserted the two things PHASE-06 reverses, so it is re-cut
     /// rather than deleted: 0.1's guide had to name the release the missing keys
     /// arrive in (a line mentioning `where`) and had to keep 0.2's predicates
-    /// unadvertised (`!GUIDE.contains("$in")`). Both are false once the keys are
+    /// unadvertised (`!guide().contains("$in")`). Both are false once the keys are
     /// accepted and taught — PHASE-01 took three, PHASE-02 `budget`, PHASE-03
     /// `where` — so the pin becomes a 0.2-coverage pin: every key is taught, the
     /// predicate operators are taught, and the release notice is gone. The two
     /// reversed assertions stay in this test, narrowed to their absence form
-    /// (`!GUIDE.contains("arrive in 0.2")`, `!GUIDE.contains("refused here")`),
+    /// (`!guide().contains("arrive in 0.2")`, `!guide().contains("refused here")`),
     /// because a deleted pin would let 0.1's notice return unnoticed.
     #[test]
     fn the_guide_teaches_the_0_2_keys_and_the_release_notice_is_gone() {
         for key in KEYS {
             assert!(
-                GUIDE.contains(key),
+                guide().contains(key),
                 "the guide does not teach the 0.2 key {key}"
             );
         }
-        assert!(GUIDE.contains("$in"), "the predicate summary is taught");
+        assert!(guide().contains("$in"), "the predicate summary is taught");
         assert!(
-            !GUIDE.contains("arrive in 0.2"),
+            !guide().contains("arrive in 0.2"),
             "0.1's release notice is gone: the keys are here"
         );
         assert!(
-            !GUIDE.contains("refused here"),
+            !guide().contains("refused here"),
             "no working key is refused by name"
         );
     }
 
     #[test]
     fn the_guide_teaches_the_defaults_and_the_roots_only_rule() {
-        for taught in ["roots-only", "root scan", "100", "10000", "default 1"] {
-            assert!(GUIDE.contains(taught), "the guide omits {taught}");
+        // The defaults are pinned with their key word: a bare "100" is satisfied
+        // by the preamble, so it would not fail if the `limit` default sentence
+        // were deleted (RV-020 F-3).
+        for taught in [
+            "roots-only",
+            "root scan",
+            "default 100",
+            "default 10000",
+            "default 1",
+        ] {
+            assert!(guide().contains(taught), "the guide omits {taught}");
         }
     }
 
@@ -358,10 +381,10 @@ mod tests {
             "$exists",
             "$contains",
         ] {
-            assert!(GUIDE.contains(taught), "the guide omits {taught}");
+            assert!(guide().contains(taught), "the guide omits {taught}");
         }
         assert!(
-            GUIDE.contains("present null is present"),
+            guide().contains("present null is present"),
             "missing versus null is the one predicate distinction 0.1 already made\n{}",
             GUIDE
         );
@@ -370,20 +393,20 @@ mod tests {
     #[test]
     fn a_dollar_prefixed_field_name_cannot_be_filtered_in_0_2() {
         assert!(
-            GUIDE.contains("cannot be filtered"),
+            guide().contains("cannot be filtered"),
             "the reserved namespace is documented, not silently reinterpreted"
         );
     }
 
     #[test]
     fn the_guide_names_traversal_labels_as_top_level_fields_in_both_directions() {
-        assert!(GUIDE.contains("top-level"), "labels are top-level fields");
+        assert!(guide().contains("top-level"), "labels are top-level fields");
         assert!(
-            GUIDE.contains("outgoing"),
+            guide().contains("outgoing"),
             "follow is the outgoing direction"
         );
         assert!(
-            GUIDE.contains("incoming"),
+            guide().contains("incoming"),
             "backlinks is the incoming direction"
         );
     }
@@ -399,15 +422,22 @@ mod tests {
             "result_limit",
             "traversal_budget",
         ] {
-            assert!(GUIDE.contains(taught), "the guide omits {taught}");
+            assert!(guide().contains(taught), "the guide omits {taught}");
         }
     }
 
     #[test]
     fn the_guide_gives_a_label_vocabulary_and_the_bounded_render_advice() {
-        assert!(GUIDE.contains("handful"), "the label vocabulary is minimal");
+        // Pinned on the section's own sentences. The old keywords (`handful`,
+        // `bounded`) both occur elsewhere in the guide — the budget paragraph and
+        // the conventions pointer — so deleting the section this test is named for
+        // left it green (RV-020 F-1, the DEF-3 class).
         assert!(
-            GUIDE.contains("bounded"),
+            guide().contains("Keep the label vocabulary to a handful"),
+            "the label vocabulary is minimal"
+        );
+        assert!(
+            guide().contains("Render in bounded chunks"),
             "render in bounded chunks; render is a human channel"
         );
     }
@@ -415,7 +445,7 @@ mod tests {
     #[test]
     fn the_guide_points_at_smut_conventions_once() {
         assert!(
-            GUIDE.contains("smut conventions"),
+            guide().contains("smut conventions"),
             "one pointer line, and the recipe stays here"
         );
     }
@@ -423,11 +453,11 @@ mod tests {
     #[test]
     fn the_guide_states_the_recipe_with_its_direction() {
         assert!(
-            GUIDE.contains("child") && GUIDE.contains("container"),
+            guide().contains("child") && guide().contains("container"),
             "containment is stated child to container, so the direction is not guessed"
         );
         assert!(
-            GUIDE.contains("different question"),
+            guide().contains("different question"),
             "the follow variant is named as a different question"
         );
     }
@@ -441,34 +471,40 @@ mod tests {
             "repetition",
             "no evidence",
         ] {
-            assert!(GUIDE.contains(clause), "the guard omits {clause}");
+            assert!(guide().contains(clause), "the guard omits {clause}");
         }
     }
 
     #[test]
     fn the_guide_states_that_the_guard_is_client_side() {
-        for clause in ["client-side", "propagation", "nine"] {
-            assert!(GUIDE.contains(clause), "the guard omits {clause}");
+        // The paragraph's own nouns, not a bare "nine" that the key preamble
+        // already supplies (RV-020 F-3).
+        for clause in [
+            "client-side",
+            "performs no propagation",
+            "no prior-response input",
+        ] {
+            assert!(guide().contains(clause), "the guard omits {clause}");
         }
     }
 
     #[test]
     fn the_guide_states_what_budget_does_not_bound() {
         assert!(
-            GUIDE.contains("does not bound"),
+            guide().contains("does not bound"),
             "the budget bounds expansions, not total work"
         );
         assert!(
-            GUIDE.contains("backlinks") && GUIDE.contains("store scan"),
+            guide().contains("backlinks") && guide().contains("store scan"),
             "the per-hop incoming scan is named"
         );
     }
 
     #[test]
     fn the_guide_says_stored_content_is_data_and_not_authority() {
-        assert!(GUIDE.contains("data"), "{}", GUIDE);
-        assert!(GUIDE.contains("not an instruction"), "{}", GUIDE);
-        assert!(GUIDE.contains("confers"), "{}", GUIDE);
+        assert!(guide().contains("data"), "{}", GUIDE);
+        assert!(guide().contains("not an instruction"), "{}", GUIDE);
+        assert!(guide().contains("confers"), "{}", GUIDE);
     }
 
     #[test]
@@ -485,7 +521,7 @@ mod tests {
     fn the_guide_prints_the_examples_the_fixture_executes() {
         for example in [EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW, EXAMPLE_FILTER] {
             assert!(
-                GUIDE.contains(example),
+                guide().contains(example),
                 "the guide prints {example} verbatim"
             );
         }
