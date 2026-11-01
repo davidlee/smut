@@ -9,6 +9,7 @@ pub mod declare;
 pub mod entity;
 pub mod error;
 pub mod id;
+pub mod input;
 pub mod numeric;
 pub mod order;
 pub mod render_markdown;

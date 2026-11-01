@@ -296,7 +296,10 @@ impl fmt::Display for Reject {
                 "--format {format} is not supported in 0.1; planned for 1.0"
             ),
             Reject::UnknownFormat { format } => {
-                write!(formatter, "unknown --format {format}, and 0.1 writes markdown")
+                write!(
+                    formatter,
+                    "unknown --format {format}, and 0.1 writes markdown"
+                )
             }
         }
     }
