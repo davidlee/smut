@@ -979,3 +979,28 @@ human reads outstanding; 28/28 verification rows PASS) · head `984cc46`
 - **Environment posture recorded**: `[reservation] reach = "local"` in
   `.doctrine/doctrine.toml` because this checkout cannot push reservation refs;
   revert to `shared` when the remote is writable.
+
+### Owner decision after the audit: packaging (2026-11-01)
+
+The repository owner fixed the identity and licence the brief left open ("licensing
+is a repository-owner decision"): **GPL-3.0-only**, repository
+`https://github.com/davidlee/smut`, homepage `https://doctrinal.systems`. Landed
+as `chore(pkg)` after RV-004 was concluded, so it is not audit-covered; it is
+recorded here and in RV-004's reconciliation brief addendum.
+
+- `LICENSE` is the FSF's verbatim GPL-3.0 text (gnu.org `gpl-3.0.txt`, 674
+  lines). `Cargo.toml` gains `description`, `license`, `repository`, `homepage`,
+  `readme`, `keywords`, `categories`, and an `exclude` list for what is project
+  governance rather than crate content (`.doctrine/`, `.pi/`, `AGENTS.md`, the
+  implementation brief, the Nix devshell).
+- `cargo package --list` → 38 files, 1.6 MiB (1.2 MiB compressed);
+  `cargo publish --dry-run` packages and verifies the crate with no warning.
+- The crate name `smut` is **free** on crates.io (index lookup → 404, API →
+  "crate `smut` does not exist"), so no rename is needed.
+- Not yet published: this checkout holds no crates.io token (no
+  `~/.cargo/credentials.toml`, no `CARGO_REGISTRY_TOKEN`), and `0.1.0` is a
+  version a publish cannot re-use. The upload is the owner's act.
+- Cosmetic caveat for crates.io's renderer: the README's brand image is a
+  relative link (`./smut.jpg`), which crates.io does not resolve for published
+  READMEs. Left alone deliberately — the owner's brand block is byte-preserved by
+  this slice.

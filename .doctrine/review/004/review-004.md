@@ -177,3 +177,21 @@ the ledger's.
 - **F-1, F-2, F-3** were fixed inside this audit (`78a7eb1`, `35b62ed`,
   `dfc6e37`) and need no reconcile write beyond the design/DEC clarifications
   listed above.
+
+### Addendum, after conclusion: the owner's packaging decision (2026-11-01)
+
+Not audit-covered — it landed after the pass concluded — but it touches two brief
+surfaces, so record it here rather than let reconcile miss it:
+
+- **`design.md §12`** gains a `LICENSE` row (GPL-3.0-only, the FSF's verbatim
+  text) and says the `Cargo.toml` row also carries the crates.io identity
+  (description, repository, homepage, keywords, categories, and an `exclude` list
+  for governance-only paths). The owner fixed the licence the brief had left
+  open; the design should say so rather than let a package manifest be the only
+  record.
+- **Selector registry (F-4's item)** stays as written — `Cargo.lock` plus its §12
+  mirror. `LICENSE` is a new path but not a *recorded phase delta*, so
+  `slice conformance` does not see it; adding it to `design-target` is harmless
+  and truthful if the reconcile pass prefers the table to stay complete.
+- No new finding, no changed disposition: `cargo publish --dry-run` is clean, the
+  name is free, and the slice's code and gates are unchanged.
