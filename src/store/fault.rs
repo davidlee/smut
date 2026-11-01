@@ -110,6 +110,13 @@ impl Faults {
     }
 }
 
+/// The process environment's arming, read once.
+static ENVIRONMENT: OnceLock<Faults> = OnceLock::new();
+
+thread_local! {
+    static ARMED: RefCell<Option<Faults>> = const { RefCell::new(None) };
+}
+
 /// The seam as the calling thread currently has it armed, falling back to the
 /// process environment, which is read once.
 fn armed() -> Faults {
@@ -148,12 +155,6 @@ pub fn arrive(boundary: Boundary) {
 /// How many of `requested` bytes may reach the file at `boundary`.
 pub fn cap_write(boundary: Boundary, requested: usize) -> usize {
     armed().shorten(boundary, requested)
-}
-
-static ENVIRONMENT: OnceLock<Faults> = OnceLock::new();
-
-thread_local! {
-    static ARMED: RefCell<Option<Faults>> = const { RefCell::new(None) };
 }
 
 #[cfg(test)]
