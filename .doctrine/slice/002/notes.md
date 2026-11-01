@@ -358,3 +358,29 @@ claim below is a reading of the design, of DEC-017, or of a committed ledger.
   read-through changes it, §11's gate already rules: the affected section is
   revised before the phase that depends on it. Not a finding — a dependency the
   privacy phase carries.
+
+## F-4 checked against the code, and the clause it earned (2026-11-01)
+
+The contest was about the accuracy of a durable answer, so the answer was
+checked against the mechanism rather than against its own prose.
+
+- **Holds as a mechanism.** `src/declare.rs:270-306`: `apply` keys the upsert on
+  `declaration.id`, clones the stored fields, then applies `Op::Set` per declared
+  field — so a supplied `body` overwrites and an unnamed field survives. That is
+  §9.3's pair exactly.
+- **The instance does not hold.** The live store's `vocab` is `"id": "vocab"`
+  (`interview.local/.smut/…`), carrying the second-session amendment in its body;
+  no entity in the store has an id beginning `conventions`, so a
+  `conventions-hygiene` seed is a creation. Id-keyed upsert cannot reach it.
+- **The precision found by looking.** The replacement is not invisible:
+  `src/declare.rs:116` emits `previous` for an updated entry unless `--compact`,
+  and `src/learn.rs:72-76` documents it. §9.3 said "without a warning", which was
+  right, but stopped short of saying the old body comes back in the reply.
+- **Delta (operator-directed, revision 58):** §9.3 gains that clause and §13.1's
+  Conventions row gains the assertion that `previous` carries the replaced body
+  and `--compact` omits it. Adopted at rev 58; the pass went stale as it must,
+  so the stage round trip ran again (rev 59, 60) and **RV-016** is the bound
+  pass, concluded on the delta.
+- **Lesson, third time paid for:** any edit adopted mid-pass stales that pass.
+  Edit while in `drafting`, or accept the round trip and a fresh ledger — the
+  ordering is cheaper than the ledger.
