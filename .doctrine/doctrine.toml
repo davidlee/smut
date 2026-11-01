@@ -33,3 +33,11 @@ installed-version = "0.47.0"
 # The trunk delivery ref dispatch advances to / the close gate checks against.
 # [dispatch]
 # deliver-to = "refs/heads/main"
+
+# --- Reservation -----------------------------------------------------------
+# This checkout has no push credentials (SSH disabled, no HTTPS token), so remote
+# id reservations cannot be pushed. Fall back to the local reservation namespace;
+# the RV-001..003 and DEC-001..011 reservations in this clone were made the same
+# way.
+[reservation]
+reach = "local"
