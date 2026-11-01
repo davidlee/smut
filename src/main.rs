@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use smut::cli::{self, Invocation};
+use smut::conventions;
 use smut::error::{Error, Reject, STORE_FAILURE, SUCCESS, StoreError};
 use smut::learn;
 use smut::store::Store;
@@ -78,9 +79,9 @@ fn dispatch(arguments: &[OsString], stdin_is_terminal: bool, stdin: &mut dyn Rea
 
 /// Route the invocation, and answer it.
 ///
-/// Only the [`Request`] arm constructs a [`Store`]: `--help`, `--version` and
-/// `learn` are answered on a call chain that never creates, locks or recovers a
-/// store (DEC-004, VA-1).
+/// Only the [`Request`] arm constructs a [`Store`]: `--help`, `--version`,
+/// `learn` and `conventions` are answered on a call chain that never creates,
+/// locks or recovers a store (DEC-004, VA-1).
 fn execute(
     arguments: &[OsString],
     stdin_is_terminal: bool,
@@ -89,6 +90,7 @@ fn execute(
     match cli::parse(arguments, stdin_is_terminal, stdin)? {
         Invocation::Help(text) | Invocation::Version(text) => Ok(text),
         Invocation::Learn => Ok(learn::GUIDE.to_owned()),
+        Invocation::Conventions(ask) => Ok(conventions::answer(ask)),
         Invocation::Request(request) => request.run(&Store::in_directory(current_directory()?)),
     }
 }
@@ -139,6 +141,7 @@ mod tests {
             "query",
             "render",
             "learn",
+            "conventions",
         ] {
             assert!(rendered.stdout.contains(named), "{}", rendered.stdout);
         }
@@ -165,6 +168,15 @@ mod tests {
         assert_eq!(rendered.stdout, learn::GUIDE);
         assert!(rendered.stdout.ends_with('\n'), "{}", rendered.stdout);
         assert!(!rendered.stdout.ends_with("\n\n"), "{}", rendered.stdout);
+        assert!(rendered.stderr.is_empty(), "{}", rendered.stderr);
+    }
+
+    #[test]
+    fn conventions_prints_the_shipped_set_without_a_store() {
+        let rendered = dispatch_of(&["conventions", "hygiene"]);
+
+        assert_eq!(rendered.exit, 0, "{}", rendered.stderr);
+        assert_eq!(rendered.stdout, conventions::HYGIENE.prose);
         assert!(rendered.stderr.is_empty(), "{}", rendered.stderr);
     }
 

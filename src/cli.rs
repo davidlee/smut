@@ -15,6 +15,7 @@ use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{CommandFactory, Parser, Subcommand};
 use serde_json::Value;
 
+use crate::conventions;
 use crate::declare;
 use crate::entity::Form;
 use crate::error::{Error, Reject};
@@ -38,6 +39,10 @@ pub enum Invocation {
     Version(String),
     /// The embedded guide, answered without a store.
     Learn,
+    /// The embedded conventions sets, answered without a store: the listing, one
+    /// set's prose, or one set's declaration. The ask is resolved before it is
+    /// carried, so the answer is pure text (§9.1).
+    Conventions(conventions::Ask),
     /// A command that runs the pipeline against the store.
     Request(Request),
 }
@@ -277,6 +282,14 @@ enum Sub {
     },
     /// Print the embedded guide.
     Learn,
+    /// Print the embedded conventions: the listing, one set, or its declaration.
+    Conventions {
+        /// The set to print; omit it for the listing.
+        name: Option<String>,
+        /// `text` (default) prints prose, `json` prints one declaration.
+        #[arg(long)]
+        format: Option<String>,
+    },
 }
 
 /// Parses and validates one command line: DEC-004's step 1, in full.
@@ -298,6 +311,10 @@ pub fn parse(
 
     match subcommand {
         Sub::Learn => Ok(Invocation::Learn),
+        Sub::Conventions { name, format } => Ok(Invocation::Conventions(conventions::resolve(
+            name.as_deref(),
+            format.as_deref(),
+        )?)),
         Sub::Declare { json, compact } => {
             let input = operand(json.as_deref(), stdin_is_terminal, stdin)?;
 
@@ -555,7 +572,15 @@ mod tests {
             panic!("help is help");
         };
 
-        for named in ["declare", "get", "delete", "query", "render", "learn"] {
+        for named in [
+            "declare",
+            "get",
+            "delete",
+            "query",
+            "render",
+            "learn",
+            "conventions",
+        ] {
             assert!(text.contains(named), "{text}");
         }
     }

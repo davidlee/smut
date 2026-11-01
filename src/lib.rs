@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 pub mod cli;
+pub mod conventions;
 pub mod declare;
 pub mod entity;
 pub mod error;

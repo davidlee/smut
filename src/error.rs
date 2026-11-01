@@ -124,6 +124,19 @@ pub enum Reject {
         /// The format's name.
         format: String,
     },
+    /// `conventions` was given a set name no release ships. The names that do
+    /// exist travel with the refusal, so the caller can retry (§9.1).
+    UnknownConvention {
+        /// The name asked for.
+        found: String,
+        /// The names that exist, in listing order.
+        sets: Vec<String>,
+    },
+    /// `conventions --format` takes `text` and `json` only (§9.1).
+    UnknownConventionFormat {
+        /// The format's name.
+        format: String,
+    },
 }
 
 /// The store could not be read or written: exit 1.
@@ -321,6 +334,15 @@ impl fmt::Display for Reject {
                     "unknown --format {format}, and 0.1 writes markdown"
                 )
             }
+            Reject::UnknownConvention { found, sets } => write!(
+                formatter,
+                "unknown conventions set {found}; the sets are: {}",
+                sets.join(", ")
+            ),
+            Reject::UnknownConventionFormat { format } => write!(
+                formatter,
+                "unknown --format {format} for conventions, which writes text or json"
+            ),
         }
     }
 }
@@ -457,7 +479,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 22] = [
+        let cases: [(Error, u8); 24] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -571,6 +593,21 @@ mod tests {
             ),
             (
                 Reject::UnknownFormat {
+                    format: "dot".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownConvention {
+                    found: "epistemic-records".to_owned(),
+                    sets: vec!["hygiene".to_owned()],
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownConventionFormat {
                     format: "dot".to_owned(),
                 }
                 .into(),
