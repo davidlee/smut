@@ -406,26 +406,81 @@ One heavy phase per charter, pairs only for the two pure cores:
   std's inherent `File::lock`/`try_lock` (Rust 1.89+) would otherwise win and
   leave `fs4` unused, which is the one thing the charter asked to avoid; `fs4` is
   no longer reported as an unused dependency · decided
+- charter-4 · PHASE-05 is one worker, one phase, and the crash suite was not
+  truncated to fit a budget · the user named this phase as the hardest and the
+  plan's risk section makes the boundary enumeration structural, so a shorter
+  suite would have been the failure mode the phase exists to prevent · decided
+- PHASE-05 · appended only `InitialisationParentSynced` to the single registry
+  (COMMIT_PATH is now 15) · with the shared `ParentDirectorySynced` label an
+  abort fired inside `initialise` before anything was staged, so the first-write
+  interruption test could not distinguish "the store directory survived" from
+  "the decision is durable" · decided
+- PHASE-05 · §4.3's two unnamed `.smut` fsyncs (post-apply and post-done) reuse
+  `RemovalsApplied` / `DoneRenamed`, and recovery's two reuse
+  `RecoveryDoneRenamed` · all four are post-decision steps with the same
+  roll-forward reaction, so a distinct name would duplicate an identical test
+  rather than add coverage · decided
+- PHASE-05 · recovery fsyncs `.smut` after replay and before its `commit → done`
+  rename · §4.4's recipe ("replay, rename to `done`, fsync, clear") omits that
+  step, which would risk keeping the state transition while losing the replayed
+  bytes; the addition mirrors §4.3's apply rule · decided
+- PHASE-05 · `src/store/fs.rs` gained `remove_directory` (plus a test-only
+  `Call::RemoveDirectory`) · unlinking a state directory had no existing site and
+  `fs.rs` must stay the crate's only removal site · decided
+- PHASE-05 · deleted `StoreError::NotYetImplemented` with the `commit` stub, its
+  `Display` arm and the three tests that referenced it · discharges charter 3's
+  record; a surviving variant would have been a failed criterion, not tidy-up ·
+  decided
+- PHASE-05 · `StoreError` gained `AmbiguousJournalState` and `InvalidWriteSet`, and
+  a manifest version mismatch reports as `Corrupt { entry: "manifest.json" }` ·
+  the additive pattern PHASE-02/03/04 set for `Reject`; the two-class `Error`
+  mapping and the exit-code table are untouched, and `UnknownFormatVersion`'s
+  message is about the index · decided
+- PHASE-05 · `tests/durability_crash.rs` carries one file-level
+  `#![allow(non_snake_case)]` · the `interrupted_at__<boundary>` and
+  `recovery_interrupted__<step>` names are exactly what EX-6 and EX-9 make
+  greppable, so rustfmt's convention gives way to the criterion · decided
+- PHASE-05 · `Store::load` treats a *regular file* named `journal.commit` as an
+  explained entry, so a direct `load()` accepts what recovery refuses as corrupt ·
+  the refusal lives on the pipeline path (`run` → `recover` before `load`), which
+  is the only path a command takes; a file-shaped journal state is a backlog
+  candidate rather than a widening of this phase's bar · deferred
+- PHASE-05 · closed `completed` with `VH-1` recorded outstanding · VH-1 is a
+  human read of evidence that now exists (22-row boundary table, seven
+  `recovery_interrupted__*` tests, the one-line claim at
+  `tests/durability_crash.rs:18`), and the seat carries it to the human; the
+  phase is not complete-with-a-hole, it is complete-with-a-review-pending ·
+  decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 3 close (PHASE-01…PHASE-04 complete) · 49d81d7
+fresh-as-of: 2026-11-01 · charter 4 close (PHASE-01…PHASE-05 complete, VH-1
+outstanding on a human) · `0e2a519`
 
 ### Produced
 
 - PHASE-01 landed the crate spine (9 commits, `e0ce040…397c5c8`); PHASE-02 the
   declaration core (9 commits, `614ea33…7adefa4`); PHASE-03 the selection core
   (7 commits, `e08bb7f…3fc8086`); PHASE-04 the store format, index, lock,
-  validation and pipeline seam (5 commits, `8403ac1…49d81d7`). `docs/` and
-  `README.md` remain undelivered by design — PHASE-08.
-- `just check` green at every close; after PHASE-04: 172 lib + 4 bin + 5
-  `tests/selection.rs` + 12 `tests/store_corruption.rs` (193) on default features,
-  182 + 4 + 5 + 12 (203) with `--features fault-injection`.
-- `slice verify-vt` green for every row PHASE-01…PHASE-04 own (14/14); later
+  validation and pipeline seam (5 commits, `8403ac1…49d81d7`); PHASE-05 the
+  journal, its recovery and its interruption evidence (7 commits,
+  `7d841fd…0e2a519`). `docs/` and `README.md` remain undelivered by design —
+  PHASE-08.
+- `just check` green at every close; after PHASE-05: 197 lib + 4 bin + 5
+  `tests/selection.rs` + 12 `tests/store_corruption.rs` + 0 (default-gated)
+  durability = **218** on default features, and 210 + 4 + 44 + 5 + 12 = **275**
+  with `--features fault-injection`. The durability target executes 44 tests
+  under the feature and 0 by construction under the default build.
+- `slice verify-vt` green for every row PHASE-01…PHASE-05 own (18/18); later
   phases red because their files do not exist yet.
-- PHASE-04 leaves the store able to refuse but not to write: `Store::run` is the
-  one pipeline entry point (DEC-004's order with `recover` and `commit` stubs),
-  and no code path creates `index.json`.
+- The protocol now exists end to end: `src/store/journal.rs` drives
+  `prepare → commit → done` through `store::fs` only, `Store::run` recovers before
+  validating and publishes a write set, and the single boundary registry has 22
+  names (15 commit path, 7 recovery path). Recovery refuses ambiguity, removes
+  only reserved temporaries, validates a commit state completely and replays it
+  totally.
+- `StoreError::NotYetImplemented` is gone with the stub, so no code path refuses
+  a write any more: the store publishes.
 - `slice conformance`: 16 declarations conformant; two undeclared (`Cargo.lock`,
   `.doctrine/slice/001/notes.md` — neither is in §12's selector list) and the two
   deliberately undelivered targets.
@@ -459,9 +514,22 @@ fresh-as-of: 2026-11-01 · charter 3 close (PHASE-01…PHASE-04 complete) · 49d
   instrumentation: `src/store/fs.rs`'s `#[cfg(test)] call_record` records every
   write, fsync, rename and removal, so `take()` around the call and asserting the
   record is empty is real evidence rather than a comment.
+- (unminted) A `cfg`-gated integration suite can be kept from passing vacuously
+  without a runtime count assertion: have the suite read its own source with
+  `include_str!` and require one named test per registry entry. Adding a boundary
+  without a test then fails a test, which is stronger than a printed count.
+- (unminted) The proven way to crash a protocol mid-flight from a test without
+  killing the harness is to re-exec `std::env::current_exe()` with
+  `--exact <test path>` and the abort variable set, then assert the child died by
+  signal. Ten-plus boundary tests can share one driver this way.
 
 ### Open
 
+- **VH-1 outstanding** (PHASE-05, by seat decision): a human reads
+  `tests/durability_crash.rs` against §4.3/§4.4/§4.5 and confirms every named
+  boundary has an interruption test, that repeated recovery is explicit, and that
+  the file claims only code-path ordering. The 22-row boundary table is carried
+  in the charter-4 hand-back.
 - Two byte-boundary defects for PHASE-07 to fold in: nested entity objects are
   serialised lexically rather than id-first (DEC-007), and the response/envelope
   key order is lexical where the brief's examples show a display order (accepted
@@ -471,10 +539,17 @@ fresh-as-of: 2026-11-01 · charter 3 close (PHASE-01…PHASE-04 complete) · 49d
   `scan_refs` panic instead of exit 1; a symlinked `.smut/lock` is followed
   (`OpenOptions` without `O_NOFOLLOW`); duplicate `objects` keys in `index.json`
   collapse at parse.
-- PHASE-05 must delete `StoreError::NotYetImplemented` with the `commit` stub, and
-  may append a registry name for initialisation's parent fsync (today labelled
-  `Boundary::ParentDirectorySynced`).
+- PHASE-05's hand-back candidates (unminted): `Store::load` treats a regular file
+  named `journal.commit` as explained, so a direct `load()` accepts what recovery
+  refuses — the refusal lives on the pipeline path only; a non-UTF-8 entry inside
+  a journal state directory is handled by lossy name; §4.3's two post-decision
+  `.smut` fsyncs are not independently injectable without two more registry names.
+- PHASE-06 needs nothing from PHASE-05 except the notice's placement rule: the
+  journal phase added no rendering surface and did not touch `select`.
 - QUE (unminted — id reservation needs an authenticated remote push, which this
   checkout cannot do): should design §12 and §11.4 be amended for the lib target
   and the pre-existing README? The plan departs from the table and records why in
   `plan.md`.
+- QUE (unminted): §4.3 names neither the post-apply nor the post-done `.smut`
+  fsync, so both borrow a neighbour's boundary name. A design touch should name
+  them; the implementation records the borrowing rather than inventing names.
