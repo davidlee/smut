@@ -1,0 +1,42 @@
+memory_uid = "mem_01a196a1a63d7bd09ebb6110e06e953e"
+memory_key = "mem.pattern.doctrine.selector-names-predicted-not-delivered"
+schema_version = 1
+memory_type = "pattern"
+status = "active"
+title = "Slice selectors describe predicted deltas, not delivered paths"
+summary = "A design-target selector for a path delivered outside recorded phase deltas reads as `undelivered`; put such a path in design prose, not the registry."
+created = "2026-11-01"
+updated = "2026-11-01"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "conformance", "slice"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "42f37c4cdeece77ee60a548032abd82e715a5798"
+ref_name = "refs/heads/main"
+checkout_state_id = "2cd4467856fa3193c173de7c6096b09585f792a92b693e5d0a0bc605d2245410"
+base_commit = "218a1f0dbe3225f5fd2dc633625cf052dd2ad9e0"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "medium"
+
+[ranking]
+severity = "none"
+weight = 0
+
