@@ -6,8 +6,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · ready (design locked at run rev 62; plan repaired
-round 1, 7 phases materialised, 25 VT mandates) · commit c3e5a49
+fresh-as-of: 2026-11-02 · implementing (PHASE-01 committed at `45983c7`;
+PHASE-02…07 planned) · design locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -34,6 +34,21 @@ round 1, 7 phases materialised, 25 VT mandates) · commit c3e5a49
   repaired (README console block re-recorded at PHASE-01; `FUTURE_KEYS` retires
   at PHASE-03). Escalations: the privacy gate's negative outcome, and design
   line-number drift.
+- **PHASE-01** (`45983c7`, C1) — `src/walk.rs`: `Fields`, `Walk`, `Dangling` and
+  the BFS consuming `entity::scan_refs`, with 14 unit tests (VT-1). `src/spec.rs`
+  accepts seven keys, `FUTURE_KEYS` holds only `where` and `budget`, and
+  `Fields::Named` dedupes at parse. `select::run` took one private `Request`
+  value (EX-13); `Selection.walk`, the conditional `traversal` member, induced
+  `edges` in result order and the walk's `dangling` landed in `envelope`.
+  `src/render_markdown.rs`'s notice trigger grew the dangling case with one line
+  per triple (EX-14). New `tests/traversal.rs` (25 tests, VT-2/3/4) plus
+  VT-5…VT-9 in the existing suites. The README's console block was re-recorded
+  against the built binary and its falsified prose re-cut in the same commit
+  (EX-11, plan blocker B1). DEC-019 re-cuts: `src/spec.rs`'s five-key loop and
+  its exhaustive-claim names, `tests/compatibility.rs`'s end-to-end example (now
+  asserts the brief's closing dangling step), `tests/readme_example.rs`'s
+  0.2-refusal test (now the traversal assertion). Nothing outside §14.1 touched;
+  the §14.2 unchanged set is unmodified.
 
 ### Learned
 
@@ -60,9 +75,60 @@ round 1, 7 phases materialised, 25 VT mandates) · commit c3e5a49
   evidence of the practice of amending convention prose, *not* a record this
   pipeline overwrites. The valid overwrite counterexample is editing `body` on an
   installed `conventions-hygiene` and re-running its own seed.
+- The scope split is **one filter, not two maps**: `Walk.depths` records every
+  discovered id, and `envelope` keeps only the returned ones. A second depth map
+  would be a second account of the walk.
+- `edges` must iterate `selection.ids` (result order). Discovery order looks
+  identical in any fixture without an `order`, so the only test that can tell
+  them apart has to reverse one against the other — that is the negative control
+  that keeps DEC-014 honest.
+- Presence of `traversal` keys on the *option*, never on its contents: treating
+  `follow: []` as absent is the one wrong implementation a plain edge fixture
+  cannot distinguish from a correct one, so the negative control supplies
+  exactly that mutation.
+- `entity::scan_refs` reports the **top-level** field as the label even when the
+  reference sits in a nested object or an array element; that is what lets the
+  walker and the envelope's induced-edge derivation share one interpretation
+  (EX-8/VA-1 verified by grep: `scan_refs` is the only reference reader in
+  either).
+- A test can be vacuous while a key is still refused by name: 0.1's
+  `FutureSpecificationKey` already exits 2, names the key and touches no store,
+  so an assertion about a *bad value* must also assert the shape the accepted
+  key names (`nonnegative`) and not the release. Caught and rebriefed.
+- `doctrine slice verify-vt` attributes results only inside a **closed**
+  conformance boundary: a phase's mandates read `UNATTRIBUTABLE` until the phase
+  flips to `completed` (which stamps `code_end_oid`), so run it after the
+  transition, not only after the commit.
+- The Markdown notice reads `selection.walk` directly; no second field was added
+  to `Selection`, so the JSON `dangling` and the rendered lines cannot disagree.
 
 ### Open
 
+- **DEF-1 (PHASE-01 VT-9).** "the reason order when both reasons occur" cannot
+  be asserted in PHASE-01: `Reason::TraversalBudget` does not exist until
+  PHASE-02, and PHASE-02's own `VT-2` mandates that assertion in the same
+  `tests/traversal.rs`. PHASE-01 asserts uniqueness and `["result_limit"]`, with
+  the re-cut's reason in the test module. No obligation is dropped — the
+  deferred clause is owned by PHASE-02's criterion — so this is recorded, not
+  escalated. The seat should confirm the ownership at C2.
+- **DEF-2 (PHASE-01 EX-5).** Its "absent for … a query supplying only `depth` or
+  `budget`" and "only from/where/select/order/limit" clauses are unobservable
+  while `budget` (until PHASE-02) and `where` (until PHASE-03) are refused by
+  name: those queries have no envelope at all. PHASE-01 asserts the satisfiable
+  set — `get`, `query {}`, from/select/order/limit-only and depth-only — and the
+  remaining two become assertable in the phase that accepts each key.
+- **DEF-3 (found at PHASE-01 closure; repair belongs to C3).** PHASE-03's `VT-4`
+  keywords are `["additivity", "where"]` over `tests/compatibility.rs`. Both
+  words are now in that file — `where` from the pre-existing refusal pins,
+  `additivity` from PHASE-01's legitimate traversal-additivity comment — so
+  `doctrine slice verify-vt 2` reports PHASE-03 `VT-4` **PASS** before PHASE-03
+  has written its where-*accepted* pin. The mandate certifies nothing, which is
+  exactly the vacuity class the plan review claimed to have swept (it read
+  `UNATTRIBUTABLE` only because the file was not yet in the slice's delta).
+  Repair under envelope #6: retarget the keyword to something only a
+  where-accepted pin produces. C3 must not trust the keyword, and PHASE-03's
+  `EX-7` still owns the assertion itself. PHASE-01's own nine mandates all read
+  `PASS` after the phase closed its conformance boundary.
 - **RV-012 F-4 is contested** and awaits the responder seat: the raiser accepted
   the §9.3/§9.2/scope/§13.1 repairs but rejected the response on two points —
   (1) DEC-017's prose was listed as swept while it still said only that the store
@@ -722,6 +788,21 @@ decided / deferred / escalated. Empty until a phase opens.
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | — | Review lane adopted: one `code-review` RV per charter batch, review parallel to the next writer, repairs batched to the boundary | decided (operator-directed) | Explicit review was missing; maintainability and quality need a seat that is not the implementer |
 | 2026-11-02 | — | DEC-018 read-through waived; PHASE-04's provenance note must record the waiver, not omit the step | decided (operator ruling) | Owner's consent, given from recall; recorded verbatim so the gate reads as satisfied-by-ruling |
+| 2026-11-02 | PHASE-01 | `Fields`, `Walk`, `Dangling` live in `src/walk.rs` and `src/spec.rs` imports `walk::Fields` | decided (#1, #2) | §14.1 assigns the three types to `walk.rs`; `Spec` already holds `order::SortKey`, so the same direction of dependency |
+| 2026-11-02 | PHASE-01 | `select::run` takes one private `Request<'a>` value (roots, fields, keys, limit, follow, backlinks, depth); `select`/`get` stay the only constructors; no `budget` field | decided (#2, EX-13) | EX-13 fixes *one value*, not its fields; PHASE-02 adds `budget` and PHASE-03 adds `where` to the same value, so clippy's argument threshold is never the design constraint. `get` still passes `Limit::unlimited` and adds no traversal |
+| 2026-11-02 | PHASE-01 | The walk is called with `u64::MAX`; no budget-shaped parameter or field is added | decided (#2, EX-3, plan m1) | `budget` is refused by name until PHASE-02, so this phase must not be able to truncate; `exhausted` is false throughout |
+| 2026-11-02 | PHASE-01 | `src/walk.rs` implements the §7.1 budget check even though this phase never exercises it | decided (#1, #2) | §4's signature and `Walk::exhausted` are locked design, and `exhausted` cannot be computed without the check; PHASE-02 only makes the key real. The key itself stays refused |
+| 2026-11-02 | PHASE-01 | Wildcard-in-array and bad-`depth` refusals reuse `Reject::InvalidSpecificationValue`; no new variant, `src/error.rs` untouched | decided (#6) | §14.1's error additions list no traversal-form variant, and making one public would be a new public API |
+| 2026-11-02 | PHASE-01 | `Fields::Named` collapses duplicates at parse (first occurrence) *and* the walker tolerates duplicates | decided (#1, #6) | §5 says duplicates are a set for edge selection that never reorder the first occurrence; VT-7 asks for the collapse to be a grammar-level assertion, so it is enforced where the list is built |
+| 2026-11-02 | PHASE-01 | `Walk.depths` records every discovered id; `envelope` filters to returned ids; the notice reads `selection.walk` directly | decided (#1, #2) | §8.2 makes `depths` result-scoped and the frontier/dangling walk-scoped; one map plus one filter keeps a single account of the walk |
+| 2026-11-02 | PHASE-01 | Dangling triples deduped with a `BTreeSet` guard beside an encounter-order `Vec` | decided (#2) | §7.2 "deduped by `(source, field, target)` … in encounter order"; a set alone loses the order and a vec alone repeats |
+| 2026-11-02 | PHASE-01 | `depths()` panics on a returned id the walk has no depth for, rather than omitting it | decided (#1) | A silently omitted depth is an envelope lying about a returned object; it matches `project_one`'s existing precondition style |
+| 2026-11-02 | PHASE-01 | Test work split into three file-disjoint red waves (`tests/traversal.rs` VT-2; then VT-3/VT-4 appended; then selection/render/cli_contract/compatibility), then four implementation briefs, one writer at a time | decided (#3, #11) | The green-tree invariant needs one writer; only genuinely disjoint files ran in parallel. New suites copy `tests/cli_contract.rs`'s `Scratch`; no `tests/common` and no third harness fork |
+| 2026-11-02 | PHASE-01 | One worker rebrief: `a_bad_depth_is_refused_before_any_store_access` was green for the wrong reason | decided (#11) | 0.1's by-name refusal already exits 2, names `depth` and touches no store. The rebrief added the assertions only an accepted-and-validated key can satisfy (`stderr` contains `nonnegative`, not `0.2`). Worker miss recorded |
+| 2026-11-02 | PHASE-01 | DEC-019 re-cuts: `src/spec.rs`'s five-key loop → the two keys still future; its two exhaustive-claim tests renamed to seven keys / `the 0_1_keys`; `tests/compatibility.rs`'s end-to-end example renamed and extended with the brief's closing dangling step; `tests/readme_example.rs`'s 0.2-refusal test → the traversal assertion | decided (#6, #7, EX-12) | EX-12 names the five-key loop and the compatibility example; the other two names asserted something this commit makes false. Renamed/re-asserted, never deleted, each with its reason in the test module |
+| 2026-11-02 | PHASE-01 | README's console block re-recorded by executing the built binary; five prose spots re-cut (0.1/0.2 boundary, the block's intro sentence, "what the transcript shows", the `## Commands` key list, the sharp-edge bullet) | decided (#10, EX-11) | EX-11 requires the block to be the binary's own transcript in this commit; the `## Commands` key list is falsified by accepting three keys and is covered by EX-11's general "prose this commit falsifies" clause. The `## Build` version line stays — the crate is still 0.1.1 |
+| 2026-11-02 | PHASE-01 | DEF-1 (VT-9's both-reasons clause) and DEF-2 (EX-5's `where`/`budget` clauses) recorded, with the obligations left to PHASE-02/PHASE-03's own criteria | deferred, not escalated (#6, #7) | Neither drops a slice obligation and neither narrows a bound: each clause is unobservable until a later phase accepts the key that makes it expressible, and the later phase's criterion already owns it. Recorded in the sheet and in this file's `### Open`, and reported in the C1 handback |
+| 2026-11-02 | PHASE-01 | Inherited dirty `.doctrine/slice/002/slice-002.toml` (`ready`→`started`, a predecessor's lifecycle write) adopted into the trailing notes commit | decided (lifecycle artefact) | It is the slice's own lifecycle state, not unrelated work; it rides the notes commit rather than being staged into the phase commit, and no `git add .` was used |
 
 ### G0 closed (2026-11-02)
 
@@ -738,3 +819,84 @@ Operator assented to the revised run record. Two further rulings:
   batched repairs, gates G1 (answered) / G2 / halt-before-audit.
 
 C1 (PHASE-01) opens on this basis.
+
+### C1 — PHASE-01 landed (2026-11-02)
+
+Charter: C1, PHASE-01 only, one writer, stop before PHASE-02. Entering HEAD
+`b47dd79`; phase commit `45983c7`; trailing notes commit after it. Phase flipped
+`in_progress` at `b47dd79` (so `code_start_oid` is the entering tree) and
+`completed` at `45983c7`.
+
+Cost: **ten worker children** (three red-test briefs + one rebrief, four
+implementation briefs, one documentation/test brief; the rebrief is the only
+repeat on a single area). Every worker's green claim was re-run by the
+sub-orchestrator. Gate and negative-control evidence is in the phase sheet and
+in the C1 handback; the sheet is disposable, so the durable facts are in
+`## Harvest` above and the decisions in the table above.
+
+What the seat should look at: the two `blocker`-class risks this phase owns were
+checked by mutation rather than by assertion — edges in discovery order instead
+of result order, and `follow: []` treated as absent both turn the suite red —
+and the dangling-only notice trigger is the third. `VA-1` was checked by grep:
+`scan_refs` is the only reference reader in `src/walk.rs` and in the envelope's
+induced-edge derivation in `src/select.rs`.
+
+## C1 close — seat verification (2026-11-02)
+
+The charter child was killed by the harness's 30-minute wall **after** it had
+committed the phase, flipped the sheet, closed the conformance boundary and run
+`verify-vt`; it died mid-way through writing this file. Nothing was rerun and
+nothing discarded: the trailing notes write was inspected and adopted, and the
+in-flight `slice-002.toml` (`ready`→`started`) is the seat's own lifecycle write
+from G0, not the child's.
+
+**Verified at the seat, not taken on report** (the rules say a worker's green is
+advisory):
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | 301 + 9 + 32 + 10 + 4 + 0 + 3 + 9 + 4 + 8 + 12 + 25 + 0, all pass |
+| `cargo test --features fault-injection` | 314 + the same suites, all pass — the gated suite ran 13 more tests, so the feature is not vacuous |
+| `doctrine slice verify-vt 2` | PHASE-01 VT-1…VT-9 **all PASS**; PHASE-02…07 FAIL/UNATTRIBUTABLE as expected |
+| `git show --stat 45983c7` | 12 files, +2726/−75; `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix` **untouched** — §14.2 proven by diff, not by selector |
+| boundary record | `.doctrine/state/slice/002/boundaries.toml`: PHASE-01 `b47dd79..45983c7`, provenance `solo` |
+
+`PHASE-01` is `completed`; lifecycle `started`; phases 1/7.
+
+### The child's three defects — adjudicated
+
+All three are the same class: a mandate that cannot fail, or cannot be satisfied,
+because a later key does not exist yet. That is the vacuity class the plan review
+claimed to have swept, so each is recorded here rather than absorbed silently.
+
+- **DEF-1 — PHASE-01 `VT-9`'s "reason order when both reasons occur".**
+  Unobservable in PHASE-01: `Reason::TraversalBudget` does not exist until
+  PHASE-02. **Ratified as deferred, obligation intact**: PHASE-02's own `VT-2`
+  mandates exactly that assertion in the same file, so C2 discharges it. No edit
+  to a completed phase's criterion — a retroactive rewrite of a mandate that has
+  already been verified is worse than a recorded hole.
+- **DEF-2 — PHASE-01 `EX-5`'s `where`-only and `budget`-only clauses.**
+  **Ratified as deferred, obligation intact**: `budget`-only ("accepted and
+  inert, no `traversal` member") is PHASE-02 `EX-1` verbatim; the
+  `where`-only case is PHASE-03's. PHASE-01 asserted the satisfiable set
+  (`get`, `query {}`, from/select/order/limit-only, depth-only) — depth is
+  already real, so that half was genuinely testable and was tested.
+- **DEF-3 — PHASE-03 `VT-4` was vacuous, and this one was repaired.**
+  Its keywords were `["additivity", "where"]` over `tests/compatibility.rs`.
+  Both words are present *now* — `where` from the pre-existing refusal pin,
+  `additivity` from PHASE-01's legitimate DEC-019 comment — so `verify-vt`
+  reported PHASE-03 `VT-4` **PASS** three phases early. Retargeted to
+  `["additivity", "where_accepted"]`, a token only the where-*accepted* pin can
+  carry, and the criterion text now names the token so PHASE-03's implementer
+  knows the mandate is contracted to it (envelope #6: a keyword the tree proves
+  wrong is mine to correct; the obligation is unchanged and PHASE-03 `EX-7` still
+  owns the assertion). C2 is chartered with this fact.
+
+**Lesson for the rest of the run:** a VT keyword can go vacuous *because an
+earlier phase legitimately used the word*. Vacuity is not a property of the plan
+at authoring time; it has to be re-checked at every phase boundary against the
+tree as it now is. From C2 on, the seat re-reads the next phase's keyword set
+against the post-phase tree before chartering, and DEF-3 is the reason.
