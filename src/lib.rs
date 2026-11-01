@@ -14,6 +14,7 @@ pub mod input;
 pub mod learn;
 pub mod numeric;
 pub mod order;
+pub mod predicate;
 pub mod render_markdown;
 pub mod select;
 pub mod spec;

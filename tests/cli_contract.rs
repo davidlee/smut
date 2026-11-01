@@ -535,15 +535,43 @@ fn an_unknown_subcommand_exits_two_with_nothing_on_stdout() {
 }
 
 #[test]
-fn a_rejected_specification_exits_two_and_names_the_release_for_a_future_key() {
+fn a_rejected_specification_exits_two_and_names_the_offending_operator() {
+    // DEC-019: this test used to pin `where` being refused with the release that
+    // would accept it. `where` is accepted here, so the pin is re-cut to what
+    // survives: a valid predicate succeeds with one JSON line on stdout, and a
+    // *malformed* one is still invalid input — exit 2, nothing on stdout, and a
+    // message naming the offending operator rather than a release, because no
+    // release is coming.
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let ran = smut(&scratch, &["query", r#"{"where":{"type":"question"}}"#]);
+    let accepted = smut(&scratch, &["query", r#"{"where":{"title":"Alpha"}}"#]);
 
-    assert_eq!(ran.code, 2, "{}", ran.stderr);
-    assert_eq!(ran.stdout, "");
-    assert!(ran.stderr.contains("0.2"), "{}", ran.stderr);
+    assert_eq!(accepted.code, 0, "{}", accepted.stderr);
+    assert!(accepted.stderr.is_empty(), "{}", accepted.stderr);
+    assert_eq!(
+        accepted.stdout.matches('\n').count(),
+        1,
+        "one JSON line: {:?}",
+        accepted.stdout
+    );
+    assert_eq!(
+        accepted.json()["objects"],
+        json!([{"body": "First.", "id": "a", "priority": 3, "title": "Alpha"}]),
+        "the predicate filters, it is not merely accepted: {}",
+        accepted.json()
+    );
+
+    let refused = smut(&scratch, &["query", r#"{"where":{"x":{"$in":1}}}"#]);
+
+    assert_eq!(refused.code, 2, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "");
+    assert!(refused.stderr.contains("$in"), "{}", refused.stderr);
+    assert!(
+        !refused.stderr.contains("0.2"),
+        "a malformed operand is not a named future key: {}",
+        refused.stderr
+    );
 }
 
 // ── VT-2: the delete contract ────────────────────────────────────────────────

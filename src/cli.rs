@@ -26,6 +26,11 @@ use crate::spec::{self, Spec};
 use crate::store::{Command, Computed, Snapshot, Store};
 
 /// What one invocation asks for, decided entirely in step 1.
+// `Request` carries a whole `Spec`, and PHASE-03's `where` predicate made that
+// the largest variant. Boxing it would allocate once per process to satisfy a
+// size lint, and would change the shape every caller constructs and matches, so
+// the size difference stands.
+#[allow(clippy::large_enum_variant)]
 pub enum Invocation {
     /// Usage text for stdout, answered without a store.
     Help(String),

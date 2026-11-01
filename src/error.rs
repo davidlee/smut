@@ -51,11 +51,6 @@ pub enum Reject {
         /// The member's name.
         key: String,
     },
-    /// A key a later release will define, rejected by name with that release.
-    FutureSpecificationKey {
-        /// The key's name.
-        key: String,
-    },
     /// A key no release plans, reported plainly as unknown.
     UnknownSpecificationKey {
         /// The key's name.
@@ -67,6 +62,26 @@ pub enum Reject {
         /// The key whose value is wrong.
         key: String,
         /// What that key accepts, for the message.
+        expected: String,
+    },
+    /// One field's condition object carries both literal and `$`-prefixed keys,
+    /// so it names no behaviour the predicate language gives.
+    MixedPredicateObject {
+        /// The field the mixed object is the condition of.
+        field: String,
+    },
+    /// A predicate key the language does not define, either at the predicate
+    /// level or inside a field condition.
+    UnknownPredicateOperator {
+        /// The operator's name.
+        operator: String,
+    },
+    /// A predicate operator that is defined carries an operand of the wrong
+    /// shape.
+    InvalidPredicateValue {
+        /// The operator whose operand is wrong.
+        operator: String,
+        /// What that operator accepts, for the message.
         expected: String,
     },
     /// One JSON object in the input gives the same key twice, which would lose
@@ -259,17 +274,22 @@ impl fmt::Display for Reject {
             Reject::UnknownOrderMember { key } => {
                 write!(formatter, "unknown order entry member: {key}")
             }
-            Reject::FutureSpecificationKey { key } => {
-                write!(
-                    formatter,
-                    "{key} is not supported in 0.1; it arrives in 0.2"
-                )
-            }
             Reject::UnknownSpecificationKey { key } => {
                 write!(formatter, "unknown query specification key: {key}")
             }
             Reject::InvalidSpecificationValue { key, expected } => {
                 write!(formatter, "{key} must be {expected}")
+            }
+            Reject::MixedPredicateObject { field } => write!(
+                formatter,
+                "field {field} mixes a literal with operator keys; compare the whole \
+                 object with `$eq`"
+            ),
+            Reject::UnknownPredicateOperator { operator } => {
+                write!(formatter, "unknown predicate operator: {operator}")
+            }
+            Reject::InvalidPredicateValue { operator, expected } => {
+                write!(formatter, "{operator} must be {expected}")
             }
             Reject::DuplicateKey { key } => write!(
                 formatter,
@@ -437,7 +457,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 20] = [
+        let cases: [(Error, u8); 22] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -476,13 +496,6 @@ mod tests {
                 INVALID_INPUT,
             ),
             (
-                Reject::FutureSpecificationKey {
-                    key: "where".to_owned(),
-                }
-                .into(),
-                INVALID_INPUT,
-            ),
-            (
                 Reject::UnknownSpecificationKey {
                     key: "sort".to_owned(),
                 }
@@ -493,6 +506,28 @@ mod tests {
                 Reject::InvalidSpecificationValue {
                     key: "limit".to_owned(),
                     expected: "a positive integer".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::MixedPredicateObject {
+                    field: "meta".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownPredicateOperator {
+                    operator: "$foo".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::InvalidPredicateValue {
+                    operator: "$in".to_owned(),
+                    expected: "an array of values".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -668,11 +703,24 @@ mod tests {
         assert!(unsortable.to_string().contains("tags"), "{unsortable}");
         assert!(unsortable.to_string().contains("an array"), "{unsortable}");
 
-        let future = Reject::FutureSpecificationKey {
-            key: "where".to_owned(),
+        let mixed = Reject::MixedPredicateObject {
+            field: "meta".to_owned(),
         };
-        assert!(future.to_string().contains("where"), "{future}");
-        assert!(future.to_string().contains("0.2"), "{future}");
+        assert!(mixed.to_string().contains("meta"), "{mixed}");
+        assert!(mixed.to_string().contains("mix"), "{mixed}");
+        assert!(mixed.to_string().contains("$eq"), "{mixed}");
+
+        let operator = Reject::UnknownPredicateOperator {
+            operator: "$foo".to_owned(),
+        };
+        assert!(operator.to_string().contains("$foo"), "{operator}");
+
+        let operand = Reject::InvalidPredicateValue {
+            operator: "$in".to_owned(),
+            expected: "an array of values".to_owned(),
+        };
+        assert!(operand.to_string().contains("$in"), "{operand}");
+        assert!(operand.to_string().contains("array"), "{operand}");
 
         let unknown = Reject::UnknownSpecificationKey {
             key: "sort".to_owned(),

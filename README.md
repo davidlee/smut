@@ -29,12 +29,13 @@ That is two entities and one reference, stored durably as one batch. An agent
 mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
-This tree is **0.1.1 plus the 0.2 traversal work** — not the published patch
-release: `follow`, `backlinks`, `depth` and `budget` walk the graph, and the
-envelope reports what the walk found. The 0.1.1 on crates.io has none of them,
-and the version moves to 0.2.0 when the release is complete. `where` arrives
-later in 0.2, and Mermaid in 1.0; where those would be, `smut` refuses by name
-instead of guessing. The commands below are the whole surface.
+This tree is **0.1.1 plus the 0.2 work** — not the published patch release:
+`where`, `follow`, `backlinks`, `depth` and `budget` are the whole 0.2 query
+surface, `where` filters the roots and the traversal keys walk the graph, and
+the envelope reports what the walk found. The 0.1.1 on crates.io has none of
+them, and the version moves to 0.2.0 when the release is complete. Mermaid
+arrives in 1.0 only: where it would be, `smut` refuses by name instead of
+guessing. The commands below are the whole surface.
 
 ## Build
 
@@ -99,10 +100,13 @@ on stdin, when the argument is absent or is `-`. With no argument and a terminal
 attached you get usage instead of a silent wait. Trailing input after the JSON
 value is refused, and so is a duplicate key inside one object.
 
-The specification keys are `from`, `select`, `order`, `limit`, `follow`,
-`backlinks`, `depth` and `budget`; absent `from` means every entity in id order,
-absent `select` means every field, and no `limit` still caps a result at 100
-with `"truncated": true` and a reason. `follow` and `backlinks` take `"*"` or
+The specification keys are `from`, `where`, `select`, `order`, `limit`,
+`follow`, `backlinks`, `depth` and `budget`; absent `from` means every entity in
+id order, absent `select` means every field, and no `limit` still caps a result
+at 100 with `"truncated": true` and a reason. `where` is a predicate over
+one entity's top-level fields — `$eq`, `$ne`, `$in`, `$exists` and `$contains`,
+ANDed by default, with `$and`, `$or` and `$not` to compose — and it filters the
+named roots only, before any traversal. `follow` and `backlinks` take `"*"` or
 an array of top-level field names, `depth` defaults to 1 (0 is roots only),
 `budget` defaults to 10000 entity expansions and is inert without a traversal
 key, and a supplied traversal key adds a `traversal` member carrying `depths`,
@@ -134,9 +138,16 @@ a success envelope.
 - **`1` and `1.0` are distinct for equality and equal for ordering.** In one
   batch they contradict each other and the batch is refused; in an `order` they
   tie, and the tie breaks by id.
-- **`where` arrives later in 0.2.** It is refused by name, with the release that
-  will accept it; `follow`, `backlinks`, `depth` and `budget` are accepted now.
-  An unrecognised key is reported as unknown, without a promise.
+- **`where` filters roots only, and `$` is reserved inside a predicate.** A
+traversal may still return an entity that fails the predicate, and a root the
+predicate rejects is omitted rather than reported missing. A field whose name
+begins with `$` cannot be filtered, and an object carrying `$` keys is an
+operator object unless you compare it whole with `$eq`. A missing field fails
+every operator except `$exists`, which counts a stored `null` as present.
+- **An unrecognised key or operator is reported as unknown**, without a promise:
+  the 0.2 query surface is complete, so a typo is a typo rather than a key due in
+  a later release. `--format` is the only surface still promising one (Mermaid,
+  in 1.0).
 - **`--` reaches an opaque id.** Ids are opaque, case-sensitive strings and may
   begin with a hyphen, so `smut get -- -weird-id` names that id. Without `--` it
   is a usage error.

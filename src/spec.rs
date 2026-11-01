@@ -1,18 +1,18 @@
-//! The query specification: eight accepted keys, and two kinds of refusal.
+//! The query specification: nine accepted keys, and one kind of refusal.
 //!
-//! `from`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth` and
-//! `budget` are the whole surface (DEC-011, §5). A traversal key is either the
-//! wildcard `"*"` or an array of top-level field names; the wildcard has that
-//! one spelling, because a mixed array would need a precedence rule between
-//! query order and lexical order that the brief does not give. The traversal
-//! keys imply neither each other nor a traversal: `depth` or `budget` without
-//! `follow` or `backlinks` parses and is inert.
+//! `from`, `where`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth`
+//! and `budget` are the whole surface (DEC-011, §5). `where` is the predicate
+//! object of §6, parsed here so a malformed predicate is refused before any
+//! store access. A traversal key is either the wildcard `"*"` or an array of
+//! top-level field names; the wildcard has that one spelling, because a mixed
+//! array would need a precedence rule between query order and lexical order that
+//! the brief does not give. The traversal keys imply neither each other nor a
+//! traversal: `depth` or `budget` without `follow` or `backlinks` parses and is
+//! inert.
 //!
-//! A key a later release will define is refused *by name* with that release, so
-//! the refusal is a promise a user can act on; keys nobody planned are refused
-//! plainly as unknown, because naming a release for them would be a guess
-//! presented as a promise. `query {}` is valid and selects everything subject to
-//! the default limit.
+//! Keys nobody planned are refused plainly as unknown, because naming a release
+//! for them would be a guess presented as a promise. `query {}` is valid and
+//! selects everything subject to the default limit.
 //!
 //! The parsed [`Limit`] has no "unlimited" spelling a user can reach: `get`
 //! bypasses the default through [`Limit::unlimited`], which is crate-internal
@@ -24,6 +24,7 @@ use serde_json::Value;
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{Direction, SortKey};
+use crate::predicate::{self, Predicate};
 use crate::walk::Fields;
 
 /// The result cap when a specification supplies none (§6.2).
@@ -34,10 +35,6 @@ pub const DEFAULT_DEPTH: u64 = 1;
 
 /// The traversal budget when a specification supplies none (§5).
 pub const DEFAULT_BUDGET: u64 = 10000;
-
-/// The key a later release will accept, and the release to name when refusing
-/// it.
-const FUTURE_KEYS: [&str; 1] = ["where"];
 
 /// How many results a selection may return.
 ///
@@ -85,6 +82,9 @@ pub struct Spec {
     /// The explicit roots in their own array order; `None` means every id in ID
     /// order, and `Some([])` means nothing.
     pub from: Option<Vec<Id>>,
+    /// The root predicate of §6; `None` means no filtering. It filters roots
+    /// only, before traversal (§7.1, §10.1 inv. 2).
+    pub r#where: Option<Predicate>,
     /// The fields to project; `None` means all of them.
     pub select: Option<Vec<String>>,
     /// The sort keys in array order; empty means discovery order.
@@ -116,6 +116,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
 
     let mut spec = Spec {
         from: None,
+        r#where: None,
         select: None,
         order: Vec::new(),
         limit: Limit::DEFAULT,
@@ -128,6 +129,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
     for (key, value) in fields {
         match key.as_str() {
             "from" => spec.from = Some(parse_roots(value)?),
+            "where" => spec.r#where = Some(predicate::parse(value)?),
             "select" => spec.select = Some(parse_select(value)?),
             "order" => spec.order = parse_order(value)?,
             "limit" => spec.limit = Limit::capped(parse_limit(value)?),
@@ -135,11 +137,6 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
             "backlinks" => spec.backlinks = Some(parse_fields("backlinks", value)?),
             "depth" => spec.depth = parse_depth(value)?,
             "budget" => spec.budget = parse_budget(value)?,
-            key if FUTURE_KEYS.contains(&key) => {
-                return Err(Reject::FutureSpecificationKey {
-                    key: key.to_owned(),
-                });
-            }
             key => {
                 return Err(Reject::UnknownSpecificationKey {
                     key: key.to_owned(),
@@ -332,6 +329,7 @@ mod tests {
             parsed,
             Spec {
                 from: None,
+                r#where: None,
                 select: None,
                 order: Vec::new(),
                 limit: Limit::DEFAULT,
@@ -432,34 +430,6 @@ mod tests {
     }
 
     #[test]
-    fn each_named_future_key_is_rejected_by_name_citing_the_release() {
-        // DEC-019 re-cut: `budget` became real in this commit, so the loop keeps
-        // exactly the keys still refused by name, and `where` is the last one.
-        //
-        // The one-element loop stays a loop rather than unrolling to a `let`
-        // (clippy's suggestion) because the literal list is what this test pins:
-        // a re-added future key is one element here, and the list is never read
-        // from `FUTURE_KEYS`, which would make the test vacuous if that array
-        // emptied.
-        #[allow(clippy::single_element_loop)]
-        for key in ["where"] {
-            let rejection = rejection(json!({key: {}}));
-
-            assert_eq!(
-                rejection,
-                Reject::FutureSpecificationKey {
-                    key: key.to_owned(),
-                },
-                "{key}"
-            );
-
-            let message = rejection.to_string();
-            assert!(message.contains(key), "{message}");
-            assert!(message.contains("0.2"), "{message}");
-        }
-    }
-
-    #[test]
     fn an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release() {
         let rejection = rejection(json!({"sort": [{"field": "title"}]}));
 
@@ -543,15 +513,19 @@ mod tests {
     }
 
     #[test]
-    fn the_acceptance_set_is_exactly_the_eight_keys() {
+    fn the_acceptance_set_is_exactly_the_nine_keys() {
         // Re-cut from `the_acceptance_set_is_exactly_the_four_keys`, whose name
         // and body the widened surface falsified: each accepted key is exercised
         // with one value its own grammar allows. Re-cut again in PHASE-02
         // (DEC-019) when `budget` became real: the name claimed seven keys and
         // the loop omitted `budget`, so both the claim and the list grow by one.
         // (This re-cut was named by no criterion — reported as a plan defect.)
+        // Re-cut a third time in PHASE-03 (DEC-019) when `where` became real: the
+        // acceptance surface is complete now, so the claim and the list grow once
+        // more and this is the last key the release adds.
         for (key, value) in [
             ("from", json!("smut")),
+            ("where", json!({})),
             ("select", json!([])),
             ("order", json!([])),
             ("limit", json!(1)),
@@ -561,6 +535,46 @@ mod tests {
             ("budget", json!(1)),
         ] {
             assert!(spec(json!({key: value})).is_ok(), "{key} is accepted");
+        }
+    }
+
+    #[test]
+    fn where_takes_a_predicate_object_and_refuses_a_value_that_is_not_one() {
+        // Rule: `where` is the predicate object of §6, so a field condition
+        // parses into the AST and a non-object is refused before any store
+        // access, naming the key and what it accepts.
+        assert_eq!(
+            spec(json!({"where": {"type": "question"}}))
+                .expect("a predicate object")
+                .r#where,
+            Some(Predicate::Field(
+                "type".to_owned(),
+                vec![predicate::Condition::Eq(json!("question"))]
+            ))
+        );
+        assert_eq!(
+            spec(json!({"where": {}}))
+                .expect("the identity predicate")
+                .r#where,
+            Some(Predicate::And(Vec::new()))
+        );
+
+        for value in [json!([]), json!("x"), json!(1)] {
+            let rejection = rejection(json!({"where": value.clone()}));
+
+            assert_eq!(
+                rejection,
+                Reject::InvalidSpecificationValue {
+                    key: "where".to_owned(),
+                    expected: "a predicate object".to_owned(),
+                },
+                "{value}"
+            );
+
+            assert!(
+                rejection.to_string().contains("predicate object"),
+                "{rejection}"
+            );
         }
     }
 

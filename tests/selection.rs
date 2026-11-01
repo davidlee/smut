@@ -143,11 +143,22 @@ fn get_through_the_lib_target_never_truncates() {
 }
 
 #[test]
-fn the_public_spec_edge_names_the_release_for_a_key_it_will_accept() {
-    let rejection =
-        spec::parse(&json!({"where": {"type": "question"}})).expect_err("`where` is 0.2, not 0.1");
+fn the_public_spec_edge_accepts_where_and_the_predicate_is_applied() {
+    // DEC-019: this test used to pin `spec::parse` refusing `where` by name with
+    // the release that would accept it. That release is the work this tree
+    // carries, so the pin is re-cut to the assertion that survives — the key is
+    // accepted at the public edge, and the predicate it parses filters. The two
+    // roots differ in one top-level field, so "applied" means one id, not two.
+    spec::parse(&json!({"where": {"type": "question"}})).expect("`where` is the key 0.2 accepts");
 
-    assert!(rejection.to_string().contains("0.2"), "{rejection}");
+    let store = store(&[
+        json!({"id": "a", "type": "question", "status": "open"}),
+        json!({"id": "b", "type": "decision", "status": "open"}),
+    ]);
+    let specification = parse(json!({"from": ["a", "b"], "where": {"type": "question"}}));
+    let selection = select(&store, &specification).expect("a predicate is not a sort failure");
+
+    assert_eq!(selected(&selection), ["a"]);
 }
 
 // ── VT-9: the traversal member's scope split (§8.1-§8.3) ────────────────────

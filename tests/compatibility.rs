@@ -13,10 +13,10 @@
 //! on without deciding key order. `render`'s output *is* settled: it is pinned as
 //! exact text.
 //!
-//! The centre of the file is the contrast in
-//! [`where_is_refused_by_name_as_a_0_2_key_and_the_pinned_query_still_works`]: a
-//! 0.1 query keeps returning its pinned result immediately after a 0.2 key is
-//! refused by name.
+//! The centre of the file is
+//! [`where_accepted_adds_a_predicate_without_disturbing_the_pinned_query`]: a
+//! 0.1 query keeps returning its pinned result beside a `where` query whose
+//! predicate filters and whose envelope is still the same five members.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -312,29 +312,65 @@ fn get_pins_explicit_order_and_missing() {
     );
 }
 
+/// The additivity pin that replaces the `where`-refusal pin (DEC-019).
+///
+/// This test used to fix the *refusal*: `where` was a 0.2 key, refused by name
+/// with the release that would accept it. That release is the work this tree
+/// carries, so the refusal is gone and the pin is re-cut to what survives it —
+/// accepting `where` adds a filter and changes nothing else a 0.1 caller can
+/// see. The predicate is a real one, and the envelope is still exactly the five
+/// 0.1 members, because no traversal key was supplied.
 #[test]
-fn where_is_refused_by_name_as_a_0_2_key_and_the_pinned_query_still_works() {
+fn where_accepted_adds_a_predicate_without_disturbing_the_pinned_query() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let refused = run(&scratch, &["query", r#"{"where":{"type":"question"}}"#]);
+    let queried = run(&scratch, &["query", r#"{"where":{"type":"question"}}"#]);
+    queried.assert_one_json_line("a query with a predicate");
 
-    assert_eq!(refused.code, 2, "a 0.2 key is invalid input in 0.1");
+    let document = queried.json();
     assert_eq!(
-        refused.stdout, "",
-        "a refusal never prints a success envelope"
+        keys(&document),
+        BTreeSet::from([
+            "dangling",
+            "missing",
+            "objects",
+            "truncated",
+            "truncation_reasons",
+        ]),
+        "the five 0.1 members and no `traversal`: `where` adds no member: {document}"
     );
-    assert!(refused.stderr.contains("where"), "{}", refused.stderr);
-    assert!(
-        refused.stderr.contains("0.2"),
-        "the refusal names the release that widens the surface: {}",
-        refused.stderr
+    assert_eq!(
+        document["objects"],
+        json!([]),
+        "the store holds no `type` field, so no entity is question-typed: {document}"
+    );
+    assert_eq!(document["truncated"], json!(false), "{document}");
+    assert_eq!(document["truncation_reasons"], json!([]), "{document}");
+    assert_eq!(document["missing"], json!([]), "{document}");
+
+    // The half the empty selection above cannot show: the predicate must
+    // *compute*. `kind` is a field this store does hold, so the same request
+    // shape selects exactly the one note — an implementation that accepted
+    // `where` and ignored it would return all three.
+    let filtered = run(&scratch, &["query", r#"{"where":{"kind":"note"}}"#]);
+    filtered.assert_one_json_line("a predicate over a field the store holds");
+    assert_eq!(
+        keys(&filtered.json()),
+        keys(&document),
+        "a predicate that selects something still adds no member"
+    );
+    assert_eq!(
+        filtered.json()["objects"],
+        json!([{"body": "First thought.", "id": "alpha", "kind": "note", "title": "Alpha"}]),
+        "the predicate selects the one note: {}",
+        filtered.json()
     );
 
-    // The point of the pin: refusing the wider surface did not disturb the 0.1
+    // The point of the pin: the wider surface did not disturb the 0.1
     // invocation beside it.
     let after = run(&scratch, &["query", "{}"]);
-    after.assert_one_json_line("the pinned 0.1 query, after the refusal");
+    after.assert_one_json_line("the pinned 0.1 query, beside the accepted predicate");
     assert_eq!(after.json(), default_query_pin());
 }
 

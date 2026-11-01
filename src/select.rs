@@ -1,5 +1,5 @@
-//! Selection: roots → walk → order → limit, and the projection and envelope
-//! downstream.
+//! Selection: roots → where → walk → order → limit, and the projection and
+//! envelope downstream.
 //!
 //! A [`Selection`] borrows the snapshot, so it carries full entities while the
 //! ordered id list stays the only thing a renderer may walk (DEC-007). The same
@@ -8,9 +8,10 @@
 //! truncate (DEC-001 rules 4 and 8) and never carries a [`Walk`].
 //!
 //! The walk — when the request supplied `follow` or `backlinks` — runs on the
-//! snapshot's full entities, after the roots are resolved and before ordering.
-//! That is why a `select` hiding a reference field cannot erase connectivity,
-//! and why the result limit cannot widen what the walk discovered (§4, §7.1).
+//! snapshot's full entities, after the roots are resolved and filtered by
+//! `where`, and before ordering. That is why a `select` hiding a reference field
+//! cannot erase connectivity, and why the result limit cannot widen what the walk
+//! discovered (§4, §7.1).
 //! The envelope's `dangling` member is now the walk's diagnostics and the
 //! conditional `traversal` member is its provenance; both are derived here,
 //! after the limit, and both read references only through
@@ -28,6 +29,7 @@ use crate::entity::{ENTITY_ID, scan_refs};
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{self, SortKey};
+use crate::predicate::Predicate;
 use crate::spec::{DEFAULT_BUDGET, DEFAULT_DEPTH, Limit, Spec};
 use crate::walk::{self, Fields, Walk};
 
@@ -85,6 +87,7 @@ pub fn select<'a>(store: &'a Entities, spec: &'a Spec) -> Result<Selection<'a>, 
         store,
         Request {
             roots: spec.from.as_deref(),
+            predicate: spec.r#where.as_ref(),
             fields: spec.select.as_deref(),
             keys: &spec.order,
             limit: spec.limit,
@@ -107,6 +110,8 @@ pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
         store,
         Request {
             roots: Some(ids),
+            // `get` takes explicit roots and never filters them.
+            predicate: None,
             fields: None,
             keys: &[],
             limit: Limit::unlimited(),
@@ -126,12 +131,14 @@ pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
 /// Everything one selection request carries.
 ///
 /// One value rather than positional parameters: PHASE-02 added the traversal
-/// budget as a field here and PHASE-03 adds the root predicate to **this same
-/// value**, so clippy's `too_many_arguments` is never the design constraint.
+/// budget as a field here and PHASE-03 added the root predicate to **this same
+/// value** (EX-13), so clippy's `too_many_arguments` is never the design
+/// constraint.
 /// Every field borrows from the specification the caller holds, so a request
 /// copies no request data.
 struct Request<'a> {
     roots: Option<&'a [Id]>,
+    predicate: Option<&'a Predicate>,
     fields: Option<&'a [String]>,
     keys: &'a [SortKey],
     limit: Limit,
@@ -141,7 +148,8 @@ struct Request<'a> {
     budget: u64,
 }
 
-/// Roots → walk → order → limit. Both public constructors are this one call.
+/// Roots → where → walk → order → limit. Both public constructors are this one
+/// call.
 fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, Reject> {
     let mut ids: Vec<&'a Id> = Vec::new();
     let mut missing: Vec<&'a Id> = Vec::new();
@@ -161,6 +169,15 @@ fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, R
                 }
             }
         }
+    }
+
+    // §7.1, §10.1 inv. 2: `where` filters ROOTS ONLY, and it runs here — after
+    // the roots are resolved and before the walk, so a filtered-out root starts
+    // no traversal. A supplied root that is filtered out is omitted and is NOT
+    // `missing`, because `missing` was recorded above. Nothing filters
+    // `walked.order`, and this runs once, never again after the walk.
+    if let Some(predicate) = request.predicate {
+        ids.retain(|id| store.get(*id).is_some_and(|entity| predicate.holds(entity)));
     }
 
     // A supplied direction is a traversal even when it names nothing to follow,
