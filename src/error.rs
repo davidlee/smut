@@ -44,6 +44,31 @@ pub enum Reject {
         /// What the field held, for the message.
         found: String,
     },
+    /// The query specification is not a JSON object.
+    NotASpecification,
+    /// An `order` entry names a member 0.1 does not define.
+    UnknownOrderMember {
+        /// The member's name.
+        key: String,
+    },
+    /// A key a later release will define, rejected by name with that release.
+    FutureSpecificationKey {
+        /// The key's name.
+        key: String,
+    },
+    /// A key no release plans, reported plainly as unknown.
+    UnknownSpecificationKey {
+        /// The key's name.
+        key: String,
+    },
+    /// An accepted key, or one of an `order` entry's members, carries a value of
+    /// the wrong shape.
+    InvalidSpecificationValue {
+        /// The key whose value is wrong.
+        key: String,
+        /// What that key accepts, for the message.
+        expected: String,
+    },
 }
 
 /// The store could not be read or written: exit 1.
@@ -116,6 +141,24 @@ impl fmt::Display for Reject {
                 "cannot order by {field}: {found} has no ordering, and a sort value \
                  must be null, a boolean, a number or a string"
             ),
+            Reject::NotASpecification => {
+                write!(formatter, "a query specification must be a JSON object")
+            }
+            Reject::UnknownOrderMember { key } => {
+                write!(formatter, "unknown order entry member: {key}")
+            }
+            Reject::FutureSpecificationKey { key } => {
+                write!(
+                    formatter,
+                    "{key} is not supported in 0.1; it arrives in 0.2"
+                )
+            }
+            Reject::UnknownSpecificationKey { key } => {
+                write!(formatter, "unknown query specification key: {key}")
+            }
+            Reject::InvalidSpecificationValue { key, expected } => {
+                write!(formatter, "{key} must be {expected}")
+            }
         }
     }
 }
@@ -158,7 +201,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 7] = [
+        let cases: [(Error, u8); 12] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -184,6 +227,36 @@ mod tests {
                 Reject::UnsortableValue {
                     field: "tags".to_owned(),
                     found: "an array".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (Reject::NotASpecification.into(), INVALID_INPUT),
+            (
+                Reject::UnknownOrderMember {
+                    key: "weight".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::FutureSpecificationKey {
+                    key: "where".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownSpecificationKey {
+                    key: "sort".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::InvalidSpecificationValue {
+                    key: "limit".to_owned(),
+                    expected: "a positive integer".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -230,5 +303,17 @@ mod tests {
         };
         assert!(unsortable.to_string().contains("tags"), "{unsortable}");
         assert!(unsortable.to_string().contains("an array"), "{unsortable}");
+
+        let future = Reject::FutureSpecificationKey {
+            key: "where".to_owned(),
+        };
+        assert!(future.to_string().contains("where"), "{future}");
+        assert!(future.to_string().contains("0.2"), "{future}");
+
+        let unknown = Reject::UnknownSpecificationKey {
+            key: "sort".to_owned(),
+        };
+        assert!(unknown.to_string().contains("unknown"), "{unknown}");
+        assert!(unknown.to_string().contains("sort"), "{unknown}");
     }
 }
