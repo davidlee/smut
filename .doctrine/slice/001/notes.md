@@ -126,7 +126,7 @@ records the 0.1 query-spec surface and its forward compatibility.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (design run rev 37, pass RV-002) · acf53fc
+fresh-as-of: 2026-11-01 · reviewing (design run rev 37, pass RV-002) · bcd1389
 
 ### Produced
 
