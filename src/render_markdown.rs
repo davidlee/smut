@@ -56,6 +56,11 @@ impl Default for Options {
 pub fn render(selection: &Selection<'_>, options: &Options) -> String {
     let mut blocks = Vec::new();
 
+    // Nothing stored can absorb the notice, because nothing stored precedes it.
+    if let Some(notice) = completeness_notice(selection) {
+        blocks.push(notice);
+    }
+
     for id in &selection.ids {
         blocks.extend(entity_blocks(selection, options, id));
     }
@@ -270,6 +275,42 @@ fn longest_backtick_run(content: &str) -> usize {
         .unwrap_or_default()
 }
 
+/// The completeness notice, as the document's first block: truncation has no row
+/// count (DEC-009), and missing ids use the same safe delimiters as identity.
+fn completeness_notice(selection: &Selection<'_>) -> Option<String> {
+    let mut lines = Vec::new();
+
+    if selection.truncated {
+        assert!(
+            !selection.reasons.is_empty(),
+            "a truncated selection names why rows were omitted"
+        );
+
+        let reasons: Vec<&str> = selection
+            .reasons
+            .iter()
+            .map(|reason| reason.as_str())
+            .collect();
+
+        lines.push(format!(
+            "> truncated: {}; additional entities omitted",
+            reasons.join(", ")
+        ));
+    }
+
+    if !selection.missing.is_empty() {
+        let spans: Vec<String> = selection
+            .missing
+            .iter()
+            .map(|id| code_span(id.as_str()))
+            .collect();
+
+        lines.push(format!("> missing: {}", spans.join(", ")));
+    }
+
+    (!lines.is_empty()).then(|| lines.join("\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -277,7 +318,8 @@ mod tests {
     use serde_json::json;
 
     use crate::declare::Entities;
-    use crate::select::get;
+    use crate::select::{get, select};
+    use crate::spec;
 
     fn store(entities: &[Value]) -> Entities {
         entities
@@ -650,5 +692,99 @@ mod tests {
             rendered(&store, &["a", "b`c"], &Options::default()),
             "`a`\n\n``b`c``\n"
         );
+    }
+
+    fn sample() -> Entities {
+        store(&[
+            json!({"id": "a", "title": "Alpha", "body": "first"}),
+            json!({"id": "b", "title": "Beta", "body": "second"}),
+            json!({"id": "c", "title": "Gamma", "body": "third"}),
+        ])
+    }
+
+    #[test]
+    fn truncation_leads_the_document_without_a_row_count() {
+        let store = sample();
+        let specification = spec::parse(&json!({"limit": 1})).expect("the limit is valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+        let document = render(&selection, &Options::default());
+
+        assert_eq!(
+            document,
+            "> truncated: result_limit; additional entities omitted\n\n## Alpha\n\nfirst\n"
+        );
+        assert!(
+            !document
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .contains(|character: char| { character.is_ascii_digit() }),
+            "the notice counts no rows: {document:?}"
+        );
+    }
+
+    #[test]
+    fn the_missing_notice_lists_each_id_as_its_own_span() {
+        let store = sample();
+        let specification =
+            spec::parse(&json!({"from": ["gone", "gone`two"]})).expect("roots are valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+
+        assert_eq!(
+            render(&selection, &Options::default()),
+            "> missing: `gone`, ``gone`two``\n"
+        );
+    }
+
+    #[test]
+    fn both_notices_are_one_leading_block_with_truncation_first() {
+        let store = sample();
+        let specification = spec::parse(&json!({"from": ["gone", "a", "b"], "limit": 1}))
+            .expect("the roots and limit are valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+
+        assert_eq!(
+            render(&selection, &Options::default()),
+            "> truncated: result_limit; additional entities omitted\n\
+             > missing: `gone`\n\
+             \n\
+             ## Alpha\n\
+             \n\
+             first\n"
+        );
+    }
+
+    #[test]
+    fn a_missing_notice_leads_entity_content() {
+        let store = sample();
+        let specification = spec::parse(&json!({"from": ["a", "gone"]})).expect("roots are valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+
+        assert_eq!(
+            render(&selection, &Options::default()),
+            "> missing: `gone`\n\n## Alpha\n\nfirst\n"
+        );
+    }
+
+    #[test]
+    fn a_zero_entity_selection_emits_the_missing_notice_and_no_entity_output() {
+        let store = sample();
+        let specification =
+            spec::parse(&json!({"from": ["gone", "also-gone"]})).expect("roots are valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+
+        assert_eq!(
+            render(&selection, &Options::default()),
+            "> missing: `gone`, `also-gone`\n"
+        );
+    }
+
+    #[test]
+    fn a_zero_entity_selection_with_nothing_to_report_renders_nothing() {
+        let store = sample();
+        let specification = spec::parse(&json!({"from": []})).expect("an empty root list is valid");
+        let selection = select(&store, &specification).expect("the fixture specification is valid");
+
+        assert_eq!(render(&selection, &Options::default()), "");
     }
 }
