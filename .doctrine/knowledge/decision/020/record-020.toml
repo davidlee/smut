@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 20
+slug = "identity-key-one-definition-a-wire-contract-assertion-and-executed-transcripts-for-every-surface"
+title = "Identity key: one definition, a wire-contract assertion, and executed transcripts for every surface but the store document"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-01"
+updated = "2026-11-01"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-004 inq-1: with the identity key moving from id to smut_id, what keeps every surface honest, and where does the key live?"
+choice = "The key keeps its single definition — ENTITY_ID in src/entity.rs, whose name stays and whose value becomes smut_id — and its value is treated as a wire contract: a one-line assertion pins it so the next change to it is a deliberate act, not a quiet edit. Drift is otherwise held per surface: code reads the constant; smut learn's sentences are pinned by substring tests; the guide's examples and the README's transcript are executed against the built binary by tests/fixture.rs and tests/readme_example.rs; docs/store-format.md is prose, so it is governed by STD-001 (its title names the surface and the review trigger) rather than by a test."
+alternatives = ["a new identity module or facade over the constant", " renaming ENTITY_ID to SMUT_ID", " interpolating the key into smut learn from the constant", " a lint/test forbidding the literal at any surface", " leaving the store document to the closure review alone"]
+rationale = "One constant with 27 readers already IS the single definition, so adding an indirection would buy nothing; the name ENTITY_ID still says what it is, so renaming it would churn call sites to say the same thing. The document being prose is a real gap that no test can close, and a standard whose title rides every agent's boot context is the cheap way to put the trigger in front of the next implementer; a blanket grep for the literal would be defeated by payloads, which may legitimately carry an id key after this change."
+consequences = ["Any change to the constant's value is a format break and must move the format version", " the store document and the guide together; smut learn can never interpolate the key", " so its pins stay prose; docs/store-format.md has no mechanical check and relies on STD-001 plus the slice's scope selectors"]
+decided_by = "operator and agent"
+decided_on = "2026-11-01"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-004"
