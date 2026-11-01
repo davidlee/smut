@@ -32,11 +32,11 @@ reads or writes a store uses `.smut/` in the current directory. A read or a
 delete against an absent store fails with exit 1 and creates nothing; only a
 declaration with something to write creates the store.
 
-`lock` is an empty file held under an exclusive `flock` for the whole of every
-command that touches the store, reads included, because a read may recover. The
-lock inode is created on demand, never truncated, never replaced by a rename,
-and never unlinked — so locking it is locking the store, not locking one of its
-names.
+`lock` is an empty file held under an exclusive `flock` from before recovery
+until the response is prepared, for every command that touches the store, reads
+included, because a read may recover. The lock inode is created on demand, never
+truncated, never replaced by a rename, and never unlinked — so locking it is
+locking the store, not locking one of its names.
 
 Reserved names inside `.smut/` are `lock`, `index.json`, `manifest.json`, the
 three journal directory names, and anything ending in `.tmp`. None of them can
@@ -103,12 +103,11 @@ write set always has the same shape and no member's absence ever means
 
 ## Canonical bytes
 
-One entity ordering, applied at the final serialisation boundary through a
-shared wrapper: the entity root puts `id` first and its remaining keys lexical,
-embedded ordinary objects are all-lexical, and arrays keep their order. Objects
-without an entity root — the index, the manifest — are all-lexical. Serialising
-and then re-parsing to arrange keys is never done, because a parsed value erases
-the ordering a wrapper imposed.
+Entity files are serialised by one wrapper: the entity root puts `id` first and
+its remaining keys lexical, embedded ordinary objects are all-lexical, and
+arrays keep their order. Documents without an entity root — the index, the
+manifest — are all-lexical. Serialising and then re-parsing to arrange keys is
+never done, because a parsed value erases the ordering a wrapper imposed.
 
 Two byte forms, deliberately different:
 
