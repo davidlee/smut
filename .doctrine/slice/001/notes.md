@@ -551,11 +551,56 @@ One heavy phase per charter, pairs only for the two pure cores:
   first, the design's mechanism clause says one shared wrapper — but reading
   either way changes a documented output byte, which is a conformance question
   for a review, not a seat improvisation. Evidence below · deferred
+- PHASE-09 · `stale_empty_snapshot_precheck` is proved at the seam with a
+  test-defined `Command`, not with the real `Declare` · the candidate ids the
+  real command draws come from `nanoid` inside the binary and cannot be scripted
+  from an integration test, so a collision cannot be forced through it; what the
+  criterion names is `Store::run`'s own contract — step 2 against an empty
+  snapshot, step 6 against the loaded one — and the store is filled in between by
+  a real spawned child, so the precheck is provably stale rather than
+  hypothetically so · decided
+- PHASE-09 · retry bounds: `ATTEMPTS = 3` around
+  `two_simultaneous_first_declarations` with the identical assertion set on every
+  attempt, and **no** retry at all for the other three scenarios · repetition
+  varies timing, it is never "retry until green", and the lock-gated scenarios
+  are deterministic because the parent holds the lock before the child exists ·
+  decided
+- PHASE-09 · the JSON envelopes in `tests/compatibility.rs` are pinned
+  structurally (parsed `Value` equality, key sets, exit code, stream discipline)
+  while `render` is pinned as exact text · entity-root id-first ordering inside
+  an envelope's `objects` is the open `/audit` question two entries above, so a
+  byte pin on envelope key order would pre-empt a decision that is not this
+  phase's · decided
+- PHASE-09 · the cross-process recovery scenario fabricates a decided-but-unapplied
+  `journal.commit/` from the public helpers instead of killing a real process
+  mid-commit · a real process cannot be stopped between the commit rename and
+  apply without the `fault-injection` feature, which these three suites must not
+  be gated behind; the fixture is built the way `tests/durability_crash.rs`
+  builds one, and a direct `load()` assertion proves it really is unrecovered ·
+  decided
+- PHASE-09 · no `src/` change, and therefore no re-export: every seam was
+  reachable from the public surface (`cli::parse` → `Request::run`,
+  `store::{Command, Computed, Snapshot}`, `declare::WriteSet`,
+  `id::{IdSource, Occupied}`, `journal::{COMMIT_STATE, MANIFEST_FORMAT_VERSION}`,
+  `index::Index`, `entity::serialise_entity`) · the charter preferred no library
+  widening and none was needed · decided
+- PHASE-09 · one pin beyond the criterion's "at least" list — the brief's own
+  end-to-end acceptance example, for the steps 0.1 can run · it is the strongest
+  compatibility statement available, and its `follow`/`where` steps are pinned as
+  the refusals, so a 0.2 widening cannot silently change either half · decided
+- PHASE-09 · carried forward, not fixed: `Store::load()` treats a
+  *directory*-shaped live journal state as an explained entry, so a direct
+  `load()` returns the pre-decision state silently (PHASE-05 recorded the
+  file-shaped variant) · `src/store/mod.rs` is not this phase's path and the
+  refusal lives on the pipeline path every command takes; the concurrency
+  scenario's "the fixture is unrecovered" assertion rests on the current
+  behaviour and would invert if `/audit` rules that `load()` must refuse ·
+  deferred to `/audit`
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 6 close (PHASE-01…PHASE-07 complete, VH-1
-outstanding on a human) · `585096d`
+fresh-as-of: 2026-11-01 · charter 7 close (PHASE-01…PHASE-07 and PHASE-09
+complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
 
 ### Produced
 
@@ -609,6 +654,16 @@ outstanding on a human) · `585096d`
   wrapper. `clap`'s `derive` **is** on: DEC-008 names it, and a feature flag on a
   declared crate is not a new dependency. Both declared-and-unused warnings are
   gone (`nanoid` from PHASE-05's uid generation, `clap` from PHASE-07).
+- PHASE-09 landed the three end-to-end seam suites (4 commits,
+  `e9f9cda…9e41e47`), `tests/roundtrip.rs`, `tests/concurrency.rs` and
+  `tests/compatibility.rs` — **no `src/` change at all**. `just check` after it:
+  276 lib + 6 bin + 26 `cli_contract` + 9 `compatibility` + 4 `concurrency` + 0
+  (default-gated) durability + 5 `render` + 4 `roundtrip` + 5 `selection` + 12
+  `store_corruption` = **347** default, and 289 + 6 + 26 + 9 + 4 + 44 + 5 + 4 + 5
+  + 12 = **404** with `--features fault-injection`; none of the three new suites
+  is feature-gated and none is `#[ignore]`d. 25 consecutive runs of the three:
+  zero flakes, ~40 ms per run. `slice verify-vt` green for PHASE-01…PHASE-07 and
+  PHASE-09; PHASE-08's VT-1 red only because `docs/` does not exist yet.
 
 - Design locked: run rev 53, 12 sections attested, RV-002 and RV-003 terminal
   (commits 1b1f574, c32f316, f28860e).
@@ -623,6 +678,18 @@ outstanding on a human) · `585096d`
 - `.doctrine` committed with the artefacts, never separately.
 
 ### Learned
+
+- (unminted) A "stale precheck" is provable without scripting the binary's
+  entropy: `Store::run` calls `Command::recompute` twice, so a test-defined
+  `Command` (the trait is public) can use its first call — the empty snapshot —
+  to spawn the real binary and let a second process commit the candidate id, and
+  its second call to generate past the now-occupied id with a scripted
+  `IdSource`/`Occupied`. The collision is forced, not hoped for.
+- (unminted) "Termination before the first lock acquisition" needs no timing: the
+  parent takes `Store::lock()` *before* spawning the child, so the child cannot
+  have acquired it however far it got; kill it, and every invariant (no partial
+  batch, no journal state, no `.tmp`, next command converges) holds for all
+  interleavings.
 
 - mem_01a1959995dc7611882307746b4495fd — six recurring review finding classes:
   obligation-versus-API, absorbable guarantee, recipe narrower than the claim
@@ -677,6 +744,21 @@ outstanding on a human) · `585096d`
 
 ### Open
 
+- PHASE-09 leaves nothing open against its own bar: `EX-1…EX-3` hold,
+  `VT-1…VT-3` green, no `src/` change. Two forward notes below.
+- For `/audit`, from PHASE-09: `Store::load()` treats a **directory**-shaped live
+  journal state as an explained entry, so a direct `load()` silently returns the
+  pre-decision state (PHASE-05 recorded the file-shaped variant of the same
+  hole). The refusal lives only on the pipeline path every command takes, so
+  this is not a behaviour any command can reach — but
+  `tests/concurrency.rs`'s "the fixture is unrecovered" assertion rests on it and
+  would invert if the review rules that `load()` must refuse a live journal.
+- For PHASE-08 (unminted): the brief's end-to-end acceptance example **cannot be
+  run verbatim in 0.1** — three of its nine steps use `follow`/`where`, which 0.1
+  refuses by name citing 0.2. The README's worked example must be 0.1-shaped, or
+  the refusals must be shown as part of the example. `tests/compatibility.rs`
+  already pins the 0.1-runnable prefix of it and both refusals, so whatever the
+  README says can be checked against that file.
 - PHASE-07 leaves nothing open of its own: `EX-1…EX-7` hold, `VT-1`/`VT-2` green,
   `VA-1` discharged by reading the ingress path rather than by a test. Its three
   forward notes are the first three below.
