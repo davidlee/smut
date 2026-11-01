@@ -16,7 +16,7 @@ use serde_json::{Map, Value};
 use crate::declare::WriteSet;
 use crate::entity::{ENTITY_ID, Form, serialise};
 use crate::error::StoreError;
-use crate::id::{Id, MAX_CANDIDATES};
+use crate::id::{HYPHEN_FREE, Id, MAX_CANDIDATES};
 use crate::store::boundary::Boundary;
 use crate::store::fs as durable;
 use crate::store::index::Index;
@@ -40,6 +40,14 @@ const REMOVES_KEY: &str = "removes";
 
 /// The suffix of every entity file's basename (§4.1).
 const UID_SUFFIX: &str = ".json";
+
+/// How many symbols a uid carries.
+///
+/// Longer than a public id, and for the opposite reason: nobody types a uid, nobody
+/// reads one, and it is never a word in a response — so the only thing to optimise is
+/// how far a collision has to be, and 21 symbols of [`HYPHEN_FREE`] put it past
+/// 10^37. The generated *shape* still differs from a public id only in length.
+const UID_LENGTH: usize = 21;
 
 /// The temporary suffix §4.1 reserves, whether or not the protocol generates the
 /// name.
@@ -258,7 +266,7 @@ fn entity_id(entity: &Value) -> Result<Id, StoreError> {
 /// A basename no mapping, no other staged file and no file in the store claims.
 fn fresh_basename(directory: &Path, taken: &BTreeSet<String>) -> Result<String, StoreError> {
     fresh_basename_from(directory, taken, || {
-        format!("{}{UID_SUFFIX}", nanoid::nanoid!())
+        format!("{}{UID_SUFFIX}", nanoid::nanoid!(UID_LENGTH, &HYPHEN_FREE))
     })
 }
 
@@ -1015,6 +1023,28 @@ mod tests {
             Some(basename.as_str())
         );
         assert_eq!(successor.basename(&Id::new("alpha")), Some("Ab3.json"));
+    }
+
+    /// A uid is drawn for every written entity, never typed by anyone and never
+    /// shown outside diagnostics and `ls` — so it keeps the longer length that keeps
+    /// a collision out of reach, and drops only the hyphen, which costs nothing to
+    /// drop and makes the two generated shapes look alike.
+    ///
+    /// One draw would not distinguish the alphabets (a hyphen is a 1-in-64 chance per
+    /// position), so this draws many: under the old alphabet the chance of seeing no
+    /// hyphen at all across 200 uids of 21 symbols is about e^-65.
+    #[test]
+    fn a_fresh_uid_is_hyphen_free_and_the_documented_length() {
+        let scratch = Scratch::new();
+        let taken = BTreeSet::new();
+
+        for _ in 0..200 {
+            let basename = fresh_basename(&scratch.directory(), &taken).expect("a free name");
+
+            assert!(!basename.contains('-'), "{basename}");
+            assert_eq!(basename.len(), UID_LENGTH + UID_SUFFIX.len(), "{basename}");
+            assert!(basename.ends_with(UID_SUFFIX), "{basename}");
+        }
     }
 
     #[test]

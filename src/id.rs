@@ -66,6 +66,26 @@ pub trait IdSource {
     fn candidate(&mut self) -> String;
 }
 
+/// The symbols a generated identifier is drawn from: nanoid's `SAFE` set without the
+/// hyphen, so nothing smut generates can begin with one.
+///
+/// A hyphen may begin an id, and an id beginning with one reaches the shell only
+/// through `--` (`smut get -- -abc12345`) — the escape hatch is for ids a caller
+/// already has, and generation should not manufacture the need for it. The store's
+/// internal uid has no such need (a leading hyphen in a basename is harmless), and
+/// draws from this same set anyway: two generated shapes that differ only in length
+/// are easier to recognise than two that differ in alphabet too.
+///
+/// Written out rather than filtered from [`nanoid::alphabet::SAFE`] at runtime, so a
+/// draw allocates nothing, and pinned against the crate's own set by a test so the
+/// literal cannot drift from it.
+pub const HYPHEN_FREE: [char; 63] = [
+    '_', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+    'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A',
+    'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+    'U', 'V', 'W', 'X', 'Y', 'Z',
+];
+
 /// How many candidates one allocation may draw before the source's contract counts
 /// as broken.
 ///
@@ -257,6 +277,17 @@ mod tests {
         let mut source = ScriptedSource::new(&["first"]);
 
         assert_eq!(occupied.generate(&mut source), Id::new("first"));
+    }
+
+    #[test]
+    fn the_symbol_set_is_nanoids_safe_set_without_the_hyphen() {
+        let expected: Vec<char> = nanoid::alphabet::SAFE
+            .into_iter()
+            .filter(|symbol| *symbol != '-')
+            .collect();
+
+        assert_eq!(HYPHEN_FREE.to_vec(), expected);
+        assert!(!HYPHEN_FREE.contains(&'-'), "the hyphen is what we removed");
     }
 
     /// The bound, and the reason it exists: a source that never yields a free

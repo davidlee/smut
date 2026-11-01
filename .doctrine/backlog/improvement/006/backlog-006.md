@@ -145,3 +145,20 @@ are internal uids, unaffected by public-id length.
 
 Gate: `just check` clean (build, both clippy configurations at `-D warnings`,
 `cargo fmt --check`, both feature test runs — 350 tests).
+
+## Addendum — uid alphabet, by operator direction
+
+The uid keeps its 21 symbols (nobody types it, nobody reads it, so the only thing
+to buy is collision reach: 63^21 ≈ 10^37). What it drops is the hyphen. A leading
+hyphen in a basename is harmless, so this is not the public id's reason — it is
+consistency: two generated shapes that differ only in *length* are easier to
+recognise than two that differ in alphabet as well.
+
+The symbol set therefore moved out of the shell and into `src/id.rs` as
+`HYPHEN_FREE`, next to `MAX_CANDIDATES` — both are shared shapes of generated
+identity rather than one caller's choice. `src/cli.rs` keeps `ID_LENGTH = 8` and
+its draw; `src/store/journal.rs` gains `UID_LENGTH = 21` and draws from the same
+set. The pin against `nanoid::alphabet::SAFE` moved with the constant; the uid
+draw gets its own test, drawing 200 names because one draw would not distinguish
+the alphabets (a hyphen is a 1-in-64 chance per symbol). Measured on the built
+binary: 40 entities, every basename 21 symbols plus `.json`, no hyphen anywhere.

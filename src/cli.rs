@@ -19,7 +19,7 @@ use crate::conventions;
 use crate::declare;
 use crate::entity::Form;
 use crate::error::{Error, Reject};
-use crate::id::{Id, IdSource};
+use crate::id::{HYPHEN_FREE, Id, IdSource};
 use crate::input::{self, Action};
 use crate::render_markdown::{self, Options};
 use crate::select;
@@ -450,34 +450,19 @@ fn serialise(value: &Value) -> String {
 }
 
 /// The length of a generated id: short enough to read and to say aloud, wide enough
-/// that a collision stays a curiosity with the alphabet below (63^8 ≈ 2.5 × 10^14).
-/// Tests, fixtures and examples are the only callers that see this; ids are opaque
-/// and nothing validates a declared one against it.
+/// that a collision stays a curiosity with the symbols in [`HYPHEN_FREE`]
+/// (63^8 ≈ 2.5 × 10^14). Tests, fixtures and examples are the only callers that see
+/// this; ids are opaque and nothing validates a declared one against it.
 const ID_LENGTH: usize = 8;
 
-/// The alphabet a generated id is drawn from: nanoid's safe set without the hyphen.
-///
-/// A hyphen may begin an id, and an id beginning with one is reachable at the shell
-/// only through `--` (`smut get -- -abc12345`). That escape hatch is for ids a caller
-/// already has; generation should not manufacture the need for it. `_` stays — it is
-/// harmless to a shell. Written out rather than filtered at runtime so a draw costs
-/// no allocation, and pinned against the crate's own set by a test so the literal
-/// cannot drift from it.
-const ALPHABET: [char; 63] = [
-    '_', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-    'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A',
-    'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-    'U', 'V', 'W', 'X', 'Y', 'Z',
-];
-
 /// The shell's only entropy: a NanoID candidate for a declaration that omits an
-/// id, drawn at [`ID_LENGTH`] from [`ALPHABET`]. The core draws until the candidate
-/// is unoccupied, within [`crate::id::MAX_CANDIDATES`] (DEC-001 rule 3).
+/// id, drawn at [`ID_LENGTH`] from [`HYPHEN_FREE`]. The core draws until the
+/// candidate is unoccupied, within [`crate::id::MAX_CANDIDATES`] (DEC-001 rule 3).
 struct Generated;
 
 impl IdSource for Generated {
     fn candidate(&mut self) -> String {
-        nanoid::nanoid!(ID_LENGTH, &ALPHABET)
+        nanoid::nanoid!(ID_LENGTH, &HYPHEN_FREE)
     }
 }
 
@@ -859,28 +844,15 @@ mod tests {
 
             assert_eq!(candidate.chars().count(), ID_LENGTH, "{candidate}");
             assert!(
-                candidate.chars().all(|symbol| ALPHABET.contains(&symbol)),
-                "{candidate} is drawn outside the alphabet"
+                candidate
+                    .chars()
+                    .all(|symbol| HYPHEN_FREE.contains(&symbol)),
+                "{candidate} is drawn outside the symbol set"
             );
             assert!(
                 !candidate.starts_with('-'),
                 "{candidate} would need `--` to reach at the shell"
             );
         }
-    }
-
-    /// The alphabet is nanoid's safe set with the one symbol removed that can make
-    /// a generated id reachable only through `--`. Written out as a literal so the
-    /// draw costs no allocation, and checked against the crate's own set so the
-    /// literal cannot drift from it.
-    #[test]
-    fn the_generated_alphabet_is_nanoids_safe_set_without_the_hyphen() {
-        let expected: Vec<char> = nanoid::alphabet::SAFE
-            .into_iter()
-            .filter(|symbol| *symbol != '-')
-            .collect();
-
-        assert_eq!(ALPHABET.to_vec(), expected);
-        assert!(!ALPHABET.contains(&'-'), "the hyphen is what we removed");
     }
 }
