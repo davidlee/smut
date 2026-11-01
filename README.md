@@ -29,19 +29,22 @@ That is two entities and one reference, stored durably as one batch. An agent
 mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
-This tree is **0.1.1 plus the 0.2 work** — not the published patch release:
-`where`, `follow`, `backlinks`, `depth` and `budget` are what 0.2 adds to the
-query surface — `where` filters the roots, the traversal keys walk the graph, and
-the envelope reports what the walk found. The 0.1.1 on crates.io has none of
-them, and the version moves to 0.2.0 when the release is complete. Mermaid
-arrives in 1.0 only: where it would be, `smut` refuses by name instead of
-guessing. The commands below are the whole surface.
+This is **smut 0.2.0**. The query surface is nine keys: `from`, `where`,
+`follow`, `backlinks`, `depth`, `select`, `order`, `limit` and `budget`. 0.1 had
+four of them — `from`, `select`, `order` and `limit` — and 0.2 adds the other
+five: `where`, which filters the roots with a small predicate language, and the
+traversal keys `follow`, `backlinks`, `depth` and `budget`, which walk the graph
+from those roots, bounded by hops and by expansions, and report what the walk
+found. The envelope stays additive: five keys when nothing was traversed and a
+sixth, `traversal`, when something was, so a 0.1 query reads exactly as it did.
+Mermaid arrives in 1.0 only: where it would be, `smut` refuses by name instead
+of guessing. The commands below are the whole surface.
 
 ## Build
 
 ```sh
 cargo build --release
-./target/release/smut --version   # smut 0.1.1
+./target/release/smut --version   # smut 0.2.0
 ```
 
 Or install it from crates.io: `cargo install smut`.
@@ -51,25 +54,36 @@ The binary is self-contained: `target/release/smut` is the whole program, and
 
 ## Worked example
 
-A scratch directory, a store, and the round trip. This is the transcript of
-running the release build; the last step follows a reference to an entity that
-was just deleted, so the walk reports it as dangling rather than recreating it.
+A scratch directory, a store, and the brief's end-to-end example. This is the
+transcript of running the release build, command for command: a nested
+declaration, the graph walked and rendered, a filtered read, an amend that keeps
+the fields it does not name, the Mermaid step 0.2 refuses by name, a `DROP`, a
+delete, and a walk that follows the reference the delete left behind. The last
+step reports that reference as dangling rather than recreating it.
 
 ```console
 $ smut declare '[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
 {"changes":[{"id":"smut","previous":null,"status":"created"},{"id":"q-query","previous":null,"status":"created"}],"ids":["smut"],"missing":[]}
 $ smut get smut q-query
 {"dangling":[],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","questions":[{"id":"q-query"}],"title":"Smut"},{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
-$ smut render '{"from":"smut","select":["title","body"]}'
+$ smut query '{"from":"smut","follow":["questions"],"select":["title","body"]}'
+{"dangling":[],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","title":"Smut"},{"id":"q-query","body":"Keep selection small.","title":"Query design"}],"traversal":{"depths":{"q-query":1,"smut":0},"edges":[{"field":"questions","source":"smut","target":"q-query"}],"frontier":["q-query"]},"truncated":false,"truncation_reasons":[]}
+$ smut render '{"from":"smut","follow":["questions"],"select":["title","body"]}'
 ## Smut
 
 Persist conversational structure.
+
+## Query design
+
+Keep selection small.
 $ smut declare '{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}'
 {"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
+$ smut query '{"where":{"type":"question","status":"resolved"}}'
+{"dangling":[],"missing":[],"objects":[{"id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
+$ smut render '{"from":"smut","follow":["questions"]}' --format mermaid
+smut: --format mermaid is not supported in this release; planned for 1.0
 $ smut declare '{"id":"q-query","status":"DROP"}'
 {"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
-$ smut get q-query
-{"dangling":[],"missing":[],"objects":[{"id":"q-query","body":"Use bounded traversal and simple predicates.","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
 $ smut delete q-query
 {"deleted":["q-query"],"missing":[]}
 $ smut query '{"from":"smut","follow":["questions"]}'
@@ -77,12 +91,15 @@ $ smut query '{"from":"smut","follow":["questions"]}'
 ```
 
 What the transcript shows, in order: one declaration that produced two entities
-and made the nested declaration an id-only reference; a read of both; a Markdown
-render of the selected fields; an amend that preserved the fields it did not
-name; a `DROP` that removed exactly one field; a delete, after which `smut`'s
-reference to the deleted entity is left dangling rather than cascaded; and
-finally a traversal query that follows a reference to the entity just deleted:
-the walk reports it as dangling, and nothing is recreated.
+and made the nested declaration an id-only reference; a read of both; a
+traversal query that follows `questions` to a depth-1 discovery and reports the
+depth, the edge and the frontier behind it; the same selection rendered as
+Markdown; an amend that preserved the fields it did not name; a filter that
+selects on the amended status; the Mermaid request, refused by name because that
+format is 1.0's; a `DROP` that removed exactly one field; a delete, after which
+`smut`'s reference to the deleted entity is left dangling rather than cascaded;
+and finally the same walk over the reference the delete left behind, reported as
+dangling and left alone.
 
 ## Commands
 
@@ -93,6 +110,7 @@ the walk reports it as dangling, and nothing is recreated.
 | `smut delete <ID>...` | remove entities in one batch; incoming references are left untouched |
 | `smut query [JSON]` | select entities with a query specification |
 | `smut render [JSON]` | the same selection, printed as Markdown |
+| `smut conventions [NAME] [--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
 
 `declare`, `query` and `render` take one JSON argument or one complete JSON value
@@ -113,7 +131,8 @@ key, and a supplied traversal key adds a `traversal` member carrying `depths`,
 `edges` and `frontier`. `get` is selection with the ids you name, no limit and
 no truncation.
 
-`render` flags: `--format markdown` (the only format in 0.1), `--heading-field`
+`render` flags: `--format markdown` (the only format this release writes;
+`mermaid` is refused by name, because it is 1.0's), `--heading-field`
 (default `title`), `--heading-level 1-6` (default 2), `--show-fields`,
 `--show-ids`.
 
@@ -121,6 +140,52 @@ Exit codes: `0` success, including reported missing ids and a truncated result;
 `1` no store, or a store that could not be read or written; `2` invalid input or
 usage. JSON goes to stdout, diagnostics go to stderr, and a failure never prints
 a success envelope.
+
+## Conventions
+
+`smut conventions` prints advice, not a schema. It needs no store, it reads no
+store, it validates nothing and it selects nothing for you: it is one shipped set
+of prose about how entities and references are shaped, versioned with the build
+that prints it. With no argument it lists the sets; with a name it prints that
+set; with `--format json` it prints the set as one declaration, which you can
+pipe straight into `smut declare -` —
+`smut conventions hygiene --format json | smut declare -` creates a single entity
+with a fixed id (`conventions-hygiene`) that a later install updates in place
+rather than duplicating. The seeded `body` is advice and is replaced on
+re-install; fields you add to that entity survive.
+
+## Traversal: what it costs and what it reports
+
+**What `budget` does not bound.** `budget` counts entity expansions — how many
+entities the walk is allowed to open. It is not a bound on total work. Every hop
+that looks backwards scans the store for incoming references, and a query with no
+`from` or `where` scans the whole store before it has any roots at all. A small
+`budget` beside a `backlinks` request therefore does not mean a small amount of
+work, and `smut` makes no total-work claim.
+
+**What a traversal reports, and what it does not.** A query that supplies
+`follow` or `backlinks` — even as an empty array — carries a `traversal` member
+beside the 0.1 envelope:
+
+- `depths` maps each **returned** id to its minimum discovery depth, roots at 0.
+- `edges` is the induced subgraph of the returned entities: `{source, field,
+  target}` triples, deduplicated, in result order, oriented as stored. An edge
+  appears when both endpoints are returned, even if neither was expanded, even
+  if the field was never named as a traversal label, and even if `select` hid
+  it. References to ids not in the store are not edges.
+- `frontier` is what discovery reached and did not expand, in discovery order. It
+  is walk-scoped: `limit` does not cut it, though a depth or budget boundary
+  does.
+
+The envelope also says why a result is incomplete: `truncated` with
+`truncation_reasons`, which is `result_limit` when ordered rows were cut and
+`traversal_budget` when the walk declined a permitted expansion. A depth boundary
+is selection, not truncation, so a finite `depth` never sets either. `dangling`
+reports the traversal's references to ids that are not in the store — one triple
+per reference, deduplicated, in encounter order, and not cut to the returned
+sources — and nothing is ever recreated to fill the gap. A non-traversing query
+carries exactly 0.1's five keys, so nothing above appears where nothing was
+walked.
 
 ## Sharp edges
 

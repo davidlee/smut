@@ -687,3 +687,217 @@ fn a_complete_looking_second_envelope_is_no_evidence_about_the_first() {
         "a caller trusting the second envelope alone answers 'no open questions': {second}"
     );
 }
+
+// ── §13.3 scenario 6: the over-cap composition (PHASE-07 EX-2, VT-1) ────────
+//
+// The committed fixture is 66 entities, comfortably under the default result
+// cap, so it cannot produce the state scenario 6 names. This graph is declared
+// into its own scratch store instead: one session holding 120 entities by
+// `part-of`, every one of them `resolved`, and a single open question whose id
+// sorts after all of them. The cap therefore cuts exactly the entity the
+// question is about, and the second call — the guide's own filter — has nothing
+// left to match.
+
+/// The graph above the default cap: `session`, 120 resolved answers, and one
+/// open question that sorts past them (`answer-000` … `answer-119` < `z-`).
+fn over_cap_graph() -> Vec<Value> {
+    let mut entities = vec![json!({"id": "session", "type": "session"})];
+
+    for number in 0..120 {
+        entities.push(json!({
+            "id": format!("answer-{number:03}"),
+            "type": "answer",
+            "status": "resolved",
+            "part-of": [{"id": "session"}],
+        }));
+    }
+
+    entities.push(json!({
+        "id": "z-question",
+        "type": "question",
+        "status": "open",
+        "title": "The one open question the cap cuts",
+        "part-of": [{"id": "session"}],
+    }));
+
+    entities
+}
+
+/// Runs `smut query` with `request` against `scratch` and returns the envelope.
+fn query(scratch: &Scratch, request: &Value) -> Value {
+    let argument = request.to_string();
+    let ran = smut(scratch, &["query", &argument]);
+    assert_eq!(ran.code, 0, "query {argument}: {}", ran.stderr);
+
+    ran.json()
+}
+
+/// **The wrong answer, kept in the suite on purpose.** A composition that reads
+/// the ids out of the first envelope, ignores `truncated` and
+/// `truncation_reasons`, and treats whatever the second call returns as the whole
+/// truth. It looks like the recipe — it is the recipe with its guard removed —
+/// and on an over-cap graph it answers "no open questions" about a store that
+/// holds one. §9.4's guard exists because this helper is plausible.
+fn naive_open_questions(scratch: &Scratch, first: &Value) -> Vec<String> {
+    ids_of(&query(scratch, &filter_over(&ids_of(first))))
+}
+
+#[test]
+fn an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions() {
+    let scratch = Scratch::new();
+    let graph = over_cap_graph();
+    let text = serde_json::to_string(&graph).expect("the graph serialises as one array");
+    let declared = run(&scratch, &["declare", "-"], Some(&text));
+    assert_eq!(declared.code, 0, "declaring the graph: {}", declared.stderr);
+
+    // The target exists and is open: the trap is a real omission, not an empty
+    // store answering honestly.
+    let stored = smut(&scratch, &["get", "z-question"]);
+    assert_eq!(stored.code, 0, "{}", stored.stderr);
+    assert_eq!(stored.json()["objects"][0]["status"], json!("open"));
+
+    // First call: the shipped first call, unchanged, over a graph above the cap.
+    let first = query(
+        &scratch,
+        &json!({"from": ["session"], "backlinks": ["part-of"], "select": ["id"]}),
+    );
+    let received = ids_of(&first);
+
+    assert_eq!(
+        first["truncated"],
+        json!(true),
+        "121 discoveries cannot fit the default cap: {first}"
+    );
+    assert_eq!(
+        first["truncation_reasons"],
+        json!(["result_limit"]),
+        "the only cut is the result limit: {first}"
+    );
+    assert_eq!(
+        received.len(),
+        100,
+        "the cap is a real cut, not an incidental one: {first}"
+    );
+    assert!(
+        !received.contains(&"z-question".to_owned()),
+        "the one open question sorts past the cap, so it is not returned: {first}"
+    );
+    assert!(
+        received.len() < graph.len(),
+        "the first call returned less than the store holds: {} of {}",
+        received.len(),
+        graph.len()
+    );
+
+    // The trap the guard exists for: the second envelope, over exactly the ids
+    // the first returned, is complete-looking and empty.
+    let second = query(&scratch, &filter_over(&received));
+    assert_eq!(
+        second["truncated"],
+        json!(false),
+        "the second call sees only what it was given, so it is whole: {second}"
+    );
+    assert_eq!(
+        second["truncation_reasons"],
+        json!([]),
+        "and it has nothing to report: {second}"
+    );
+    assert_eq!(
+        second["objects"],
+        json!([]),
+        "every id it was given is resolved: {second}"
+    );
+
+    // The naive composition therefore concludes "no open questions" …
+    let naive = naive_open_questions(&scratch, &first);
+    assert_eq!(
+        naive,
+        Vec::<String>::new(),
+        "the naive helper answers 'no open questions': {naive:?}"
+    );
+
+    // … while the store does hold one, and the guarded conclusion says so by
+    // naming the bound that hid it. Both halves of the comparison are asserted:
+    // a future repair that makes the naive helper right, or the guard silent,
+    // fails here.
+    let truth = ids_of(&query(
+        &scratch,
+        &json!({"where": {"type": "question", "status": "open"}, "select": ["id"]}),
+    ));
+    assert_eq!(
+        truth,
+        ["z-question".to_owned()],
+        "the store's answer, asked directly"
+    );
+
+    match guarded(&first) {
+        Guarded::Partial { ids, reasons } => {
+            assert_eq!(ids, received, "the guard keeps the ids it read: {first}");
+            assert_eq!(
+                reasons,
+                ["result_limit".to_owned()],
+                "the guard names what cut the answer: {first}"
+            );
+        }
+        Guarded::Complete(_) => panic!("a truncated first response is not whole: {first}"),
+    }
+
+    assert_ne!(
+        naive, truth,
+        "the naive helper and the store disagree, which is the whole point: {naive:?} vs {truth:?}"
+    );
+
+    // The same graph, cut by a budget instead of the cap. `depth: 2` is what
+    // makes the budget bite at all: at the default depth the 121 discoveries sit
+    // on the boundary and no expansion of theirs is permitted, so declining one
+    // would be a depth selection rather than truncation. Discovery stops here,
+    // so both reasons the envelope can carry are present, in the order they can
+    // occur — and the naive helper is no less wrong for it.
+    let bounded = query(
+        &scratch,
+        &json!({
+            "from": ["session"],
+            "backlinks": ["part-of"],
+            "select": ["id"],
+            "depth": 2,
+            "budget": 3,
+        }),
+    );
+
+    assert_eq!(bounded["truncated"], json!(true), "{bounded}");
+    assert_eq!(
+        bounded["truncation_reasons"],
+        json!(["traversal_budget", "result_limit"]),
+        "the walk stopped, and the ordered rows were still cut: {bounded}"
+    );
+
+    let frontier = bounded["traversal"]["frontier"]
+        .as_array()
+        .unwrap_or_else(|| panic!("the walk reports its frontier: {bounded}"));
+    assert_eq!(
+        frontier.len(),
+        119,
+        "one root expanded plus two answers, so 119 of the 121 discoveries were left unexpanded: {bounded}"
+    );
+    assert!(
+        frontier.contains(&json!("z-question")),
+        "the question the walk never reached is squarely on the frontier: {bounded}"
+    );
+
+    let naive_bounded = naive_open_questions(&scratch, &bounded);
+    assert_eq!(
+        naive_bounded,
+        Vec::<String>::new(),
+        "the naive helper answers 'no open questions' here too: {naive_bounded:?}"
+    );
+    match guarded(&bounded) {
+        Guarded::Partial { reasons, .. } => assert_eq!(
+            reasons,
+            ["traversal_budget".to_owned(), "result_limit".to_owned()],
+            "the guarded conclusion names both bounds rather than reporting a whole answer: {bounded}"
+        ),
+        Guarded::Complete(_) => {
+            panic!("a budget-truncated walk is not apparent completeness: {bounded}")
+        }
+    }
+}

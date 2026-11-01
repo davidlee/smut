@@ -264,7 +264,7 @@ enum Sub {
     Render {
         /// One specification object; `-` reads stdin.
         json: Option<String>,
-        /// The output format: `markdown` is the only value in 0.1.
+        /// The output format: `markdown` is the only value this release writes.
         #[arg(long)]
         format: Option<String>,
         /// The field the heading comes from (default `title`).
@@ -414,7 +414,7 @@ fn operand(
     }
 }
 
-/// `--format`: `markdown` is the default and the only value 0.1 writes.
+/// `--format`: `markdown` is the default and the only value this release writes.
 fn check_format(format: Option<&str>) -> Result<(), Reject> {
     match format {
         None | Some("markdown") => Ok(()),
@@ -780,7 +780,10 @@ mod tests {
             }
         );
         assert!(reject.to_string().contains("1.0"), "{reject}");
-        assert!(reject.to_string().contains("0.1"), "{reject}");
+        // DEC-019 re-cut, PHASE-07: the diagnostic used to say "not supported in
+        // 0.1", which this release makes false. It now names the release that
+        // plans the format and asserts no version this tree is not.
+        assert!(!reject.to_string().contains("0.1"), "{reject}");
     }
 
     #[test]

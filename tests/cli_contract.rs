@@ -382,11 +382,12 @@ fn mermaid_is_refused_with_exit_two_naming_the_release_that_plans_it() {
 
     assert_eq!(ran.code, 2, "{}", ran.stderr);
     assert_eq!(ran.stdout, "");
-    assert!(
-        ran.stderr.contains("not supported in 0.1"),
-        "{}",
-        ran.stderr
-    );
+    // DEC-019 re-cut, PHASE-07: the diagnostic used to say "not supported in
+    // 0.1". That sentence becomes false in the commit that moves the crate to
+    // 0.2.0, so it now names the release that plans the format and no version it
+    // does not ship. The refusal itself — exit 2, the named format, no store — is
+    // unchanged.
+    assert!(ran.stderr.contains("not supported"), "{}", ran.stderr);
     assert!(ran.stderr.contains("1.0"), "{}", ran.stderr);
     assert!(!scratch.has_store(), "the refusal needs no store");
 }
@@ -515,7 +516,11 @@ fn help_and_version_exit_zero_and_touch_no_store() {
 
     let version = smut(&scratch, &["--version"]);
     assert_eq!(version.code, 0, "{}", version.stderr);
-    assert_eq!(version.stdout, "smut 0.1.1\n");
+    // DEC-019 re-cut, PHASE-07 EX-5: the literal was `smut 0.1.1`. The release
+    // number is this phase's to move, so the pin moves with it — and it stays a
+    // literal, because this is the one place a bump that missed a file would be
+    // caught (`src/main.rs` and `src/cli.rs` both read `CARGO_PKG_VERSION`).
+    assert_eq!(version.stdout, "smut 0.2.0\n");
 
     assert!(
         !scratch.has_store(),
@@ -802,7 +807,7 @@ fn a_bad_depth_is_refused_before_any_store_access() {
     // scratch directory, so a refusal that reached the store would be the
     // exit-1 "no store" answer instead. The diagnostic must describe the shape
     // of an accepted value rather than defer the key to a later release, since
-    // a refusal that only says "not supported in 0.1" would satisfy the rest of
+    // a refusal that only says "not supported" would satisfy the rest of
     // this test without the key ever being accepted.
     let scratch = Scratch::new();
 

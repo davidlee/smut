@@ -292,6 +292,96 @@ fn the_worked_example_ends_with_a_0_2_traversal() {
     assert_eq!(ids, ["smut"], "the walk returns the source entity alone");
 }
 
+/// The console block is the brief's end-to-end example, not an excerpt: traverse,
+/// filter, render Markdown, delete a reference and see it reported as dangling,
+/// with the Mermaid step still named as 1.0's (§13.3 scenario 1, §14.1). The
+/// runner above executes every step; this test pins that the steps the criterion
+/// names are the ones the block carries, so a shorter block cannot pass by being
+/// executed faithfully.
+#[test]
+fn the_console_block_carries_the_whole_0_2_example() {
+    let steps = worked_example();
+    let matching = |predicate: &dyn Fn(&Step) -> bool| -> usize {
+        steps.iter().filter(|step| predicate(step)).count()
+    };
+
+    // Traverse: an outgoing walk that also projects fields.
+    assert!(
+        matching(&|step| step.command.starts_with("smut query ")
+            && step.command.contains("\"follow\"")
+            && step.command.contains("\"select\""))
+            >= 1,
+        "the block walks the graph with a projection: {:?}",
+        steps.iter().map(|step| &step.command).collect::<Vec<_>>()
+    );
+
+    // Filter: a `where` step, and the envelope it prints carries the filtered
+    // entity rather than the whole store.
+    let filtered = steps
+        .iter()
+        .find(|step| step.command.contains("\"where\""))
+        .expect("the block filters with a predicate");
+    let filtered_envelope: Value =
+        serde_json::from_str(&filtered.output).expect("the filter step prints an envelope");
+    assert_eq!(
+        filtered_envelope["objects"],
+        json!([{
+            "id": "q-query",
+            "body": "Use bounded traversal and simple predicates.",
+            "status": "resolved",
+            "title": "Query design",
+            "type": "question",
+        }]),
+        "the filter selects the amended question and nothing else: {filtered_envelope}"
+    );
+
+    // Render: the same walk, printed as Markdown rather than JSON.
+    assert!(
+        steps
+            .iter()
+            .any(|step| step.command.starts_with("smut render ")
+                && step.command.contains("\"follow\"")
+                && step.output.starts_with("## ")),
+        "the block renders a traversal as Markdown"
+    );
+
+    // The Mermaid step is still 1.0's, and says so by name rather than quietly
+    // falling back to Markdown.
+    let mermaid = steps
+        .iter()
+        .find(|step| step.command.contains("--format mermaid"))
+        .expect("the block keeps the Mermaid step the brief carries");
+    assert!(
+        mermaid.output.starts_with("smut: "),
+        "the Mermaid step is refused, not rendered: {}",
+        mermaid.output
+    );
+    assert!(
+        mermaid.output.contains("1.0"),
+        "the refusal names the release that plans it: {}",
+        mermaid.output
+    );
+    assert!(
+        !mermaid.output.contains("in 0.1"),
+        "the refusal claims no release this tree is not: {}",
+        mermaid.output
+    );
+
+    // Delete a reference, then see it: the delete step and the dangling report
+    // are both present, and the report is the last word.
+    assert!(
+        matching(&|step| step.command.starts_with("smut delete ")) >= 1,
+        "the block deletes an entity a reference points at"
+    );
+    assert!(
+        steps
+            .iter()
+            .take(steps.len() - 1)
+            .all(|step| !step.output.contains("\"dangling\":[{")),
+        "no step before the last reports the reference as dangling"
+    );
+}
+
 /// crates.io renders the README against its own paths, so a relative link is dead
 /// on the published page — which is where a crate's reader arrives first.
 #[test]

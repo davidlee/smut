@@ -119,7 +119,8 @@ pub enum Reject {
         /// The format's name.
         format: String,
     },
-    /// A `--format` no release plans. `markdown` is the only value in 0.1.
+    /// A `--format` no release plans. `markdown` is the only value this release
+    /// writes.
     UnknownFormat {
         /// The format's name.
         format: String,
@@ -326,12 +327,12 @@ impl fmt::Display for Reject {
             ),
             Reject::FutureFormat { format } => write!(
                 formatter,
-                "--format {format} is not supported in 0.1; planned for 1.0"
+                "--format {format} is not supported in this release; planned for 1.0"
             ),
             Reject::UnknownFormat { format } => {
                 write!(
                     formatter,
-                    "unknown --format {format}, and 0.1 writes markdown"
+                    "unknown --format {format}, and this release writes markdown"
                 )
             }
             Reject::UnknownConvention { found, sets } => write!(
@@ -804,7 +805,8 @@ mod tests {
             format: "mermaid".to_owned(),
         };
         assert!(mermaid.to_string().contains("mermaid"), "{mermaid}");
-        assert!(mermaid.to_string().contains("0.1"), "{mermaid}");
+        // DEC-019 re-cut, PHASE-07: "0.1" was the refused release; the sentence
+        // now claims no version, so only the planned release is named.
         assert!(mermaid.to_string().contains("1.0"), "{mermaid}");
 
         let dot = Reject::UnknownFormat {

@@ -492,6 +492,51 @@ fn follow_empty_keeps_the_induced_edges_among_returned_objects() {
 }
 
 #[test]
+fn follow_empty_still_honours_backlinks_and_the_depth_bound() {
+    // §10.3 "`follow: []`", third clause: "the frontier follows `depth`,
+    // `budget` and any supplied `backlinks`". An empty outgoing label list
+    // switches off outgoing discovery and nothing else — the walk still runs,
+    // still expands what it expands, and still finds what points at a root.
+    //
+    // The trap: treating an empty `follow` as "no walk" would drop `x` from
+    // both the returned set and the frontier, which the other two `follow: []`
+    // tests cannot catch because neither supplies `backlinks`.
+    let entities = store(&[
+        json!({"id": "hub", "alpha": {"id": "n-a"}}),
+        json!({"id": "n-a"}),
+        json!({"id": "n-z"}),
+        json!({"id": "x", "up": {"id": "hub"}}),
+    ]);
+
+    let traversal = walked(
+        &entities,
+        json!({"from": "hub", "follow": [], "backlinks": ["up"], "depth": 1}),
+    );
+
+    assert_eq!(
+        traversal["depths"],
+        json!({"hub": 0, "x": 1}),
+        "the incoming discovery is a real one: {traversal}"
+    );
+    assert_frontier(&traversal, json!(["x"]));
+    assert_eq!(
+        traversal["edges"],
+        json!([{"source": "x", "field": "up", "target": "hub"}]),
+        "the incoming edge is induced, and `hub.alpha` is not an edge because
+         `n-a` was not discovered: {traversal}"
+    );
+
+    // The same request at `depth: 0` stops at the root: the empty `follow` does
+    // not make the depth bound inert.
+    let stopped = walked(
+        &entities,
+        json!({"from": "hub", "follow": [], "backlinks": ["up"], "depth": 0}),
+    );
+    assert_eq!(stopped["depths"], json!({"hub": 0}), "{stopped}");
+    assert_frontier(&stopped, json!(["hub"]));
+}
+
+#[test]
 fn an_empty_from_with_a_traversal_request_has_an_empty_member() {
     // §10.3 "`from: []`": nothing is selected, but the supplied `follow` still
     // makes the member present with empty views.
@@ -580,6 +625,171 @@ fn depth_one_puts_the_depth_one_discoveries_in_the_frontier() {
         "the walk: {traversal}"
     );
     assert_frontier(&traversal, json!(["n-a", "n-z"]));
+}
+
+/// The five clusters §13.3 scenario 3 walks, shaped as the committed fixture
+/// stores them: each cluster is a `part-of` the session, each cluster holds two
+/// questions that are a `part-of` it, and each question is answered by one
+/// entity. The graph is built here rather than read from the fixture array so
+/// the walk that matters — a wildcard over *every* reference field — exercises
+/// outgoing and incoming in the same expansion, which is the shape the real
+/// store has and the in-memory helpers elsewhere in this file do not.
+fn clusters() -> Entities {
+    const NAMES: [&str; 5] = ["friction", "mind", "schema", "setup", "thesis"];
+
+    let mut entities = vec![json!({"id": "session", "type": "session"})];
+
+    for name in NAMES {
+        entities.push(json!({
+            "id": format!("cluster-{name}"),
+            "type": "cluster",
+            "part-of": [{"id": "session"}],
+        }));
+
+        for hop in 1..=2 {
+            let question = format!("q-{name}-{hop}");
+
+            entities.push(json!({
+                "id": question,
+                "type": "question",
+                "part-of": [{"id": format!("cluster-{name}")}],
+            }));
+            entities.push(json!({
+                "id": format!("a-{name}-{hop}"),
+                "type": "answer",
+                "answered-by": [{"id": question}],
+            }));
+        }
+    }
+
+    store(&entities)
+}
+
+#[test]
+fn a_wildcard_walk_over_the_five_clusters_moves_the_frontier_out_by_one() {
+    // §13.3 scenario 3 (PHASE-07 VT-3): the depth-1 wildcard walk returns the
+    // clusters and their depth-1 neighbours with edges and depths, and depth 2
+    // pushes the frontier out by exactly one ring while the edge set grows.
+    //
+    // "Wildcard" is the load-bearing word, and it is wildcarded in both
+    // directions: the fixture's clusters carry one outgoing `part-of` to the
+    // session and are named by ten incoming `part-of` questions, so a walk that
+    // follows only outward would have no depth-2 ring to grow into. `follow: "*"`
+    // plus `backlinks: "*"` is therefore the walk scenario 3 describes — the
+    // clusters and everything one hop away, in either orientation.
+    let entities = clusters();
+    let roots = json!([
+        "cluster-friction",
+        "cluster-mind",
+        "cluster-schema",
+        "cluster-setup",
+        "cluster-thesis",
+    ]);
+
+    let depth_one = envelope_of(
+        &entities,
+        json!({"from": roots, "follow": "*", "backlinks": "*", "depth": 1}),
+    );
+    let one = traversal_member(&depth_one);
+
+    let mut expected_frontier = vec![json!("session")];
+    for name in ["friction", "mind", "schema", "setup", "thesis"] {
+        expected_frontier.push(json!(format!("q-{name}-1")));
+        expected_frontier.push(json!(format!("q-{name}-2")));
+    }
+
+    assert_eq!(
+        one["frontier"],
+        Value::Array(expected_frontier.clone()),
+        "the depth-1 discoveries sit on the frontier, roots expanded: {one}"
+    );
+    assert_eq!(
+        one["depths"].as_object().map(serde_json::Map::len),
+        Some(16),
+        "five clusters at depth 0 and eleven neighbours at depth 1: {one}"
+    );
+    for root in roots.as_array().expect("an array of roots") {
+        let id = root.as_str().expect("a cluster id");
+        assert_eq!(one["depths"][id], json!(0), "a root is depth 0: {one}");
+    }
+    for discovered in ["session", "q-friction-1", "q-thesis-2"] {
+        assert_eq!(
+            one["depths"][discovered],
+            json!(1),
+            "a neighbour is one hop out: {one}"
+        );
+    }
+
+    // The edge set is the induced subgraph of the returned entities: five
+    // cluster-to-session edges and ten question-to-cluster edges. The answer
+    // edges are not here yet, because the answers are not returned yet.
+    assert_eq!(
+        one["edges"].as_array().map(Vec::len),
+        Some(15),
+        "the depth-1 edge set: {one}"
+    );
+    assert!(
+        one["edges"]
+            .as_array()
+            .expect("an edge array")
+            .contains(&json!({
+                "source": "cluster-friction",
+                "field": "part-of",
+                "target": "session",
+            })),
+        "the outgoing edge is induced from the returned session: {one}"
+    );
+    assert!(
+        one["edges"]
+            .as_array()
+            .expect("an edge array")
+            .contains(&json!({
+                "source": "q-friction-1",
+                "field": "part-of",
+                "target": "cluster-friction",
+            })),
+        "the incoming edge is induced too: {one}"
+    );
+
+    let depth_two = envelope_of(
+        &entities,
+        json!({"from": roots, "follow": "*", "backlinks": "*", "depth": 2}),
+    );
+    let two = traversal_member(&depth_two);
+
+    let expected_next_frontier: Vec<Value> = ["friction", "mind", "schema", "setup", "thesis"]
+        .iter()
+        .flat_map(|name| [json!(format!("a-{name}-1")), json!(format!("a-{name}-2"))])
+        .collect();
+
+    assert_eq!(
+        two["frontier"],
+        Value::Array(expected_next_frontier.clone()),
+        "depth 2 expands the depth-1 ring and leaves the answers on the boundary: {two}"
+    );
+    assert!(
+        expected_frontier
+            .iter()
+            .all(|previous| !expected_next_frontier.contains(previous)),
+        "the frontier moved out rather than repeating: {two}"
+    );
+    assert_eq!(
+        two["depths"].as_object().map(serde_json::Map::len),
+        Some(26),
+        "the ten answers join the returned set at depth 2: {two}"
+    );
+    assert_eq!(two["depths"]["a-friction-1"], json!(2), "{two}");
+
+    let grown = two["edges"].as_array().expect("an edge array");
+    assert_eq!(grown.len(), 25, "ten answer edges join the fifteen: {two}");
+    assert!(
+        grown.contains(&json!({
+            "source": "a-thesis-2",
+            "field": "answered-by",
+            "target": "q-thesis-2",
+        })),
+        "the new ring's edges are induced from the new return set: {two}"
+    );
 }
 
 #[test]
@@ -850,6 +1060,62 @@ fn an_entity_reachable_twice_through_one_field_contributes_one_edge() {
 }
 
 #[test]
+fn a_cycle_and_a_self_reference_record_their_edge_once() {
+    // §10.3 "cycle / self-reference": "edge recorded once; entity expanded
+    // once; no requeue". The walk's own tests pin the expansion half (`order`,
+    // empty frontier, depths); this pins the half only the envelope can show,
+    // because `Walk` carries no edges — `edges` is induced afterwards and must
+    // still dedupe by `(source, field, target)` when a triple points at itself
+    // or back where it came from.
+    let cycle = store(&[
+        json!({"id": "a", "next": {"id": "b"}}),
+        json!({"id": "b", "next": {"id": "a"}}),
+    ]);
+
+    let document = envelope_of(&cycle, json!({"from": "a", "follow": ["next"], "depth": 2}));
+    let traversal = traversal_member(&document);
+
+    assert_eq!(
+        document["objects"].as_array().map(Vec::len),
+        Some(2),
+        "each entity in the cycle is expanded once and returned once: {document}"
+    );
+    assert_eq!(
+        traversal["depths"],
+        json!({"a": 0, "b": 1}),
+        "the return edge discovers nothing new: {traversal}"
+    );
+    assert_eq!(
+        traversal["edges"],
+        json!([
+            {"source": "a", "field": "next", "target": "b"},
+            {"source": "b", "field": "next", "target": "a"},
+        ]),
+        "two directed triples, neither repeated: {traversal}"
+    );
+    assert_frontier(&traversal, json!([]));
+
+    let itself = store(&[json!({"id": "s", "self": {"id": "s"}})]);
+    let document = envelope_of(
+        &itself,
+        json!({"from": "s", "follow": ["self"], "depth": 1}),
+    );
+    let traversal = traversal_member(&document);
+
+    assert_eq!(
+        document["objects"].as_array().map(Vec::len),
+        Some(1),
+        "a self-reference does not duplicate its entity: {document}"
+    );
+    assert_eq!(
+        traversal["edges"],
+        json!([{"source": "s", "field": "self", "target": "s"}]),
+        "one triple, recorded once: {traversal}"
+    );
+    assert_eq!(document["truncated"], json!(false), "{document}");
+}
+
+#[test]
 fn edges_follow_result_order_not_discovery_order() {
     // DEC-014 trap: the walk discovers `a` then `b`, but `order` returns `b`
     // first, and `edges` is the induced subgraph of the result in result order —
@@ -1032,6 +1298,52 @@ fn one_fewer_than_the_permitted_expansions_declines_the_next_permitted_one() {
         walk.exhausted,
         "a permitted expansion was declined, so the walk reports itself exhausted"
     );
+}
+
+#[test]
+fn a_budget_of_one_expands_the_first_root_and_leaves_the_second_in_the_frontier() {
+    // §13.3 scenario 4 (PHASE-07 EX-2): a budget of one on a two-root store
+    // returns the first root's expansion, reports the second root in the
+    // frontier, and sets `traversal_budget`.
+    //
+    // The second root is a *permitted* expansion — it sits at depth 0, inside
+    // the bound — so declining it is truncation, not selection, and the walk
+    // says so. Both roots are returned: a root is a selection, not a discovery,
+    // so the budget cannot remove one from the result.
+    let entities = store(&[
+        json!({"id": "r1", "out": {"id": "c1"}}),
+        json!({"id": "c1"}),
+        json!({"id": "r2", "out": {"id": "c2"}}),
+        json!({"id": "c2"}),
+    ]);
+
+    let document = envelope_of(
+        &entities,
+        json!({"from": ["r1", "r2"], "follow": ["out"], "depth": 1, "budget": 1}),
+    );
+
+    assert_eq!(
+        document["truncated"],
+        json!(true),
+        "the second root's expansion was declined: {document}"
+    );
+    assert_eq!(
+        document["truncation_reasons"],
+        json!(["traversal_budget"]),
+        "the budget, and only the budget, cut this walk: {document}"
+    );
+
+    let traversal = traversal_member(&document);
+    assert_eq!(
+        traversal["depths"],
+        json!({"r1": 0, "r2": 0, "c1": 1}),
+        "the first root expanded and the second did not: {traversal}"
+    );
+    assert!(
+        traversal["depths"].get("c2").is_none(),
+        "the declined root's child was never discovered: {traversal}"
+    );
+    assert_frontier(&traversal, json!(["r2", "c1"]));
 }
 
 #[test]
