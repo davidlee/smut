@@ -1,0 +1,73 @@
+id    = 17
+slug  = "code-review-of-sl-002-phase-01-the-walker-its-labels-and-the-provenance-it-carries"
+title = "code review of SL-002 PHASE-01 — the walker, its labels and the provenance it carries"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "reviewer"
+responder = "implementer"
+rounds_base = 0
+contests_base = 0
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "open"
+severity = "major"
+title = "The walker test module still says it is expected to be RED and that the keys are refused"
+detail = """`tests/traversal.rs:10-15` (also `:41-42`, `:442`). Expected: a committed test file's module doc describes the file as it is in this commit. Observed, verbatim: "This file is expected to be RED until the walker lands. 0.1's `spec::parse` refuses `follow`, `backlinks` and `depth` by name, so every walk test stops at that refusal ... Once parsing accepts the keys, the same tests fail on the envelope's missing `traversal` member until the walker exists." Plus `walked`'s doc "or the red this file expects: first the parse refusal, then a missing member" (`:41-42`) and `traversal_member`'s "or the red this file expects" (`:442`). Against the tree: `src/spec.rs:125-127` accepts all three keys and all 20 tests in the file drive a green walk, so none of that narration is true. This is the file VT-2 certifies against and the paragraph asserts the inverse of what it proves; left in the committed file it invites a later worker to "restore" a refusal the design has retired — the DEC-019 failure mode in the opposite direction. Route: fix-now — replace `:10-15` with one sentence stating the file is green against the walker and naming the six determinism rules it pins; drop the two "the red this file expects" clauses."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-2"
+status = "open"
+severity = "major"
+title = "`smut learn` prints statements the binary now contradicts, and no criterion re-cuts them"
+detail = """`src/learn.rs:88-89` and `:110-111`. Verbatim: "where, follow, backlinks, depth and budget arrive in 0.2, and are refused here / by name with that release." and "Reporting dangling references belongs to / traversal, which arrives in 0.2." Against the tree: `follow`, `backlinks` and `depth` are accepted (`src/spec.rs:125-127`) and dangling references are reported (`src/select.rs:293`), so the shipped guide's own answer is false for three of the five keys it names. This is a plan gap, not only a code defect: EX-11's rationale ("accepting `follow` falsifies it in this commit") applies to this prose verbatim, yet §14.1 assigns `src/learn.rs` to PHASE-06 and PHASE-06 EX-4 presumes the notice still exists at its entrance. Raised route: tolerated with a named home (PHASE-06 EX-4). Responder route: fix-now — a released surface stays false for three charters otherwise, the edit is two clauses, and PHASE-06 rewrites the guide wholesale regardless."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-3"
+status = "open"
+severity = "major"
+title = "The README presents a published version as carrying traversal"
+detail = '`README.md:32-36` against `README.md:42`, `:45` and `Cargo.toml:3`. Observed: "`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks` and `depth` walk the graph..." followed at `:45` by "Or install it from crates.io: `cargo install smut`", with `version = "0.1.1"` in `Cargo.toml:3` and `--version` recording `smut 0.1.1` at `:42`. Against the record: 0.1.1 is published and immutable and has no traversal (`SL-001` notes). Because PHASE-01 did not move the version (PHASE-07 EX-5 owns the bump), the version string can no longer distinguish this tree from the artifact on crates.io, and a reader who follows `:45` gets "follow is not supported in 0.1; it arrives in 0.2" for the keys `:32` says walk the graph. No single sentence is false; the composition overclaims. This is the front door, and it is the one line EX-11 told this commit to re-cut to name the keys actually refused now. Route: fix-now — one clause distinguishing this tree from the published 0.1.1.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-4"
+status = "open"
+severity = "minor"
+title = "A test comment cites a defect record that existed in no artefact at that commit"
+detail = """`tests/selection.rs:278-281`, verbatim: "...the earlier position of `traversal_budget` is asserted where that reason is introduced, PHASE-02's reason-order test in `tests/traversal.rs`; this is recorded plan defect DEF-1, and this comment is the re-cut's reason." At `45983c7`, `DEF-1` appeared nowhere except that comment and the diff — not in `plan.toml`, `plan.md`, `notes.md`, `design.md`, nor any ledger under `.doctrine/review/`. The underlying gap is real and should be recorded, not merely referenced: `VT-9` requires the reason order when both reasons occur, which is unsatisfiable at PHASE-01 because `traversal_budget` cannot occur while `budget` is a refused key. Status since raising: the seat recorded DEF-1 in `notes.md` `## Harvest`/`### Open` at `7a0c717` (after this review's snapshot), so the citation is now true; the remaining repair is to name PHASE-02's test inline so the comment is self-contained rather than pointing at an id."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-5"
+status = "open"
+severity = "minor"
+title = "Two comments in `src/select.rs` give PHASE-02 opposite instructions about the budget"
+detail = """`src/select.rs:139-140` against `src/select.rs:120-121`, `src/walk.rs:92`, `src/walk.rs:106`. Observed, verbatim: "There is deliberately no budget-shaped parameter or field to fill in later." But `walk::walk` already takes `budget: u64` (`src/walk.rs:92`), `Walker` already holds `budget: u64` (`src/walk.rs:106`), and `Request`'s own doc four lines earlier says "PHASE-02 adds the traversal budget ... to this same value" (`src/select.rs:120-121`). The sentence reads as "there is no budget hook, do not make one", the opposite of what the same file tells the next phase — the kind of comment a later worker follows into a second refactor. Route: fix-now — rewrite it to say there is no placeholder field in `Request`, and PHASE-02 adds one and threads it where the constant sits."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
