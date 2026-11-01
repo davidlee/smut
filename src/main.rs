@@ -3,12 +3,12 @@
 #![forbid(unsafe_code)]
 
 use std::ffi::OsString;
-use std::io::{self, IsTerminal, Read};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use smut::cli::{self, Invocation};
-use smut::error::{Error, Reject, SUCCESS, StoreError};
+use smut::error::{Error, Reject, STORE_FAILURE, SUCCESS, StoreError};
 use smut::learn;
 use smut::store::Store;
 
@@ -18,12 +18,36 @@ fn main() -> ExitCode {
     let mut stdin = io::stdin().lock();
     let rendered = dispatch(&arguments, stdin_is_terminal, &mut stdin);
 
-    // The bytes were prepared in full, and already end in exactly one newline:
-    // the shell never adds one of its own.
-    print!("{}", rendered.stdout);
-    eprint!("{}", rendered.stderr);
+    let mut stdout = io::stdout().lock();
+    let mut stderr = io::stderr().lock();
 
-    ExitCode::from(rendered.exit)
+    ExitCode::from(emit(&mut stdout, &mut stderr, rendered))
+}
+
+/// Write what the invocation produced, and answer with the code the process exits
+/// with.
+///
+/// The bytes were prepared in full, and already end in exactly one newline: the
+/// shell never adds one of its own (§5.3). They are written *fallibly* — a reader
+/// that closes the pipe (`smut query | head -1`) is ordinary use, and must not
+/// panic the process out of the brief's 0/1/2 exit table — and a response that
+/// could not be delivered exits with the failure code, never success. The closed
+/// pipe itself is not worth a diagnostic; anything else is.
+fn emit(stdout: &mut dyn Write, stderr: &mut dyn Write, rendered: Rendered) -> u8 {
+    if let Err(error) = stdout
+        .write_all(rendered.stdout.as_bytes())
+        .and_then(|()| stdout.flush())
+    {
+        if error.kind() != io::ErrorKind::BrokenPipe {
+            let _ = writeln!(stderr, "smut: failed to write output: {error}");
+        }
+
+        return STORE_FAILURE;
+    }
+
+    let _ = stderr.write_all(rendered.stderr.as_bytes());
+
+    rendered.exit
 }
 
 /// Everything one invocation writes, and the code it exits with.
@@ -185,5 +209,79 @@ mod tests {
             "{}",
             rendered.stderr
         );
+    }
+
+    /// A writer that fails every write with `kind`.
+    struct Failing(std::io::ErrorKind);
+
+    impl std::io::Write for Failing {
+        fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::new(self.0, "the reader went away"))
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn rendered() -> Rendered {
+        Rendered {
+            stdout: "{}\n".to_owned(),
+            stderr: String::new(),
+            exit: 0,
+        }
+    }
+
+    #[test]
+    fn a_closed_stdout_exits_one_rather_than_panicking_and_says_nothing() {
+        let mut stderr = Vec::new();
+
+        let exit = emit(
+            &mut Failing(std::io::ErrorKind::BrokenPipe),
+            &mut stderr,
+            rendered(),
+        );
+
+        assert_eq!(exit, 1);
+        assert!(
+            stderr.is_empty(),
+            "a reader that closed the pipe is ordinary use: {}",
+            String::from_utf8_lossy(&stderr)
+        );
+    }
+
+    #[test]
+    fn any_other_output_failure_exits_one_and_is_reported_on_stderr() {
+        let mut stderr = Vec::new();
+
+        let exit = emit(
+            &mut Failing(std::io::ErrorKind::StorageFull),
+            &mut stderr,
+            rendered(),
+        );
+
+        assert_eq!(exit, 1);
+        assert!(
+            String::from_utf8_lossy(&stderr).contains("failed to write output"),
+            "{}",
+            String::from_utf8_lossy(&stderr)
+        );
+    }
+
+    #[test]
+    fn a_delivered_response_keeps_its_own_exit_code_and_writes_its_diagnostic() {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let failure = Rendered {
+            stdout: String::new(),
+            stderr: "smut: no command given\n".to_owned(),
+            exit: 2,
+        };
+
+        let exit = emit(&mut stdout, &mut stderr, failure);
+
+        assert_eq!(exit, 2);
+        assert!(stdout.is_empty(), "a failure carries no success envelope");
+        assert_eq!(stderr, b"smut: no command given\n");
     }
 }
