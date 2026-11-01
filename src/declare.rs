@@ -851,9 +851,9 @@ mod tests {
     #[test]
     fn a_declaration_that_is_not_an_object_is_rejected() {
         for input in [
+            json!(null),
             json!(5),
             json!("x"),
-            json!({"id": "a"}),
             json!([5]),
             json!([["a"]]),
         ] {
@@ -861,11 +861,12 @@ mod tests {
 
             let result = normalize(&Entities::new(), &input, &mut source);
 
-            if input == json!({"id": "a"}) {
-                assert!(result.is_ok(), "an object is a declaration");
-            } else {
-                assert_eq!(result.err(), Some(Reject::NotADeclaration), "{input}");
-            }
+            assert_eq!(result.err(), Some(Reject::NotADeclaration), "{input}");
+            assert_eq!(
+                source.draws(),
+                0,
+                "nothing is generated for a refusal: {input}"
+            );
         }
     }
 

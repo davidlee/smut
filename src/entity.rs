@@ -548,6 +548,23 @@ mod reference_tests {
         assert_eq!(scan_refs(&entity).count(), 0);
         assert_eq!(scan_refs(&json!({"id": "a"})).count(), 0);
     }
+
+    #[test]
+    fn a_hoisted_declaration_carries_the_label_of_the_entity_holding_the_reference() {
+        let (_, declarations) =
+            extract(&json!({"id": "a", "refs": [{"id": "b", "note": {"id": "c"}}]}))
+                .expect("a nested reference chain is valid");
+        let holder = declarations
+            .iter()
+            .find(|declaration| declaration.id.as_str() == "b")
+            .expect("b was hoisted");
+
+        assert_eq!(
+            scan_refs(&holder.entity()).collect::<Vec<(&str, &str)>>(),
+            vec![("note", "c")],
+            "the label is the field on the entity that holds the reference, after hoisting"
+        );
+    }
 }
 
 #[cfg(test)]
