@@ -32,6 +32,8 @@ pub struct Options {
     pub heading_field: String,
     /// The heading's level, repeated as `#` that many times.
     pub heading_level: u8,
+    /// Whether fields that are neither the heading nor the body are shown.
+    pub show_fields: bool,
 }
 
 impl Default for Options {
@@ -39,6 +41,7 @@ impl Default for Options {
         Options {
             heading_field: DEFAULT_HEADING_FIELD.to_owned(),
             heading_level: DEFAULT_HEADING_LEVEL,
+            show_fields: false,
         }
     }
 }
@@ -71,14 +74,32 @@ fn finish(blocks: Vec<String>) -> String {
 
 fn entity_blocks(selection: &Selection<'_>, options: &Options, id: &Id) -> Vec<String> {
     let entity = entity_of(selection, id);
+    let heading = heading(entity, selection, options);
+    let body = body(entity, selection, options);
+
+    let mut rendered_specially = Vec::new();
+
+    if heading.is_some() {
+        rendered_specially.push(options.heading_field.as_str());
+    }
+
+    if body.is_some() {
+        rendered_specially.push(BODY_FIELD);
+    }
+
+    let attributes = attribute_lines(entity, selection, options, &rendered_specially);
     let mut blocks = Vec::new();
 
-    if let Some(heading) = heading(entity, selection, options) {
+    if let Some(heading) = heading {
         blocks.push(heading);
     }
 
-    if let Some(body) = body(entity, selection, options) {
+    if let Some(body) = body {
         blocks.push(body);
+    }
+
+    if !attributes.is_empty() {
+        blocks.push(attributes.join("\n"));
     }
 
     blocks
@@ -152,6 +173,57 @@ fn is_selected(selection: &Selection<'_>, field: &str) -> bool {
     match selection.fields {
         None => true,
         Some(fields) => fields.iter().any(|name| name == field),
+    }
+}
+
+/// The `- **name:** value` lines, in the entity's own (lexical, §4.2) field
+/// order. `rendered_specially` names the fields already emitted as something
+/// other than an attribute, so a body that is not a string stays displayable.
+fn attribute_lines(
+    entity: &Map<String, Value>,
+    selection: &Selection<'_>,
+    options: &Options,
+    rendered_specially: &[&str],
+) -> Vec<String> {
+    if !options.show_fields {
+        return Vec::new();
+    }
+
+    entity
+        .iter()
+        .filter(|(field, _)| *field != ENTITY_ID && is_selected(selection, field))
+        .filter(|(field, _)| !rendered_specially.contains(&field.as_str()))
+        .map(|(field, value)| format!("- **{}:** {}", escape_label(field), attribute_value(value)))
+        .collect()
+}
+
+/// Labels are generated names, not stored content: every ASCII punctuation
+/// character is backslash-escaped, which CommonMark renders literally, so a
+/// field name cannot end the bold marker or open a block of its own.
+fn escape_label(label: &str) -> String {
+    let mut escaped = String::with_capacity(label.len());
+
+    for character in label.chars() {
+        match character {
+            '\n' | '\r' => escaped.push(' '),
+            punctuation if punctuation.is_ascii_punctuation() => {
+                escaped.push('\\');
+                escaped.push(punctuation);
+            }
+            other => escaped.push(other),
+        }
+    }
+
+    escaped
+}
+
+/// A string value is its own raw text; everything else is compact JSON.
+fn attribute_value(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.clone(),
+        other => {
+            serde_json::to_string(other).expect("serialising a JSON value into memory cannot fail")
+        }
     }
 }
 
@@ -316,5 +388,129 @@ mod tests {
         let store = store(&[json!({"id": "a", "title": "T", "body": 42})]);
 
         assert_eq!(rendered(&store, &["a"], &Options::default()), "## T\n");
+    }
+
+    fn fields_shown(options: Options) -> Options {
+        Options {
+            show_fields: true,
+            ..options
+        }
+    }
+
+    #[test]
+    fn other_fields_appear_only_under_show_fields() {
+        let store = notebook();
+
+        assert_eq!(
+            rendered(&store, &["design"], &Options::default()),
+            "## Query design\n\nKeep selection small.\n"
+        );
+        assert_eq!(
+            rendered(&store, &["design"], &fields_shown(Options::default())),
+            "## Query design\n\nKeep selection small.\n\n- **tags:** [\"storage\"]\n- **type:** question\n"
+        );
+    }
+
+    #[test]
+    fn a_string_value_is_raw_and_anything_else_is_compact_json() {
+        let store = store(&[json!({
+            "id": "a",
+            "flag": true,
+            "list": [1, 2],
+            "n": 1.5,
+            "nested": {"b": 1},
+            "nothing": null,
+            "text": "a *raw* string"
+        })]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "- **flag:** true\n\
+             - **list:** [1,2]\n\
+             - **n:** 1.5\n\
+             - **nested:** {\"b\":1}\n\
+             - **nothing:** null\n\
+             - **text:** a *raw* string\n"
+        );
+    }
+
+    #[test]
+    fn a_non_string_body_stays_displayable_as_an_attribute() {
+        let store = store(&[json!({"id": "a", "body": 42})]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "- **body:** 42\n"
+        );
+    }
+
+    #[test]
+    fn the_heading_field_is_excluded_only_when_it_rendered_a_heading() {
+        let store = store(&[json!({"id": "a", "title": "", "type": "x"})]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "- **title:** \n- **type:** x\n"
+        );
+    }
+
+    #[test]
+    fn the_body_named_as_the_heading_field_renders_once() {
+        let store = store(&[json!({
+            "id": "a",
+            "title": "ignored",
+            "body": "B text",
+            "type": "x"
+        })]);
+        let options = fields_shown(Options {
+            heading_field: BODY_FIELD.to_owned(),
+            ..Options::default()
+        });
+
+        assert_eq!(
+            rendered(&store, &["a"], &options),
+            "## B text\n\n- **title:** ignored\n- **type:** x\n"
+        );
+    }
+
+    #[test]
+    fn field_labels_are_escaped() {
+        let store = store(&[json!({
+            "id": "a",
+            "*bold*": "x",
+            "a[b]`c`": "y",
+            "two\nlines": "z"
+        })]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "- **\\*bold\\*:** x\n\
+             - **a\\[b\\]\\`c\\`:** y\n\
+             - **two lines:** z\n"
+        );
+    }
+
+    #[test]
+    fn attributes_honour_the_selections_fields() {
+        let store = store(&[json!({"id": "a", "title": "T", "type": "x", "body": "text"})]);
+        let roots = [Id::new("a")];
+        let fields = ["type".to_owned()];
+        let mut selection = get(&store, &roots);
+        selection.fields = Some(&fields);
+
+        assert_eq!(
+            render(&selection, &fields_shown(Options::default())),
+            "- **type:** x\n"
+        );
+    }
+
+    #[test]
+    fn the_id_is_never_an_attribute() {
+        let store = store(&[json!({"id": "a", "type": "x"})]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "- **type:** x\n"
+        );
     }
 }
