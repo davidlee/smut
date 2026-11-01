@@ -883,7 +883,10 @@ durability guarantees and their tests remain in force unchanged.
 - `src/order.rs` — the comparator and ID tiebreak already satisfy the brief.
 - `src/store/**` — no new on-disk state; the index/`Entities` order is already
   deterministic and is proven by a shuffled-order test rather than changed.
-- `docs/store-format.md` — the store format is unchanged.
+- `docs/store-format.md` — the store format is unchanged. Its version-scoped
+  prose was de-versioned after closure, on operator authorisation (RV-021 F-5):
+  three phrases said "in 0.1" where the claim holds for `format_version` 1 in
+  every release. The format, and this document's protocol, are untouched.
 - `justfile`, `flake.nix` — no build or workflow change.
 
 The design-target selectors recorded for this slice are:

@@ -1,12 +1,12 @@
 # The smut store format
 
 This document describes the on-disk format of a `smut` store, version
-`format_version` **1**. It is written against the 0.1 build and is the home of
+`format_version` **1** — unchanged since the 0.1 build — and is the home of
 the durability promise: the protocol below is what that promise rests on.
 
 `format_version` appears in two documents — the store index and each journal
 manifest — and neither accepts a version this build does not read. An unknown
-`format_version` is exit 1. **There is no migration path in 0.1, and no repair
+`format_version` is exit 1. **There is no migration path, and no repair
 path at any point:** every inconsistency listed under [Corruption](#corruption)
 is refused, never reconstructed.
 
@@ -298,7 +298,7 @@ The uncertainty is named precisely, and its direction matters:
   can die between the commit decision and the response reaching the caller, so
   an interrupted command's effect is *unknown*, not *undone*. Re-running the
   batch is the caller's decision, and there is no request-id or exactly-once
-  retry in 0.1.
+  retry.
 - **An acknowledged write is durable.** Once a command has printed its success
   response and exited 0, the batch is committed and made durable, and no later
   command will find it half-applied.

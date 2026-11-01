@@ -296,3 +296,17 @@ design from the tool."** So:
   the operator did not offer and this pass may not invent.
 
 Reconcile complete. The slice is ready for `/close`.
+
+### Addendum — F-5, after close
+
+The operator authorised the fence crossing on 2026-11-02 ("update the store-format
+doc if it's a small change"), so the escalation this finding carried is discharged:
+`docs/store-format.md`'s three 0.1-scoped phrases were de-versioned, and
+`design.md` §14.2 now records the correction rather than claiming the path was
+never touched.
+
+The finding keeps `tolerated` — that was the audit's judgement on the authority it
+held, and a later authorisation does not make the earlier judgement wrong. The
+observation also stands unchanged: the statements were true of `format_version` 1
+and are still true; what was stale was their scope. Recorded here so the ledger
+does not read as an open escalation after the work landed.

@@ -1976,3 +1976,28 @@ tree, and crates.io still carries 0.1.1.
 **Origin.** `IMP-001` (fulfilled by SL-002) resolves with this closure; the
 deferred `epistemic-records` set stays with `IMP-004`, and the loader hardening
 with `IMP-005`.
+
+### Addendum, post-close: F-5 resolved for real (2026-11-02)
+
+The operator authorised the fence crossing the audit could not grant ("yeah update
+the store-format doc if it's a small change"), so F-5's tolerated disposition is
+now overtaken by an actual repair rather than left standing as a pending
+escalation. The ledger keeps `tolerated` because that was the audit's judgement on
+the authority it held; what happened next is recorded here.
+
+Three phrases in `docs/store-format.md` spoke in 0.1's voice where the claim holds
+for `format_version` 1 in every release:
+
+- "It is written against the 0.1 build" → "unchanged since the 0.1 build";
+- "**There is no migration path in 0.1**, and no repair path at any point" →
+  "no migration path", the qualifier dropped (there is none in 0.2 either);
+- "there is no request-id or exactly-once retry in 0.1" → the qualifier dropped.
+
+Nothing about the format, the protocol or the durability promise changed; this is
+the document's voice, and `format_version` is still 1. `design.md` §14.2's fence
+entry now records the correction instead of claiming the path was never touched.
+
+Conformance is unchanged by the edit — `docs/**` is a `scope-relevant` selector, so
+the path is covered rather than undeclared: still 26 conformant, 0 undelivered, 4
+undeclared (the review lane's cells). The §14.2 fence proof in the audit remains
+true of the *format*: no `src/`, manifest or store-format protocol byte moved.
