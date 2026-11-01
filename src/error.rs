@@ -20,6 +20,22 @@ pub enum Reject {
     MissingCommand,
     /// The command line named a command 0.1 does not define.
     UnknownCommand(String),
+    /// The declaration input is not an object or an array of objects.
+    NotADeclaration,
+    /// An entity's `id` is present but is not a nonempty string: `null`, a
+    /// number and `""` are invalid, and none of them asks for generation.
+    InvalidId {
+        /// What the `id` member held, for the message.
+        found: String,
+    },
+    /// One top-level field of one entity is given two incompatible operations by
+    /// this batch, which refuses the whole batch.
+    ConflictingDeclaration {
+        /// The entity whose fields conflict.
+        id: String,
+        /// The top-level field assigned both a value and a drop, or two values.
+        field: String,
+    },
 }
 
 /// The store could not be read or written: exit 1.
@@ -73,6 +89,20 @@ impl fmt::Display for Reject {
         match self {
             Reject::MissingCommand => write!(formatter, "no command given"),
             Reject::UnknownCommand(command) => write!(formatter, "unknown command: {command}"),
+            Reject::NotADeclaration => {
+                write!(
+                    formatter,
+                    "a declaration must be an object or an array of objects"
+                )
+            }
+            Reject::InvalidId { found } => write!(
+                formatter,
+                "invalid entity id: {found}, and an id must be a nonempty string"
+            ),
+            Reject::ConflictingDeclaration { id, field } => write!(
+                formatter,
+                "conflicting declarations for entity {id} on field {field}"
+            ),
         }
     }
 }
@@ -115,10 +145,26 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 3] = [
+        let cases: [(Error, u8); 6] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
+                INVALID_INPUT,
+            ),
+            (Reject::NotADeclaration.into(), INVALID_INPUT),
+            (
+                Reject::InvalidId {
+                    found: "null".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::ConflictingDeclaration {
+                    id: "smut".to_owned(),
+                    field: "body".to_owned(),
+                }
+                .into(),
                 INVALID_INPUT,
             ),
             (sample_store_failure().into(), STORE_FAILURE),
@@ -144,5 +190,17 @@ mod tests {
 
         let unknown = Reject::UnknownCommand("frobnicate".to_owned());
         assert!(unknown.to_string().contains("frobnicate"), "{unknown}");
+
+        let bad_id = Reject::InvalidId {
+            found: "null".to_owned(),
+        };
+        assert!(bad_id.to_string().contains("nonempty string"), "{bad_id}");
+
+        let conflict = Reject::ConflictingDeclaration {
+            id: "smut".to_owned(),
+            field: "body".to_owned(),
+        };
+        assert!(conflict.to_string().contains("smut"), "{conflict}");
+        assert!(conflict.to_string().contains("body"), "{conflict}");
     }
 }
