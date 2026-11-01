@@ -10,6 +10,12 @@ raiser    = "reviewer"
 responder = "implementer"
 rounds_base = 0
 contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Read-only pass over PHASE-06 (84a8d5f..d8a7cb4) in a pinned worktree, lensed on whether the shipped guide names behaviour the code lacks: the nine keys and three defaults against their constants, roots-only for where, traversal presence, both reason spellings and their order, the price budget does not bound, the recipe s direction against the fixture data, and the example being the one the tests execute. Blocker class clean. Seven findings (two minors, five nits), all report-only. F-1 was the fourth instance of the assertion-that-cannot-fail family; F-3 took three attempts, the second of which the verifier rejected as still vacuous and the third of which holds. F-2 tolerated with the duplication ownership recorded. Two of the findings corrected the responder s own earlier dispositions, and four defects the repair batch itself introduced were found and fixed."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
@@ -64,7 +70,7 @@ note = "Verified by the independent seat at d8a7cb4: the pin now names its own s
 
 [[finding]]
 id = "F-3"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "Three further pins are satisfiable by a sentence other than the one they are named for"
 detail = """`src/learn.rs:344`, `:418`, `:450`. `"100"` is satisfied by the preamble at `:97`, so the `limit` default is unpinned; `the_guide_points_at_smut_conventions_once` asserts presence while `"smut conventions"` occurs three times; `"nine"` is satisfied by `:96`/`:203` rather than the client-side paragraph the test is about. Same failure mode as F-1 at lower stakes: the assertion passes for a reason the test name disclaims, so an editor can weaken the guide's real claim with the suite green. Route: assert `"default 100"`/`"default 10000"`, count the pointer inside the Conventions section, and name the client-side paragraph's own sentence."""
@@ -91,6 +97,11 @@ act = "dispose"
 role = "responder"
 disposition = "fix-now"
 response = """Contested twice, fixed on the third attempt in `91e15a8`. First answer: keyword presence. Second: "default 100"/"default 10000"/"default 1" — which the verifier showed are substrings of each other, so deleting the limit or depth sentence still left the pin green; my strengthening was itself an instance of the family it was fixing. Third: each default is pinned by its own clause ("cap on the result, default 100", "cap on entity expansions, default 10000", "default 1. 0 is roots-only"), and the conventions pointer by its section's sentence ("a set never validates, never selects and never touches a store") rather than the phrase the header also carries. Negative controls run per pin: deleting the limit line reddens with "the guide omits cap on the result, default 100"; replacing the pointer sentence reddens. Recorded honestly: my first control used a global substitution that rewrote the assertion alongside the guide, so it proved nothing — the valid control deletes a line."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Third attempt verified and accepted, with each pin checked against the guide text rather than against the previous answer: "cap on the result, default 100" occurs only on the limit line, "cap on entity expansions, default 10000" only on the budget line, "default 1. 0 is roots-only" only on the depth line (and no near neighbour satisfies them, e.g. the preamble's "subject to the default limit of 100" lacks "cap on the result"); the conventions pointer sentence occurs once, inside the Conventions section; and no pin is green only because flattening joined two sentences across a newline. The earlier attempts failed on exactly this test, and the recorded controls delete a line rather than substituting globally."""
 
 [[finding]]
 id = "F-4"
