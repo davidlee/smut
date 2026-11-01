@@ -24,6 +24,10 @@ pub mod boundary {
     /// One moment in the commit or recovery protocol.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub enum Boundary {
+        /// `.smut/`'s parent directory was fsynced, making the store directory's
+        /// own entry durable (§5.1, DEC-003). A new store's first commit cannot
+        /// begin before this completes.
+        InitialisationParentSynced,
         /// A staged entity file was written to completion.
         StagedPutWritten,
         /// A staged entity file was fsynced.
@@ -70,7 +74,8 @@ pub mod boundary {
 
     impl Boundary {
         /// The commit path's boundaries, in the order the protocol reaches them.
-        pub const COMMIT_PATH: [Boundary; 14] = [
+        pub const COMMIT_PATH: [Boundary; 15] = [
+            Boundary::InitialisationParentSynced,
             Boundary::StagedPutWritten,
             Boundary::StagedPutSynced,
             Boundary::StagedIndexWritten,
@@ -108,6 +113,7 @@ pub mod boundary {
         /// The name the fault seam's environment variables match.
         pub const fn as_str(self) -> &'static str {
             match self {
+                Boundary::InitialisationParentSynced => "initialisation_parent_synced",
                 Boundary::StagedPutWritten => "staged_put_written",
                 Boundary::StagedPutSynced => "staged_put_synced",
                 Boundary::StagedIndexWritten => "staged_index_written",
@@ -140,7 +146,8 @@ pub mod boundary {
         /// Which track reaches this boundary.
         pub const fn track(self) -> Track {
             match self {
-                Boundary::StagedPutWritten
+                Boundary::InitialisationParentSynced
+                | Boundary::StagedPutWritten
                 | Boundary::StagedPutSynced
                 | Boundary::StagedIndexWritten
                 | Boundary::StagedIndexSynced
@@ -307,9 +314,9 @@ impl Store {
     ///
     /// A process using a possibly new `.smut/` syncs the parent entry itself
     /// rather than trusting the process that won `mkdir` (DEC-004). The fsync
-    /// goes through [`durable::sync_directory`], the crate's only fsync site;
-    /// it is labelled [`Boundary::ParentDirectorySynced`], which is the
-    /// registry's name for a directory fsync that makes an entry durable.
+    /// goes through [`durable::sync_directory`], the crate's only fsync site, and
+    /// carries [`Boundary::InitialisationParentSynced`] so an interruption here is
+    /// told apart from the commit path's own parent fsync.
     fn initialise(&self) -> Result<(), StoreError> {
         let directory = self.directory();
 
@@ -319,27 +326,26 @@ impl Store {
             Err(source) => return Err(failure("create_store_directory", &directory, source)),
         }
 
-        durable::sync_directory(&self.root, Boundary::ParentDirectorySynced)
+        durable::sync_directory(&self.root, Boundary::InitialisationParentSynced)
     }
 
     /// Step 5: recovery, strictly before validation (DEC-004).
     ///
-    /// PHASE-05 replaces this body with the journal's recovery. Recovery removes
-    /// and replays journal state; it never publishes an index, so this no-op
-    /// cannot create one.
+    /// Recovery runs under the lock and never publishes an index of its own; it
+    /// discards a staging state, replays a decided commit, or finishes clearing
+    /// a done state (§4.4).
     fn recover(&self) -> Result<(), StoreError> {
-        Ok(())
+        journal::recover(&self.directory())
     }
 
     /// Step 8: publish the write set as one durable batch.
     ///
-    /// PHASE-05 replaces this body with the journal's commit: stage every entity
-    /// file and the fresh `index.json`, fsync the barrier, rename to the commit
-    /// state, apply, fsync, rename to done, unlink. Until then it refuses, so no
-    /// code path in this phase can publish an index and a command that asked for
-    /// a write is told the write did not happen.
-    fn commit(&self, _snapshot: &Snapshot, _write_set: &WriteSet) -> Result<(), StoreError> {
-        Err(StoreError::NotYetImplemented { step: "commit" })
+    /// The journal stages every entity file and the fresh `index.json`, makes
+    /// them durable, renames the staging state to the commit state — the commit
+    /// decision — and only then applies (§4.3). This is the one code path that
+    /// creates an index.
+    fn commit(&self, snapshot: &Snapshot, write_set: &WriteSet) -> Result<(), StoreError> {
+        journal::commit(&self.directory(), snapshot, write_set)
     }
 }
 
@@ -570,6 +576,7 @@ mod tests {
     #[test]
     fn the_barrier_apply_and_recovery_boundaries_are_registered_by_name() {
         for name in [
+            "initialisation_parent_synced",
             "staged_put_synced",
             "staged_index_synced",
             "staged_manifest_synced",
@@ -1078,55 +1085,85 @@ mod store_tests {
     }
 
     #[test]
-    fn a_write_set_reaches_the_commit_step_and_publishes_nothing() {
+    fn a_write_set_is_published_as_one_durable_batch() {
         let scratch = Scratch::new();
         scratch.healthy();
-        let before = scratch.listing();
         let store = scratch.store();
         let mut probe = Probe::new(&store, false, one_put());
 
-        let error = store
-            .run(&mut probe)
-            .expect_err("the commit path is PHASE-05's");
+        let output = store.run(&mut probe).expect("the batch commits");
 
-        assert!(
-            matches!(
-                error,
-                Error::Store(StoreError::NotYetImplemented { step: "commit" })
-            ),
-            "{error}"
+        assert_eq!(output, "1 entities\n");
+
+        let snapshot = store.load().expect("the committed store");
+        assert_eq!(
+            snapshot.entities()[&Id::new("alpha")],
+            serde_json::json!({"id": "alpha"}),
+            "the put replaced the stored entity"
         );
-        assert_eq!(error.exit_code(), 1);
-
-        let mut expected = before;
-        expected.push(LOCK_BASENAME.to_owned());
-        expected.sort();
+        assert_eq!(
+            snapshot.index().basename(&Id::new("alpha")),
+            Some("Ab3.json"),
+            "an existing id keeps its uid"
+        );
         assert_eq!(
             scratch.listing(),
-            expected,
-            "the run created the lock and published no index"
+            ["Ab3.json", "index.json", "lock"],
+            "the journal cleared itself and published nothing else"
         );
     }
 
+    #[cfg(feature = "fault-injection")]
     #[test]
-    fn a_first_declaration_initialises_the_store_without_an_index() {
+    fn initialisation_reaches_its_own_parent_directory_boundary() {
+        use crate::store::fault::{Faults, install, reset};
+
+        let scratch = Scratch::new();
+        let store = scratch.store();
+
+        install(Faults::failing_at(Boundary::InitialisationParentSynced));
+        let refused = store.initialise();
+        reset();
+
+        let error = refused.expect_err("the parent fsync is armed to fail");
+        assert!(
+            error.to_string().contains("initialisation_parent_synced"),
+            "{error}"
+        );
+
+        install(Faults::failing_at(Boundary::ParentDirectorySynced));
+        let second = store.initialise();
+        reset();
+
+        second.expect("initialisation does not use the commit path's fsync");
+    }
+
+    #[test]
+    fn a_first_declaration_initialises_the_store_and_publishes_its_first_index() {
         let scratch = Scratch::new();
         let store = scratch.store();
         let mut probe = Probe::new(&store, true, one_put());
 
-        let error = store
-            .run(&mut probe)
-            .expect_err("the commit path is PHASE-05's");
+        let output = store.run(&mut probe).expect("the first batch commits");
 
-        assert!(
-            matches!(error, Error::Store(StoreError::NotYetImplemented { .. })),
-            "{error}"
-        );
-        assert_eq!(
-            scratch.listing(),
-            [LOCK_BASENAME],
-            "initialisation creates the lock and no index"
-        );
+        assert_eq!(output, "0 entities\n");
+
+        let snapshot = store.load().expect("the committed store");
+        assert_eq!(snapshot.entities().len(), 1);
+        let basename = snapshot
+            .index()
+            .basename(&Id::new("alpha"))
+            .expect("a fresh uid")
+            .to_owned();
+        assert!(basename.ends_with(".json"), "{basename}");
+
+        let mut expected = vec![
+            basename,
+            INDEX_BASENAME.to_owned(),
+            LOCK_BASENAME.to_owned(),
+        ];
+        expected.sort();
+        assert_eq!(scratch.listing(), expected);
         assert_eq!(
             *probe.counts.borrow(),
             [0, 0],
@@ -1136,6 +1173,21 @@ mod store_tests {
             *probe.lock_held.borrow(),
             [false, true],
             "the pre-check runs without a lock, the authoritative pass under it"
+        );
+    }
+
+    #[test]
+    fn initialisation_creates_the_store_directory_and_no_index() {
+        let scratch = Scratch::new();
+        let store = scratch.store();
+
+        store.initialise().expect("the store directory");
+
+        assert!(scratch.directory().is_dir());
+        assert_eq!(
+            scratch.listing(),
+            Vec::<String>::new(),
+            "initialisation publishes nothing; the first commit stages the index"
         );
     }
 }

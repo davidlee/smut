@@ -156,12 +156,6 @@ pub enum StoreError {
         /// What the contradiction is.
         reason: String,
     },
-    /// A protocol step this build does not carry out, refused rather than
-    /// silently skipped.
-    NotYetImplemented {
-        /// The step's name in [`crate::store::boundary`].
-        step: &'static str,
-    },
 }
 
 /// Everything a command can fail with: exactly these two classes, and no third.
@@ -294,10 +288,6 @@ impl fmt::Display for StoreError {
             StoreError::InvalidWriteSet { reason } => {
                 write!(formatter, "the write set cannot be stored: {reason}")
             }
-            StoreError::NotYetImplemented { step } => write!(
-                formatter,
-                "the store cannot {step} yet: this build does not publish a store change"
-            ),
         }
     }
 }
@@ -361,7 +351,12 @@ mod tests {
             StoreError::Locked {
                 path: PathBuf::from(".smut/lock"),
             },
-            StoreError::NotYetImplemented { step: "commit" },
+            StoreError::AmbiguousJournalState {
+                found: vec!["journal.commit".to_owned(), "journal.prepare".to_owned()],
+            },
+            StoreError::InvalidWriteSet {
+                reason: "alpha is both put and removed".to_owned(),
+            },
         ]
     }
 
@@ -508,6 +503,20 @@ mod tests {
         };
         assert!(symlinked.to_string().contains("Ab3.json"), "{symlinked}");
         assert!(symlinked.to_string().contains("symlink"), "{symlinked}");
+
+        let ambiguous = StoreError::AmbiguousJournalState {
+            found: vec!["journal.commit".to_owned(), "journal.prepare".to_owned()],
+        };
+        for named in ["journal.commit", "journal.prepare", "recovery"] {
+            assert!(ambiguous.to_string().contains(named), "{ambiguous}");
+        }
+
+        let write_set = StoreError::InvalidWriteSet {
+            reason: "alpha is both put and removed".to_owned(),
+        };
+        for named in ["alpha", "put", "removed"] {
+            assert!(write_set.to_string().contains(named), "{write_set}");
+        }
     }
 
     #[test]
