@@ -1,0 +1,24 @@
+id    = 13
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Pass over the RV-012 repairs at revision 51. While reading it, the retry ceiling in the guard was tightened (raise once to a bound the store can meet; if it truncates again, answer partially naming the refused bound), which staled this pass before it concluded; RV-014 took over at revision 52."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

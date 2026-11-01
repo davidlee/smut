@@ -80,15 +80,19 @@ questions the first-use store actually asked.
    pipeable `--format json` declaration on request, never validated and never
    auto-selected. Exactly two sets ship (DEC-017): `hygiene` and
    `epistemic-records`, the only domain with evidence. Each JSON seed carries a
-   fixed id and the release version, so re-installing updates that entity and the
-   store owns its copy afterwards. `learn` gains a pointer line and keeps its
-   single, descriptive, version-bound document.
+   fixed id and the release version, so re-installing replaces the fields the seed
+   supplies — the `body` included — and leaves fields the user added; the store owns
+   its copy only as an ordinary entity it may edit or delete, and the printed prose
+   says so. `learn` gains a pointer line and keeps its single, descriptive,
+   version-bound document.
 9. **The guide carries the idioms** — `learn` is the normative home of the
-   two-call composition (DEC-016): traverse for ids with `select:["id"]`, then
-   filter those ids as roots with `where`. The recipe is normative including its
-   completeness guard: the first response's truncation reasons are read before
-   its ids are filtered, because the second call cannot see what the first
-   dropped. It also teaches the label vocabulary and bounded rendering.
+   two-call composition (DEC-016): traverse for ids with `select:["id"]` in the
+   direction the relation points (containment is child → container, so it is asked
+   with `backlinks`), then filter those ids as roots with `where`. The recipe is
+   normative including its completeness guard: the first response's truncation
+   reasons are read before its ids are filtered, because the second call cannot see
+   what the first dropped. The example in the guide is the one the fixture test
+   runs, so a hand-written example cannot drift from the store's direction. It also teaches the label vocabulary and bounded rendering.
    Conventions state the principle and point at `learn` rather than repeating the
    recipe. A behaviour without its sentence in the
    guide is an unfinished fix (`finding-smut-17`), even when the behaviour needs

@@ -241,3 +241,37 @@ Corrected by the orchestrator: the findings file first claimed no verb prints a
 schema; `doctrine design contract --format prompt` does (embedded
 `knowledge::RecordKind`), it is just design-scoped. Everything else spot-checked
 against the store and the CLI.
+
+## RV-012 — adversarial pass 2 (codex), 2026-11-01
+
+Four findings (three from the operator's codex pass, one raised here), all
+`fix-now`, all verified before repair:
+
+- F-1 `major` (dedupe) — **DEC-016's recipe walked containment the wrong way.**
+  `follow:["part-of"]` from `session` returns the session alone (clusters point
+  *at* the session), and the second call then answers "no open questions" in a
+  complete-looking envelope — the guard cannot help, because nothing was
+  truncated. `backlinks:["part-of"]` at depth 2 reaches the eight open questions
+  (verified: `part-of` child→container, 5 clusters → session, 8 open questions).
+  Repaired in DEC-016's body, §9.4, §13.1 Guide, §13.3 scenario 2 and the scope:
+  the direction is stated in the recipe, the guide's example is the one the
+  fixture test runs, and the test asserts the eight ids *and* that the `follow`
+  variant reaches none. The store's `finding-smut-18` carries the same inverted
+  example — data, untouched; the lesson is recorded: never copy an example out of
+  the store without running it.
+- F-2 `minor` (review) — the composition control had no executable subject. §13.1
+  now names the discriminating fact (target stored and open, absent from the
+  truncated first result, second envelope complete-looking and empty), the naive
+  helper kept in the suite as the wrong answer, and the guarded conclusion that
+  must differ. No prior-response input, no propagation: the guard is client-side
+  and §9.4 says so.
+- F-3 `minor` (refresh) — DEC-018 and the §14.1 row still fixed the fixture to
+  pre-redaction numbers and a "retracted claim". Both repaired: counts name the
+  source snapshot, the committed array records its own counts in PROVENANCE.md,
+  the retirement case is the superseded finding, and provenance records redaction
+  scope and who resolved it.
+- F-4 `minor` (refresh, raised here) — §9.3 called the seed upsert "the store owns
+  its copy" while the seed supplies `body`: a hand-amended convention body is
+  silently replaced on re-install. The operator's own `vocab` is exactly that
+  amendment. Repaired in §9.3, §9.2's printed-prose note, the scope and the
+  conventions test row.

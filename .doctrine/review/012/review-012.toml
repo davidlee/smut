@@ -17,8 +17,204 @@ act = "conclude"
 role = "raiser"
 note = "Final pass over revision 46 (watermark 1cf9209e). Delta is the RV-011 F-1 repair: §2 and the §13.1 fixture row now name what the store holds (a superseded finding, settled and open findings, no retracted record), §9.2 names the store conflation as the drift the distinction corrects, and the scope objective matches. Re-read all fifteen sections against the brief, DEC-012 to DEC-019 and the code references; no open item remains on any ledger."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Read all 15 design sections, the brief's Query contract and Rendering, slice scope, DEC-012 through DEC-019 plus DEC-001/011 including bodies, referenced source seams and compatibility tests, both thread-3 research artifacts, and the real store via jq. Verified index/entity-id agreement and all five requested source-store facts. Checked all seven requested attack questions. Raised one major wrong-direction normative recipe and two minor issues concerning the composition verification subject and stale fixture promises. Read each finding back after raising. No blocker; schema preferences remain separate from correctness findings. Counterexamples are source-backed deductions and jq graph probes, not execution of 0.2 behavior. Findings await responder disposition; no design acceptance, edits to reviewed artifacts, store writes or commits.
+"""
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Adversarial pass 2 (operator codex) plus one finding raised here. Four findings: the recipe direction (major), the composition control (minor), DEC-018 and the fixture impact row (minor), the seed upsert claim (minor). All verified against the store and the text, all repaired in place; the repairs staled the pass, and RV-013 takes over."
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "DEC-016 walks containment in the wrong direction and returns no open questions"
+detail = """
+What the design says: §9.4 and §13.3 scenario 2 make DEC-016's two-call idiom the normative answer to open questions under session. DEC-016's prose gives the exact first call as {"from":"session","follow":["part-of"],"depth":2,"select":["id"]}. Design §9.2 defines part-of as child -> container.
+
+Concrete instance: jq over all 66 indexed entities in interview.local/.smut confirms session has no part-of field and each cluster points to session. Applying the specified outgoing relation for two hops yields only ["session"]. Filtering those ids for status:open gives no objects. Both envelopes are untruncated, so the new guard passes. Inverting the traversal with backlinks:["part-of"] at depth 2 reaches eight open question ids: q-audit-cost, q-channel-fix, q-fix-order, q-impact-query, q-more-friction, q-promotion, q-split, q-variance-mechanism. This is a deduction from verified JSON and the specified walker, not execution of an unbuilt 0.2 binary. finding-smut-18 in the source store contains the same erroneous example; it is evidence, not authority to propagate it.
+
+What it should say/do: change the normative DEC-016 example to backlinks:["part-of"], and require the guide's actual example (not a separately handwritten equivalent) to run against the fixture and assert the expected open-question ids. This challenges the direction of the published recipe, not roots-only where or the settled edge direction semantics. Severity major: following the normative recipe returns the wrong answer on the designated acceptance store even with fully satisfied truncation guards.
+"""
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted, and it is the more damaging of the two composition defects: the guard I added protects against truncation, and the recipe it protects walks the wrong way, so both envelopes are complete and both are useless. Verified independently before disposing: session has no part-of field; five clusters point to session by part-of; the eight open questions sit at depth two via backlinks from session (q-audit-cost, q-channel-fix, q-fix-order, q-impact-query, q-more-friction, q-promotion, q-split, q-variance-mechanism); the outgoing walk reaches session alone and filters to nothing.
+
+The duplicate that goes is the first call in DEC-016's prose and every restatement of it. The owner that survives is the direction discipline in 9.2: part-of is child to container, so a question about what hangs off a container is a backlink question, and the inverse is what follow answers. That discipline was already written down; the example contradicted it, and an example carries more weight than a rule a reader has to apply.
+
+Class swept: DEC-016 prose, the 9.4 bullet, 13.3 scenario 2, the README row in 14.1, and 13.1's guide row. The store's own finding-smut-18 carries the same inverted example - it is data and stays as it is, but it is where the error came from, so the sweep's rule is: no example may be copied from the store without being run.
+
+Two additions make the repair falsifiable rather than merely corrected: the guide's worked example must be the one the fixture test runs, and the test asserts the expected open-question ids, so a hand-written example cannot drift from the direction again.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted, and it is the more damaging of the two composition defects: the guard I added protects against truncation, and the recipe it protects walks the wrong way, so both envelopes are complete and both are useless. Verified independently before disposing: session has no part-of field; five clusters point to session by part-of; the eight open questions sit at depth two via backlinks from session (q-audit-cost, q-channel-fix, q-fix-order, q-impact-query, q-more-friction, q-promotion, q-split, q-variance-mechanism); the outgoing walk reaches session alone and filters to nothing.
+
+The duplicate that goes is the first call in DEC-016's prose and every restatement of it. The owner that survives is the direction discipline in 9.2: part-of is child to container, so a question about what hangs off a container is a backlink question, and the inverse is what follow answers. That discipline was already written down; the example contradicted it, and an example carries more weight than a rule a reader has to apply.
+
+Class swept: DEC-016 prose, the 9.4 bullet, 13.3 scenario 2, the README row in 14.1, and 13.1's guide row. The store's own finding-smut-18 carries the same inverted example - it is data and stays as it is, but it is where the error came from, so the sweep's rule is: no example may be copied from the store without being run.
+
+Two additions make the repair falsifiable rather than merely corrected: the guide's worked example must be the one the fixture test runs, and the test asserts the expected open-question ids, so a hand-written example cannot drift from the direction again.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Recipe direction: DEC-016 now asks containment with backlinks, §9.4/§13.1/§13.3 assert the eight ids and the follow-variant miss."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "Composition negative control has no specified executable subject or observable rejection"
+detail = """
+What the design says: §13.1 Composition row (line 782) requires the guarded recipe to report a partial answer and an unguarded recipe/test to be rejected by the assertion; §13.3 scenario 6 (815-819) repeats the reporting property. §9.4 specifies prose instructions and two independent queries, but names no executable composition/reporting surface, output shape, or failure assertion. src/learn.rs currently tests GUIDE text with contains checks; src/select.rs::envelope produces diagnostics only for the current Selection. The design adds no prior-response input to the second query.
+
+Concrete instance: let s reference 100 questions and let only the final one be open. First query at default limit returns s plus 99 questions with result_limit; second query filters those ids and correctly returns objects:[], truncated:false. These two ordinary CLI outputs are identical whether a caller later says 'partial answer' or 'no open questions'. A test that merely asserts first.truncated and second.objects.is_empty() cannot reject the bad composition. A test-local report helper that is not the documented recipe would only test the helper; a GUIDE.contains('truncated') check can pass even if the executable example discards the envelope before consulting it.
+
+What it should say/do: specify the subject and observable failure for the control: for example, an executable client-side recipe included in learn, run by the acceptance harness, whose partial outcome retains first-response reasons; run the same assertion against a variant that drops that guard and require it to fail. Alternatively classify the reporting behavior as human verification, retaining automated tests only for envelope facts and guide presence. No new smut query key or automatic provenance propagation is required. Severity minor: the guard itself is implementable by retaining the first envelope, but its automated verification promise is underspecified; it is not evidence of an incorrect current envelope.
+"""
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted. The row asserted that a bad composition is rejected by an assertion without naming the subject, the output, or the observation that rejects it, and the two envelopes alone cannot distinguish a guarded reading from a naive one. The 13.1 row will name all three.
+
+The discriminating fact, which is what the criterion must assert: in an over-cap store the open question that answers the query is stored and open, is absent from the truncated first result, and the second envelope over the ids you did receive is complete-looking and empty. That is a fact about the mechanism, not a preference, and it is what makes the naive composition wrong rather than merely unlucky.
+
+The control candidate, concretely: a deliberately naive helper in the test suite that takes the first envelope and filters its ids without consulting truncation, then asserts the answer is no open questions. It must be shown producing exactly that, and the guarded conclusion - a partial answer naming result_limit - must differ from it, so the two readings are distinguishable inside one test. The target-id assertion is what rejects the naive result: the store holds the answer, the truncated set does not, so the naive composition is falsified by the store rather than by the reviewer's opinion.
+
+No mechanism is added to smut: no prior-response input to the second query, no automatic propagation. Propagation stays client-side, which is what the guard asks of a client that retains the first envelope, and 9.4 will say so in those words so nobody later tries to put it in the envelope.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted. The row asserted that a bad composition is rejected by an assertion without naming the subject, the output, or the observation that rejects it, and the two envelopes alone cannot distinguish a guarded reading from a naive one. The 13.1 row will name all three.
+
+The discriminating fact, which is what the criterion must assert: in an over-cap store the open question that answers the query is stored and open, is absent from the truncated first result, and the second envelope over the ids you did receive is complete-looking and empty. That is a fact about the mechanism, not a preference, and it is what makes the naive composition wrong rather than merely unlucky.
+
+The control candidate, concretely: a deliberately naive helper in the test suite that takes the first envelope and filters its ids without consulting truncation, then asserts the answer is no open questions. It must be shown producing exactly that, and the guarded conclusion - a partial answer naming result_limit - must differ from it, so the two readings are distinguishable inside one test. The target-id assertion is what rejects the naive result: the store holds the answer, the truncated set does not, so the naive composition is falsified by the store rather than by the reviewer's opinion.
+
+No mechanism is added to smut: no prior-response input to the second query, no automatic propagation. Propagation stays client-side, which is what the guard asks of a client that retains the first envelope, and 9.4 will say so in those words so nobody later tries to put it in the envelope.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "§13.1 names the executable subject, the discriminating fact and the naive helper as control; §9.4 states the guard is client-side."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "DEC-018 and the impact table still bind the fixture to pre-redaction facts"
+detail = """
+What the design says: §2 lines 57-68 correctly labels 66/44/22 as pre-redaction evidence and states no retracted record; §13.1 Fixture row binds assertions to post-redaction properties and remeasured counts. However §14.1 line 841 still promises 'The normalised 66-entity array'. The cited DEC-018 prose explicitly requires an array 'of the 66 complete entities, public ids and fields preserved', enumerates the pre-redaction counts in PROVENANCE.md, and justifies promotion by 'a retracted claim'. Its privacy caveat allows removing/redacting content or not committing the fixture.
+
+Concrete instance: a privacy review removes one entity with no incoming references. The authorised fixture has 65 entities and 21 with no incoming references; the committing-phase measurements can satisfy §13.1 but contradict §14.1 and DEC-018's array/count requirements. Independently, jq confirms finding-smut-16 is status:superseded and no stored entity has status:retracted, so DEC-018's retracted-claim justification still presents the fact that §2 expressly corrected. This is the specific remaining wrong text, not a re-raise of the repaired §2/§13.1 claim.
+
+What it should say/do: refresh DEC-018 and §14.1 so fixed numbers describe the source snapshot only, the committed artifact records its own measured counts after privacy resolution, and the retirement case is described consistently with the store. DEC-018 already specifies provenance origin, sessions, ownership, copy date, counts and stale-vocab caveat; extend that account to identify redaction scope and reviewer/operator resolution without copying removed private text. Severity minor: stale governing promises conflict with an explicitly allowed fixture transformation; no current numeric measurement is wrong.
+"""
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. DEC-018 and the 14.1 row lag the corrected 2 and 13.1, and they are the wrong side of the lag: the governing record still fixes numbers and a retirement case that the corrected design no longer asserts.
+
+Records edited: DEC-018's prose, its choice facet and one consequence; the 14.1 fixture row. The counts become the source snapshot as measured before the privacy read-through, the committed array records its own counts in PROVENANCE.md at the phase that commits it, and the awkward-cases sentence names what the store actually holds - one superseded finding retired in place and no retracted record - since the store's own vocab is why the earlier wording said otherwise. The provenance account gains the two facts the operator caveat needs: the scope of any redaction and who resolved it, without carrying the removed text.
+
+Records swept: the 13.1 fixture row (already post-redaction, now cross-referenced), 2 (already labelled), the slice scope objective 10 (already corrected), and the notes. The positive control for the sweep is the count: 66/44/22 must appear only where the source snapshot is being described, and a grep for those three numbers is the test.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. DEC-018 and the 14.1 row lag the corrected 2 and 13.1, and they are the wrong side of the lag: the governing record still fixes numbers and a retirement case that the corrected design no longer asserts.
+
+Records edited: DEC-018's prose, its choice facet and one consequence; the 14.1 fixture row. The counts become the source snapshot as measured before the privacy read-through, the committed array records its own counts in PROVENANCE.md at the phase that commits it, and the awkward-cases sentence names what the store actually holds - one superseded finding retired in place and no retracted record - since the store's own vocab is why the earlier wording said otherwise. The provenance account gains the two facts the operator caveat needs: the scope of any redaction and who resolved it, without carrying the removed text.
+
+Records swept: the 13.1 fixture row (already post-redaction, now cross-referenced), 2 (already labelled), the slice scope objective 10 (already corrected), and the notes. The positive control for the sweep is the count: 66/44/22 must appear only where the source snapshot is being described, and a grep for those three numbers is the test.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "DEC-018 body, choice and consequences, and the §14.1 row now describe the source snapshot and the committed array separately."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "The seed upsert silently overwrites a locally amended convention body while the text promises the store owns its copy"
+detail = """
+Section 9.3 specifies the seed upsert precisely and then draws a conclusion the mechanism does not support. Re-install updates every field the seed supplies - type, id, version, title, body - and leaves fields the user added. Since `body` is supplied, a locally amended convention body is overwritten, silently, by the very command the section calls "an upsert, not a duplicate". The section then says "after installation the store owns its copy", which reads as edit protection and is not one.
+
+The instance is in the store this slate is derived from: `vocab` was amended by hand in the second session to add `superseded` to its status list, and the amendment is recorded in its body. Re-running `smut conventions hygiene --format json | smut declare -` would erase that amendment while leaving the store's id and extra fields intact - a partial overwrite that looks successful.
+
+What it should say: the seed's body is supplied, so a local amendment to it is replaced on re-install; amend a copy under a different id, or keep the amendment outside the seeded fields, or expect to re-apply it. One sentence, in 9.3 and in the set's own printed prose, because the buyer of an upsert claim is the person who already edited the record.
+"""
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The record lags the behaviour it describes: an upsert of supplied fields is what the section specifies, and the ownership sentence claims more than that. No protection is added - read-only or protected seeds would be a new mechanism, and the section is right that the pipe is the whole mechanism.
+
+Records edited: 9.3 gains the sentence that a local amendment to a supplied field is replaced on re-install, with the three options the operator actually has - amend a different entity, keep the amendment outside the seeded fields, or re-apply it. The epistemic-records and hygiene prose each carry one line saying the seeded body is advice that gets replaced, since the set's printed text is where a reader meets the idea first.
+
+Records swept: DEC-017's body, which says the store owns its copy and must not imply edit protection; the 9.4 guide bullet that points at conventions; and the conventions command tests in 13.1, which already assert the upsert overwrites and can now assert that a user-added field survives while an amended supplied field does not - the exact pair the earlier wording blurred.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The record lags the behaviour it describes: an upsert of supplied fields is what the section specifies, and the ownership sentence claims more than that. No protection is added - read-only or protected seeds would be a new mechanism, and the section is right that the pipe is the whole mechanism.
+
+Records edited: 9.3 gains the sentence that a local amendment to a supplied field is replaced on re-install, with the three options the operator actually has - amend a different entity, keep the amendment outside the seeded fields, or re-apply it. The epistemic-records and hygiene prose each carry one line saying the seeded body is advice that gets replaced, since the set's printed text is where a reader meets the idea first.
+
+Records swept: DEC-017's body, which says the store owns its copy and must not imply edit protection; the 9.4 guide bullet that points at conventions; and the conventions command tests in 13.1, which already assert the upsert overwrites and can now assert that a user-added field survives while an amended supplied field does not - the exact pair the earlier wording blurred.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "§9.3, §9.2 prose note, scope objective 8 and the conventions test row now say the seeded body is replaced."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

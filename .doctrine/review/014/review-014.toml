@@ -1,0 +1,24 @@
+id    = 14
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Final pass over revision 52 (watermark e6f7f5f1). Delta: §9.4 and DEC-016 now carry the retry ceiling and the client-side statement, plus the RV-012 repairs (recipe direction, executable composition criterion, seed upsert caveat, DEC-018 and §14.1 counts). Re-read all fifteen sections and the touched records; the direction example, the eight expected ids, the control candidate and the closure-of-loop claims agree with each other and with the store. No open item on any ledger."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

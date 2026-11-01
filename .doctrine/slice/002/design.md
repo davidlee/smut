@@ -597,6 +597,11 @@ the operator's own record, not a taxonomy for its own sake.
 
 None of this is enforced. The tool prints it and refuses to check it.
 
+Both sets also say, in the printed prose rather than only in the guide, that the
+seeded `body` is advice a re-install replaces: keep an amendment by editing under
+a different id or by keeping it out of the seeded fields, not by editing the
+seeded body in place and trusting it to survive.
+
 ### 9.3 Seeds
 
 `--format json` emits one entity, built from the same embedded prose so there is
@@ -609,9 +614,15 @@ no second copy to drift:
 
 The id is fixed (`conventions-hygiene`, `conventions-epistemic-records`), so
 `smut conventions hygiene --format json | smut declare -` is an upsert, not a
-duplicate. After installation the store owns its copy: re-installing updates the
-fields the seed supplies and leaves fields the user added alone (0.1's patch
-semantics). The binary never reads it back.
+duplicate. Re-installing updates every field the seed supplies — `type`, `id`,
+`version`, `title`, `body` — and leaves fields the user added alone (0.1's patch
+semantics). **That includes `body`:** a convention the operator amended by hand
+is replaced by the seeded text the next time the pipe runs, without a warning. So
+the store owns its copy only in the sense that it is an ordinary entity it may
+edit or delete; the seed does not protect an edit. Amend a different entity, keep
+the amendment outside the seeded fields, or expect to re-apply it — and the
+printed set says so, because the reader who meets the upsert is the one who
+already edited the record. The binary never reads the copy back.
 
 ### 9.4 The guide
 
@@ -621,8 +632,11 @@ semantics). The binary never reads it back.
 - the predicate summary, including missing versus null;
 - traversal labels as top-level fields, both directions, and depth/budget;
 - the `traversal` provenance member and the truncation reasons;
-- the **two-call recipe** (DEC-016):
-  `select:["id"]` traversal, then `where` over those ids as roots;
+- the **two-call recipe** (DEC-016): traverse for ids with `select:["id"]` in the
+  direction the relation actually points, then `where` over those ids as roots.
+  Containment is child → container, so "which questions hang off this session"
+  is `backlinks:["part-of"]` at depth 2; `follow:["part-of"]` from a session
+  answers a different question and returns the session alone;
 - the recipe's **completeness guard** (below), which is part of the recipe, not
   advice beside it;
 - a minimal label vocabulary and the bounded-render advice;
@@ -631,12 +645,22 @@ semantics). The binary never reads it back.
 The recipe carries an obligation, and it is normative: inspect `truncated` and
 `truncation_reasons` on the **first** response before extracting ids. Either
 reason — `result_limit` or `traversal_budget` — makes the second answer a
-statement about the ids you received, not about the graph. Raise `limit` or
-`budget` where the store allows it and repeat; otherwise say the answer is
-partial. A `truncated: false` second envelope is never evidence of coverage,
-because it cannot see what the first call dropped. This is the one composition
-rule the release must teach, since `where` over roots is otherwise silent about
-everything discovery did not return.
+statement about the ids you received, not about the graph. Retry once with a
+bound the store can meet — `limit` above the discovered count, or `budget` above
+the expansions the query needs. If it truncates again, or the caller will not
+spend that scan, stop and answer partially, naming the reason and the bound that
+was refused. Repetition alone never establishes completeness, and a truncated
+first response makes a `truncated: false` second envelope no evidence at all,
+because the second call cannot see what the first dropped. This is the one
+composition rule the release must teach, since `where` over roots is otherwise
+silent about everything discovery did not return.
+
+The guard is carried **client-side**, and the guide says so: smut adds no
+prior-response input to the second call and performs no propagation, because
+the envelope describes one request. What the client must do is retain the first
+envelope and repeat its reason into its own answer — human or program. The
+example in `learn` is the one the fixture test runs, and its expected answer is
+the partial one.
 
 It removes 0.1's "where and traversal arrive in 0.2" notice. The conventions
 sets state principles and point at `learn` for the recipe; they do not repeat it.
@@ -755,7 +779,7 @@ phase that depends on it, not papered over at audit.
 | The fixture commits something private | A fresh-agent read-through is a phase gate before the fixture commit; the operator resolves anything found (DEC-018) |
 | Conventions advice reads as a schema | Two epistemics in the guide; the command prints and never validates; tests assert no store is created or read |
 | Predicate disambiguation is subtly wrong | Table-driven tests for literal, operator-only, mixed, `$eq` on a literal object with `$` keys, and missing/null |
-| The guide drifts from behaviour | `learn` tests assert the two-call recipe and its guard (both truncation reasons read before ids are filtered), the new keys, the `traversal` member and the removal of the 0.1 release notice |
+| The guide drifts from behaviour | `learn` tests assert the two-call recipe **with its direction** (containment asked by `backlinks`) and its guard (both truncation reasons read before ids are filtered), the new keys, the `traversal` member and the removal of the 0.1 release notice; the shipped example is the one the fixture test runs |
 | A criterion only polite input can reach | Every edge-case row in §10.3 that names a behaviour gets a test that produces that state, including `follow: []` with an induced edge between roots, `depth: 0` and an empty budget-ending queue; the composition guard gets a graph above the default cap whose only matching question orders beyond it |
 | A general claim is narrower than its recipe | The budget/backlink claim is stated with its exact boundary, and the determinism table names the mechanism per rule |
 | Fault-injection suites pass vacuously | The gate runs the feature matrix and asserts a non-zero executed test count for the injected suites |
@@ -777,9 +801,9 @@ durability guarantees and their tests remain in force unchanged.
 | Envelope | `tests/traversal.rs`, `tests/selection.rs` | `traversal` presence condition, `depths`/`edges` result-scoped, `frontier`/`dangling` walk-scoped, limit cut, reason order, `get` never traverses; edges induced from returned entities including an unrequested field and a returned-but-unexpanded node |
 | Hidden fields | `tests/traversal.rs` | `select` hides a reference field; edges and connectivity survive |
 | Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place (`finding-smut-16`), a settled finding, a mutually-referencing cluster — and no retracted record, which the array does not hold — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
-| Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, re-install upserts, no store created |
-| Guide | `src/learn.rs` unit tests | Two-call recipe **and its completeness guard** (both truncation reasons inspected before ids are extracted), 0.2 keys, `traversal`, conventions pointer; the 0.1 "arrives in 0.2" text is gone |
-| Composition | `tests/fixture.rs`, `src/learn.rs` tests | An over-cap graph: the first call truncates with `result_limit`, and the guarded recipe reports a partial answer instead of "no open questions"; the control candidate — a recipe or test that drops the first envelope and asserts the filtered answer complete — is rejected by the assertion |
+| Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, no store created; on re-install a user-added field survives while an amended seeded field (`body`) is replaced — the exact pair §9.3 promises |
+| Guide | `src/learn.rs` unit tests, `tests/fixture.rs` | The two-call recipe **with its direction**, asserted by running the shipped example against the fixture: `backlinks:["part-of"]` at depth 2 from `session` reaches the eight open questions (`q-audit-cost`, `q-channel-fix`, `q-fix-order`, `q-impact-query`, `q-more-friction`, `q-promotion`, `q-split`, `q-variance-mechanism`), and the `follow` variant reaches none of them; plus the completeness guard (both reasons inspected before ids are extracted), 0.2 keys, `traversal`, conventions pointer, and the 0.1 "arrives in 0.2" text gone |
+| Composition | `tests/fixture.rs`, `src/learn.rs` tests | Executable subject and observable rejection. An over-cap scratch store built so the only open question sorts beyond the default cap. Assertion one: the target id is stored and `open`, is **absent** from the truncated first result, and the second envelope over the received ids is `truncated: false` with `objects: []` — the discriminating fact, which is what makes a naive composition wrong rather than unlucky. Assertion two: a deliberately naive helper in the suite (filter the first envelope's ids, ignore its reasons) yields "no open questions", while the guarded conclusion yields a partial answer naming `result_limit`; the two must differ. The control candidate is that naive helper, kept as the wrong answer the guarded path must not reproduce. No prior-response input and no propagation are added to smut |
 | Render | `tests/render.rs` | Leading notice discloses `traversal_budget` and dangling without a stored byte able to absorb it |
 | Compatibility | `tests/compatibility.rs` | 0.1 `query {}` pinned unchanged; additivity pin after a 0.2 query; the re-cut carries its reason |
 | Regression | existing `tests/*` | 0.1 declaration, store, recovery, order, render and CLI suites stay green |
@@ -803,7 +827,10 @@ durability guarantees and their tests remain in force unchanged.
    `questions`, filter resolved questions, render Markdown, delete a reference
    and see it reported as dangling rather than recreated.
 2. The first-use store answers "which open questions hang off this session?" in
-   two calls, with `select:["id"]` on the first.
+   two calls with `select:["id"]` on the first: `backlinks:["part-of"]` at depth
+   2 from `session`, then `where:{"status":"open"}`, returning the eight open
+   questions by id. The same query with `follow:["part-of"]` returns `session`
+   alone, and the test asserts that difference.
 3. A depth-1 wildcard walk over the five clusters returns the clusters and their
    depth-1 neighbours, with edges and depths, and a depth-2 walk moves the
    frontier out by one and grows the edge set.
@@ -811,12 +838,15 @@ durability guarantees and their tests remain in force unchanged.
    reports the second root in the frontier, and sets `traversal_budget`.
 5. `smut conventions epistemic-records --format json | smut declare -` creates
    one entity with id `conventions-epistemic-records`; running it again updates
-   that entity rather than adding another.
+   that entity rather than adding another, replacing the seeded `body` and keeping
+   a field the user added.
 6. A graph above the default limit whose only matching question orders beyond
-   the cap: the first call truncates with `result_limit`, and the guided recipe
-   reports the partial answer rather than "no open questions". The same graph
-   under a budget that cuts discovery reports `traversal_budget`, and the
-   filtered second call does not turn either into apparent completeness.
+   the cap: the first call truncates with `result_limit` and does not return the
+   target, the second envelope over the received ids is complete-looking and
+   empty, a naive composition therefore answers "no open questions", and the
+   guarded conclusion names `result_limit` instead. The same graph under a budget
+   that cuts discovery reports `traversal_budget`, and neither case becomes
+   apparent completeness.
 
 <!-- doctrine:section sec-8 -->
 ## 14. Code impact and selector commitments
@@ -838,7 +868,7 @@ durability guarantees and their tests remain in force unchanged.
 | `src/main.rs` | Route `conventions`; it requires no store |
 | `src/lib.rs` | Export `predicate`, `walk`, `conventions` |
 | `tests/**` | Predicate, traversal, determinism, fixture, conventions, render, compatibility and CLI tests |
-| `tests/fixtures/interview/**` | The normalised 66-entity array and its provenance note |
+| `tests/fixtures/interview/**` | The normalised entity array (66 entities as measured before the privacy read-through; the committed array records its own counts) and its provenance note |
 | `README.md` | Replace the 0.1/0.2 boundary example with the brief's query example through Markdown (traverse, filter, render, delete, dangling); keep the Mermaid step named as 1.0; document conventions, backlink cost and provenance |
 | `Cargo.toml`, `Cargo.lock` | Release version `0.2.0`; no dependency change |
 
