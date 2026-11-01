@@ -7,8 +7,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
-`4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04…07 planned) ·
-design locked at run rev 62; plan repaired round 1
+`4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04 `fddbe33`;
+PHASE-05…07 planned) · design locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -67,6 +67,29 @@ design locked at run rev 62; plan repaired round 1
   nine), `src/error.rs` (two assertions) and the README's key-refusal sentence.
   Gates green in both feature configurations; five negative controls each turned
   the owning test red. `src/learn.rs` untouched (GAP-1).
+
+- **PHASE-04** (`fddbe33`, C3) — `tests/fixtures/interview/entities.json`: one
+  normalised array of the first-use store's 66 entities, read through `smut
+  query '{"limit":400}'` with the store directory as cwd, sorted by id, each
+  entity in the store's own serialisation order (`id` first, remaining keys
+  lexical), values verbatim. Declared into an empty directory it creates 66
+  entities and reads back an identical array, so it rebuilds the store rather
+  than sampling it; it is the only copy of the data and nothing reads `.smut`
+  internals. `PROVENANCE.md` records the source snapshot, the operator's G1
+  privacy ruling (read-through waived 2026-11-02, consent from recall, nothing
+  removed, no redaction, resolved by the owner), the committing phase's residual
+  scan, the normalisation rules and the array's own counts (66 entities, 28
+  statused, 44 reference targets, 22 with no incoming reference, 5 clusters, 0
+  retracted, 8 open questions). `tests/fixture.rs`: 9 tests over a store declared
+  from that array in a copied `Scratch` (no `tests/common`) — non-empty and
+  read-back count, an unreferenced entity, `finding-smut-16` superseded in place,
+  a settled finding, a mutually referencing pair, exactly the five clusters, no
+  retracted record, and the two-call acceptance query by id
+  (`backlinks:["part-of"]` depth 2 from `session`, then those ids as `where`
+  roots filtered to `open` = the eight). Red observed on the absent file;
+  negative control amputating one cluster's `part-of` edge turned exactly the two
+  containment assertions red. Gates green in both feature configurations; no
+  source path touched, `src/learn.rs` untouched (GAP-1).
 
 ### Learned
 
@@ -138,6 +161,28 @@ design locked at run rev 62; plan repaired round 1
 - `doctrine slice record-delta --start <commit>` takes the phase's entering HEAD
   itself, not `<commit>^`: passing the parent pulls a foreign commit (the R1
   repair batch) into the phase's delta.
+- A data fixture earns its red at its own layer: with `entities.json` absent, all
+  nine tests failed on the unreadable file — a red for the right reason. Its
+  non-vacuity check is an **amputation**, not a prose mutation: delete one
+  cluster's `part-of` edge from a copy and exactly the two containment assertions
+  go red (`cluster-mind` missing from `traversal.depths`; `q-split` missing from
+  the eight) while the entity assertions stay green. A fixture suite that
+  survives an impoverished store proves nothing about the graph.
+- The normalisation is **order-only**, so the array round-trips through `declare`
+  byte-identically and the fixture can prove it rebuilds the store. Re-sorting or
+  re-projecting values would have made that check impossible.
+- `session`'s prose says nine questions are open while the array holds eight —
+  the second stale claim in the store's own text, after `vocab` saying `projects`
+  is unused. A fixture assertion on a count must derive it from the entities; the
+  prose entities are not authority.
+- The privacy ruling is **recorded, not performed**: `PROVENANCE.md` cites the
+  operator's waiver so an auditor reads a ruling with a basis, and the phase's
+  residual scan is written up as a check on that waiver's premise, never as a
+  second verdict. That separation is what keeps `VH-1` a human act.
+- `doctrine slice record-delta --commit <S>` refuses to narrow an auto-bound solo
+  boundary: `--status completed` had already recorded `2ea81fa..fddbe33`, and the
+  safe mode's narrower `[S^, S]` span would have silently un-attributed the paths
+  in between.
 
 ### Open
 
@@ -189,7 +234,9 @@ design locked at run rev 62; plan repaired round 1
 - DEC-018: the fresh-agent read-through is **waived by the operator** and the
   verdict is *publish* — the ruling and its basis are under
   `## Operator rulings (G0)`. PHASE-04's provenance note records the waiver, so
-  an auditor reads a ruling, not an omission.
+  an auditor reads a ruling, not an omission. **Discharged at C3**: the array is
+  committed (`fddbe33`), nothing removed, no redaction, and the residual scan
+  found nothing materially private — see `## C3 — PHASE-04 landed`.
 - The design run state is gitignored but live; resume with `doctrine design resume
   SL-002`.
 
@@ -1100,3 +1147,73 @@ not). No criterion was narrowed.
 | 2026-11-02 | PHASE-03 | `VT-3`'s `roots-only` token moved into the test file inside the phase commit, then the commit amended and the boundary re-recorded (`record-delta`) before `verify-vt` | decided (#6, #7) | The obligation was met; only the mandate's literal was not. Amending keeps the phase one contiguous commit so `code_end_oid` is the tree the mandate was verified against |
 | 2026-11-02 | PHASE-03 | Research advisory (`slice research 2` reports drift from the added `plan.md`/`plan.toml`) left unrestamped | deferred, recorded (not escalated) | The drift is a plan-stage artefact added after the design, not design drift; the baseline is a design/plan-stage artefact and PHASE-01/02 ran under the same advisory. Restamping mid-phase would be an unrequested write outside this charter |
 | 2026-11-02 | PHASE-03 | `src/learn.rs` left untouched although it still refuses `where` in prose (GAP-1) | deferred (recorded decision, upheld) | PHASE-06 EX-1/EX-4 rewrite that section wholesale; the C2 ruling and R1's F-2 disposition stand |
+
+## C3 — PHASE-04 landed (2026-11-02)
+
+Charter: C3, **PHASE-04 only** (one phase per charter, ruled at C2). Entering
+HEAD `2ea81fa`, tree clean; phase flipped `in_progress` at `2ea81fa`; phase
+commit `fddbe33` (3 files added, +1319/−0 — the array is 1164 lines); boundary
+auto-bound at completion as `2ea81fa..fddbe33`, provenance `solo`; trailing notes
+commit after it.
+
+Cost: **one worker child** — the test suite only. The fixture itself was built by
+this seat with a scripted read of the binary's public query surface and a `jq`
+sort, because the raw store must not reach a subagent before the array is the
+consented artefact; the worker read the committed array, not the store. No
+rebrief, no repeat. Every worker green was re-run here, and all five gates were
+run by me on the final tree.
+
+**Verified here, not taken on report:**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean |
+| `cargo clippy --all-targets -- -D warnings` | clean; non-vacuity proven by injecting an `unused_must_use` into `tests/fixture.rs` (failed), then reverting |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | exit 0 — 15 suites, `fixture` 9/9, lib 313 |
+| `cargo test --features fault-injection` | exit 0 — 15 suites, lib 326, `durability_crash` 44 |
+| `doctrine slice verify-vt 2` | **PHASE-04 VT-1 PASS**; PHASE-01 9/9, 02 4/4, 03 4/4 still PASS; PHASE-05…07 fail/unattributable as expected |
+| §14.2 fence | `git show --stat fddbe33` is `tests/fixture.rs`, `tests/fixtures/interview/entities.json`, `tests/fixtures/interview/PROVENANCE.md` — no `src/**` at all, so `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix` and `src/learn.rs` are untouched |
+| VA-1 | `git status` shows only the three intended paths; `interview.local/.smut` is matched by `.gitignore:58`; no store internals tracked |
+
+**EX-1…EX-5 and VH-1.** EX-1: one normalised array, declared by the helper in
+`tests/fixture.rs`, the only copy — and it rebuilds the store (66 declares, full
+query reads back an identical array). EX-2: `PROVENANCE.md` carries the source
+snapshot, the waiver and its basis, who resolved it, and what the outcome was.
+EX-3: the nine assertions, on entities only. EX-4: the counts are the array's
+own, in both the sheet and the note. EX-5: green in both feature configurations.
+VH-1: satisfied by the operator's recorded ruling of 2026-11-02, which this phase
+transcribes; the residual it left (consent from recall) was honoured by scanning
+before the commit — nothing materially private found, so nothing was escalated
+and nothing was removed.
+
+**The residual was checked, and this is what it found.** Titles and bodies were
+scanned for credentials, contact details, URLs, postal codes, financial and
+health identifiers and mid-sentence proper nouns; the personal-content entities
+(`session`, `a-focus`, `convention`, `a-navigation`, `q-focus`) were read in
+full. The only personal mention is the operator's own *Slow Horses* viewing,
+which the ruling names as inside the consent. `finding-smut-10` quotes opaque
+store filenames as legibility examples — identifiers, not credentials. The
+`PROVENANCE.md` text says this is a check on the waiver's premise, not a second
+verdict.
+
+**Two things worth the seat's attention.** (1) `session`'s prose says nine
+questions are open while the array holds eight — the second stale claim inside
+the store's own text, and the reason EX-3 forbids asserting against vocabulary
+prose. (2) Two **review-lane** commits (`9e89d24`, `157ecf1`) landed between the
+phase's entering HEAD and its own commit, both under `.doctrine/review/**`; they
+ride in the boundary's range as foreign commits in the undeclared cell. Not a
+conflicting writer — no source or test path was involved — but it is why
+`record-delta --commit` refused to narrow the auto-bound span, and that refusal
+was correct.
+
+### Autonomy log additions (C3 · PHASE-04)
+
+| date | phase | decision | class | reason |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | PHASE-04 | Array element field order is the store's own wrapper order (`id` first, then lexical) rather than a re-sort; the array is sorted by id and nothing inside an entity is reordered | decided (#8) | Fixture mechanics, not the verdict. Re-serialising values would break the declare round-trip, and the round-trip is what lets the fixture prove it rebuilds the store |
+| 2026-11-02 | PHASE-04 | The array was built by this seat from the public query surface; only the *test suite* was delegated | decided (#11) | The G0 ruling flags raw store contents reaching a subagent. Building it here keeps the store in one context and gives the worker the consented, publishable artefact instead |
+| 2026-11-02 | PHASE-04 | The privacy residual was scanned by keyword, structure and full reads of the personal-content entities; nothing materially private found, so nothing was escalated, removed or redacted | decided (#10; residual not triggered) | Consent came from recall, so the premise was checked before the irreversible act. The check is recorded in `PROVENANCE.md` as a check — the verdict stays the owner's |
+| 2026-11-02 | PHASE-04 | Redeclared the cluster ids and the eight question ids as literals in `tests/fixture.rs` and `PROVENANCE.md` | decided (#8) | They are acceptance properties from §13.1/§13.3 scenario 2, not counts of the fixture; asserting by id is what makes the composition claim testable. No *total* count is hardcoded — the suite compares against the array's own length |
+| 2026-11-02 | PHASE-04 | Boundary left as the auto-bound `2ea81fa..fddbe33` after `record-delta --commit fddbe33` refused to narrow it | decided (lifecycle artefact) | The refusal is right: the two review-lane doc commits sit between start and end and appear in conformance's undeclared cell, which is honest. Narrowing would have un-attributed nothing useful and moved those paths silently |
+| 2026-11-02 | PHASE-04 | Research advisory left unrestamped (same reason as C3/PHASE-03) | deferred, recorded (not escalated) | Plan-stage drift, not design drift; no charter authority to restamp mid-phase |
