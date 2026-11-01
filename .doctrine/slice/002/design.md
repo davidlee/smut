@@ -55,7 +55,9 @@ not reopen its mechanisms; it extends four seams.
 | Store format | `docs/store-format.md` | Unchanged; `format_version` stays 1 |
 
 The first-use store is product evidence, not defect evidence: 66 entities, 44
-distinct reference targets, 22 with nothing pointing at them, labels `part-of`
+distinct reference targets, 22 with nothing pointing at them — measured before
+the privacy read-through of §11, so source evidence rather than a test assertion
+(§13.1 pins the committed array) — labels `part-of`
 (65), `about` (48), `answers` (5) and `projects` (1). It contains a superseded
 record, a retracted finding and mutually-referencing clusters. It is the
 acceptance graph (DEC-018), with one caveat: its `vocab` entity says `projects`
@@ -662,7 +664,7 @@ sets state principles and point at `learn` for the recipe; they do not repeat it
 
 | Case | Behaviour |
 | --- | --- |
-| `from: []` | selects nothing; no traversal member even if `follow` is supplied |
+| `from: []` | selects nothing; `traversal` is still present when `follow` or `backlinks` was supplied, with empty `depths`, `edges` and `frontier` |
 | supplied root absent | `missing`, in `from` order, unique; never consumes `limit` |
 | supplied root fails `where` | omitted, not `missing` |
 | a discovered entity fails `where` | still discovered and returned: roots-only |
@@ -750,7 +752,7 @@ durability guarantees and their tests remain in force unchanged.
 | Determinism | `tests/traversal.rs` | Named fields in query order (different from lexical), wildcard lexical, array order, outgoing before incoming, incoming source ID order; a rebuilt store with shuffled index entries and filenames yields an identical envelope |
 | Envelope | `tests/traversal.rs`, `tests/selection.rs` | `traversal` presence condition, `depths`/`edges` result-scoped, `frontier`/`dangling` walk-scoped, limit cut, reason order, `get` never traverses; edges induced from returned entities including an unrequested field and a returned-but-unexpanded node |
 | Hidden fields | `tests/traversal.rs` | `select` hides a reference field; edges and connectivity survive |
-| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; 66 entities, 44 targets, 22 unreferenced; two-call composition answers "open questions under session"; backlinks hit and miss; superseded/retracted records present |
+| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded record, a retracted finding, a mutually-referencing cluster — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
 | Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, re-install upserts, no store created |
 | Guide | `src/learn.rs` unit tests | Two-call recipe, 0.2 keys, `traversal`, conventions pointer; the 0.1 "arrives in 0.2" text is gone |
 | Render | `tests/render.rs` | Leading notice discloses `traversal_budget` and dangling without a stored byte able to absorb it |
@@ -795,7 +797,7 @@ durability guarantees and their tests remain in force unchanged.
 | --- | --- |
 | `src/spec.rs` | Accept the five keys; `Spec` grows `where`, `follow`, `backlinks`, `depth`, `budget`; retire `FUTURE_KEYS` |
 | `src/predicate.rs` (new) | Predicate AST, parser, evaluator |
-| `src/walk.rs` (new) | `Fields`, `Walk`, `Edge`, `Dangling`, BFS and the expansion rules |
+| `src/walk.rs` (new) | `Fields`, `Walk`, `Dangling`, BFS and the expansion rules; no edge set (§7.2) |
 | `src/select.rs` | Roots → `where` → walk → order → limit; `Selection.walk`; `Reason::TraversalBudget`; conditional `traversal` in `envelope` |
 | `src/error.rs` | New refusals: bad predicate/operator/type, bad depth/budget, unknown convention, bad convention format |
 | `src/conventions.rs` (new) | Set registry, listing, prose, seed construction, format dispatch |

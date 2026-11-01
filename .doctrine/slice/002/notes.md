@@ -16,7 +16,8 @@ fresh-as-of: 2026-11-01 · reviewing (design run RV-007) · 33fc45e
 - DEC-012…DEC-019 from the eight inquiry dispositions; DEC-014 amended to the
   induced subgraph of returned entities.
 - 15-section `design.md`, materialised at revision 33; RV-005/RV-006 are
-  superseded stale passes, RV-007 is the open review pass.
+  superseded stale passes, RV-007 is the review pass (F-1…F-4 raised,
+  disposed fix-now, repaired).
 - 16 `design-target` selectors matching §14.
 - IMP-001 moved to `started`.
 
@@ -34,6 +35,12 @@ fresh-as-of: 2026-11-01 · reviewing (design run RV-007) · 33fc45e
   mapping bodies to ids in lexical order (mapping in this file).
 - The first-use store's `vocab` is stale: it says `projects` is unused, but
   `a-focus` uses it. Tests assert against entities, not vocab prose.
+- Presence of `traversal` keys on the *request* (either key supplied, empty
+  array included), never on the root set; `from: []` therefore still carries it.
+- Edge order is **result** order, not discovery order: edges are induced after
+  ordering and the limit, so DEC-012 lagged DEC-014 until the review repair.
+- Fixture counts are pre-redaction source measurements; the test pins properties
+  plus the committed array's own counts, so the privacy gate cannot redden it.
 
 ### Open
 
@@ -129,3 +136,51 @@ operator-vs-literal rule, and six determinism rules are acceptance criteria.
 - Review pass RV-005 was opened at revision 25 and went stale when the
   correction changed section fingerprints; a fresh pass is opened from the
   corrected materialisation.
+- RV-007 review pass (agent pass, operator disposes and accepts). Four findings,
+  all `fix-now`, repaired in place rather than carried:
+  - F-1 `major` (dedupe) — §10.3 suppressed the `traversal` member for `from: []`,
+    contradicting §8.1 and invariant 5. Presence keys on the request only; the
+    row now says the member is present with empty `depths`/`edges`/`frontier`.
+    Owner: §8.1 + invariant 5 + DEC-012; the sweep found no other exception.
+  - F-2 `major` (refresh) — the scope said edges are in *discovery* order while
+    §7.2/§8.2 and DEC-014 say *result* order; DEC-012 said encounter order.
+    Resolution: result order wins. Edited `slice-002.md` (objective 5 and the
+    settled table) and DEC-012 (choice facet and body).
+  - F-3 `minor` (dedupe) — §14.1 gave the walker an `Edge` type §4 and DEC-014
+    abolished. Removed; the row now points at §7.2.
+  - F-4 `minor` (review) — §13.1 pinned 66/44/22 from the pre-redaction store
+    while DEC-018's privacy gate may change the fixture. §13.1 now pins the
+    acceptance properties plus the committed array's counts, measured at the
+    committing phase; §2 keeps the figures as source evidence.
+- Section fingerprints changed with the repairs, so every section attestation
+  must be recorded after them, never reused from before.
+- RV-007 went stale on those repairs, as RV-005 did before it. The run opens its
+  own pass on entering `reviewing`; opening one by hand (RV-008) does not rebind
+  it. The repair is a stage round trip (reviewing → drafting → reviewing) and the
+  pass the run opens there (RV-009) is the one to conclude. Do not renumber or
+  reconcile the stale ledgers: RV-005…RV-008 are the pass history.
+
+## What a further review pass would probe (RV-009)
+
+If this design came back for another pass, it would go at these, in order — none
+is a known defect, each is the place a later reader is most likely to be wrong:
+
+1. **The induced-edge derivation and `select`.** §8.2 derives edges from full
+   entities of returned ids. The claim "`select` cannot erase connectivity" is
+   true for edges; check that it is also true for what a Markdown client does
+   with them, since the renderer does not print edges.
+2. **Budget accounting under a `where`-filtered root set.** The budget counts
+   expansions, not roots; a filtered root list changes what is expandable, so
+   the boundary tests in §13 must construct the queue state, not reason about it.
+3. **Two accounts that are legitimately separate.** `frontier` is walk-scoped
+   and `depths`/`edges` result-scoped; a pass would re-test that no helper
+   function quietly cuts one with the other's bound.
+4. **The conventions seed's upsert claim.** §9.3 leans on 0.1's patch semantics
+   for "fields the user added survive"; that is 0.1 behaviour, so a pass would
+   confirm it with the existing patch tests rather than a new fixture.
+5. **`from: []` and `missing`.** The repaired presence rule makes the member
+   unconditional on the request's keys; the remaining risk is the interaction
+   with `missing`, which is untouched.
+
+Nothing here blocks the lock: each item is a check for the phase that builds it,
+and each has a place in §13.1's test map.

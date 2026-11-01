@@ -1,0 +1,24 @@
+id    = 9
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Pass over the repaired materialisation at revision 34 (watermark cd95c78b). Re-read sections 1-15; checked the four repairs against their dispositions (presence condition, edge order in scope and DEC-012, walker types, fixture assertion), re-checked the code references the design leans on, and confirmed the assumption that serde_json is built without preserve_order (Cargo.toml line 29). No new findings: the repairs are the only changes and each restores agreement rather than adding surface."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

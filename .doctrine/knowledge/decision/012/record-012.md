@@ -23,10 +23,11 @@ request keeps 0.1's five keys, so the compatibility pin does not move (DEC-019).
 - `depths` — one scalar per **returned** object: minimum discovery depth in the
   mixed graph (both directions), fixed by breadth-first first discovery.
 - `edges` — the induced edge set among **returned** objects, deduplicated by
-  `(source, field, target)`, in the order the walk encountered them, oriented
-  source → target as stored. Derived from full entities before projection, so a
+  `(source, field, target)`, in result order: for each returned id in the
+  result's own order, first occurrence wins. Oriented source → target as stored.
+  Derived from the returned entities after the limit and before projection, so a
   `select` that hides the reference field still yields the edge. Dangling
-targets are absent here and appear in `dangling`.
+  targets are absent here and appear in `dangling`.
 - `frontier` — discovered but never expanded, in discovery order (DEC-013).
 
 `depths` and `edges` describe the result and are cut to selected ids after the

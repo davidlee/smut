@@ -8,9 +8,167 @@ title = "design review of SL-002"
 facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
 raiser    = "raiser"
 responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Four findings raised, disposed fix-now and verified (F-1 presence of the traversal member, F-2 edge order across scope and DEC-012, F-3 walker edge type, F-4 fixture counts against the privacy gate). The repairs changed four section fingerprints, which went this pass stale by construction; the corrected materialisation was re-reviewed as RV-009."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Presence of the traversal member: §10.3 suppresses it for from: [], §8.1 and invariant 5 say it appears exactly when follow or backlinks is supplied"
+detail = "design.md §8.1 and invariant 5 (and DEC-012) state one presence condition: the traversal member appears exactly when the request supplied follow or backlinks, including an empty array, and nothing else. The §10.3 edge-case row for an empty from says the opposite - selects nothing, no traversal member even if follow is supplied - which invents a second condition (supplied and at least one root). The condition is load-bearing: it is what keeps every 0.1 response byte-identical under the full-envelope compatibility pin, and it is the thing the envelope tests assert. Two live accounts of one fact, one of which no test table row covers."
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate account that goes is the suppression clause in the §10.3 edge-case row for an empty from array. The surviving owner is the single condition in §8.1 and invariant 5: the traversal member appears exactly when follow or backlinks was supplied, including an empty array and including a root set that selects nothing. That owner is the one DEC-012 states and the one the 0.1 compatibility pin depends on, because it keys presence on the request rather than on the store or the root list.
+
+Class swept: every statement of the presence condition - §8.1, invariant 5, the §10.3 row, the envelope row of the test map, and DEC-012. The sweep criterion: grep the design and slice scope for turn "traversal" plus "supplied" and require one condition and no exception. The §10.3 row will read that the member is present with empty depths, edges and frontier, which is also what makes the from: [] case assertable rather than merely describable.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate account that goes is the suppression clause in the §10.3 edge-case row for an empty from array. The surviving owner is the single condition in §8.1 and invariant 5: the traversal member appears exactly when follow or backlinks was supplied, including an empty array and including a root set that selects nothing. That owner is the one DEC-012 states and the one the 0.1 compatibility pin depends on, because it keys presence on the request rather than on the store or the root list.
+
+Class swept: every statement of the presence condition - §8.1, invariant 5, the §10.3 row, the envelope row of the test map, and DEC-012. The sweep criterion: grep the design and slice scope for turn "traversal" plus "supplied" and require one condition and no exception. The §10.3 row will read that the member is present with empty depths, edges and frontier, which is also what makes the from: [] case assertable rather than merely describable.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Unchanged presence condition now the only account; §10.3 row repaired."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "Edge order drifts: scope says discovery order, design and DEC-014 say result order, DEC-012 says encounter order"
+detail = """
+Edge order is stated two ways across the governing records. slice-002.md objective 5 and the settled-decisions table in the same file both say edges are deduped in "discovery order, DEC-014". design.md §7.2 and §8.2 say result order: scan each returned id in result order, keep first occurrence. DEC-014 says result order and was amended for it. DEC-012 still says discovery order in its facet and "in the order the walk encountered them" in its body, so it lags the same amendment.
+
+The two orders coincide only when the request supplies no ordered key. With an ordered key they diverge, so the scope currently asserts a claim the design contradicts, and the DEC-012 body asserts a third. This is also the runbook review.scope item: the scope must assert nothing these decisions contradict and omit nothing they add.
+"""
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The design and DEC-014 are right and the scope and DEC-012 lag. Edges are derived from the returned entities after the ordering and the limit, so the order that survives is result order; discovery order would describe the walk rather than the result, and the whole point of the amendment was that the digestible edge set belongs to the result.
+
+Records edited: slice-002.md objective 5 and its settled-decisions table, and DEC-012 both in its choice facet and in the body bullet that says the walk encounter order. Records swept for the same claim: design §7.2, §8.2 and the §15 decision row (already result order), the slice notes, and the research artefact if it restates edge order. The verb is knowledge edit for DEC-012 and a direct edit for the scope, since the scope is a slice artefact.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The design and DEC-014 are right and the scope and DEC-012 lag. Edges are derived from the returned entities after the ordering and the limit, so the order that survives is result order; discovery order would describe the walk rather than the result, and the whole point of the amendment was that the digestible edge set belongs to the result.
+
+Records edited: slice-002.md objective 5 and its settled-decisions table, and DEC-012 both in its choice facet and in the body bullet that says the walk encounter order. Records swept for the same claim: design §7.2, §8.2 and the §15 decision row (already result order), the slice notes, and the research artefact if it restates edge order. The verb is knowledge edit for DEC-012 and a direct edit for the scope, since the scope is a slice artefact.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Scope and DEC-012 repaired to result order; design unchanged."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "Code-impact table gives the walker an Edge type the design abolished"
+detail = """
+design.md §14.1 lists the walker module as carrying `Fields`, `Walk`, `Edge`, `Dangling`. §4 says the opposite in two places: the module map lists `Walk`, `Dangling`, `Fields`, and the prose under the struct listing states plainly that the walk does not carry the edge set, because edges are derived from the returned entities after the limit. DEC-014 records the same consequence. The `Edge` in §14.1 is left over from before that correction and is the only place a walker-owned edge list survives, so it is exactly the kind of residue a planner would implement from.
+"""
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate that goes is the Edge token in the §14.1 code-impact row for the walker. The surviving owner is §4: the module map row lists Fields, Walk and Dangling, and the prose beside the struct listing states that the walk does not carry the edge set because edges are derived from the returned entities after the limit. DEC-014 records the same consequence, so the owner is corroborated outside the section being repaired.
+
+Class swept: every place that enumerates what the walker owns - the §4 module map, the §4 struct listing and prose, the §13.1 walker test row, and the §14.1 row. The sweep test is a positive one: search the design for the walker's type names and require that Edge appears only where the induced derivation is described, never as a walker-owned value.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate that goes is the Edge token in the §14.1 code-impact row for the walker. The surviving owner is §4: the module map row lists Fields, Walk and Dangling, and the prose beside the struct listing states that the walk does not carry the edge set because edges are derived from the returned entities after the limit. DEC-014 records the same consequence, so the owner is corroborated outside the section being repaired.
+
+Class swept: every place that enumerates what the walker owns - the §4 module map, the §4 struct listing and prose, the §13.1 walker test row, and the §14.1 row. The sweep test is a positive one: search the design for the walker's type names and require that Edge appears only where the induced derivation is described, never as a walker-owned value.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Edge removed from the walker row; §4 terminology now the only account."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "Fixture test pins exact entity counts that the privacy gate may change"
+detail = """
+design.md §13.1 pins the fixture test to the first-use store as measured today: 66 entities, 44 distinct targets, 22 with nothing pointing at them. §11 and §12 gate the fixture on a fresh-agent privacy read-through that may remove content before the fixture is committed (DEC-018), and the design explicitly does not assume what that read finds. If the read removes anything, or normalisation drops a private field, those three numbers in the test map become a red test that the gate itself produced, and the plan has no stated way to settle it.
+
+The assertion should be about the committed fixture, not about the pre-redaction measurement: either the counts are re-derived at commit from the fixture and provenance note and recorded then, or the test asserts the properties the acceptance case actually needs - at least one entity with no incoming reference, a superseded record, a retracted finding, mutually-referencing clusters - with counts asserted as whatever the committed array holds.
+"""
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted. The commitment to accept and its consequence is the question: whether the fixture test may pin three numbers measured before the privacy read-through, when the read-through is allowed to remove content. It may not, because then the gate that protects the operator is the same gate that reddens the suite.
+
+Resolution, in prose in this review: §13.1 asserts the properties the acceptance case needs - the committed array is non-empty, it contains at least one entity with no incoming reference, a superseded record, a retracted finding, and a mutually-referencing cluster - and it pins the counts of whatever the committed array holds, measured at the phase that commits it and recorded in that phase sheet, with the pre-redaction figures in §2 kept as evidence of the source store rather than as an assertion. §11 says the same thing in its own words: the redaction gate may change the fixture, and the assertion follows the fixture.
+
+Swept: the §2 measurements keep their role as source evidence, the §13.1 row, and the acceptance scenario 2 steps of §13.3, which must not depend on a count either.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted. The commitment to accept and its consequence is the question: whether the fixture test may pin three numbers measured before the privacy read-through, when the read-through is allowed to remove content. It may not, because then the gate that protects the operator is the same gate that reddens the suite.
+
+Resolution, in prose in this review: §13.1 asserts the properties the acceptance case needs - the committed array is non-empty, it contains at least one entity with no incoming reference, a superseded record, a retracted finding, and a mutually-referencing cluster - and it pins the counts of whatever the committed array holds, measured at the phase that commits it and recorded in that phase sheet, with the pre-redaction figures in §2 kept as evidence of the source store rather than as an assertion. §11 says the same thing in its own words: the redaction gate may change the fixture, and the assertion follows the fixture.
+
+Swept: the §2 measurements keep their role as source evidence, the §13.1 row, and the acceptance scenario 2 steps of §13.3, which must not depend on a count either.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixture row now asserts properties plus commit-time counts."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

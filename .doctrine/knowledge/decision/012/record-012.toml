@@ -12,7 +12,7 @@ tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "IMP-001's only new design question: what a traversal result carries beyond objects. prop-result-provenance recommended nodes, induced edges, unexpanded frontier and minimum depth."
-choice = "One conditional top-level `traversal` member holding `depths` (returned id -> minimum discovery depth), `edges` (induced, both endpoints returned, deduped, discovery order) and `frontier` (discovered but unexpanded, not cut by the limit). The member is absent when no traversal is requested."
+choice = "One conditional top-level `traversal` member holding `depths` (returned id -> minimum discovery depth), `edges` (induced, both endpoints returned, deduped, result order per DEC-014) and `frontier` (discovered but unexpanded, not cut by the limit). The member is present exactly when follow or backlinks is supplied, including an empty array, and absent otherwise."
 alternatives = ["A per-object `depth` member inside `objects` — collides with user fields and breaks the flat-entity rule", "One `result` object duplicating nodes and edges — two accounts of one fact", "An always-present `traversal` member — breaks the pinned 0.1 envelope"]
 rationale = "The frontier is the only information that exists nowhere else after the process exits; edges are the single derivation the 1.0 renderer and clients share; a conditional member leaves every 0.1 response identical."
 consequences = ["`traversal` appears iff follow or backlinks is supplied", "`depths` and `edges` are cut to returned ids; `frontier` is not", "Returning the edge set is a 0.2 deliverable of 1.0's Mermaid renderer, which is still built in IMP-002"]

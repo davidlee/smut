@@ -60,7 +60,7 @@ questions the first-use store actually asked.
 5. **Traversal provenance** — the result carries what the walk knew, in one
    conditional top-level `traversal` member (DEC-012): `depths` (returned id to
    minimum discovery depth), `edges` (induced among returned objects, deduped,
-   discovery order, DEC-014) and `frontier` (discovered but never expanded, DEC-013).
+   result order, DEC-014) and `frontier` (discovered but never expanded, DEC-013).
    The member is present exactly when `follow` or `backlinks` is supplied, so a
    non-traversing 0.1 envelope is unchanged. The frontier is the information that
    exists nowhere else once the process exits; `truncated: true` alone says
@@ -177,7 +177,7 @@ knowledge records, not scope prose.
 | --- | --- |
 | DEC-012 | Provenance is one conditional `traversal` member: `depths`, `edges`, `frontier` |
 | DEC-013 | Frontier = discovered but never expanded; depth and budget cut it, limit does not |
-| DEC-014 | Edges are induced among returned objects, deduped, discovery order, dangling excluded |
+| DEC-014 | Edges are induced among returned objects, deduped, result order, dangling excluded |
 | DEC-015 | Budget counts entity expansions; `traversal_budget` only on a real decline |
 | DEC-016 | The two-call idiom is normative in `learn`; conventions carry the principle |
 | DEC-017 | Two convention sets, fixed-id versioned seeds, the store owns its copy |
