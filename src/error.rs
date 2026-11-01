@@ -144,6 +144,18 @@ pub enum StoreError {
         /// The lock file that is held.
         path: PathBuf,
     },
+    /// More than one journal state exists, so recovery cannot know which one the
+    /// store is in (§4.4). Refused without modifying any evidence.
+    AmbiguousJournalState {
+        /// The state directories that are all present.
+        found: Vec<String>,
+    },
+    /// A write set contradicts the snapshot it was computed against, so it cannot
+    /// be translated into staged bytes.
+    InvalidWriteSet {
+        /// What the contradiction is.
+        reason: String,
+    },
     /// A protocol step this build does not carry out, refused rather than
     /// silently skipped.
     NotYetImplemented {
@@ -272,6 +284,15 @@ impl fmt::Display for StoreError {
             ),
             StoreError::Locked { path } => {
                 write!(formatter, "the store at {} is locked", path.display())
+            }
+            StoreError::AmbiguousJournalState { found } => write!(
+                formatter,
+                "more than one journal state is present ({}), and recovery never guesses \
+                 which one to apply",
+                found.join(", ")
+            ),
+            StoreError::InvalidWriteSet { reason } => {
+                write!(formatter, "the write set cannot be stored: {reason}")
             }
             StoreError::NotYetImplemented { step } => write!(
                 formatter,

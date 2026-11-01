@@ -620,6 +620,7 @@ pub const JOURNAL_STATES: [&str; 3] = ["journal.prepare", "journal.commit", "jou
 pub mod fault;
 pub mod fs;
 pub mod index;
+pub mod journal;
 
 use std::fs::{File, OpenOptions};
 use std::io;
