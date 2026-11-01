@@ -38,7 +38,7 @@ const OBJECTS_KEY: &str = "objects";
 ///
 /// Safe means: a single component, not `.` or `..`, not one of the store's own
 /// names, and not in the protocol's temporary namespace (§4.1).
-pub fn unsafe_basename(basename: &str) -> Option<&'static str> {
+fn unsafe_basename(basename: &str) -> Option<&'static str> {
     if basename.is_empty() {
         return Some("a basename cannot be empty");
     }
@@ -179,11 +179,6 @@ impl Index {
         self.objects.insert(id, basename);
 
         Ok(())
-    }
-
-    /// Stop mapping `id`, returning the basename it held.
-    pub fn remove(&mut self, id: &Id) -> Option<String> {
-        self.objects.remove(id)
     }
 
     /// Every mapping, in public-id order.
