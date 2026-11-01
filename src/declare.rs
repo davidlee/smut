@@ -121,6 +121,25 @@ impl Change {
     }
 }
 
+/// The delete response of the brief's contract.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DeleteResponse {
+    /// The ids removed, deduped in first-occurrence order.
+    pub deleted: Vec<Id>,
+    /// The ids that were not there, deduped in first-occurrence order.
+    pub missing: Vec<Id>,
+}
+
+impl DeleteResponse {
+    /// The response as JSON.
+    pub fn to_json(&self) -> Value {
+        Value::Object(Map::from_iter([
+            ("deleted".to_owned(), id_list(&self.deleted)),
+            ("missing".to_owned(), id_list(&self.missing)),
+        ]))
+    }
+}
+
 /// What the shell must write for one batch, in public-id space (DEC-001 rule 6).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct WriteSet {
@@ -296,6 +315,36 @@ pub fn apply(store: &Entities, batch: Batch) -> Result<Outcome, Reject> {
         },
         write_set,
     })
+}
+
+/// Plans the delete of `ids` against `store`: the response the command prints and
+/// the write set that removes them, both deduped in first-occurrence order.
+///
+/// Incoming references are left untouched, so a delete never cascades: an entity
+/// that referenced a removed id keeps the reference, and whatever reads it next
+/// reports the target as missing.
+pub fn plan_delete(store: &Entities, ids: &[Id]) -> (DeleteResponse, WriteSet) {
+    let mut deleted = Vec::new();
+    let mut missing = Vec::new();
+    let mut seen = BTreeSet::new();
+
+    for id in ids {
+        if !seen.insert(id.clone()) {
+            continue;
+        }
+        if store.contains_key(id) {
+            deleted.push(id.clone());
+        } else {
+            missing.push(id.clone());
+        }
+    }
+
+    let write_set = WriteSet {
+        put: Vec::new(),
+        remove: deleted.clone(),
+    };
+
+    (DeleteResponse { deleted, missing }, write_set)
 }
 
 /// Folds every declaration of one id into one declaration per id, in
@@ -898,5 +947,32 @@ mod tests {
         let second = normalize(&Entities::new(), &input, &mut second_source).expect("normalises");
 
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn plan_delete_dedupes_in_first_occurrence_order() {
+        let store = snapshot(&[
+            ("a", json!({"id": "a"})),
+            ("b", json!({"id": "b", "refs": [{"id": "a"}]})),
+        ]);
+        let requested = ["b", "gone", "a", "b"]
+            .iter()
+            .map(|id| Id::new(*id))
+            .collect::<Vec<_>>();
+
+        let (response, write_set) = plan_delete(&store, &requested);
+
+        assert_eq!(texts(&response.deleted), vec!["b", "a"]);
+        assert_eq!(texts(&response.missing), vec!["gone"]);
+        assert_eq!(texts(&write_set.remove), vec!["b", "a"]);
+        assert!(write_set.put.is_empty());
+    }
+
+    #[test]
+    fn plan_delete_of_nothing_is_empty() {
+        let (response, write_set) = plan_delete(&Entities::new(), &[]);
+
+        assert_eq!(response.to_json(), json!({"deleted": [], "missing": []}));
+        assert!(write_set.is_empty());
     }
 }
