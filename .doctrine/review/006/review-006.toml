@@ -8,6 +8,14 @@ title = "design review of SL-002"
 facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
 raiser    = "raiser"
 responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Same basis as RV-005, and recorded separately rather than in one breath because they are separate ledgers: this pass raised no findings, was superseded by RV-007…RV-016 before the design locked at revision 62, and was never concluded. Zero findings, rounds 0 — nothing is terminal-by-default here, so the conclusion is the only missing act. It is taken at the SL-002 reconciliation audit (RV-021 F-4) so no active design-facet ledger survives into reconcile."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"

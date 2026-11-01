@@ -6,11 +6,17 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · implementing, slice ready for audit (PHASE-01 `45983c7`;
+fresh-as-of: 2026-11-02 · **audit** (RV-021 concluded) · HEAD `a9aee11` at audit entry
+
+_Superseded stamp (implementation): implementing, slice ready for audit (PHASE-01 `45983c7`;
 PHASE-02 `1324dae` + `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`;
 PHASE-04 `fddbe33`; PHASE-05 `cb46e37`; PHASE-06 `46c6699` + `a6ddb25`;
 PHASE-07 `2b9250b`, with trailing notes `318e6b2` and the install-line
-repair in the trailing docs commit) · design locked at run rev 62; plan repaired round 1
+repair in the trailing docs commit) · design locked at run rev 62; plan repaired round 1_
+
+_Audit rows appended 2026-11-02: the six RV-021 findings, the four acts this
+seat took on other ledgers, and the two record corrections. See
+`## Audit close` below for the reasoning; the entries here are ids and clauses._
 
 ### Produced
 
@@ -278,6 +284,27 @@ repair in the trailing docs commit) · design locked at run rev 62; plan repaire
   and it is additive: the `Scratch`/`Declared` harness is untouched. A guide whose
   example lives only in prose cannot be tested this way — the constants exist to
   be importable.
+- **RV-021 F-1** — `doctrine show` reports a knowledge record's status, and a
+  sibling slice's decisions are the cheapest calibration: 0.1's were created
+  `accepted` at design-run time (`bcd1389`), this slice's eight were created
+  `proposed` and never moved, while §15 indexes them as settled. Compare a
+  governance claim against another slice's record before believing either.
+- **RV-021 F-3** — a run record's claim about the *repository* is checkable in
+  one command and should be checked before it is handed on: `git ls-remote`
+  against the handover's "nothing pushed", and `git diff A B` against a claim of
+  byte-identity. Both were false here; neither cost anything to disprove.
+- **RV-021 F-4** — a review finding routed `refresh` is closed **after**
+  `slice phases` (`lib:reference/review-ledger.md`), i.e. by the audit seat and
+  not by the seat that raised it. Three design-stage ledgers were still open on a
+  slice at audit because nobody owned that act; the route axis already did.
+- **RV-021 F-2** — a falsified claim in a locked design is usually in more tiers
+  than the one a run's deferral list names. Grep the phrase across design, scope
+  and plan before handing a single sentence to reconcile: here it was four.
+- **Sampling `verify-vt`** — the keyword class is worth one pass, but check the
+  *assertions*, not the tokens: PHASE-01 VT-1's `self-reference` and
+  `depth boundary` occur in comments in `src/walk.rs` and yet the behaviours are
+  genuinely asserted there under their own test names. A token match is not
+  evidence of vacuity either.
 
 ### Open
 
@@ -1720,3 +1747,126 @@ Two structural lessons, both paid for:
   line-number drift the operator deferred: §2's "mutually-referencing clusters",
   and §9.4's "version-bound" for a guide that now carries no build number.
 - **IMP-004** holds the deferred `epistemic-records` set and its five questions.
+- **RV-021 F-1 → reconcile.** DEC-012…DEC-019 are `proposed` while the release
+  ships under them; the brief records them accepted, on the operator's assent.
+- **RV-021 F-2 → reconcile.** The "mutually-referencing clusters" claim lives in
+  design §2, design §13.1 **and** `slice-002.md` objective 10; the handover named
+  one tier. Plan PHASE-04 EX-3 shares the clause and is off-surface.
+- **RV-021 F-5 → operator or IMP-002.** `docs/store-format.md` speaks in 0.1's
+  voice; §14.2 fences it, so the fix is a scope change this audit may not grant.
+- **RV-021 F-3 → close.** Landing is a force-push (`--force-with-lease` against
+  `dfc2887`), not a fast-forward. Operator ruled: wait, push the finished slice.
+
+## Audit close (2026-11-02) — RV-021, the record corrections, and what audit did not redo
+
+Stage: **audit**, conformance mode, facet `reconciliation`, ledger **RV-021**
+(`doctrine review show RV-021 --full`). Surface reviewed: the primary worktree
+— the implementation ran here, so the reviewed artefact *is* `main` (no dispatch
+candidate exists). Entry HEAD `a9aee11`; the audit's own writes are the ledger,
+this file, and the four acts on RV-005/RV-006/RV-012.
+
+### Gates re-run at this seat, not taken on trust
+
+`cargo fmt --check` clean · `cargo clippy --all-targets -- -D warnings` clean ·
+`cargo test` 16 suites / 506 tests, 0 failed · `doctrine check gate` exit 0
+(both clippy configurations, the test matrix and the fault-injection cadence) ·
+`doctrine slice verify-vt 2` **25 PASS, 0 Fail, 0 unattributable** ·
+`doctrine slice conformance 2` **26 conformant, 0 undelivered, 4 undeclared** ·
+`git diff b47dd79..HEAD -- src/entity.rs src/order.rs src/store
+docs/store-format.md justfile flake.nix` **empty** (the §14.2 fence proven across
+the whole slice, not per phase) · `Cargo.lock`'s only change is the version line.
+
+### Two acceptance facts re-derived by hand
+
+- The fixture declared into a scratch store (66 entities), then the guide's own
+  example: `backlinks:["part-of"]` at depth 2 from `session` returns **all 66
+  ids** with `truncated: false` and a 60-id frontier; the `follow` variant
+  returns `session` alone with empty `edges` and `frontier`.
+- The second call over those ids names **exactly the eight open questions**
+  (`q-audit-cost`, `q-channel-fix`, `q-fix-order`, `q-impact-query`,
+  `q-more-friction`, `q-promotion`, `q-split`, `q-variance-mechanism`).
+
+### What audit found — six findings, 0 blocker, 0 major-but-gating
+
+| id | sev | subject | disposition |
+| --- | --- | --- | --- |
+| F-1 | major | DEC-012…DEC-019 are `proposed`; 0.1's were created `accepted` | design-wrong → reconcile |
+| F-2 | minor | the falsified "mutually-referencing clusters" claim is in four tiers, not one | design-wrong → reconcile |
+| F-3 | minor | "nothing pushed" and "byte-identical restoration" are both false | fix-now (this file) |
+| F-4 | minor | three design-stage ledgers non-terminal at audit | fix-now (performed) |
+| F-5 | minor | `docs/store-format.md` speaks in 0.1's voice inside a §14.2 fence | tolerated → operator/IMP-002 |
+| F-6 | nit | four conformance cells are the review lane's own artefacts | aligned |
+
+Every finding is terminal; the pass is concluded. The reconciliation brief lives
+in `review-021.md` `## Reconciliation Brief` — per-slice direct edits
+(`design.md` §1/§2/§9.4/§13.1, `slice-002.md` objective 10), governance
+(DEC-012…DEC-019 → accepted, on the operator's assent), and two escalations that
+are not reconcile edits (the store-format fence; the force-push at close).
+
+### The two record corrections (F-3)
+
+The handover's release-surface claim and one PHASE-06 row are wrong as written,
+and a next seat would act on them:
+
+1. **"Nothing pushed, tagged or published" is partly false.** `git ls-remote
+   origin refs/heads/main` = `dfc2887` ("review(sl-002): RV-019 … "), whose parent
+   is `46c6699` — PHASE-06's `code_end_oid`. The public branch therefore carries
+   the whole slice through PHASE-06 plus that review commit, at
+   `Cargo.toml version = "0.1.1"`. No tags exist; nothing is published;
+   `0.2.0` does exist only in this tree. So the release half of the claim holds
+   and the "nothing pushed" half does not.
+2. **`991a831` is not "byte-identical to its original".** The public original is
+   `dfc2887`; `git diff dfc2887 991a831` is `src/learn.rs` alone (2 insertions /
+   4 deletions) — a doc comment above
+   `the_guide_teaches_the_0_2_keys_and_the_release_notice_is_gone` that named a
+   test (`the_release_notice_is_gone`) which never existed. `6885f66` corrected
+   the wording; HEAD's comment is accurate and both `!guide().contains(…)` pins
+   are present. The tree is right; the claim of byte-identity was not.
+
+**Consequence for close: landing is a force-push, not a fast-forward.** Local
+`main` forked from `dfc2887` and is 19 commits ahead. Nothing is lost by
+forcing: no file is deleted between `dfc2887` and HEAD; `.doctrine/review/019`
+locally is the same ledger 7 findings further along (+104/−7, the 7 removed lines
+being `status = "open"` fields the verbs have since moved); the remote's only
+unique content is the superseded comment. **Operator ruling (2026-11-02): wait,
+then force-push the finished slice at close** —
+`git push --force-with-lease=main:dfc2887a47d153726b5ddefd9a2018e5b34b08ae origin main`.
+
+### The four acts on other ledgers (F-4)
+
+- **RV-012 F-4 verified** — route `refresh`, whose terminal close the route axis
+  defers to after `slice phases`, i.e. here. Remediation re-checked on evidence:
+  design §9.3, §9.2's printed-prose requirement, `DEC-017`'s consequences, the
+  hygiene set's "Seeding a set" paragraph, and the test; plus the mechanism run
+  by hand (amend body + add a field, re-install, body replaced / field kept /
+  `previous` carries the old body).
+- **RV-005 and RV-006 concluded** — zero findings, rounds 0, superseded by
+  RV-007…RV-016 before the design locked. Abandoned rather than closed; the
+  conclusion is the only missing act, and its basis says exactly that.
+
+No active `RV` on SL-002 remains except this audit's own.
+
+### What audit did not redo
+
+The review lane's 23 findings (RV-017…RV-020) were treated as priors and not
+re-audited. The recorded decisions on GAP-1, DEF-1…3, RV-017 F-2, RV-018 F-4,
+RV-020 F-2 and the four conformance cells were accepted or contested explicitly
+where this audit had new evidence — F-6 accepts the cells, and no prior was
+silently reopened. `verify-vt`'s keyword class was sampled in the way the handover
+asked (check the assertions, not the tokens): PHASE-01 VT-1's `self-reference`
+and `depth boundary` do occur in comments in `src/walk.rs`, and the behaviours
+are also genuinely asserted there under `a_self_reference_is_discovered_once_and_does_not_requeue`
+and `the_depth_boundary_is_frontier_not_truncation` — so the keyword is weak
+evidence and the mandate was nonetheless met. Every test-module comment naming a
+test was checked: the only namesakes are deliberate DEC-019 references to deleted
+tests.
+
+### Durable risks this audit adds
+
+- **A locked design's falsified sentence is usually repeated.** The same claim sat
+  in design §2, design §13.1, `slice-002.md` objective 10 and plan PHASE-04 EX-3.
+  A reconcile handed one location leaves the scope asserting it.
+- **A run record is evidence, not instruction.** Two of its claims about the
+  repository were false and cost one command each to disprove.
+- **Governance status is part of canon.** Eight decisions shipped as `proposed`;
+  nothing in the build, the gates or `conformance` can see that.

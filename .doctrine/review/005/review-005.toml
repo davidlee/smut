@@ -8,6 +8,17 @@ title = "design review of SL-002"
 facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
 raiser    = "raiser"
 responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Concluded at the SL-002 reconciliation audit (RV-021 F-4) so the slice's ledger roll-up is terminal before reconcile.
+
+This pass raised no findings and was never concluded when it was superseded: the design run opened RV-005 and RV-006 early, then RV-007…RV-016 carried the substantive design examination through revision 62, and this one was abandoned rather than closed. Its own record shows rounds 0 and zero findings, so there is no disposed or verified finding left behind it — only a missing conclusion. No examination is being invented here: the basis is the pass's own emptiness plus its successor."""
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"

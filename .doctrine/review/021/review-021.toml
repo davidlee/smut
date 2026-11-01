@@ -1,0 +1,318 @@
+id    = 21
+slug  = "audit-of-sl-002-smut-02-conformance-against-scope-design-and-the-delivered-binary"
+title = "audit of SL-002 — smut 0.2, conformance against scope, design and the delivered binary"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Conformance audit of SL-002 at implementation-complete (7/7 phases, entry HEAD a9aee11), on the primary worktree since the implementation ran there. Examined: the scope's 11 objectives and the brief's query contract against the delivered binary by running it (grammar refusals and types; the five operators, three clauses, identities, disambiguation and the $eq escape; both traversal directions with [] / * / named fields; depth and the frontier; budget as expansions; truncation reasons; induced edges from unexpanded and select-hidden endpoints; dangling dedupe and walk-scoping; get never traversing; the Markdown notice; the conventions command end to end including the seed pipe, re-install replacement and the deferred-set refusal); the six §13.3 acceptance scenarios in their owning suites plus two acceptance facts re-derived by hand; PHASE-07's release surface (README, learn, 0.2.0 in both manifests) against the binary; the relationships between phases; the §14.2 fence across the whole slice by diff; the claimed reference single-sourcing by grep; and every durable claim-vs-code sentence (guide, conventions prose, PROVENANCE, store-format, and the run record's own statements about the repository). Gates re-run here rather than inherited: fmt, clippy both configurations, 16 suites / 506 tests, check gate, verify-vt 25 PASS, conformance 26/0/4. Six findings, 0 blocker, all terminal; the review lane's 23 priors were treated as evidence and none silently reopened."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "The slice's eight decisions are recorded `proposed` while the release ships under them and 0.1's were `accepted`"
+detail = """
+Expected: a settled decision the design indexes, the plan implements and the code exercises is recorded at the status that means settled. 0.1's decisions were written straight into that state at design-run time.
+
+Observed: DEC-012, DEC-013, DEC-014, DEC-015, DEC-016, DEC-017, DEC-018 and DEC-019 all carry status = "proposed". DEC-001, DEC-005, DEC-010 and DEC-011 carry status = "accepted", and DEC-011 was created accepted in bcd1389 (the SL-001 design run commit) and never changed since.
+
+Evidence:
+- `doctrine show DEC-011`: "01-spec-surface-four-keys… · decision · accepted"; `git show bcd1389:.doctrine/knowledge/decision/011/record-011.toml` has status = "accepted" at creation.
+- DEC-012…DEC-019: every `.doctrine/knowledge/decision/NNN/record-NNN.toml` line 8 reads status = "proposed"; no commit ever changed one.
+- design.md §15 presents the eight as the slice's settled decisions ("Settles …") and §3 says "this design records a decision rather than inventing a requirement"; design.md is locked (run dr-01a196a8, rev 62).
+- The tree implements all eight: DEC-012/013/014 in src/select.rs's envelope and Walk scoping, DEC-015 in the budget check, DEC-016 in src/learn.rs's recipe, DEC-017 in src/conventions.rs and the hygiene prose, DEC-018 in tests/fixtures/interview/**, DEC-019 in the re-cut tests.
+
+Consequence: reconciled truth and canon disagree. A future agent reading `doctrine show DEC-013` is told the provenance shape is "proposed" while it is what 0.2 ships, and the slice's own governance record does not carry the decision set its release rests on. No behaviour is at fault; the record of acceptance is missing for the whole eight.
+
+Not a structural defect in the design and not a code defect: the status of eight knowledge records. The act is the reconcile stage's (sole writer of reconciled truth); this audit neither infers the operator's acceptance nor edits knowledge records."""
+disposition = "design-wrong"
+response = """
+Accepted. The design is not at fault and neither is the code: eight decision records carry a status that says they are not settled while design.md §15 indexes them as settled, the plan builds to them and the tree implements them. That is a governance record defect, i.e. the reconcile write surface, not something this audit should fix by inference.
+
+Reconcile entry: record DEC-012…DEC-019 as accepted, the status 0.1's decisions were created in (DEC-011 at bcd1389). The basis is already in the record and needs no new prose — each of the eight carries context, choice, alternatives, rationale, consequences, decided_by: operator and agent, and decided_on: 2026-11-01; the design locked at rev 62 with §15 presenting them; and the release ships under them. The verb is `doctrine knowledge status <ID> <STATE>` (checked against the CLI's help, not guessed); the act is the reconcile stage's, and the operator's assent to the eight as 0.2's settled decisions is what the brief should record, because the records say "operator and agent" and a status flip asserts that assent.
+
+No behaviour, criterion, bound or test depends on the status, so this rides reconcile and gates nothing."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Accepted. The design is not at fault and neither is the code: eight decision records carry a status that says they are not settled while design.md §15 indexes them as settled, the plan builds to them and the tree implements them. That is a governance record defect, i.e. the reconcile write surface, not something this audit should fix by inference.
+
+Reconcile entry: record DEC-012…DEC-019 as accepted, the status 0.1's decisions were created in (DEC-011 at bcd1389). The basis is already in the record and needs no new prose — each of the eight carries context, choice, alternatives, rationale, consequences, decided_by: operator and agent, and decided_on: 2026-11-01; the design locked at rev 62 with §15 presenting them; and the release ships under them. The verb is `doctrine knowledge status <ID> <STATE>` (checked against the CLI's help, not guessed); the act is the reconcile stage's, and the operator's assent to the eight as 0.2's settled decisions is what the brief should record, because the records say "operator and agent" and a status flip asserts that assent.
+
+No behaviour, criterion, bound or test depends on the status, so this rides reconcile and gates nothing."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Observation confirmed at this seat and the reconcile-brief entry exists in review-021.md § Reconciliation Brief (governance/spec), with the verb, the basis and the operator-assent requirement. No behaviour is at stake, so the finding is terminal here and the repair is reconcile's."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The falsified 'mutually-referencing clusters' claim lives in four tiers, not the one the reconcile list names"
+detail = """
+Expected: the "gone to reconcile" list in the handover names design.md §2 as the only home of the claim that the acceptance store holds "mutually-referencing clusters", and says reconcile should fix it there.
+
+Observed: the same falsified claim appears in three more places, one of them the scope:
+1. design.md §2 — named in the handover.
+2. design.md §13.1, the Fixture row — "a mutually-referencing cluster" among the properties the fixture proves.
+3. slice-002.md objective 10 — "already containing the awkward cases (a superseded finding retired in place, settled and open findings, mutually-referencing clusters) and 22 entities with no incoming reference".
+4. plan.toml PHASE-04 EX-3 — "a mutually-referencing cluster" as an exit criterion.
+
+Evidence: reading tests/fixtures/interview/entities.json (66 entities) — the only mutually-referencing pair is finding-smut-17 ↔ prop-conventions-library (asserted by tests/fixture.rs::finding_smut_17_and_the_conventions_proposal_reference_each_other). The five `type: cluster` entities each carry exactly one outgoing `part-of` to `session` and no cluster names another cluster or session's peer, so no cluster is in a mutual reference with anything. Cluster incoming sets: cluster-friction 20 sources, cluster-mind 9, cluster-schema 10, cluster-setup 9, cluster-thesis 12 — none of them a cluster.
+
+Consequence: a reconcile that follows the handover fixes design.md §2, §13.1 and leaves slice-002.md objective 10 asserting the falsified property — the tier a reader consults for "what this slice promised". The plan criterion is off-surface (plan.toml criteria are immutable-append), and its clause was discharged by the neighbouring pair, which the PHASE-04 sheet records without saying so. Recorded here so reconcile does not half-fix it."""
+disposition = "design-wrong"
+response = """
+Accepted, and the finding widens the reconcile item rather than disputing it. The operator's G0 ruling ("drift: deal with it at reconcile") named design.md §2; the same falsified property sits in design.md §13.1's Fixture row and in slice-002.md objective 10, and the plan's PHASE-04 EX-3 asks for "a mutually-referencing cluster" too.
+
+Reconcile entries (per-slice, direct edit):
+- design.md §2 — replace "mutually-referencing clusters" with the property the array actually holds: one mutually-referencing pair (finding-smut-17 ↔ prop-conventions-library) plus five clusters that are one-directional (each cluster → session).
+- design.md §13.1 Fixture row — the same replacement, in the list of properties the fixture suite proves.
+- slice-002.md objective 10 — the same replacement inside "the awkward cases" clause, keeping "and 22 entities with no incoming reference", which is true (verified: 66 entities, 22 with no incoming reference).
+
+plan.toml PHASE-04 EX-3 is off-surface (criteria are immutable-append) and needs no edit: its obligation — that the acceptance store exercise mutual referencing — is met by the pair, which is the only mutual reference the array holds; the PHASE-04 sheet records the clause as proved by that pair. Naming it here so reconcile does not read the criterion as a live obligation.
+
+The five clusters' incoming sets are 20/9/10/9/12 and none is a cluster, which is the measurement behind the claim."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Accepted, and the finding widens the reconcile item rather than disputing it. The operator's G0 ruling ("drift: deal with it at reconcile") named design.md §2; the same falsified property sits in design.md §13.1's Fixture row and in slice-002.md objective 10, and the plan's PHASE-04 EX-3 asks for "a mutually-referencing cluster" too.
+
+Reconcile entries (per-slice, direct edit):
+- design.md §2 — replace "mutually-referencing clusters" with the property the array actually holds: one mutually-referencing pair (finding-smut-17 ↔ prop-conventions-library) plus five clusters that are one-directional (each cluster → session).
+- design.md §13.1 Fixture row — the same replacement, in the list of properties the fixture suite proves.
+- slice-002.md objective 10 — the same replacement inside "the awkward cases" clause, keeping "and 22 entities with no incoming reference", which is true (verified: 66 entities, 22 with no incoming reference).
+
+plan.toml PHASE-04 EX-3 is off-surface (criteria are immutable-append) and needs no edit: its obligation — that the acceptance store exercise mutual referencing — is met by the pair, which is the only mutual reference the array holds; the PHASE-04 sheet records the clause as proved by that pair. Naming it here so reconcile does not read the criterion as a live obligation.
+
+The five clusters' incoming sets are 20/9/10/9/12 and none is a cluster, which is the measurement behind the claim."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Observation confirmed: 66 entities, exactly one mutually-referencing pair, five one-directional clusters. The brief now names all four tiers (design §2, design §13.1, slice-002.md objective 10, plan PHASE-04 EX-3 as off-surface), so reconcile cannot half-fix it."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "The run record's release-surface and restoration claims are contradicted by the remote and by the rewritten commit"
+detail = """
+Expected: handover.md states "**Nothing pushed, tagged or published.** `0.2.0` exists only in this tree", and notes.md's PHASE-06 decisions row states the reviewer's commit was restored "byte-identical to its original (`991a831`)".
+
+Observed, both false as written:
+1. `git ls-remote origin refs/heads/main` = dfc2887a47d153726b5ddefd9a2018e5b34b08ae ("review(sl-002): RV-019 code review of PHASE-04/05 — two minors, five nits, nothing blocking"). Its parent is 46c6699 — PHASE-06's `code_end_oid` — so the public branch carries the whole slice through PHASE-06 plus that review commit. `git show dfc2887:Cargo.toml` is version = "0.1.1", and `git ls-remote --tags origin` returns nothing, so "not tagged, not published" holds and "0.2.0 exists only in this tree" holds — but "nothing pushed" does not.
+2. dfc2887 and 991a831 share parent 46c6699 and subject but are not byte-identical: `git diff dfc2887 991a831` is src/learn.rs only, 2 insertions / 4 deletions, a doc comment above the_guide_teaches_the_0_2_keys_and_the_release_notice_is_gone. The local wording named a test that never existed ("the_release_notice_is_gone"); 6885f66 fixed it and HEAD's comment is now accurate with both `!guide().contains(…)` pins present.
+
+Consequence, operational: local main forked from the public tip, so landing is not a fast-forward — it needs a force-push (or a merge that resurrects the superseded comment). Content loss is nil: no file is deleted between dfc2887 and HEAD, .doctrine/review/019 locally is the same ledger 7 findings further along (+104/−7, the 7 removed lines are `status = "open"` fields the verbs have since moved), and the remote's only unique content is the superseded comment. The operator has ruled: wait, and force-push the finished slice at close.
+
+The record is what is at fault, not the tree: a next seat reading "nothing pushed" would plan a fast-forward push and be refused."""
+disposition = "fix-now"
+response = """
+Accepted. Two record corrections, both inside this audit's own harvest surface, plus one operational fact for close.
+
+1. notes.md gains a correction (this pass, under the audit's harvest) stating what is actually public: origin/main = dfc2887, parent 46c6699, i.e. the whole slice through PHASE-06 plus RV-019, with Cargo.toml at 0.1.1 and no tags; local main rewritten off the same parent, 19 commits ahead; landing therefore needs a force-push. The handover's "nothing pushed" is superseded by that note rather than edited out of the handover.
+2. notes.md's PHASE-06 row claiming 991a831 is "byte-identical to its original" gains the correction: it differs from the public dfc2887 in one src/learn.rs doc comment, since superseded by 6885f66, so the tree is right and the claim of byte-identity was not.
+3. The operator has ruled on the landing: wait, then force-push the finished slice at close (`--force-with-lease` against dfc2887). Recorded so close does not attempt a fast-forward. Nothing on the remote is lost: no deleted file, review/019 locally 7 findings further along, the remote's only unique content a superseded comment.
+
+No code, criterion or claim about the shipped binary changes."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Accepted. Two record corrections, both inside this audit's own harvest surface, plus one operational fact for close.
+
+1. notes.md gains a correction (this pass, under the audit's harvest) stating what is actually public: origin/main = dfc2887, parent 46c6699, i.e. the whole slice through PHASE-06 plus RV-019, with Cargo.toml at 0.1.1 and no tags; local main rewritten off the same parent, 19 commits ahead; landing therefore needs a force-push. The handover's "nothing pushed" is superseded by that note rather than edited out of the handover.
+2. notes.md's PHASE-06 row claiming 991a831 is "byte-identical to its original" gains the correction: it differs from the public dfc2887 in one src/learn.rs doc comment, since superseded by 6885f66, so the tree is right and the claim of byte-identity was not.
+3. The operator has ruled on the landing: wait, then force-push the finished slice at close (`--force-with-lease` against dfc2887). Recorded so close does not attempt a fast-forward. Nothing on the remote is lost: no deleted file, review/019 locally 7 findings further along, the remote's only unique content a superseded comment.
+
+No code, criterion or claim about the shipped binary changes."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Both corrections landed in notes.md `## Audit close`: the public tip, its parent, the 0.1.1 manifest and the absent tags, with the force-push consequence and the operator's ruling recorded; and the byte-identity correction with the commit that superseded the comment. The handover is left as written and superseded by the note — the record gains the correction rather than being rewritten."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "The design stage's review ledgers are not terminal: two never concluded, one finding unanswered since the design run"
+detail = """
+Expected: a slice at audit has its prior review ledgers terminal — every finding verified or withdrawn and every pass concluded (lib:reference/review-ledger.md §6). The route axis additionally defers an instrument-routed finding's terminal close to `slice phases`, i.e. to this seat.
+
+Observed, three non-terminal ledgers on SL-002:
+1. RV-005 — design facet, 0 findings, status active, await=raiser, rounds 0. Never concluded.
+2. RV-006 — same: design facet, 0 findings, active, await=raiser, rounds 0.
+3. RV-012 F-4 — minor, answered, disposition fix-now, route refresh, since 2026-11-01. Four findings; F-1…F-3 verified by the seat that raised them; F-4 awaited its raiser and never got one.
+
+Evidence that F-4's remediation is in the tree, so it is verifiable rather than merely stale:
+- design.md §9.3 now states the overwrite, its three options and the `previous` reply;
+- design.md §9.2 requires the printed set to say it;
+- DEC-017's consequences now read "the seeded body is replaced on re-install; the binary never reads it back";
+- src/conventions/hygiene.md's "Seeding a set" paragraph says it;
+- tests/conventions.rs::a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_previous asserts the pair, and I re-ran the pipe by hand: amend body to "my amendment" + add `mine`, re-install, and the entity comes back with body replaced and `mine` intact.
+
+RV-005/RV-006 are superseded design passes (RV-007…RV-016 ran after them and carried the substantive examination); they raised nothing and were abandoned rather than concluded, which is why the roll-up shows three active ledgers on a slice that is otherwise complete.
+
+Fixed in this pass: F-4's verification and the two conclusions are taken here (the route axis makes this seat F-4's raiser, and a zero-finding pass needs only a truthful basis), so the slice's roll-up is terminal before reconcile. Recorded rather than left for close to discover."""
+disposition = "fix-now"
+response = """
+Accepted and performed in this pass, because the route axis defers an instrument-routed finding's close to after `slice phases` — this seat.
+
+Acts taken (as the raiser role, on evidence I re-checked rather than inherited):
+- RV-012 F-4 verified: the remediation it demanded is in four places in the tree and I re-ran the mechanism by hand (amend body + add a user field, re-install the seed: body replaced, user field kept, `previous` carries the replaced body, `--compact` omits it).
+- RV-005 and RV-006 concluded with a truthful basis: zero findings raised, superseded by RV-007…RV-016 before the design locked, concluded so the slice's roll-up is terminal.
+
+RV-012's F-4 was the ledger's only outstanding finding; the ledger was already concluded, and no raise or reopen is introduced by a verify, so it stays concluded. The slice's design-facet ledgers are now terminal: no active RV on SL-002 remains except this audit's own."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Accepted and performed in this pass, because the route axis defers an instrument-routed finding's close to after `slice phases` — this seat.
+
+Acts taken (as the raiser role, on evidence I re-checked rather than inherited):
+- RV-012 F-4 verified: the remediation it demanded is in four places in the tree and I re-ran the mechanism by hand (amend body + add a user field, re-install the seed: body replaced, user field kept, `previous` carries the replaced body, `--compact` omits it).
+- RV-005 and RV-006 concluded with a truthful basis: zero findings raised, superseded by RV-007…RV-016 before the design locked, concluded so the slice's roll-up is terminal.
+
+RV-012's F-4 was the ledger's only outstanding finding; the ledger was already concluded, and no raise or reopen is introduced by a verify, so it stays concluded. The slice's design-facet ledgers are now terminal: no active RV on SL-002 remains except this audit's own."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Acts performed and recorded: RV-012 F-4 verified with its evidence on the ledger, RV-005 and RV-006 concluded with truthful bases (zero findings, rounds 0, superseded by RV-007…RV-016). No active RV on SL-002 remains but this audit's own."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "The store-format document ships 0.1-scoped prose as the 0.2 release's durability authority, and the design fence forbids touching it"
+detail = '''
+Expected: a document the README links as the authority for what 0.2 promises about its store describes the release it ships in, or states plainly that its claims are unchanged from 0.1.
+
+Observed: docs/store-format.md — untouched by this slice, correctly, because §14.2 fences it and the on-disk format is unchanged — still opens "It is written against the 0.1 build" and says "**There is no migration path in 0.1, and no repair path at any point**" and "there is no request-id or exactly-once retry in 0.1". A 0.2 reader cannot tell from those sentences whether 0.2 has a migration path or a request-id, and the README's "What smut promises" section hands them this document as the source.
+
+Evidence: README.md's promise section links docs/store-format.md; the file's only version words are the three 0.1-scoped ones above (`grep -n "0\.1" docs/store-format.md` → lines 4, 9, 301). `git diff b47dd79..HEAD -- docs/store-format.md` is empty, so the slice neither changed nor stale-dated it.
+
+Not repaired here, and not a reconcile edit: the fix is a second scope change inside a §14.2-fenced file, which the audit cannot grant and the operator did not authorise. Every statement remains true of format_version 1, so the exposure is reader confusion, not a false promise. Named as an escalation the operator may take (a one-line scope change) and otherwise owned by IMP-002's documentation pass. PHASE-07 recorded this handoff explicitly ("it remains true of `format_version` 1 and is left for the audit to weigh").'''
+disposition = "tolerated"
+response = """
+Tolerated, with the boundary stated rather than blurred.
+
+The statements are true: `format_version` is 1, the format did not change in 0.2, and there is no migration path or request-id retry in either release. What is stale is the scope of the wording, not the promise, and the fix would be a second scope change inside a §14.2-fenced file — a change this audit may not grant and the operator did not authorise. Editing it would break the fence that proves the slice did not touch the on-disk format, which is a more valuable property than the phrase.
+
+What would make this a defect rather than a tolerate: if 0.2 had changed the format, added a migration path, or if the document's guarantee had been narrowed by this release. None holds — `git diff b47dd79..HEAD -- docs/store-format.md` is empty and §14.2's unchanged set is proven by the same diff.
+
+Carried as an operator escalation in the brief (one-line scope change, "unchanged since 0.1" wording) and otherwise owned by IMP-002's documentation pass. No reconcile edit, no backlog mint: the owner already exists."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = """
+Tolerated, with the boundary stated rather than blurred.
+
+The statements are true: `format_version` is 1, the format did not change in 0.2, and there is no migration path or request-id retry in either release. What is stale is the scope of the wording, not the promise, and the fix would be a second scope change inside a §14.2-fenced file — a change this audit may not grant and the operator did not authorise. Editing it would break the fence that proves the slice did not touch the on-disk format, which is a more valuable property than the phrase.
+
+What would make this a defect rather than a tolerate: if 0.2 had changed the format, added a migration path, or if the document's guarantee had been narrowed by this release. None holds — `git diff b47dd79..HEAD -- docs/store-format.md` is empty and §14.2's unchanged set is proven by the same diff.
+
+Carried as an operator escalation in the brief (one-line scope change, "unchanged since 0.1" wording) and otherwise owned by IMP-002's documentation pass. No reconcile edit, no backlog mint: the owner already exists."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Tolerated on the stated boundary: statements remain true of format_version 1, the fence is a scope boundary this audit cannot cross, the brief carries the escalation for the operator and names IMP-002 as the owning pass. Nothing to reconcile."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "nit"
+title = "Four conformance cells are undeclared: review-lane artefacts, not design targets"
+detail = """
+Expected: `doctrine slice conformance 2` accounts for every touched path — either conformant to a design-target selector or explained.
+
+Observed: 26 conformant, 0 undelivered, 4 undeclared:
+  M .doctrine/review/017/review-017.toml
+  A .doctrine/review/018-code-review-of-sl-002-phase-02-phase-03-budget-truncation-and-the-roots-only-predicate
+  A .doctrine/review/018/review-018.md
+  A .doctrine/review/018/review-018.toml
+
+Evidence they are process artefacts rather than deliverables: they are the review lane's own RV entities and slug symlinks for RV-017 and RV-018, written at PHASE-01's and PHASE-02/03's boundaries by a seat that was not the implementation seat. §14.2's selector list covers code, tests, README and the manifests and has no selector for .doctrine/review/** — adding one would make the review lane a design target, which is wrong, and "fixing" the diff would mean rewriting another seat's ledger.
+
+undelivered: 0 is the number that matters, and the PHASE-07 sheet recorded all four with their explanation (VA-2) before this audit ran. Accepted as prior evidence after re-running conformance at this seat and confirming the cells are unchanged."""
+disposition = "aligned"
+response = """
+Aligned: no follow-up, and no change to the slice.
+
+The four cells are the review lane's own RV-017/RV-018 entities and slug symlinks, written by a different seat at earlier phase boundaries. They are not deliverables of this design, §14.2 deliberately has no selector for .doctrine/review/**, and declaring one would make the review lane a design target. The alternative reading — that conformance is red — is ruled out by undelivered: 0 and by the fact that the four cells name no code, test, manifest or document.
+
+Re-ran conformance at this seat: the four cells are unchanged from the PHASE-07 record, which already explained each one (VA-2). Prior accepted on evidence, not on trust."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = """
+Aligned: no follow-up, and no change to the slice.
+
+The four cells are the review lane's own RV-017/RV-018 entities and slug symlinks, written by a different seat at earlier phase boundaries. They are not deliverables of this design, §14.2 deliberately has no selector for .doctrine/review/**, and declaring one would make the review lane a design target. The alternative reading — that conformance is red — is ruled out by undelivered: 0 and by the fact that the four cells name no code, test, manifest or document.
+
+Re-ran conformance at this seat: the four cells are unchanged from the PHASE-07 record, which already explained each one (VA-2). Prior accepted on evidence, not on trust."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Aligned: four review-lane cells, undelivered 0, each already explained in the PHASE-07 sheet. Re-ran conformance at this seat and the cells are unchanged."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

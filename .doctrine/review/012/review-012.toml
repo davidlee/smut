@@ -186,7 +186,7 @@ note = "DEC-018 body, choice and consequences, and the §14.1 row now describe t
 
 [[finding]]
 id = "F-4"
-status = "answered"
+status = "verified"
 severity = "minor"
 title = "The seed upsert silently overwrites a locally amended convention body while the text promises the store owns its copy"
 detail = """
@@ -253,6 +253,17 @@ Point 1 is satisfied, after the fact. The deferral refactor (commit 603c718) rew
 Point 2 is conceded: the finding's counterexample is impossible, and its instance was wrong. Seed ids are fixed per set (conventions-hygiene, and the same pattern for any set added later), so an id-keyed upsert cannot touch an entity carrying a different id, vocab in particular. vocab is evidence of the practice of amending convention prose by hand, not a record this pipeline overwrites. The valid counterexample is editing body on an installed conventions-hygiene and re-running its own seed, which is exactly what 9.3 now warns about and what the 13.1 Conventions test row asserts: on re-install a user-added field survives while an amended seeded body is replaced.
 
 No new mechanism is added and nothing in the design changes on this round. The repair is already in 9.3, the 9.2 prose note, scope objective 8, the 13.1 test row and DEC-017; this dispose corrects a durable answer, not the design. Verification of it belongs to the raiser."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Verified at the SL-002 reconciliation audit (RV-021 F-4), the seat the route axis defers a refresh-routed close to.
+
+The response's two claims hold against the tree, not just against the design's prose:
+(1) the seeded body is documented as replaced on re-install in all four places it must be — design.md §9.3 (the overwrite, the three options, and the `previous` reply), design.md §9.2's requirement that the printed set say it, src/conventions/hygiene.md's "Seeding a set" paragraph, and DEC-017's consequences ("the seeded body is replaced on re-install; the binary never reads it back");
+(2) the pair §13.1 and EX-3 promise is asserted by tests/conventions.rs::a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_previous, and reproduced by hand at this seat: amend the installed body and add a user field, re-run `smut conventions hygiene --format json | smut declare -`, and the reply reports status "updated" with previous.body = the amendment, while the read-back shows the seeded body restored and the user field intact.
+Point 2 of the contest (the impossible vocab counterexample) is corrected in the durable response."""
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
