@@ -457,6 +457,187 @@ fn names(directory: &Path) -> Result<Vec<String>, StoreError> {
     Ok(names)
 }
 
+/// Recover the store's journal, strictly before validation (§4.4).
+///
+/// Ambiguity is refused without touching evidence; only the protocol's own
+/// temporaries are removed; a `prepare` state is discarded; a `done` state is
+/// cleared; and a `commit` state is validated completely before it is replayed
+/// totally.
+pub fn recover(directory: &Path) -> Result<(), StoreError> {
+    let states = present_states(directory)?;
+
+    if states.len() > 1 {
+        return Err(StoreError::AmbiguousJournalState {
+            found: states.iter().map(|state| state.name().to_owned()).collect(),
+        });
+    }
+
+    remove_temporaries(directory)?;
+
+    match states.first() {
+        None => Ok(()),
+        Some(State::Prepare) => clear(directory, PREPARE_STATE, Boundary::RecoveryPrepareDiscarded),
+        Some(State::Commit) => replay_commit(directory),
+        Some(State::Done) => clear(directory, DONE_STATE, Boundary::RecoveryCleanupRemoved),
+    }
+}
+
+/// The three journal states, which are the registry's three state names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum State {
+    Prepare,
+    Commit,
+    Done,
+}
+
+impl State {
+    fn from_name(name: &str) -> Option<State> {
+        match name {
+            PREPARE_STATE => Some(State::Prepare),
+            COMMIT_STATE => Some(State::Commit),
+            DONE_STATE => Some(State::Done),
+            _ => None,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            State::Prepare => PREPARE_STATE,
+            State::Commit => COMMIT_STATE,
+            State::Done => DONE_STATE,
+        }
+    }
+}
+
+/// Every journal state directory that is present, in the registry's order.
+fn present_states(directory: &Path) -> Result<Vec<State>, StoreError> {
+    let mut found = Vec::new();
+
+    for name in names(directory)? {
+        let Some(state) = State::from_name(&name) else {
+            continue;
+        };
+        let path = directory.join(&name);
+        let metadata = std::fs::symlink_metadata(&path)
+            .map_err(|source| failure("read_journal_state", &path, source))?;
+
+        if !metadata.is_dir() {
+            return Err(StoreError::Corrupt {
+                entry: name,
+                reason: "a journal state is a directory".to_owned(),
+            });
+        }
+
+        found.push(state);
+    }
+
+    found.sort_by_key(|state| state.name());
+
+    Ok(found)
+}
+
+/// Remove the protocol's own temporaries, and nothing else (§4.4).
+///
+/// This runs before store validation, so a crash between writing `<name>.tmp`
+/// and renaming it cannot turn a recoverable store into a refused one.
+fn remove_temporaries(directory: &Path) -> Result<(), StoreError> {
+    for name in names(directory)? {
+        if durable::is_protocol_temporary(&name) {
+            durable::remove_file(&directory.join(&name), Boundary::RecoveryTemporariesRemoved)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate a `commit` state completely, then replay it totally (§4.4).
+fn replay_commit(directory: &Path) -> Result<(), StoreError> {
+    let state = directory.join(COMMIT_STATE);
+    let manifest = Manifest::parse(&read_staged(&state.join(MANIFEST_BASENAME))?)?;
+
+    manifest.validate()?;
+    validate_staged(&state, &manifest)?;
+
+    #[cfg(feature = "fault-injection")]
+    {
+        crate::store::fault::checkpoint(Boundary::RecoveryCommitValidated).map_err(|source| {
+            failure(Boundary::RecoveryCommitValidated.as_str(), &state, source)
+        })?;
+        crate::store::fault::arrive(Boundary::RecoveryCommitValidated);
+    }
+
+    for basename in manifest.puts() {
+        let bytes = read_staged(&state.join(basename))?;
+
+        publish(directory, basename, &bytes, Boundary::RecoveryPutReplayed)?;
+    }
+
+    for basename in manifest.removes() {
+        remove_if_present(directory, basename, Boundary::RecoveryRemovalReplayed)?;
+    }
+
+    durable::sync_directory(directory, Boundary::RecoveryDoneRenamed)?;
+    durable::rename(
+        &state,
+        &directory.join(DONE_STATE),
+        Boundary::RecoveryDoneRenamed,
+    )?;
+    durable::sync_directory(directory, Boundary::RecoveryDoneRenamed)?;
+
+    clear(directory, DONE_STATE, Boundary::RecoveryCleanupRemoved)
+}
+
+/// The staged directory holds exactly what the manifest lists (§4.4).
+fn validate_staged(state: &Path, manifest: &Manifest) -> Result<(), StoreError> {
+    let listed: BTreeSet<&str> = manifest.puts().iter().map(String::as_str).collect();
+    let staged = names(state)?;
+
+    for basename in manifest.puts() {
+        if !staged.iter().any(|name| name == basename) {
+            return Err(corrupt(format!(
+                "it puts {basename}, which the staging directory does not hold"
+            )));
+        }
+    }
+
+    for name in staged {
+        if name != MANIFEST_BASENAME && !listed.contains(name.as_str()) {
+            return Err(StoreError::Corrupt {
+                entry: name,
+                reason: "the staging directory holds a file the manifest does not list".to_owned(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+/// Read one staged file, refusing to resolve a symlink (§4.4).
+fn read_staged(path: &Path) -> Result<Vec<u8>, StoreError> {
+    let metadata =
+        std::fs::symlink_metadata(path).map_err(|source| failure("read_staged", path, source))?;
+
+    if metadata.file_type().is_symlink() {
+        return Err(StoreError::SymlinkedEntry {
+            entry: file_name(path),
+        });
+    }
+    if !metadata.is_file() {
+        return Err(StoreError::Corrupt {
+            entry: file_name(path),
+            reason: "a staged entry is a file".to_owned(),
+        });
+    }
+
+    std::fs::read(path).map_err(|source| failure("read_staged", path, source))
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
 /// Why `basename` may not appear in a manifest (§4.1, §4.4).
 fn reserved_basename(basename: &str) -> Option<&'static str> {
     if basename.is_empty() {
@@ -1000,5 +1181,342 @@ mod tests {
 
         assert!(scratch.listing().contains(&COMMIT_STATE.to_owned()));
         assert!(!scratch.listing().contains(&PREPARE_STATE.to_owned()));
+    }
+
+    const STAGED_UID: &str = "Fresh.json";
+
+    fn manifest_json(puts: &[&str], removes: &[&str]) -> Vec<u8> {
+        serde_json::to_vec(&json!({
+            "format_version": MANIFEST_FORMAT_VERSION,
+            "puts": puts,
+            "removes": removes,
+        }))
+        .expect("a manifest")
+    }
+
+    /// Write one journal state holding the canonical batch's staged bytes.
+    fn write_state(scratch: &Scratch, state: &str, manifest: &[u8], files: &[(&str, &[u8])]) {
+        let path = scratch.directory().join(state);
+        fs::create_dir_all(&path).expect("a journal state");
+        fs::write(path.join(MANIFEST_BASENAME), manifest).expect("the manifest");
+
+        for (name, bytes) in files {
+            fs::write(path.join(name), bytes).expect("a staged file");
+        }
+    }
+
+    /// The canonical batch, staged: `alpha` updated, `gamma` added, `beta` removed.
+    fn the_batch_staged(scratch: &Scratch, state: &str) {
+        write_state(
+            scratch,
+            state,
+            &manifest_json(&["Ab3.json", STAGED_UID, INDEX_BASENAME], &["Zq7.json"]),
+            &[
+                (
+                    "Ab3.json",
+                    &entity_bytes(json!({"id": "alpha", "body": "changed"})),
+                ),
+                (
+                    STAGED_UID,
+                    &entity_bytes(json!({"id": "gamma", "body": "new"})),
+                ),
+                (
+                    INDEX_BASENAME,
+                    &Index::new([
+                        (Id::new("alpha"), "Ab3.json".to_owned()),
+                        (Id::new("gamma"), STAGED_UID.to_owned()),
+                    ])
+                    .expect("safe basenames")
+                    .to_bytes()
+                    .into_bytes(),
+                ),
+            ],
+        );
+    }
+
+    fn assert_the_batch_is_published(scratch: &Scratch) {
+        let reloaded = scratch.loaded();
+
+        assert_eq!(reloaded.entities().len(), 2);
+        assert_eq!(
+            reloaded.entities()[&Id::new("alpha")]["body"],
+            json!("changed")
+        );
+        assert_eq!(reloaded.entities()[&Id::new("gamma")]["body"], json!("new"));
+        assert_eq!(
+            reloaded.index().basename(&Id::new("gamma")),
+            Some(STAGED_UID)
+        );
+        assert_eq!(
+            scratch.listing(),
+            ["Ab3.json", STAGED_UID, "index.json", "lock"]
+        );
+    }
+
+    #[test]
+    fn recovery_does_nothing_to_a_store_with_no_journal_state() {
+        use crate::store::fs::call_record::take;
+
+        let scratch = Scratch::seeded();
+        let before = scratch.listing();
+
+        take();
+        recover(&scratch.directory()).expect("nothing to recover");
+
+        let calls = take();
+
+        assert!(
+            calls.is_empty(),
+            "recovery wrote for an unrecovered store: {calls:?}"
+        );
+        assert_eq!(scratch.listing(), before);
+    }
+
+    #[test]
+    fn recovery_refuses_two_journal_states_without_modifying_evidence() {
+        let scratch = Scratch::seeded();
+        the_batch_staged(&scratch, PREPARE_STATE);
+        the_batch_staged(&scratch, COMMIT_STATE);
+        let staged = fs::read(
+            scratch
+                .directory()
+                .join(PREPARE_STATE)
+                .join(MANIFEST_BASENAME),
+        )
+        .expect("the staged manifest");
+
+        let error = recover(&scratch.directory()).expect_err("two states are not a tie-break");
+
+        assert!(
+            matches!(error, StoreError::AmbiguousJournalState { .. }),
+            "{error}"
+        );
+        for named in [PREPARE_STATE, COMMIT_STATE] {
+            assert!(error.to_string().contains(named), "{error}");
+        }
+        assert_eq!(
+            fs::read(
+                scratch
+                    .directory()
+                    .join(PREPARE_STATE)
+                    .join(MANIFEST_BASENAME)
+            )
+            .expect("the evidence is still there"),
+            staged
+        );
+    }
+
+    #[test]
+    fn recovery_removes_only_the_protocols_own_temporaries() {
+        let scratch = Scratch::seeded();
+        let directory = scratch.directory();
+
+        fs::write(directory.join("index.json.tmp"), b"{}").expect("a replay temporary");
+        fs::write(directory.join("Ab3.json.tmp"), b"{}").expect("a replay temporary");
+        fs::write(directory.join("nested.tmp.tmp"), b"{}").expect("not a protocol temporary");
+
+        recover(&directory).expect("the temporaries are removable");
+
+        let listing = scratch.listing();
+        assert!(
+            !listing.contains(&"index.json.tmp".to_owned()),
+            "{listing:?}"
+        );
+        assert!(!listing.contains(&"Ab3.json.tmp".to_owned()), "{listing:?}");
+        assert!(
+            listing.contains(&"nested.tmp.tmp".to_owned()),
+            "the narrow namespace kept a name it does not own: {listing:?}"
+        );
+    }
+
+    #[test]
+    fn recovery_discards_a_prepare_state_whatever_it_holds() {
+        for manifest in [
+            manifest_json(&["Ab3.json"], &[]),
+            b"not a manifest".to_vec(),
+        ] {
+            let scratch = Scratch::seeded();
+            write_state(
+                &scratch,
+                PREPARE_STATE,
+                &manifest,
+                &[("Ab3.json", b"{\"id\":\"alpha\"}")],
+            );
+
+            recover(&scratch.directory()).expect("a prepare state is always discardable");
+
+            assert_eq!(
+                scratch.listing(),
+                ["Ab3.json", "Zq7.json", "index.json", "lock"],
+                "the staged state is gone and nothing was published"
+            );
+            assert_eq!(
+                scratch.loaded().entities()[&Id::new("alpha")]["body"],
+                json!("first")
+            );
+        }
+    }
+
+    #[test]
+    fn recovery_replays_a_commit_state_totally_and_clears_it() {
+        let scratch = Scratch::seeded();
+        the_batch_staged(&scratch, COMMIT_STATE);
+
+        recover(&scratch.directory()).expect("the commit state is replayable");
+
+        assert_the_batch_is_published(&scratch);
+    }
+
+    #[test]
+    fn recovery_of_a_commit_state_is_idempotent_after_a_partial_replay() {
+        let scratch = Scratch::seeded();
+        the_batch_staged(&scratch, COMMIT_STATE);
+
+        fs::write(
+            scratch.directory().join("Ab3.json"),
+            entity_bytes(json!({"id": "alpha", "body": "changed"})),
+        )
+        .expect("an earlier attempt got this far");
+        fs::remove_file(scratch.directory().join("Zq7.json")).expect("and this far");
+
+        recover(&scratch.directory()).expect("a replay is total, not incremental");
+
+        assert_the_batch_is_published(&scratch);
+    }
+
+    #[test]
+    fn recovery_finishes_a_done_state_whatever_it_holds() {
+        let scratch = Scratch::seeded();
+        the_batch_staged(&scratch, DONE_STATE);
+
+        recover(&scratch.directory()).expect("a done state only needs clearing");
+
+        assert_eq!(
+            scratch.listing(),
+            ["Ab3.json", "Zq7.json", "index.json", "lock"],
+            "the done state was cleared and nothing was replayed"
+        );
+    }
+
+    /// One commit state that recovery must refuse: what is wrong with it, its
+    /// manifest bytes, and the files staged beside that manifest.
+    struct Disagreeing {
+        what: &'static str,
+        manifest: Vec<u8>,
+        staged: Vec<(&'static str, Vec<u8>)>,
+    }
+
+    fn disagreeing() -> Vec<Disagreeing> {
+        let entity = entity_bytes(json!({"id": "alpha", "body": "changed"}));
+        let staged = |name: &'static str| vec![(name, entity.clone())];
+
+        vec![
+            Disagreeing {
+                what: "a listed put is not staged",
+                manifest: manifest_json(&["Ab3.json", INDEX_BASENAME], &[]),
+                staged: Vec::new(),
+            },
+            Disagreeing {
+                what: "a staged file is not listed",
+                manifest: manifest_json(&[], &[]),
+                staged: staged("Ab3.json"),
+            },
+            Disagreeing {
+                what: "an entry appears twice",
+                manifest: manifest_json(&["Ab3.json", "Ab3.json"], &[]),
+                staged: staged("Ab3.json"),
+            },
+            Disagreeing {
+                what: "a put and a removal overlap",
+                manifest: manifest_json(&["Ab3.json"], &["Ab3.json"]),
+                staged: staged("Ab3.json"),
+            },
+            Disagreeing {
+                what: "a basename escapes the store",
+                manifest: manifest_json(&["../escape.json"], &[]),
+                staged: Vec::new(),
+            },
+            Disagreeing {
+                what: "a basename is reserved",
+                manifest: manifest_json(&["lock"], &[]),
+                staged: Vec::new(),
+            },
+            Disagreeing {
+                what: "a basename is a temporary",
+                manifest: manifest_json(&["Ab3.json.tmp"], &[]),
+                staged: Vec::new(),
+            },
+            Disagreeing {
+                what: "the manifest version is unknown",
+                manifest: br#"{"format_version":2,"puts":[],"removes":[]}"#.to_vec(),
+                staged: Vec::new(),
+            },
+        ]
+    }
+
+    #[test]
+    fn recovery_refuses_a_commit_state_that_disagrees_with_its_staging_directory() {
+        for case in disagreeing() {
+            let name = case.what;
+            let scratch = Scratch::seeded();
+            let staged: Vec<(&str, &[u8])> = case
+                .staged
+                .iter()
+                .map(|(name, bytes)| (*name, bytes.as_slice()))
+                .collect();
+
+            write_state(&scratch, COMMIT_STATE, &case.manifest, &staged);
+            let before = scratch.listing();
+
+            let error = recover(&scratch.directory()).expect_err(name);
+
+            assert!(
+                matches!(
+                    error,
+                    StoreError::Corrupt { .. } | StoreError::UnsafeBasename { .. }
+                ),
+                "{name}: {error}"
+            );
+            assert_eq!(scratch.listing(), before, "{name}: evidence was modified");
+            assert_eq!(
+                scratch.loaded().entities()[&Id::new("alpha")]["body"],
+                json!("first"),
+                "{name}: something was replayed before the refusal"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn recovery_refuses_a_symlinked_staged_file_rather_than_following_it() {
+        let scratch = Scratch::seeded();
+        let outside = scratch.path.join("outside.json");
+        fs::write(
+            &outside,
+            entity_bytes(json!({"id": "alpha", "body": "outside"})),
+        )
+        .expect("an entity outside the store");
+        write_state(
+            &scratch,
+            COMMIT_STATE,
+            &manifest_json(&["Ab3.json"], &[]),
+            &[],
+        );
+        std::os::unix::fs::symlink(
+            &outside,
+            scratch.directory().join(COMMIT_STATE).join("Ab3.json"),
+        )
+        .expect("a symlinked staged file");
+
+        let error = recover(&scratch.directory()).expect_err("a symlink is never followed");
+
+        assert!(
+            matches!(error, StoreError::SymlinkedEntry { .. }),
+            "{error}"
+        );
+        assert_eq!(
+            scratch.loaded().entities()[&Id::new("alpha")]["body"],
+            json!("first")
+        );
     }
 }
