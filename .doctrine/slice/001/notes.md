@@ -362,22 +362,70 @@ One heavy phase per charter, pairs only for the two pure cores:
   id-first wherever it appears · the fix lands at the byte boundary with the
   owner of `src/entity.rs` once the CLI projects into an envelope, not in the
   selection core · deferred to PHASE-07
+- charter-3 · PHASE-04's commit step in the seam refuses with
+  `StoreError::NotYetImplemented` instead of doing nothing · a silent no-op would
+  let a command that asked for a write report success without publishing, and
+  would hide the fact that PHASE-04 has no index writer; refusing keeps "no code
+  path publishes an index" structural and makes a `declare` against a real store
+  exit 1 until PHASE-05 fills the body (which deletes the variant) · decided
+- charter-3 · initialisation's parent-directory fsync is labelled
+  `Boundary::ParentDirectorySynced` instead of a new registry name · the registry
+  has no initialisation-parent name and the charter forbids adding one here, and
+  it is the same durable step on the same directory; PHASE-05 owns initialisation
+  interruption tests and may append a distinct name when it needs to distinguish
+  the two · decided
+- charter-3 · `StoreError` gained its refusal vocabulary (absent, locked, unknown
+  format version, unexplained entry, symlinked entry, id disagreement, corrupt,
+  not-yet-implemented) with `Error`'s two-class mapping untouched · all are
+  exit-1 store failures, which is the additive pattern PHASE-02/03 set for
+  `Reject`; no third error class and no exit-code change · decided
+- charter-3 · a top-level `.smut/manifest.json` is refused as an unexplained
+  entry · §4.1 reserves the manifest name for a manifest *inside* a journal state
+  directory and DEC-004's explained list (lock, journal states, `index.json`,
+  mapped files, the reserved temporary namespace) excludes a top-level one, so a
+  stray one is evidence of the tool's own namespace being violated, not noise ·
+  decided
+- charter-3 · nested stored entity-node ids stay unvalidated · §5.2's list and
+  EX-5 name only "each file's `id` equal to its index key", so validating nested
+  reference shapes would invent an obligation outside this phase's bar; PHASE-02's
+  recorded "the store loader owns it" stands as the target, and the concrete risk
+  (a corrupt-but-index-consistent nested `id` reaching a `scan_refs` panic in
+  PHASE-07) is handed to `/audit` → `/reconcile` as a backlog candidate ·
+  deferred
+- charter-3 · a symlinked `.smut/lock` would still be followed by
+  `OpenOptions::create(true)` (no `O_NOFOLLOW`) · EX-5 names entity files and
+  `index.json` for the symlink refusal, so hardening the lock is outside this
+  phase's bar and is recorded as a backlog candidate · deferred
+- charter-3 · duplicate `objects` *keys* inside `index.json` collapse at
+  `serde_json` parse, so only distinct-ids-mapping-to-one-file duplicates are
+  detectable · EX-5's "duplicate path mapping" is that detectable case; refusing
+  duplicate JSON keys needs the custom visitor DEC-006 scopes to declaration
+  input, so it is a backlog candidate rather than a silent widening · deferred
+- charter-3 · `fs4` 1.1.0 has no `fs4::fs_std::FileExt` (the path the charter
+  named from memory); the lock uses the crate-root `fs4::FileExt` via UFCS ·
+  std's inherent `File::lock`/`try_lock` (Rust 1.89+) would otherwise win and
+  leave `fs4` unused, which is the one thing the charter asked to avoid; `fs4` is
+  no longer reported as an unused dependency · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 2 close (PHASE-01…PHASE-03 complete) · 3fc8086
+fresh-as-of: 2026-11-01 · charter 3 close (PHASE-01…PHASE-04 complete) · 49d81d7
 
 ### Produced
 
 - PHASE-01 landed the crate spine (9 commits, `e0ce040…397c5c8`); PHASE-02 the
   declaration core (9 commits, `614ea33…7adefa4`); PHASE-03 the selection core
-  (7 commits, `e08bb7f…3fc8086`). `docs/` and `README.md` remain undelivered by
-  design — PHASE-08.
-- `just check` green at both closes: 142 lib + 4 bin + 5 `tests/selection.rs`
-  (151) on default features, 152 + 4 + 5 (161) with `--features
-  fault-injection`.
-- `slice verify-vt` green for every row PHASE-01/02/03 own (12/12); later phases
-  red because their files do not exist yet.
+  (7 commits, `e08bb7f…3fc8086`); PHASE-04 the store format, index, lock,
+  validation and pipeline seam (5 commits, `8403ac1…49d81d7`). `docs/` and
+  `README.md` remain undelivered by design — PHASE-08.
+- `just check` green at every close; after PHASE-04: 172 lib + 4 bin + 5
+  `tests/selection.rs` + 12 `tests/store_corruption.rs` (193) on default features,
+  182 + 4 + 5 + 12 (203) with `--features fault-injection`.
+- `slice verify-vt` green for every row PHASE-01…PHASE-04 own (14/14); later
+  phases red because their files do not exist yet.
+- PHASE-04 leaves the store able to refuse but not to write: `Store::run` is the
+  one pipeline entry point (DEC-004's order with `recover` and `commit` stubs),
+  and no code path creates `index.json`.
 - `slice conformance`: 16 declarations conformant; two undeclared (`Cargo.lock`,
   `.doctrine/slice/001/notes.md` — neither is in §12's selector list) and the two
   deliberately undelivered targets.
@@ -403,6 +451,14 @@ fresh-as-of: 2026-11-01 · charter 2 close (PHASE-01…PHASE-03 complete) · 3fc
   obligation-versus-API, absorbable guarantee, recipe narrower than the claim
   above it, vacuous cfg-gated suite, tests needing a lib target, unmeetable
   criteria.
+- (unminted — id minting fails in this checkout) `fs4` 1.1.0 exposes `FileExt` at
+  the crate root, not the pre-1.0 `fs4::fs_std` path; call it by UFCS
+  (`FileExt::lock(&file)`) or std's inherent `File::lock`/`try_lock` (Rust
+  1.89+) shadows it and the crate is reported unused.
+- (unminted) A "this function performs no writes" claim is testable without
+  instrumentation: `src/store/fs.rs`'s `#[cfg(test)] call_record` records every
+  write, fsync, rename and removal, so `take()` around the call and asserting the
+  record is empty is real evidence rather than a comment.
 
 ### Open
 
@@ -410,6 +466,14 @@ fresh-as-of: 2026-11-01 · charter 2 close (PHASE-01…PHASE-03 complete) · 3fc
   serialised lexically rather than id-first (DEC-007), and the response/envelope
   key order is lexical where the brief's examples show a display order (accepted
   as insignificant; DEC-007 fixes the stdout form).
+- PHASE-04's hand-back candidates (unminted): nested stored entity-node ids are
+  unvalidated, so a corrupt-but-index-consistent nested `id` can reach a
+  `scan_refs` panic instead of exit 1; a symlinked `.smut/lock` is followed
+  (`OpenOptions` without `O_NOFOLLOW`); duplicate `objects` keys in `index.json`
+  collapse at parse.
+- PHASE-05 must delete `StoreError::NotYetImplemented` with the `commit` stub, and
+  may append a registry name for initialisation's parent fsync (today labelled
+  `Boundary::ParentDirectorySynced`).
 - QUE (unminted — id reservation needs an authenticated remote push, which this
   checkout cannot do): should design §12 and §11.4 be amended for the lib target
   and the pre-existing README? The plan departs from the table and records why in
