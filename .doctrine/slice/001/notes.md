@@ -1004,3 +1004,8 @@ recorded here and in RV-004's reconciliation brief addendum.
   relative link (`./smut.jpg`), which crates.io does not resolve for published
   READMEs. Left alone deliberately — the owner's brand block is byte-preserved by
   this slice.
+- The owner then replaced the README's relative brand image with
+  `https://github.com/davidlee/smut/raw/main/smut.jpg` (crates.io does not resolve
+  a relative one), so the "brand block byte-preserved" claim now covers the copy
+  text only, and `smut.jpg` is excluded from the crate: **37 files, 556.8 KiB
+  (132.9 KiB compressed)**, `cargo publish --dry-run` clean.
