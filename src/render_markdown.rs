@@ -34,6 +34,8 @@ pub struct Options {
     pub heading_level: u8,
     /// Whether fields that are neither the heading nor the body are shown.
     pub show_fields: bool,
+    /// Whether identity is shown even when the entity has visible content.
+    pub show_ids: bool,
 }
 
 impl Default for Options {
@@ -42,6 +44,7 @@ impl Default for Options {
             heading_field: DEFAULT_HEADING_FIELD.to_owned(),
             heading_level: DEFAULT_HEADING_LEVEL,
             show_fields: false,
+            show_ids: false,
         }
     }
 }
@@ -88,7 +91,16 @@ fn entity_blocks(selection: &Selection<'_>, options: &Options, id: &Id) -> Vec<S
     }
 
     let attributes = attribute_lines(entity, selection, options, &rendered_specially);
+    let visible = heading.is_some()
+        || body.as_deref().is_some_and(|text| !text.trim().is_empty())
+        || !attributes.is_empty();
     let mut blocks = Vec::new();
+
+    // Identity leads the entity, and is also what the visibility fallback
+    // renders: a bodyless entity never silently vanishes.
+    if options.show_ids || !visible {
+        blocks.push(code_span(id.as_str()));
+    }
 
     if let Some(heading) = heading {
         blocks.push(heading);
@@ -231,6 +243,33 @@ fn collapse_newlines(text: &str) -> String {
     text.replace("\r\n", " ").replace(['\r', '\n'], " ")
 }
 
+/// A CommonMark code span: a fence one backtick longer than the longest run
+/// inside `content`, padded when the content's own edges would otherwise be
+/// stripped by the code-span rule. Public ids are opaque, so a fixed
+/// single-backtick span is not a delimiter.
+fn code_span(content: &str) -> String {
+    let fence = "`".repeat(longest_backtick_run(content) + 1);
+    let pad = content.starts_with('`')
+        || content.ends_with('`')
+        || (content.starts_with(' ')
+            && content.ends_with(' ')
+            && !content.chars().all(|character| character == ' '));
+
+    if pad {
+        format!("{fence} {content} {fence}")
+    } else {
+        format!("{fence}{content}{fence}")
+    }
+}
+
+fn longest_backtick_run(content: &str) -> usize {
+    content
+        .split(|character: char| character != '`')
+        .map(str::len)
+        .max()
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,8 +390,14 @@ mod tests {
             json!({"id": "absent", "body": "bodyless heading"}),
         ]);
 
-        assert_eq!(rendered(&store, &["empty"], &Options::default()), "");
-        assert_eq!(rendered(&store, &["number"], &Options::default()), "");
+        assert_eq!(
+            rendered(&store, &["empty"], &Options::default()),
+            "`empty`\n"
+        );
+        assert_eq!(
+            rendered(&store, &["number"], &Options::default()),
+            "`number`\n"
+        );
         assert_eq!(
             rendered(&store, &["absent"], &Options::default()),
             "bodyless heading\n"
@@ -511,6 +556,99 @@ mod tests {
         assert_eq!(
             rendered(&store, &["a"], &fields_shown(Options::default())),
             "- **type:** x\n"
+        );
+    }
+
+    fn ids_shown(options: Options) -> Options {
+        Options {
+            show_ids: true,
+            ..options
+        }
+    }
+
+    #[test]
+    fn show_ids_renders_identity_in_addition_to_the_content() {
+        let store = store(&[json!({"id": "a", "title": "T", "body": "b", "type": "x"})]);
+
+        assert_eq!(
+            rendered(&store, &["a"], &ids_shown(Options::default())),
+            "`a`\n\n## T\n\nb\n"
+        );
+        assert_eq!(
+            rendered(&store, &["a"], &ids_shown(fields_shown(Options::default()))),
+            "`a`\n\n## T\n\nb\n\n- **type:** x\n"
+        );
+    }
+
+    #[test]
+    fn the_visibility_fallback_renders_identity_when_nothing_else_would_be_visible() {
+        let store = store(&[json!({"id": "a"})]);
+
+        assert_eq!(rendered(&store, &["a"], &Options::default()), "`a`\n");
+        assert_eq!(
+            rendered(&store, &["a"], &fields_shown(Options::default())),
+            "`a`\n"
+        );
+    }
+
+    #[test]
+    fn an_empty_or_whitespace_only_body_cannot_suppress_the_fallback() {
+        let store = store(&[
+            json!({"id": "empty", "body": ""}),
+            json!({"id": "blank", "body": "   \n\t "}),
+            json!({"id": "titled", "title": "T", "body": "  "}),
+        ]);
+
+        assert_eq!(
+            rendered(&store, &["empty"], &Options::default()),
+            "`empty`\n"
+        );
+        assert_eq!(
+            rendered(&store, &["blank"], &Options::default()),
+            "`blank`\n\n   \n\t \n"
+        );
+        assert_eq!(
+            rendered(&store, &["titled"], &Options::default()),
+            "## T\n\n  \n"
+        );
+    }
+
+    #[test]
+    fn an_id_with_backticks_gets_a_fence_longer_than_its_longest_run() {
+        let store = store(&[
+            json!({"id": "a`b"}),
+            json!({"id": "a``b"}),
+            json!({"id": "`lead"}),
+            json!({"id": "trail`"}),
+            json!({"id": " spaced ` middle "}),
+        ]);
+
+        assert_eq!(rendered(&store, &["a`b"], &Options::default()), "``a`b``\n");
+        assert_eq!(
+            rendered(&store, &["a``b"], &Options::default()),
+            "```a``b```\n"
+        );
+        assert_eq!(
+            rendered(&store, &["`lead"], &Options::default()),
+            "`` `lead ``\n"
+        );
+        assert_eq!(
+            rendered(&store, &["trail`"], &Options::default()),
+            "`` trail` ``\n"
+        );
+        assert_eq!(
+            rendered(&store, &[" spaced ` middle "], &Options::default()),
+            "``  spaced ` middle  ``\n"
+        );
+    }
+
+    #[test]
+    fn each_entity_gets_its_own_span() {
+        let store = store(&[json!({"id": "a"}), json!({"id": "b`c"})]);
+
+        assert_eq!(
+            rendered(&store, &["a", "b`c"], &Options::default()),
+            "`a`\n\n``b`c``\n"
         );
     }
 }
