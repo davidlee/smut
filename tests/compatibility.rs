@@ -355,6 +355,94 @@ fn an_unknown_key_is_refused_without_naming_0_2() {
     );
 }
 
+/// The brief's end-to-end acceptance example, for the steps 0.1 can run.
+///
+/// Two of the example's invocations use `follow` and one uses `where`, which are
+/// named-future keys refused by name (pinned above), so the workflow's 0.1 part
+/// is what is fixed here: the nested declaration, the patch that preserves
+/// unnamed fields, `DROP` of one field, the delete envelope, and the reference
+/// that survives the delete. The example's closing "the final query reports a
+/// dangling reference" needs traversal, which 0.1 does not have, so the final
+/// query here pins `dangling: []` for a store that never traversed.
+#[test]
+fn the_briefs_end_to_end_example_still_runs_where_0_1_can() {
+    let scratch = Scratch::new();
+
+    let declared = run(
+        &scratch,
+        &[
+            "declare",
+            r#"[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]"#,
+        ],
+    );
+    declared.assert_one_json_line("the brief's nested declaration");
+    assert_eq!(declared.json()["ids"], json!(["smut"]));
+    assert_eq!(declared.json()["missing"], json!([]));
+
+    // The nested declaration became an entity of its own and an id-only
+    // reference in its container — the brief's stated outcome.
+    let stored = run(&scratch, &["get", "smut", "q-query"]);
+    stored.assert_one_json_line("both declared entities");
+    assert_eq!(
+        stored.json()["objects"],
+        json!([
+            {"body": "Persist conversational structure.", "id": "smut", "questions": [{"id": "q-query"}], "title": "Smut"},
+            {"body": "Keep selection small.", "id": "q-query", "status": "open", "title": "Query design", "type": "question"},
+        ])
+    );
+
+    // A patch preserves the fields it does not name; DROP removes only the field
+    // it names.
+    run(
+        &scratch,
+        &[
+            "declare",
+            r#"{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}"#,
+        ],
+    )
+    .assert_one_json_line("the brief's patch");
+    run(
+        &scratch,
+        &["declare", r#"{"id":"q-query","status":"DROP"}"#],
+    )
+    .assert_one_json_line("the brief's DROP");
+
+    let after = run(&scratch, &["get", "q-query"]);
+    after.assert_one_json_line("q-query after the patch and DROP");
+    assert_eq!(
+        after.json()["objects"],
+        json!([{
+            "body": "Use bounded traversal and simple predicates.",
+            "id": "q-query",
+            "title": "Query design",
+            "type": "question",
+        }])
+    );
+
+    // One batch with its own envelope, and the reference in `smut` survives it:
+    // querying `smut` after the delete does not recreate `q-query`.
+    let deleted = run(&scratch, &["delete", "q-query"]);
+    deleted.assert_one_json_line("the brief's delete");
+    assert_eq!(
+        deleted.json(),
+        json!({"deleted": ["q-query"], "missing": []})
+    );
+
+    let survivors = run(&scratch, &["query", r#"{"from":"smut"}"#]);
+    survivors.assert_one_json_line("smut after the delete");
+    assert_eq!(
+        survivors.json()["objects"],
+        json!([{
+            "body": "Persist conversational structure.",
+            "id": "smut",
+            "questions": [{"id": "q-query"}],
+            "title": "Smut",
+        }])
+    );
+    assert_eq!(survivors.json()["missing"], json!([]));
+    assert_eq!(survivors.json()["dangling"], json!([]));
+}
+
 #[test]
 fn learn_writes_a_non_empty_guide_and_touches_no_store() {
     let scratch = Scratch::new();
