@@ -5,6 +5,7 @@
 //! by the phase that builds it.
 
 #![forbid(unsafe_code)]
+pub mod declare;
 pub mod entity;
 pub mod error;
 pub mod id;
