@@ -281,6 +281,9 @@ fn completeness_notice(selection: &Selection<'_>) -> Option<String> {
     let mut lines = Vec::new();
 
     if selection.truncated {
+        // `select` sets `truncated` and its reasons together, so a truncated
+        // selection always says why rows were omitted. A hand-built one that
+        // does not is the same precondition breach `project_one` reports.
         assert!(
             !selection.reasons.is_empty(),
             "a truncated selection names why rows were omitted"
