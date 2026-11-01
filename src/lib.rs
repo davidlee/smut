@@ -11,5 +11,6 @@ pub mod error;
 pub mod id;
 pub mod numeric;
 pub mod order;
+pub mod select;
 pub mod spec;
 pub mod store;
