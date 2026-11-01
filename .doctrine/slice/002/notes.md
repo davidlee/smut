@@ -1663,3 +1663,60 @@ which is the only one that proves it.
   is a field `follow`, `backlinks` and `where` must be told). Nothing currently
   detects the two drifting apart — the sets are pinned byte-for-byte and the
   guide by keyword — so a reword in one is a manual review duty, not a test.
+
+## Implementation complete — final state (2026-11-02)
+
+Audit not opened; nothing pushed, tagged or published; `0.2.0` exists only in this
+tree. Review scratch worktrees reaped; one worktree remains.
+
+| | |
+| --- | --- |
+| phases | **7/7 completed** |
+| `doctrine slice verify-vt 2` | **25 PASS, 0 Fail, 0 unattributable** |
+| gates at the final tree | fmt clean, clippy clean in both feature configurations, 16 suites green, fault-injection green with the gated suite executing 44 |
+| version | `Cargo.toml` + `Cargo.lock` = `0.2.0`, no dependency moved |
+| conformance | 26 conformant, **0 undelivered**, 4 undeclared (the review ledgers — explained above) |
+| code reviews | RV-017…RV-020 all `done`; 23 findings, 0 blocker, 0 major, 0 design contradiction |
+
+### What the review lane actually cost, and bought
+
+Every pass was raised by a read-only seat and verified by a **second** one; no
+finding was ever verified by the seat that answered it. Four passes produced 23
+findings, none behavioural — the release's central invariants survived every
+adversarial read (one reference interpretation, roots-only `where`,
+budget-before-expansion, predicate purity, the executed example being the guide's
+example).
+
+Two structural lessons, both paid for:
+
+- **A repair is a change and needs the same falsification as code.** Twice a
+  batch introduced a smaller defect than the one it closed: a comment claiming a
+  field order the printer cannot produce, and a sentence cut mid-thought with a
+  dangling clause. A third time the *control* itself was invalid — a global
+  substitution that rewrote the assertion alongside its subject, which proves
+  nothing.
+- **An assertion that cannot fail was the run's dominant defect class — five
+  instances**, three of them in repairs written by the seat: a vacuous VT keyword
+  (DEF-3), a keyword spelled differently from the suite (`roots-only`), a rename
+  whose supporting claim was false (RV-018 F-3), a pin whose keywords lived
+  elsewhere (RV-020 F-1), and a "strengthened" pin that was a substring of a
+  neighbour (RV-020 F-3, twice). The escalations that worked, in order: pin a
+  token only the intended sentence can produce; make the subject impossible to
+  delete silently; flatten the text so a reflow is not a false alarm; and **run
+  the mutation** — delete the subject, expect red — which is the only one that
+  proves it.
+
+### Residual for the audit, stated rather than hidden
+
+- **Prose pins are substring matches on flattened text.** They cannot tell a claim
+  that moved from one that was deleted (the limit default is taught twice), nor a
+  sentence reworded around the pinned fragment. The durable pin is the structural
+  one — `the_guide_teaches_exactly_the_nine_keys` reads the key block instead of
+  restating it — and that pattern is not applied to the rest of the guide.
+- **Two shipped surfaces carry the same two rules** (`learn` and
+  `src/conventions/hygiene.md`), by design; nothing tests them against each other.
+  Ownership is recorded; drift detection is nobody's.
+- **Two locked-design sentences the data falsifies** go to reconcile with the
+  line-number drift the operator deferred: §2's "mutually-referencing clusters",
+  and §9.4's "version-bound" for a guide that now carries no build number.
+- **IMP-004** holds the deferred `epistemic-records` set and its five questions.
