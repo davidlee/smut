@@ -755,6 +755,57 @@ fn a_failed_commit_rename_is_pre_commit_and_discards_the_staging_state() {
     );
 }
 
+/// The decision is the rename, so what `journal.commit/` holds is exactly the
+/// material every barrier step produced before it (§4.3).
+#[test]
+fn the_barrier_stages_every_put_and_the_manifest_before_the_decision() {
+    if is_child() {
+        run_child();
+    }
+
+    let scratch = Scratch::seeded();
+
+    abort_at(
+        "the_barrier_stages_every_put_and_the_manifest_before_the_decision",
+        Boundary::CommitRenamed,
+        &scratch.root,
+        "declare",
+    );
+
+    let staged: BTreeMap<String, Vec<u8>> = scratch
+        .tree()
+        .into_iter()
+        .filter(|(key, _)| key.starts_with(&format!("{COMMIT_STATE}/")))
+        .collect();
+    let manifest = smut::store::journal::Manifest::parse(
+        &staged[&format!("{COMMIT_STATE}/{MANIFEST_BASENAME}")],
+    )
+    .expect("the staged manifest");
+
+    assert_eq!(
+        manifest.removes(),
+        [BETA_FILE],
+        "the removal is in the write set"
+    );
+    assert_eq!(manifest.puts().len(), 3, "two entities and the index");
+    assert_eq!(
+        manifest.puts().last().map(String::as_str),
+        Some(INDEX_BASENAME),
+        "the index is staged last, so it is applied after the puts"
+    );
+    for basename in manifest.puts() {
+        assert!(
+            staged.contains_key(&format!("{COMMIT_STATE}/{basename}")),
+            "{basename} is listed and not staged"
+        );
+    }
+    assert_eq!(
+        staged.len(),
+        4,
+        "the manifest and every put, and nothing else"
+    );
+}
+
 #[test]
 fn a_failed_initialisation_parent_fsync_publishes_nothing() {
     let scratch = Scratch::new();
