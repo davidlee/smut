@@ -513,12 +513,12 @@ mod tests {
     }
 
     #[test]
-    fn the_nine_keys_are_each_accepted() {
-        // Named for what it does. The exclusivity half of "exactly" is not
-        // asserted here: `an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release`
-        // (this module) and the CLI's `an_unknown_key_stays_unknown_and_names_no_release`
-        // own it, so a tenth accepted key would fail there. The old name
-        // claimed it twice over and could not fail on the thing it claimed.
+    fn the_nine_keys_are_accepted_and_nothing_else_is() {
+        // Both halves are asserted here, because the first rename of this test
+        // claimed the exclusivity half was owned elsewhere and it was not: the
+        // two unknown-key tests probe only `sort`, so a tenth accepted key left
+        // them green (RV-018 F-3). A test named for set identity has to fail when
+        // the set grows.
         //
         // Re-cut from `the_acceptance_set_is_exactly_the_four_keys`, whose name
         // and body the widened surface falsified: each accepted key is exercised
@@ -541,6 +541,22 @@ mod tests {
             ("budget", json!(1)),
         ] {
             assert!(spec(json!({key: value})).is_ok(), "{key} is accepted");
+        }
+
+        // The other half: plausible keys the surface does not have. Each is a
+        // shape a future release could want, so accepting one by accident — a
+        // new arm added without a criterion — goes red here.
+        for key in ["sort", "offset", "page", "filter", "fields", "include"] {
+            let rejected = spec(json!({key: []}))
+                .err()
+                .unwrap_or_else(|| panic!("{key} is not in the surface and must be refused"));
+            assert_eq!(
+                rejected,
+                Reject::UnknownSpecificationKey {
+                    key: key.to_owned()
+                },
+                "{key} is refused as an unknown key, not as a bad value"
+            );
         }
     }
 
