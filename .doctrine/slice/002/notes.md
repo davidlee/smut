@@ -6,8 +6,9 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (run rev 55, pass RV-014 stale, RV-012 F-4
-contested) · commit 603c718
+fresh-as-of: 2026-11-01 · reviewing (run rev 57, pass RV-015 concluded as a
+rebinding pass, RV-012 F-4 answered awaiting raiser verification) · commit
+603c718 + this session's ledger/run acts
 
 ### Produced
 
@@ -16,9 +17,10 @@ contested) · commit 603c718
 - Research artefact + raw threads; baseline restamped after the design.
 - DEC-012…DEC-019 from the eight inquiry dispositions; DEC-014 amended to the
   induced subgraph of returned entities.
-- 15-section `design.md`, now at run revision 55; review passes RV-007…RV-014
+- 15-section `design.md`, unchanged at revision 57; review passes RV-007…RV-014
   across four adversarial windows, every finding terminal except RV-012 F-4
-  (contested, awaiting the responder).
+  (answered, awaiting the raiser's verification). RV-015 is the rebinding pass
+  opened by the stage round trip, concluded with its basis recorded.
 - 16 `design-target` selectors matching §14.
 - IMP-001 moved to `started`.
 - `IMP-004` — the epistemic-records convention set, deferred out of 0.2 with its
@@ -324,3 +326,35 @@ design conversation. Removed from the design, not repaired again.
 - **Gate removed:** DEC-017 no longer requires operator approval of a schema
   before a set ships, because no such set ships. §9.2's review is now ordinary
   review, not approval.
+
+## Rebinding, and the F-4 dispose (2026-11-01)
+
+Two ledger acts, no design change. Nothing was built or run this session; every
+claim below is a reading of the design, of DEC-017, or of a committed ledger.
+
+- **F-4 disposed (RV-012).** Contested → answered, `fix-now`, route `refresh`
+  kept. The response concedes the raiser's point 2 — the finding's own instance
+  is impossible, because seed ids are fixed per set (`conventions-hygiene`) and
+  an id-keyed upsert cannot touch `vocab`, which is evidence of the *practice* of
+  amending convention prose rather than a record this pipeline overwrites — and
+  records point 1 as satisfied after the fact by `603c718`, which rewrote
+  DEC-017's body, choice and consequences to say the seeded `body` is replaced
+  on re-install. No mechanism added. **Verification of F-4 is the raiser's act,
+  not the responder's**: F-1…F-3 were self-verified only because that seat raised
+  them.
+- **Rebinding (revision 55 → 57).** The refactor was adopted after RV-014 had
+  opened, so the run reported its pass as `STALE`. Rebinding is a stage round
+  trip — `reviewing → drafting → reviewing` — after which the run opened **RV-015
+  bound to the current revision**; opening a ledger by hand does not rebind it.
+  The same lesson as RV-008/RV-010/RV-013, and the reason those three were paid
+  for and superseded.
+- **RV-015 is a rebinding pass, not a fifth window.** Concluded with its basis
+  stated: the whole adopted delta of `603c718` plus a cross-reference sweep for
+  references to a shipped second set or an operator schema approval. Nothing new
+  found, nothing raised. The substantive examination of this design remains
+  RV-007…RV-014.
+- **Open exposure, already governed.** §2's first-use-store paragraph and §9.2
+  item 7 both describe the operator's store's `vocab`. If the DEC-018 privacy
+  read-through changes it, §11's gate already rules: the affected section is
+  revised before the phase that depends on it. Not a finding — a dependency the
+  privacy phase carries.
