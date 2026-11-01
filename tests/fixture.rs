@@ -12,7 +12,8 @@
 //!
 //! Every invocation is a real process run in its own scratch directory, as
 //! `tests/cli_contract.rs` keeps it, so the store found is the one `$PWD/.smut`
-//! names.
+//! names. The guide's own example constants are executed here as well, so the
+//! shipped recipe and this suite cannot drift (PHASE-06, EX-5 / VT-2).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -22,6 +23,8 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
+
+use smut::learn::{EXAMPLE_FILTER, EXAMPLE_FOLLOW, EXAMPLE_TRAVERSE};
 
 /// The committed array, relative to the crate root. It is the only data source
 /// these tests read: no store internals, no second copy.
@@ -444,5 +447,222 @@ fn filtering_the_reached_ids_for_open_status_names_the_eight_questions() {
         ]
         .map(String::from),
         "the reached ids, filtered to open questions, are exactly the eight in id order"
+    );
+}
+// ── the shipped recipe, executed (PHASE-06, EX-5 / VT-2) ────────────────────
+
+/// The eight open questions §13.1 names, in id order: what "which open
+/// questions hang off this session" has to answer.
+const OPEN_QUESTIONS: [&str; 8] = [
+    "q-audit-cost",
+    "q-channel-fix",
+    "q-fix-order",
+    "q-impact-query",
+    "q-more-friction",
+    "q-promotion",
+    "q-split",
+    "q-variance-mechanism",
+];
+
+/// What a guarded composition concludes from one envelope.
+enum Guarded {
+    /// Both fields agree the envelope is whole, so its ids are the answer.
+    Complete(Vec<String>),
+    /// The answer is a statement about the ids received, and it carries every
+    /// reason the envelope gave for not being whole.
+    Partial {
+        ids: Vec<String>,
+        reasons: Vec<String>,
+    },
+}
+
+/// The completeness guard the guide states as part of the recipe, clause by
+/// clause: `truncated` and `truncation_reasons` are read **before** any id is
+/// extracted, so a truncated envelope can never be reported as a whole answer.
+///
+/// It is client-side: nothing here is passed back to smut, and smut is never
+/// told what the first call said (§9.4, invariant 13).
+fn guarded(envelope: &Value) -> Guarded {
+    let truncated = envelope["truncated"]
+        .as_bool()
+        .unwrap_or_else(|| panic!("the envelope says whether it was cut: {envelope}"));
+    let reasons: Vec<String> = envelope["truncation_reasons"]
+        .as_array()
+        .unwrap_or_else(|| panic!("the envelope names its truncation reasons: {envelope}"))
+        .iter()
+        .map(|reason| {
+            reason
+                .as_str()
+                .unwrap_or_else(|| panic!("a truncation reason is a string: {envelope}"))
+                .to_owned()
+        })
+        .collect();
+
+    let ids = ids_of(envelope);
+
+    if truncated {
+        assert!(
+            !reasons.is_empty(),
+            "a truncated envelope names a reason, so the guard never has to guess: {envelope}"
+        );
+        Guarded::Partial { ids, reasons }
+    } else {
+        Guarded::Complete(ids)
+    }
+}
+
+/// Parses one of the guide's example constants into the request value a query
+/// takes, so the request tested is the request printed.
+fn example(text: &str) -> Value {
+    serde_json::from_str(text)
+        .unwrap_or_else(|error| panic!("the guide's example is JSON ({error}): {text}"))
+}
+
+/// The recipe's second call, with the ids from the first reply substituted for
+/// the guide's `IDS` placeholder — the one thing the guide leaves to the caller.
+fn filter_over(ids: &[String]) -> Value {
+    let ids = serde_json::to_string(ids).expect("ids serialise as a JSON array");
+    example(&EXAMPLE_FILTER.replace("IDS", &ids))
+}
+
+#[test]
+fn the_guide_prints_the_example_this_suite_executes() {
+    let declared = Declared::new();
+    let printed = smut(&declared.scratch, &["learn"]).stdout;
+
+    for printed_example in [EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW, EXAMPLE_FILTER] {
+        assert!(
+            printed.contains(printed_example),
+            "smut learn prints the example verbatim, so the shipped recipe is the tested one: {printed_example}"
+        );
+    }
+}
+
+#[test]
+fn the_shipped_example_reaches_the_eight_open_questions_in_two_calls() {
+    let declared = Declared::new();
+
+    let first = declared.query(&example(EXAMPLE_TRAVERSE));
+    let Guarded::Complete(reached) = guarded(&first) else {
+        panic!("the acceptance graph fits under the default cap: {first}");
+    };
+    assert!(
+        reached.contains(&"session".to_owned()),
+        "the root is a returned id: {reached:?}"
+    );
+
+    let second = declared.query(&filter_over(&reached));
+    let Guarded::Complete(open) = guarded(&second) else {
+        panic!("the filtered call is whole: {second}");
+    };
+
+    assert_eq!(
+        open,
+        OPEN_QUESTIONS.map(String::from),
+        "the shipped example's two calls answer with the eight open questions, in id order"
+    );
+}
+
+#[test]
+fn the_follow_variant_of_the_shipped_example_reaches_none_of_the_questions() {
+    let declared = Declared::new();
+    let envelope = declared.query(&example(EXAMPLE_FOLLOW));
+
+    let Guarded::Complete(ids) = guarded(&envelope) else {
+        panic!("the wrong direction is a complete walk of nothing: {envelope}");
+    };
+    assert_eq!(
+        ids,
+        ["session".to_owned()],
+        "follow on part-of from the session returns the session alone: {envelope}"
+    );
+    assert!(
+        OPEN_QUESTIONS
+            .iter()
+            .all(|question| !ids.contains(&question.to_string())),
+        "the same request in the outgoing direction answers a different question: {ids:?}"
+    );
+}
+
+#[test]
+fn the_completeness_guard_reads_both_reasons_before_it_extracts_any_id() {
+    // Both reasons the envelope can carry, on the first response where they
+    // matter: the guard names each one rather than reporting a whole answer.
+    for reason in ["result_limit", "traversal_budget"] {
+        let first = json!({
+            "objects": [{"id": "q-split"}],
+            "missing": [],
+            "dangling": [],
+            "truncated": true,
+            "truncation_reasons": [reason],
+            "traversal": {"depths": {"q-split": 0}, "edges": [], "frontier": []},
+        });
+
+        match guarded(&first) {
+            Guarded::Partial { ids, reasons } => {
+                assert_eq!(
+                    ids,
+                    ["q-split".to_owned()],
+                    "the ids stay readable beside the reason: {first}"
+                );
+                assert_eq!(
+                    reasons,
+                    [reason.to_owned()],
+                    "the guard carries the reason it read: {first}"
+                );
+            }
+            Guarded::Complete(_) => {
+                panic!("a truncated first response is not a whole answer: {first}")
+            }
+        }
+    }
+
+    // An envelope is whole only when both fields say so, and no reason is
+    // manufactured when nothing was cut.
+    let whole = json!({
+        "objects": [{"id": "q-split"}],
+        "missing": [],
+        "dangling": [],
+        "truncated": false,
+        "truncation_reasons": [],
+        "traversal": {"depths": {"q-split": 0}, "edges": [], "frontier": []},
+    });
+    match guarded(&whole) {
+        Guarded::Complete(ids) => assert_eq!(ids, ["q-split".to_owned()]),
+        Guarded::Partial { reasons, .. } => {
+            panic!("nothing was cut, so nothing is named: {reasons:?}")
+        }
+    }
+}
+
+#[test]
+fn a_complete_looking_second_envelope_is_no_evidence_about_the_first() {
+    let declared = Declared::new();
+
+    // A cap far below what the walk reaches: the first response is cut, and the
+    // questions it did not return are invisible to the second call.
+    let capped = declared.query(&json!({
+        "from": ["session"],
+        "backlinks": ["part-of"],
+        "depth": 2,
+        "select": ["id"],
+        "limit": 3,
+    }));
+    let Guarded::Partial { ids, reasons } = guarded(&capped) else {
+        panic!("three ids cannot hold the whole walk: {capped}");
+    };
+    assert_eq!(reasons, ["result_limit".to_owned()]);
+
+    let second = declared.query(&filter_over(&ids));
+    assert_eq!(
+        second["truncated"],
+        json!(false),
+        "the second call sees only what it was given, so it is whole: {second}"
+    );
+    assert!(
+        OPEN_QUESTIONS
+            .iter()
+            .all(|question| !ids_of(&second).contains(&question.to_string())),
+        "a caller trusting the second envelope alone answers 'no open questions': {second}"
     );
 }
