@@ -203,3 +203,96 @@ own three deferred sentences stay deferred.
 - **Landing** — RV-021 F-3. `git push --force-with-lease=main:dfc2887…` at
   close, not a fast-forward. The operator ruled: wait, then push the finished
   slice.
+
+## Reconciliation Outcome
+
+Reconcile pass, 2026-11-02. Consumed `RV-021` (done · await=none, seven findings
+terminal) and its brief. Two surfaces were written: per-slice artefacts by direct
+edit, and the decision records by their own status verb. No REV was minted — the
+REV typed-change surface covers published docs (ADR / spec / requirement / policy
+/ standard); a decision is a knowledge record with its own status verb, and a REV
+would have had no expressible row and stalled at apply.
+
+### Direct edits applied (per-slice)
+
+- **`design.md` §1** — `src/entity.rs:60` → `:71`. `src/entity.rs` is
+  byte-unchanged by this slice (`git diff b47dd79..HEAD -- src/entity.rs` is
+  empty) and `scan_refs` sits at `:71` in **both** trees, so the pin was wrong
+  when written rather than stale (finding F-2's brief item).
+- **`design.md` §2 table, Reference definition row** — `src/entity.rs:31,60` →
+  `:31,71`, the same error.
+- **`design.md` §2 table, Guide row** — `src/learn.rs:113` → `src/learn.rs`
+  (`GUIDE`). **The handover's prescription (`:111`) was wrong and was not
+  applied**: 0.1's release notice is at 0.1's `:110-111` ("…which arrives in
+  0.2"), and `:111` in the shipped file is the `limit:` line of the key block.
+  The file is rewritten by this slice, so a line pin into it locates nothing; the
+  §2 table's other line pins (`spec.rs:26,70,86`, `select.rs:79`,
+  `render_markdown.rs:280`, `compatibility.rs:316`) were left as they stand —
+  that column locates the **0.1** mechanism, and those files were rewritten.
+- **`design.md` §2 prose** — "mutually-referencing clusters" → one
+  mutually-referencing pair (`finding-smut-17` ↔ `prop-conventions-library`),
+  with the five `type: cluster` entities described as one-directional, each
+  naming the session (finding F-2). Measured: 66 entities, one mutual pair, no
+  cluster referencing another.
+- **`design.md` §13.1 Fixture row** — the same claim, the same replacement.
+- **`slice-002.md` objective 10** — the same claim in the scope tier, which the
+  handover's reconcile list did not name (finding F-2). Verified true and left
+  alone: "22 entities with no incoming reference".
+- **`design.md` §9.4** — "remains descriptive and version-bound" → "bound to the
+  release that ships it — it names no build number, and names the release only
+  where a limit is version-specific". Measured against the shipped guide: its
+  banner carries no version, and its only release word is "in 0.2" in the
+  `$`-reserved limit.
+
+`plan.toml` PHASE-04 EX-3 carries the identical cluster clause and was **not**
+edited: criteria are immutable-append and off-surface. Its obligation — that the
+acceptance store exercise mutual referencing — is met by the pair.
+
+### Governance writes
+
+- **`DEC-012`…`DEC-019` recorded `accepted`** (finding F-1), on the operator's
+  assent given at the audit ("agreed"). The basis is in each record already
+  (context, choice, alternatives, rationale, consequences, `decided_by: operator
+  and agent`, `decided_on: 2026-11-01`); the design locked at rev 62 with §15
+  presenting the eight as settled; the release ships under them. Verb:
+  `doctrine knowledge status <ID> accepted` — one per record, no prose edited.
+  0.1's decisions were created `accepted` (`DEC-011` at `bcd1389`), which is the
+  precedent this restores.
+
+### Withdrawn / tolerated / delegated
+
+- **F-5 tolerated** — `docs/store-format.md` keeps its 0.1-scoped voice; every
+  statement remains true of `format_version` 1 and the file is §14.2-fenced.
+  Escalated to the operator and otherwise owned by IMP-002's documentation pass.
+- **F-6 aligned** — four conformance cells are the review lane's own artefacts.
+- **F-7 follow-up** — owned by `IMP-005`, with the reproduction, the fence and
+  the three obligations the fix owes.
+
+### Recorded divergence: the design run's runtime state
+
+Reconciling the design's prose through the managed run (`doctrine design apply`,
+rev 64) revealed something no one had checked: **amending locked design prose
+invalidates the design's own acceptance.** The apply emitted
+`act_invalidated cpa-design-accepted` and `review_invalidated att-1/att-10/att-3/att-7`,
+leaving `sections_outstanding_review=4` and `review_pass RV-016 STALE`. Undoing it
+did not restore the attestations (the fingerprint returned to a trailing-newline
+variant of the original, not the original bytes), so the run now stands at rev 65
+with the four attestations invalid and the design-accepted act invalidated.
+
+**Operator ruling (2026-11-02): "edit the design directly, don't materialise the
+design from the tool."** So:
+
+- `design.md` — the tracked, reviewed, cited artefact — carries the reconciled
+  text, by direct edit as this skill prescribes for per-slice artefacts.
+- The run's runtime state (`.doctrine/state/slice/002/design.toml`, gitignored)
+  keeps the pre-reconcile prose for those four sections, and its attestations stay
+  invalid. It is frozen history, not the artefact of record.
+- **`doctrine design materialise` must not be run on SL-002**: it renders the
+  runtime sections over `design.md` and would silently revert all seven edits.
+  `doctrine design show 2` likewise prints the runtime state, so a reader of the
+  reconciled design reads `design.md`, not the run.
+- The invalidation is honest history — the acceptance *was* invalidated by a
+  prose amendment — and is recorded here rather than hidden by a re-acceptance act
+  the operator did not offer and this pass may not invent.
+
+Reconcile complete. The slice is ready for `/close`.

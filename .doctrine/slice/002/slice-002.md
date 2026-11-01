@@ -104,7 +104,8 @@ questions the first-use store actually asked.
 10. **Acceptance fixture** — the first-use store is the acceptance graph: real,
     small enough to read whole, and already containing the awkward cases (a
     superseded finding retired in place, settled and open findings,
-    mutually-referencing clusters) and 22 entities with no incoming reference, so
+    one mutually-referencing pair — `finding-smut-17` ↔
+    `prop-conventions-library`) and 22 entities with no incoming reference, so
     `backlinks` has a hit and a miss without inventing either. It holds no
     retracted record, so none is claimed. It is promoted as one normalised entity
     array plus a provenance note, declared into a scratch store by the tests;

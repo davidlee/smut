@@ -28,7 +28,7 @@ likely site of scope creep.
 
 Two things make this release cheaper than it looks. The reference definition
 already exists: `entity::scan_refs` returns `(label, target)` pairs, labels the
-originating top-level field, and stops at a reference occurrence (`src/entity.rs:60`).
+originating top-level field, and stops at a reference occurrence (`src/entity.rs:71`).
 The walker consumes it rather than re-walking JSON. And the store's substrate is
 ordered: `Entities` is a `BTreeMap<Id, Value>` (`src/declare.rs:26`), the index
 is a `BTreeMap` (`src/store/index.rs:75`), and `serde_json::Map` is a `BTreeMap`
@@ -46,11 +46,11 @@ not reopen its mechanisms; it extends four seams.
 | --- | --- | --- |
 | Query grammar: four keys, future keys refused by name | `src/spec.rs:26,70,86` | Retire the future-key refusal, add the five keys and their strict types |
 | Pipeline: roots → order → limit → project | `src/select.rs:79` | Insert predicate filtering at roots and traversal between roots and order; add provenance to `Selection` |
-| Reference definition | `src/entity.rs:31,60` | Consume `reference_id` / `scan_refs` unchanged; the walker is a client of them |
+| Reference definition | `src/entity.rs:31,71` | Consume `reference_id` / `scan_refs` unchanged; the walker is a client of them |
 | Comparator: per-key missing-last, ID tiebreak, exact numbers | `src/order.rs:66` | Unchanged; traversal-discovered ids sort exactly like roots |
 | Envelope: flat objects, `missing`, `dangling`, `truncated`, reasons | `src/select.rs` `envelope` | Add one conditional `traversal` member; `dangling` gains traversal content |
 | Markdown completeness notice | `src/render_markdown.rs:280` | Disclose `traversal_budget` and dangling diagnostics in the same leading block |
-| Guide | `src/learn.rs:113` | Teach the 0.2 surface, the two-call idiom and its completeness guard; remove the 0.1 release notice |
+| Guide | `src/learn.rs` (`GUIDE`) | Teach the 0.2 surface, the two-call idiom and its completeness guard; remove the 0.1 release notice |
 | Compatibility pins | `tests/compatibility.rs:316` | Keep the 0.1 query pin; re-cut the `where`-refusal test into an additivity pin |
 | Store format | `docs/store-format.md` | Unchanged; `format_version` stays 1 |
 
@@ -59,8 +59,10 @@ distinct reference targets, 22 with nothing pointing at them — measured before
 the privacy read-through of §11, so source evidence rather than a test assertion
 (§13.1 pins the committed array) — labels `part-of`
 (65), `about` (48), `answers` (5) and `projects` (1). It contains one superseded
-finding retired in place, settled and open findings, and mutually-referencing
-clusters. It contains no retracted record at all: its own `vocab` says
+finding retired in place, settled and open findings, and one mutually-referencing
+pair — `finding-smut-17` ↔ `prop-conventions-library`; its five `type: cluster`
+entities are one-directional, each naming the session. It contains no retracted
+record at all: its own `vocab` says
 `superseded` retired `finding-smut-16`, which is the conflation §9.2 now names.
 It is the acceptance graph (DEC-018), with two caveats: its `vocab` entity says
 `projects` is unused while `a-focus` uses it, and its status list collapses
@@ -627,7 +629,9 @@ copy back.
 
 ### 9.4 The guide
 
-`learn` keeps one document, remains descriptive and version-bound, and gains:
+`learn` keeps one document, remains descriptive and bound to the release that
+ships it — it names no build number, and names the release only where a limit is
+version-specific — and gains:
 
 - the 0.2 query keys with defaults and the roots-only rule for `where`;
 - the predicate summary, including missing versus null;
@@ -800,7 +804,7 @@ durability guarantees and their tests remain in force unchanged.
 | Determinism | `tests/traversal.rs` | Named fields in query order (different from lexical), wildcard lexical, array order, outgoing before incoming, incoming source ID order; a rebuilt store with shuffled index entries and filenames yields an identical envelope |
 | Envelope | `tests/traversal.rs`, `tests/selection.rs` | `traversal` presence condition, `depths`/`edges` result-scoped, `frontier`/`dangling` walk-scoped, limit cut, reason order, `get` never traverses; edges induced from returned entities including an unrequested field and a returned-but-unexpanded node |
 | Hidden fields | `tests/traversal.rs` | `select` hides a reference field; edges and connectivity survive |
-| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place (`finding-smut-16`), a settled finding, a mutually-referencing cluster — and no retracted record, which the array does not hold — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
+| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place (`finding-smut-16`), a settled finding, a mutually-referencing pair (`finding-smut-17` ↔ `prop-conventions-library`) — and no retracted record, which the array does not hold — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
 | Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, no store created; on re-install a user-added field survives while an amended seeded field (`body`) is replaced — the exact pair §9.3 promises — and the reply's `previous` carries the replaced `body` for the `updated` entry, `--compact` omitting it |
 | Guide | `src/learn.rs` unit tests, `tests/fixture.rs` | The two-call recipe **with its direction**, asserted by running the shipped example against the fixture: `backlinks:["part-of"]` at depth 2 from `session` reaches the eight open questions (`q-audit-cost`, `q-channel-fix`, `q-fix-order`, `q-impact-query`, `q-more-friction`, `q-promotion`, `q-split`, `q-variance-mechanism`), and the `follow` variant reaches none of them; plus the completeness guard (both reasons inspected before ids are extracted), 0.2 keys, `traversal`, conventions pointer, and the 0.1 "arrives in 0.2" text gone |
 | Composition | `tests/fixture.rs`, `src/learn.rs` tests | Executable subject and observable rejection. An over-cap scratch store built so the only open question sorts beyond the default cap. Assertion one: the target id is stored and `open`, is **absent** from the truncated first result, and the second envelope over the received ids is `truncated: false` with `objects: []` — the discriminating fact, which is what makes a naive composition wrong rather than unlucky. Assertion two: a deliberately naive helper in the suite (filter the first envelope's ids, ignore its reasons) yields "no open questions", while the guarded conclusion yields a partial answer naming `result_limit`; the two must differ. The control candidate is that naive helper, kept as the wrong answer the guarded path must not reproduce. No prior-response input and no propagation are added to smut |
