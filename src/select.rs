@@ -18,7 +18,7 @@ use crate::entity::ENTITY_ID;
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{self, SortKey};
-use crate::spec::{self, Limit, Spec};
+use crate::spec::{Limit, Spec};
 
 /// An ordered, deduped, post-limit view of the snapshot.
 #[derive(Clone, Debug, PartialEq)]
@@ -71,7 +71,7 @@ pub fn select<'a>(store: &'a Entities, spec: &'a Spec) -> Result<Selection<'a>, 
 /// parsed spec, because a spec can ask for the default limit and `get` must
 /// never truncate (DEC-001 rule 4).
 pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
-    run(store, Some(ids), None, &[], Limit::Unlimited)
+    run(store, Some(ids), None, &[], Limit::unlimited())
         .expect("get supplies no sort keys, so no sort value is validated")
 }
 
@@ -105,11 +105,7 @@ fn run<'a>(
 
     order::sort_ids(&mut ids, store, keys)?;
 
-    let cap = match limit {
-        Limit::Default => Some(spec::DEFAULT_LIMIT),
-        Limit::Capped(cap) => Some(cap),
-        Limit::Unlimited => None,
-    };
+    let cap = limit.cap();
 
     let mut truncated = false;
     let mut reasons = Vec::new();
@@ -218,6 +214,8 @@ mod tests {
     use super::*;
 
     use serde_json::json;
+
+    use crate::spec;
 
     fn store(entities: &[Value]) -> Entities {
         entities

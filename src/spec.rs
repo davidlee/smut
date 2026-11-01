@@ -7,9 +7,10 @@
 //! presented as a promise. `query {}` is valid and selects everything subject to
 //! the default limit.
 //!
-//! The parsed [`Limit`] has no "unlimited" spelling: `get` bypasses the default
-//! through the crate-internal [`Limit::Unlimited`], which no input can reach
-//! (DEC-001 rule 4). That is what keeps `get` from being a defaulted spec.
+//! The parsed [`Limit`] has no "unlimited" spelling a user can reach: `get`
+//! bypasses the default through [`Limit::unlimited`], which is crate-internal
+//! and which `parse` never produces (DEC-001 rule 4). That is what keeps `get`
+//! from being a defaulted spec.
 
 use serde_json::Value;
 
@@ -25,14 +26,43 @@ pub const DEFAULT_LIMIT: u64 = 100;
 const FUTURE_KEYS: [&str; 5] = ["where", "follow", "backlinks", "depth", "budget"];
 
 /// How many results a selection may return.
+///
+/// The representation is private so that the unlimited case has no public
+/// constructor: a parsed specification can ask for an explicit cap or for the
+/// default, and only this crate's `get` can lift the cap entirely.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Limit {
-    /// No `limit` key: [`DEFAULT_LIMIT`] applies.
+pub struct Limit(LimitKind);
+
+/// [`Limit`]'s states.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LimitKind {
     Default,
-    /// A positive, explicit cap.
     Capped(u64),
-    /// No cap at all. Only `get` asks for this, and `parse` cannot produce it.
     Unlimited,
+}
+
+impl Limit {
+    /// No `limit` key: [`DEFAULT_LIMIT`] applies.
+    pub const DEFAULT: Limit = Limit(LimitKind::Default);
+
+    /// An explicit, positive cap.
+    pub const fn capped(results: u64) -> Self {
+        Limit(LimitKind::Capped(results))
+    }
+
+    /// No cap at all: `get`'s constructor, unreachable from a parsed spec.
+    pub(crate) const fn unlimited() -> Self {
+        Limit(LimitKind::Unlimited)
+    }
+
+    /// The number of results this limit allows, or `None` when nothing caps it.
+    pub fn cap(self) -> Option<u64> {
+        match self.0 {
+            LimitKind::Default => Some(DEFAULT_LIMIT),
+            LimitKind::Capped(results) => Some(results),
+            LimitKind::Unlimited => None,
+        }
+    }
 }
 
 /// A parsed query specification.
@@ -60,7 +90,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
         from: None,
         select: None,
         order: Vec::new(),
-        limit: Limit::Default,
+        limit: Limit::DEFAULT,
     };
 
     for (key, value) in fields {
@@ -68,7 +98,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
             "from" => spec.from = Some(parse_roots(value)?),
             "select" => spec.select = Some(parse_select(value)?),
             "order" => spec.order = parse_order(value)?,
-            "limit" => spec.limit = Limit::Capped(parse_limit(value)?),
+            "limit" => spec.limit = Limit::capped(parse_limit(value)?),
             key if FUTURE_KEYS.contains(&key) => {
                 return Err(Reject::FutureSpecificationKey {
                     key: key.to_owned(),
@@ -199,7 +229,7 @@ mod tests {
             Some(vec!["title".to_owned(), "body".to_owned()])
         );
         assert_eq!(parsed.order, vec![SortKey::descending("priority")]);
-        assert_eq!(parsed.limit, Limit::Capped(5));
+        assert_eq!(parsed.limit, Limit::capped(5));
     }
 
     #[test]
@@ -212,10 +242,11 @@ mod tests {
                 from: None,
                 select: None,
                 order: Vec::new(),
-                limit: Limit::Default,
+                limit: Limit::DEFAULT,
             }
         );
         assert_eq!(DEFAULT_LIMIT, 100);
+        assert_eq!(parsed.limit.cap(), Some(100));
     }
 
     #[test]
@@ -380,25 +411,30 @@ mod tests {
 
         assert_eq!(
             spec(json!({"limit": 1})).expect("one result").limit,
-            Limit::Capped(1)
+            Limit::capped(1)
         );
         assert_eq!(
             spec(json!({"limit": u64::MAX}))
                 .expect("the largest integer a JSON number holds")
                 .limit,
-            Limit::Capped(u64::MAX)
+            Limit::capped(u64::MAX)
         );
     }
 
     #[test]
     fn a_parsed_specification_never_asks_for_an_unlimited_result() {
-        for input in [json!({}), json!({"limit": 1}), json!({"limit": u64::MAX})] {
-            assert_ne!(
-                spec(input).expect("a valid spec").limit,
-                Limit::Unlimited,
+        for input in [json!({}), json!({"limit": 1}), json!({"limit": 1000000})] {
+            assert!(
+                spec(input).expect("a valid spec").limit.cap().is_some(),
                 "only get may bypass the cap"
             );
         }
+
+        assert_eq!(
+            Limit::unlimited().cap(),
+            None,
+            "get's constructor caps nothing"
+        );
     }
 
     #[test]
