@@ -221,3 +221,22 @@ planning starts from a current advisory.
   **returned** entities (DEC-014 amended), derived after the limit. That applies
   the research finding — the renderer should project the envelope, not derive
   the same structure a second time — rather than introducing a new premise.
+
+## Plan-era drift, restamped 2026-11-02 (execution)
+
+The baseline flagged `.doctrine/slice/002/plan.md` and `plan.toml` as **added**
+since the last stamp. That is bookkeeping, not new evidence:
+
+- The two plan artefacts *consume* this research — `plan.md` cites its sequencing
+  rationale and `plan.toml` encodes the criteria — so their arrival cannot
+  invalidate a finding here. No section is refreshed because no section's claim
+  depended on the plan's absence.
+- The one substantive change since the research round is the plan-review repair
+  (README console block at PHASE-01; `FUTURE_KEYS` retiring at PHASE-03), which
+  changed *when* work lands, not what the evidence says.
+- Everything this artefact asserts about `entity::scan_refs`, `select::run`,
+  `FUTURE_KEYS`, the store's ordering and the guide was re-read against the tree
+  during execution and still holds; PHASE-01…04 are landed and green on it.
+
+Restamped on that basis. A future drift on a *source* path (not an authored plan
+path) must be treated as evidence drift, not bookkeeping.
