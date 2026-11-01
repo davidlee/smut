@@ -211,6 +211,39 @@ fn declare_reads_its_declaration_from_a_pipe_on_stdin_and_exits_zero() {
 }
 
 #[test]
+fn a_declaration_with_nothing_to_write_succeeds_without_creating_a_store() {
+    let scratch = Scratch::new();
+
+    for arguments in [vec!["declare", "[]"], vec!["declare", "{}"]] {
+        let ran = smut(&scratch, &arguments);
+
+        assert_eq!(ran.code, 0, "{arguments:?}: {}", ran.stderr);
+        assert_eq!(ran.json()["changes"], json!([]), "{arguments:?}");
+        assert!(
+            !scratch.has_store(),
+            "{arguments:?} had no write set, so no store is created"
+        );
+    }
+}
+
+#[test]
+fn an_id_only_reference_on_an_absent_store_is_missing_and_creates_nothing() {
+    let scratch = Scratch::new();
+
+    let ran = smut(&scratch, &["declare", r#"{"id":"ghost"}"#]);
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    assert_eq!(
+        ran.json(),
+        json!({"changes": [], "ids": ["ghost"], "missing": ["ghost"]})
+    );
+    assert!(
+        !scratch.has_store(),
+        "a reference does not create a placeholder"
+    );
+}
+
+#[test]
 fn an_empty_pipe_is_malformed_json_and_exits_two() {
     let scratch = Scratch::new();
 
