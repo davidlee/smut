@@ -73,7 +73,10 @@ round 1, 7 phases materialised, 25 VT mandates) · commit c3e5a49
 - Section review of `design.md` (all 15, none attested), then the pass
   disposition (`conducted`), then `design-accepted` to lock; `/plan`, `/phase-plan`.
 - IMP-004: the epistemic set's own design conversation (not this slice's work).
-- DEC-018: a fresh-agent privacy read-through precedes the fixture commit.
+- DEC-018: the fresh-agent read-through is **waived by the operator** and the
+  verdict is *publish* — the ruling and its basis are under
+  `## Operator rulings (G0)`. PHASE-04's provenance note records the waiver, so
+  an auditor reads a ruling, not an omission.
 - The design run state is gitignored but live; resume with `doctrine design resume
   SL-002`.
 
@@ -461,8 +464,37 @@ evidence and was the sole writer. Design untouched, design run not reopened.
 
 ## Implementation run — proposed 2026-11-02 (awaiting operator adaptation)
 
-**Status: proposed, not assented, not started.** No phase is open; nothing in
-`src/` has been touched for 0.2; HEAD `3e5b6ae`, tree clean, branch `main`.
+**Status: proposed, revised after the operator's G0 reply; not started.** No phase
+is open; nothing in `src/` has been touched for 0.2; HEAD `3e5b6ae`, tree clean,
+branch `main`. Revisions at G0: the privacy read-through is waived (below), and a
+**review lane** with batched repairs is added to the drive (below). One operator
+decision is still outstanding: the design's line-number drift.
+
+## Operator rulings (G0)
+
+Two rulings, recorded here because the phase that depends on each cannot carry
+the authority itself. Neither is mine.
+
+- **Privacy (DEC-018 / §11) — consent to publish; read-through waived.** The
+  operator's words: "it's probably overcooked in this instance… the only thing I
+  can think of was I mentioned watching Slow Horses on tv which I can live with
+  the world knowing. I consent to the fixtures, skip the audit." Read as a waiver
+  of the *procedure* §11 names (a fresh-agent read-through) and a verdict of
+  **publish, nothing removed**: §11 does not assume what a read finds, so no
+  section is revised, and `VH-1` is answered before the fixture commit rather than
+  satisfied by it. Consequence for PHASE-04: EX-2's provenance note records source
+  snapshot, `read-through: waived by the operator <date>, nothing removed, no
+  redaction, resolved by the owner`, plus the array's own counts (EX-4).
+  **Residual, deliberately kept:** consent was given from recall, not from
+  inspection. If the normalised array turns out to contain something materially
+  private — named third parties, health, addresses, credentials — I stop at G1
+  and show it before committing. That is not a re-litigation of the waiver; it is
+  the difference between "nothing I can think of" and "nothing there", and the
+  commit is the irreversible act. No secret ever reaches an RV ledger.
+- **Code review is a lane, not a gate.** Explicit review was missing from the
+  first draft. The operator's direction: retrospective review runs *in parallel*
+  with new work, may batch a few phases, and covers maintainability and quality
+  as well as correctness; repairs batch too. Adopted as the review lane below.
 
 ### Routing and the seat
 
@@ -483,6 +515,7 @@ honest choice.
 | seat | this session, operator attached | charters, reads handbacks, holds gates, never implements |
 | sub-orchestrator | fresh `sub-orchestrator` per charter | `/phase-plan`s the sheet, owns lifecycle, runs gates, commits owned paths |
 | worker | `worker`/`delegate` per bounded task | tests (red first) and implementation |
+| reviewer | fresh read-only `reviewer` per review batch | raises on its own RV, verifies its own repairs, concludes the pass |
 
 If nested spawning is denied to a child, that is a capability blocker to report,
 not permission to implement inline.
@@ -506,17 +539,49 @@ not permission to implement inline.
 
 ### Charter schedule
 
-| charter | phases | why this boundary |
-| --- | --- | --- |
-| C1 | PHASE-01 | Heaviest (14 EX, 9 VT) **and** interface-setting: `Walk`, the `select::run` input value (EX-13), the notice trigger (EX-14), the README re-record (EX-11). Everything after consumes these. |
-| C2 | PHASE-02 → PHASE-03 | Two ordinary phases, serial inside the charter. Ends where the query surface is complete and `FUTURE_KEYS` has retired. |
-| C3 | PHASE-04 | Alone, by construction: it carries the plan's only `VH` and its negative outcome blocks PHASE-06/07. |
-| C4 | PHASE-05 → PHASE-06 | Two ordinary phases; ends where behaviour and its sentences agree and the guide's example is the one the fixture test runs. |
-| C5 | PHASE-07 | Alone: the release proof (six scenarios, four gates, conformance diff, version, §14.2 diff). |
+| charter | phases | why this boundary | review batch | reviewed while |
+| --- | --- | --- | --- | --- |
+| C1 | PHASE-01 | Heaviest (14 EX, 9 VT) **and** interface-setting: `Walk`, the `select::run` input value (EX-13), the notice trigger (EX-14), the README re-record (EX-11). Everything after consumes these. | R1: 01 | C2 implements |
+| C2 | PHASE-02 → PHASE-03 | Two ordinary phases, serial inside the charter. Ends where the query surface is complete and `FUTURE_KEYS` has retired. | R2: 02+03 | C3 implements |
+| C3 | PHASE-04 | Alone: it carries the plan's only `VH`, and the fixture is the run's one irreversible commit. | R3 (starts here) | — |
+| C4 | PHASE-05 → PHASE-06 | Two ordinary phases; ends where behaviour and its sentences agree and the guide's example is the one the fixture test runs. | R3: 04+05+06 | C5 implements |
+| C5 | PHASE-07 | Alone: the release proof (six scenarios, four gates, conformance diff, version, §14.2 diff). | R4: 07 + all repair commits | seat halt → audit |
 
 Boundaries are committed, green, and handed over (fresh seat context) — never
 mid-phase. PHASE-01 alone in C1 is the deliberate cost of its interface weight;
 splitting it remains an **escalation**, never a resequencing.
+
+**Concurrency cap: one writer and one reviewer alive at a time.** Two writers in
+one worktree make the green-tree invariant untestable; a reviewer is read-only and
+may overlap a writer. Repairs are writes: they land when the writer is idle.
+
+### Review lane
+
+Explicit, batched and parallel to implementation — the operator's addition, and
+the run's answer to *maintainability and quality*, not only correctness.
+
+- **A batch is a charter's delta.** A fresh read-only `reviewer` child runs
+  `/code-review` over the batch's commit range and raises on **one new ledger per
+  batch**: `doctrine review new --facet code-review --target SL-002 --title
+  "code review of SL-002 PHASE-0N…0M" --raiser reviewer --responder implementer`.
+  Findings detail their phase. The whole-delta pre-close lens remains `/audit`'s,
+  so R4 covers 07 and the repair commits only — no duplicate inventory.
+- **Review over correctness *and* design.** The brief names the axes: duplicated
+  reference interpretation, coupling between `walk` and `select`, cohesion of the
+  new modules, test brittleness versus behaviour, and whether the code honours the
+  letter and spirit of §4–§10. A VT going green is not an answer to any of those.
+- **Roles stay separate.** The reviewer raises; the implementer disposes on
+  evidence; the reviewer verifies its own findings and concludes the pass
+  (RV-012's lesson: verification is the raiser's act). I do not verify a finding I
+  raised, and nothing is disposed on assertion alone.
+- **Repairs batch, with one exception.** `blocker` halts and is repaired before
+  the next phase opens — a wrong foundation costs more than the batch saves.
+  `major`/`minor`/`nit` land as **one repair commit per batch** at the charter
+  boundary, tree re-gated green, each DEC-019 re-cut named in it. No `follow-up`
+  disposition to dodge work; a pathology outside the slice goes to `backlog new`.
+- **Tripwires stay per-phase** and are not deferred to the batch: a deleted or
+  renamed test without a DEC-019 reason, a waived or uncheckable VT, an
+  out-of-scope path touched, or `Deviations: NONE` beside a real divergence.
 
 ### Verification cadence
 
@@ -535,6 +600,9 @@ Per phase, at the sub-orchestrator tier and spot-checked at the seat:
    budget-before-expansion, roots-only `where`), so a green is not vacuous.
 6. Commit: path-limited, one commit per phase (trailing knowledge/notes commits
    allowed), sheet flipped `completed`, harvest refreshed in this file.
+7. Review: the batch reviewer's raises are triaged at the seat into
+   `blocker` (halt) or the next repair commit; the repair commit re-runs steps 3–5
+   before it lands, so a batch never ends on a tree the review has not seen.
 
 Seat review is **not** every diff. Mandatory seat review on a tripwire: a deleted
 or renamed test without a DEC-019 reason, a waived or uncheckable VT, an
@@ -548,7 +616,7 @@ central claim, the other is outward-facing personal data.
 | gate | when | what the operator decides |
 | --- | --- | --- |
 | G0 | now | Adapt/assent this schedule **and** the envelope below; dispose the two open decisions (privacy negative outcome; design line drift) or defer them to G1. Also: who performs the DEC-018 read-through, and with what model exposure — raw store contents must not reach a subagent's context without an explicit ruling. |
-| G1 | before PHASE-04's fixture commit | The privacy verdict itself (`VH-1`): publish, redact, synthesise, or ship no fixture. Blocks PHASE-06/07. |
+| G1 | before PHASE-04's fixture commit | **Answered 2026-11-02**: consent to publish, read-through waived (see `## Operator rulings`). Residual: if the array holds something materially private despite that recall, I stop here and show it before committing. Blocks PHASE-06/07 no longer. |
 | G2 | before PHASE-07's commit | The release surface: README claims, the conformance table's unexplained cells, and `0.2.0` as it will be described. |
 | halt | after PHASE-07 | The seat stops; `/audit` is a separate stage. |
 
@@ -602,6 +670,10 @@ means or ships?*
 11. **Worker operation**: brief composition, model inheritance from the
     operator's configuration, one focused rebrief per worker, and recording a
     worker miss. Two failed attempts on one phase ends #7 below.
+12. **Review operation**: batch boundaries, reviewer briefs, which findings join
+    which repair commit, and a finding's disposition when the repair preserves the
+    design's behaviour (naming, cohesion, duplication, test shape, error text).
+    Review adds a second reader, not a second authority.
 
 ### Stop and escalate — I do not decide these
 
@@ -632,6 +704,11 @@ means or ships?*
 8. **Review-ledger acts**: disposing, verifying, contesting or concluding any
    `RV` finding (RV-012 F-4 included) is the raiser's/operator's seat. My
    surface is this envelope, the phase sheets and this file.
+9. **A finding the envelope forbids**: a review may not launder what #1–#4
+   forbid. A finding whose repair would be a design deviation, a scope change, a
+   dependency, or a weakened guard is escalated with its evidence — never quietly
+   repaired because a reviewer asked. A `tolerated` disposition on a finding that
+   contradicts the locked design is likewise escalated.
 
 **The invariant protected throughout**: every phase ends on a green tree, and a
 charter never opens on a red or half-landed one.
@@ -643,3 +720,5 @@ decided / deferred / escalated. Empty until a phase opens.
 
 | date | phase | decision | class | reason |
 | --- | --- | --- | --- | --- |
+| 2026-11-02 | — | Review lane adopted: one `code-review` RV per charter batch, review parallel to the next writer, repairs batched to the boundary | decided (operator-directed) | Explicit review was missing; maintainability and quality need a seat that is not the implementer |
+| 2026-11-02 | — | DEC-018 read-through waived; PHASE-04's provenance note must record the waiver, not omit the step | decided (operator ruling) | Owner's consent, given from recall; recorded verbatim so the gate reads as satisfied-by-ruling |
