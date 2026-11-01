@@ -12,8 +12,11 @@
 //!
 //! A version figure would be PHASE-07's to change and would be false in one
 //! direction or the other, so the guide names the release and not the build. Every claim was checked by running the built binary rather than by
-//! reading the design, and the tests below pin the guide's coverage, not its
-//! prose.
+//! reading the design, and the tests below pin the guide's coverage on
+//! whitespace-flattened text — so they hold a sentence, not its line breaks. A
+//! prose pin is a substring match and can be satisfied by a claim that merely
+//! moved; the structural pin is the key block, which
+//! `the_guide_teaches_exactly_the_nine_keys` reads rather than restates.
 //!
 //! The examples the recipe prints are [`EXAMPLE_TRAVERSE`], [`EXAMPLE_FOLLOW`]
 //! and [`EXAMPLE_FILTER`], held as constants so `tests/fixture.rs` can execute
