@@ -482,11 +482,71 @@ One heavy phase per charter, pairs only for the two pure cores:
   trailing newline while `render` ends the document in one is handed forward
   rather than fixed here · the shell is PHASE-07's and printing a third newline
   would be that phase's defect · deferred to PHASE-07
+- PHASE-07 · the trailing newline is settled at the byte boundary and nowhere
+  else: `prepare_output` returns bytes that already end in exactly one `\n` (or
+  are empty), and `main` writes them with `print!`, never `println!` · a third
+  newline was the defect PHASE-06 handed forward, and demoting the rule to “the
+  shell never adds one” makes it unrepresentable rather than remembered · decided
+- PHASE-07 · `clap`'s `derive` feature is enabled in `Cargo.toml` · DEC-008 names
+  clap v4 derive; a feature flag on an already-declared crate is not a new
+  runtime dependency, by the same reasoning PHASE-01/02 used to keep `serde`'s
+  derive off · decided
+- PHASE-07 · `Render` renders inside `recompute` and returns the document through
+  `prepare_output` unchanged, where `query`/`get`/`delete` return a `Value` that
+  `prepare_output` serialises · `Selection` borrows the snapshot, so it cannot
+  outlive `recompute`, and rendering is output preparation either way — both run
+  under the lock, which is what §5.3 requires · decided
+- PHASE-07 · response and envelope keys stay lexical rather than following the
+  brief's example display order · the brief's ordering is illustrative, JSON key
+  order is insignificant, and DEC-007 fixes canonical stdout as lexical apart
+  from the entity root; this discharges charter-2's deferral · decided
+- PHASE-07 · `--heading-level` carries `allow_hyphen_values` so `-1` and `9`
+  reach the shell's own 1–6 refusal · without it clap answers “unexpected
+  argument”, and EX-1 makes the range check a `Reject` rather than a clap error ·
+  decided
+- PHASE-07 · six `Reject` variants added additively (duplicate key, trailing
+  input, malformed JSON, missing input, invalid heading level, future/unknown
+  format) with `StoreError` and the two-class `Error` mapping untouched · the
+  pattern PHASE-02/03/04/05 set; every one is exit 2 · decided
+- PHASE-07 · `input::read_stdin` splits its two failures: an IO error is a
+  `StoreError` (exit 1, a runtime failure) while bytes that are not UTF-8 are a
+  `Reject` (exit 2, no JSON value is recoverable from them) · the brief's exit
+  table names the classes, not the layer that noticed · decided
+- PHASE-07 · `Store::run` is untouched; the seam needed no new parameter, so the
+  charter's conditional path on `src/store/mod.rs` went unused · steps 1 and 11
+  really were the caller's, as PHASE-04 documented · decided
+- PHASE-07 · the deferred byte-boundary defect (a projected entity inside an
+  envelope's `objects` array serialises lexically rather than id-first, DEC-007)
+  is NOT fixed here · the charter lists `src/entity.rs` among the settled parts
+  to use rather than restructure and does not include it in this phase's paths,
+  so the fix returns to `/audit` → `/reconcile` with a backlog candidate instead
+  of widening the phase · deferred
+- PHASE-07 · `print!` to a closed stdout (`smut query | head -1`) panics with
+  exit 101 rather than dying of SIGPIPE · pre-existing in PHASE-01's skeleton and
+  outside this phase's bar; §4.5 documents the post-commit ambiguity, not a
+  panic, so it is a backlog candidate rather than a silent widening · deferred
+- PHASE-07 · `src/learn.rs`'s honest first pass turns PHASE-08's VT-2 green
+  already (`DROP` and `0.2` present) · that is keyword attribution against a file
+  PHASE-08 owns and will rewrite, so the audit should not read it as PHASE-08
+  work done · decided
+- charter-6 · `doctrine slice phase SL-001 PHASE-07 --status completed` was
+  issued twice (the second while re-reading the boundary warning) · the
+  transition is idempotent: `code_end_oid` stayed `585096d` and the registry row
+  is unchanged, so only a note-less `completed` row was appended; the warning's
+  ten commits are all this phase's own, so no `record-delta` tightening was
+  needed · decided
+- charter-6 · VA-1 discharged by reading the diff rather than by a test: the
+  duplicate-key check is inside `input`'s visitor at each `next_key` (before the
+  second value is even read), installed at `input::parse`, called from
+  `cli::operand`/`cli::parse`, which `main::execute` reaches before the only
+  `Store::in_directory(..)` sits in the `Invocation::Request` arm; `Learn`, `Help`
+  and `Version` are `Invocation` variants, so no store is constructible on their
+  path · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 5 close (PHASE-01…PHASE-06 complete, VH-1
-outstanding on a human) · `f5d0773`
+fresh-as-of: 2026-11-01 · charter 6 close (PHASE-01…PHASE-07 complete, VH-1
+outstanding on a human) · `585096d`
 
 ### Produced
 
@@ -496,16 +556,27 @@ outstanding on a human) · `f5d0773`
   validation and pipeline seam (5 commits, `8403ac1…49d81d7`); PHASE-05 the
   journal, its recovery and its interruption evidence (7 commits,
   `7d841fd…0e2a519`); PHASE-06 the Markdown renderer and its notice evidence
-  (6 commits, `5d3af21…f5d0773`). `docs/` and `README.md` remain undelivered by
-  design — PHASE-08.
-- `just check` green at every close; after PHASE-06: 226 lib + 4 bin + 5
-  `tests/render.rs` + 5 `tests/selection.rs` + 12 `tests/store_corruption.rs` +
-  0 (default-gated) durability = **252** on default features, and 239 + 4 + 44 +
-  5 + 5 + 12 = **309** with `--features fault-injection`. The durability target
-  executes 44 tests under the feature and 0 by construction under the default
-  build.
-- `slice verify-vt` green for every row PHASE-01…PHASE-06 own (21/21); later
-  phases red because their files do not exist yet.
+  (6 commits, `5d3af21…f5d0773`); PHASE-07 the clap grammar, ingress, pipeline
+  wiring, envelopes, delete contract and learn guide (10 commits,
+  `212e574…585096d`). `docs/` and `README.md` remain undelivered by design —
+  PHASE-08.
+- `just check` green at every close; after PHASE-07: 276 lib + 6 bin + 26
+  `tests/cli_contract.rs` + 5 `tests/render.rs` + 5 `tests/selection.rs` + 12
+  `tests/store_corruption.rs` + 0 (default-gated) durability = **330** on default
+  features, and 289 + 6 + 26 + 44 + 5 + 5 + 12 = **387** with `--features
+  fault-injection`. The durability target executes 44 tests under the feature and
+  0 by construction under the default build.
+- `slice verify-vt` green for every row PHASE-01…PHASE-07 own (23/23); PHASE-08's
+  VT-2 also reads PASS because `src/learn.rs` exists with its keywords, which is
+  attribution rather than PHASE-08 work done.
+- The binary is the brief's: `src/cli.rs` (clap v4 derive grammar, the five
+  commands as `store::Command`, `--` for opaque ids, `--heading-level` refused by
+  our own 1–6 check, `--format mermaid` refused naming 1.0), `src/input.rs` (the
+  pure operand/tty decision, stdin, and a `serde` `DeserializeSeed` visitor that
+  refuses a duplicate key as `next_key` yields it), `src/main.rs` (dispatch;
+  `learn`/`--help`/`--version` are answered as `Invocation` variants, so no store
+  is constructible on their path), `src/learn.rs` (`GUIDE`, honest first pass).
+  `Store::run` needed no new parameter.
 - `src/render_markdown.rs` renders a `Selection` from `Options { heading_field,
   heading_level, show_fields, show_ids }`: heading only when the field is
   selected, a string and non-empty (newlines collapsed); body verbatim and
@@ -526,7 +597,9 @@ outstanding on a human) · `f5d0773`
   deliberately undelivered targets.
 - serde `derive` settled **off** for the run so far: responses are assembled as
   `serde_json::Value` and every byte form comes from PHASE-01's hand-written
-  wrapper.
+  wrapper. `clap`'s `derive` **is** on: DEC-008 names it, and a feature flag on a
+  declared crate is not a new dependency. Both declared-and-unused warnings are
+  gone (`nanoid` from PHASE-05's uid generation, `clap` from PHASE-07).
 
 - Design locked: run rev 53, 12 sections attested, RV-002 and RV-003 terminal
   (commits 1b1f574, c32f316, f28860e).
@@ -576,24 +649,47 @@ outstanding on a human) · `f5d0773`
   keyword present but <file> not modified by this slice` until the `completed`
   flip records `code_end_oid`; the rows resolve on the flip, so an
   `UNATTRIBUTABLE` row mid-phase is the open boundary, not a failing row.
+- (unminted) `serde_json`'s `Map` is a `BTreeMap` here, so a duplicate key in the
+  input text is silently overwritten by any ordinary `from_str` — the only place
+  to catch it is a `DeserializeSeed`/`Visitor` pair whose `visit_map` checks each
+  `next_key` against the keys already inserted, before `next_value_seed` reads the
+  second value. Carrying the offending key out of serde's opaque error type needs
+  a side channel (a `RefCell<Option<String>>` the seed holds) — serde's
+  `de::Error::custom` will not surrender a payload.
+- (unminted) A terminal-only behaviour stays honest without a pty by making the
+  *decision* a pure function of `(operand present, operand is -, stdin is a tty)`
+  and injecting `std::io::IsTerminal` from `main`; the `Refuse` branch is then a
+  `Reject` with a unit test per branch, and the pipe branch is proven end to end
+  by a spawned binary whose stdin is a pipe.
+- (unminted) "The shell adds no trailing newline" is one rule instead of three:
+  the byte boundary (`Form::Stdout`, `render`) owns the single `\n`, and `main`
+  writes with `print!`. Pinning it with a count assertion
+  (`stdout.matches('\n').count()`) catches both a missing and a doubled newline.
 
 ### Open
 
-- PHASE-06 leaves nothing open of its own: VT-1…VT-3 green with no `VA-`/`VH-`
-  row to carry. Its one forward note is on PHASE-07 (next item).
-- PHASE-06's hand-back candidate (unminted): `entity::Form::Stdout` already
-  appends a trailing newline and `render_markdown::render` ends a non-empty
-  document with one, so PHASE-07 must not print a third — that phase's shell is
-  where it is in scope.
+- PHASE-07 leaves nothing open of its own: `EX-1…EX-7` hold, `VT-1`/`VT-2` green,
+  `VA-1` discharged by reading the ingress path rather than by a test. Its three
+  forward notes are the first three below.
+- Two byte-boundary items the earlier harvest routed to PHASE-07, and where each
+  landed: the **response/envelope key order** is settled as lexical (DEC-007; the
+  brief's display order is illustrative) — closed here. The **id-first ordering of
+  a projected entity inside an envelope's `objects`** is **still open**: the fix
+  lives in `src/entity.rs`, which PHASE-07's charter lists among the settled parts
+  and does not include in its paths, so it returns to `/audit` → `/reconcile` as a
+  backlog candidate rather than widening the phase.
+- PHASE-07's hand-back candidate (unminted): `print!` to a closed stdout
+  (`smut query | head -1`) panics with exit 101 instead of dying quietly. The
+  post-commit ambiguity is documented; the panic is not, and a pipe closing early
+  is ordinary use. Not this phase's bar — it predates the shell.
+- `--` reaches an opaque id, but a caller who omits `--` and names an id that
+  begins with `-` still gets a clap usage error; that is the documented
+  convention (DEC-008), not a defect, recorded so `/audit` does not re-raise it.
 - **VH-1 outstanding** (PHASE-05, by seat decision): a human reads
   `tests/durability_crash.rs` against §4.3/§4.4/§4.5 and confirms every named
   boundary has an interruption test, that repeated recovery is explicit, and that
   the file claims only code-path ordering. The 22-row boundary table is carried
   in the charter-4 hand-back.
-- Two byte-boundary defects for PHASE-07 to fold in: nested entity objects are
-  serialised lexically rather than id-first (DEC-007), and the response/envelope
-  key order is lexical where the brief's examples show a display order (accepted
-  as insignificant; DEC-007 fixes the stdout form).
 - PHASE-04's hand-back candidates (unminted): nested stored entity-node ids are
   unvalidated, so a corrupt-but-index-consistent nested `id` can reach a
   `scan_refs` panic instead of exit 1; a symlinked `.smut/lock` is followed
