@@ -265,3 +265,6 @@ mod tests {
         assert_eq!(Boundary::from_name(""), None);
     }
 }
+
+#[cfg(feature = "fault-injection")]
+pub mod fault;
