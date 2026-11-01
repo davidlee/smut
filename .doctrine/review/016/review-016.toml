@@ -1,0 +1,24 @@
+id    = 16
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Rebinding pass for a two-part delta, not a new adversarial window. The delta at revision 58 is one clause in §9.3 and its matching assertion in the §13.1 Conventions row, both closing the precision gap found while checking RV-012 F-4 against the code: the seed upsert replaces a supplied body but is not silent about it, because the declare reply carries the prior entity under `previous`. Examined against the mechanism the clause describes rather than against its own prose: `src/declare.rs:270-306` (id-keyed upsert, Op::Set per supplied field, unspecified fields survive), `src/declare.rs:116` (previous serialised for non-compact form, omitted otherwise) and `src/learn.rs:72-76` (the documented contract — created carries null, updated carries the full prior entity, unchanged omits it, --compact omits it everywhere). The clause states exactly that, including the two cases where the prior body does not come back, and its remedy (a client that reads previous can restore it) adds no mechanism. The fingerprint diff shows the two touches and nothing else: sec-3 and sec-7 changed, the other thirteen unchanged. Nothing new was found, and nothing was raised. The substantive examination remains RV-007…RV-014; RV-015 was the first rebinding pass, concluded on its own basis."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

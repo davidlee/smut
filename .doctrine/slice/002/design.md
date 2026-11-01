@@ -617,7 +617,13 @@ the store owns its copy only in the sense that it is an ordinary entity it may
 edit or delete; the seed does not protect an edit. Amend a different entity, keep
 the amendment outside the seeded fields, or expect to re-apply it — and the
 printed set says so, because the reader who meets the upsert is the one who
-already edited the record. The binary never reads the copy back.
+already edited the record. The replacement is reported though nothing warns
+about it: the reply to that `declare` carries the entity as it stood before the
+batch under `previous` — the full entity, `body` included, for an `updated`
+entry (`learn` documents the field; `--compact` drops it). So the overwritten
+text comes back in the response to the very command that overwrote it, and a
+client that reads `previous` can restore it. The binary itself never reads the
+copy back.
 
 ### 9.4 The guide
 
@@ -795,7 +801,7 @@ durability guarantees and their tests remain in force unchanged.
 | Envelope | `tests/traversal.rs`, `tests/selection.rs` | `traversal` presence condition, `depths`/`edges` result-scoped, `frontier`/`dangling` walk-scoped, limit cut, reason order, `get` never traverses; edges induced from returned entities including an unrequested field and a returned-but-unexpanded node |
 | Hidden fields | `tests/traversal.rs` | `select` hides a reference field; edges and connectivity survive |
 | Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place (`finding-smut-16`), a settled finding, a mutually-referencing cluster — and no retracted record, which the array does not hold — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
-| Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, no store created; on re-install a user-added field survives while an amended seeded field (`body`) is replaced — the exact pair §9.3 promises |
+| Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, no store created; on re-install a user-added field survives while an amended seeded field (`body`) is replaced — the exact pair §9.3 promises — and the reply's `previous` carries the replaced `body` for the `updated` entry, `--compact` omitting it |
 | Guide | `src/learn.rs` unit tests, `tests/fixture.rs` | The two-call recipe **with its direction**, asserted by running the shipped example against the fixture: `backlinks:["part-of"]` at depth 2 from `session` reaches the eight open questions (`q-audit-cost`, `q-channel-fix`, `q-fix-order`, `q-impact-query`, `q-more-friction`, `q-promotion`, `q-split`, `q-variance-mechanism`), and the `follow` variant reaches none of them; plus the completeness guard (both reasons inspected before ids are extracted), 0.2 keys, `traversal`, conventions pointer, and the 0.1 "arrives in 0.2" text gone |
 | Composition | `tests/fixture.rs`, `src/learn.rs` tests | Executable subject and observable rejection. An over-cap scratch store built so the only open question sorts beyond the default cap. Assertion one: the target id is stored and `open`, is **absent** from the truncated first result, and the second envelope over the received ids is `truncated: false` with `objects: []` — the discriminating fact, which is what makes a naive composition wrong rather than unlucky. Assertion two: a deliberately naive helper in the suite (filter the first envelope's ids, ignore its reasons) yields "no open questions", while the guarded conclusion yields a partial answer naming `result_limit`; the two must differ. The control candidate is that naive helper, kept as the wrong answer the guarded path must not reproduce. No prior-response input and no propagation are added to smut |
 | Render | `tests/render.rs` | Leading notice discloses `traversal_budget` and dangling without a stored byte able to absorb it |
