@@ -67,6 +67,20 @@ looks at it.
    document and the loader agree — that document also still speaks in 0.1's voice
    (see RV-021 F-5), so both belong to the same pass.
 
-Likely owner: whichever release next touches the store loader or the store
-format document (`IMP-002` names documentation and hardening). Not urgent: no
-CLI-only store can hold this shape.
+Superseded by the Ownership note below — this is now SL-004's work. The original
+guess pointed at whichever release next touched the loader or the format document,
+and was in no hurry because no CLI-only store can hold this shape.
+
+## Ownership — 2026-11-01
+
+Folded into SL-004, the identity format break, by operator direction: "Fix alongside
+the loader/format change. I reproduced the malformed nested identity panic." RV-022
+F-3 reproduced it independently (hand-edit an indexed file's `bad:{id:null}`, `get`
+returns it, `query {from:x,follow:[payload]}` exits 101 at `src/entity.rs`).
+
+The reason to fold rather than defer again: the format version is moving and every
+stored identity is being respelled, so this is the one moment when the loader's
+precondition and the new spelling can be written together instead of one around the
+other. Under `smut_id` the rule becomes: a nested nonempty string `smut_id` is
+identity, anything else stored in that position is corruption (exit 1, naming the
+entry), and a payload's ordinary `id` is not identity at all.

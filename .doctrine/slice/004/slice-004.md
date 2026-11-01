@@ -1,26 +1,36 @@
-# Identity is smut_id, and generated ids can be minted
+# Identity is smut_id — the format break, and a loader that refuses what it cannot trust
 
 ## Context
 
-ADR-001 (proposed, awaiting a second review) moves the identity key from `id` to
-`smut_id`. This slice is the change that follows from it, and it takes the three
-backlog items it governs as one unit, because each one's answer moves the other
-two:
+ADR-001 (proposed, awaiting the operator's acceptance act) moves the identity key
+from `id` to `smut_id`. This slice is the change that follows from it, and it takes
+the two items it governs — ISS-002 and IMP-005 — as one unit: the rename is a format
+break, and a format break is the only honest moment to fix the loader validation and
+corruption story at the same time.
 
 - **ISS-002** — `id` is reserved in every nested object, so a payload's own `id`
   cannot be stored. Measured today: a nested `{"id":"abc","name":"Ext"}` silently
   declares an entity and strips the payload to `{"id":"abc"}`; a nested `{"id":"zzz"}`
   is a reference reported `missing`; a nested `{"id":null}` or `{"id":7}` refuses the
-  whole batch at exit 2. The rename closes this: bare `id` becomes ordinary data at
-  any depth.
-- **ISS-003** — generated ids are drawn only for a top-level declaration, so a nested
-  entity must be *named* at the moment of writing. A connected graph therefore takes
-  two batches (create, then wire), where semantic ids need one. The minting verb is
-  the cure, and it is only coherent once `id` is no longer reserved.
-- **IDE-002** — ids cannot be renamed, so a name chosen badly is permanent. With the
-  minting verb making generated ids the easy default, ids stop being chosen by hand,
-  which is what drains the motivation for a rename verb. This slice *dispositions*
-  that idea rather than implementing it.
+  whole batch at exit 2. The rename closes this for a caller's own `id` — while
+  reserving `smut_id` at every depth, which the ADR states as a boundary rather than
+  a disappearance.
+- **IMP-005** — the loader validates the root and the root-id/index agreement only, so
+a hand-edited store can make `scan_refs` panic (exit 101) on a nested
+  `{"id":null}`. **Folded into this slice by operator direction ("fix alongside the
+  loader/format change")**, and independently reproduced in RV-022 F-3. Under
+  `smut_id` the loader must refuse malformed stored identity as corruption (exit 1)
+  while accepting arbitrary ordinary `id` values in payloads.
+
+Two neighbours are recorded and deliberately *not* in this slice:
+
+- **ISS-003** (pre-minting ids) — operator direction: "settle its contract
+  separately. It works under either identity spelling and gives two calls, one
+  atomic graph write." Sequenced after, not behind.
+- **IDE-002** (rename with referential stability) — **stays deferred, not resolved.**
+  Generated ids reduce naming pressure; they do not retarget existing references or
+  repair an entity already carrying a bad id. A future reference-preserving rename
+  can be additive, so nothing here forecloses it.
 
 Placing the change: pre-1.0, one real store in the wild
 (`interview.local/.smut`, 66 entities, outside this repo) and one committed fixture
@@ -45,12 +55,11 @@ unmitigated break rather than a migration.
    reads. No migration verb, no dual-key reader, no repair path — operator
    direction: "we're not writing a migration script, let alone legacy handler. blow
    up loudly."
-4. **A minting verb.** `smut new` (name, count semantics and response shape are the
-   design's) mints ids without storing anything, so a caller can author a connected
-   graph — cycles included — in one declaration batch using names it did not invent.
-   The unreserved-id race is accepted (ADR-001): a store that gains a minted id
-   before the declaring batch turns that declaration into an upsert, expected never
-   to occur.
+4. **The loader stops trusting a store it did not write.** `scan_refs`'
+   precondition (every nested identity is a nonempty string) is established at load
+   instead of assumed: a malformed stored identity is corruption, exit 1, naming the
+   entry — never a panic on a later traversal. Ordinary payload `id` values are, of
+   course, no longer identity at all.
 5. **The binding records are reconciled, not silently contradicted.** Six accepted
    DECs carry the old spelling in their letter, and one of them reverses:
    DEC-005 defines an entity node as "a `Value::Object` with a member `id`" and
@@ -74,9 +83,10 @@ unmitigated break rather than a migration.
 - **No migration tooling, of any kind.** Not a verb, not a dual reader, not a
   rewrite-on-write. An old store is refused, and its owner re-declares or scripts
   it themselves.
-- **No rename verb** (IDE-002). This slice records that the minting verb drains the
-  motivation, and leaves the idea deferred rather than implementing a graph-wide
-  reference rewrite in the same change.
+- **No pre-minting verb** (ISS-003). Its contract is settled separately and it is
+  independent of the key spelling; including it would make this slice two changes.
+- **No rename verb** (IDE-002), which stays deferred rather than resolved: generated
+  ids reduce naming pressure and repair nothing that already exists.
 - **No envelope-vocabulary creativity.** `edges[].source`/`.target` are not renamed
   to anything identity-shaped, and no new envelope key is invented; one key moves
   (`changes[].id`) and one rule decides the rest.
@@ -93,10 +103,10 @@ unmitigated break rather than a migration.
 | --- | --- |
 | `src/entity.rs` | `ENTITY_ID` → the new key; `reference_id`, `hoist`, `scan_refs` read it; the nested-id refusal paths go |
 | `src/declare.rs` | references, hoisting, `changes[]` subject key, `previous` |
-| `src/store/*` | `FORMAT_VERSION` 1 → 2; entity-file validation (`IdDisagreement` reads the new key) |
+| `src/store/*` | `FORMAT_VERSION` 1 → 2; entity-file validation (`IdDisagreement` reads the new key); the loader's nested-identity validation (IMP-005) |
 | `src/walk.rs`, `src/select.rs`, `src/order.rs` | identity key in selection, edges, sort tiebreak (internal ids, mostly unchanged) |
 | `src/render_markdown.rs` | identity display unchanged; any reference formatting that names the key |
-| `src/cli.rs` | the minting verb's grammar; nothing else beyond the key |
+| `src/cli.rs` | nothing beyond the key: the grammar does not change |
 | `src/learn.rs` | Declaring, References, Querying, Traversal, the two-call recipe, the command block |
 | `docs/store-format.md` | format version, the key, id-first serialisation, diagnostic examples |
 | `README.md` | every declaration and response example (operator's live edit — coordinate before sweeping) |
@@ -126,20 +136,24 @@ unmitigated break rather than a migration.
 - **Risk:** the README is under active edit by the operator. Sweeping it while it is
   being written produces a conflicted draft; sequencing has to be agreed before the
   docs phase runs.
+- **Risk:** IMP-007 (render short flags) is explicitly optional and must not ride
+  along; it touches `src/cli.rs`, which this slice is otherwise leaving alone.
 
 ## Verification / closure intent
 
 - Red first, per behaviour: a nested `{"id":7}` stores as data (today exit 2); a
   nested `{"id":"x","name":"n"}` stays embedded and creates no entity (today it
-  does); an entity file and every envelope object carry `smut_id`; a version-1 store
-  is refused by version with a message naming both versions; `smut new` mints ids
-  that a following batch can use for a cycle in one declaration.
+  does); an entity file and every envelope object carry `smut_id`, `changes[]`
+  included; a version-1 store is refused by version with a message naming both
+  versions; a hand-edited store carrying a nested `{"smut_id":null}` is refused as
+  corruption at exit 1 rather than panicking on the next traversal (IMP-005).
 - Green: `just check` — build, both clippy configurations at `-D warnings`,
   `cargo fmt --check`, both feature test runs.
 - Agent-checked: a scripted store lifecycle at version 2 (declare → query → render →
   delete) with no `"id"` in any output; a version-1 store written by hand refused
-  with exit 1 and the version message; the rewritten fixture renders identically
-  apart from the key.
+  with exit 1 and the version message; the RV-022 F-3 probe re-run — hand-edit a
+  nested identity to `null`, then `get` and a `follow` traversal both answer
+  without a panic; the rewritten fixture renders identically apart from the key.
 - Human-checked: `smut learn` reads true end to end, the README examples match the
   binary's output verbatim, and the DEC reconciliation in `docs/store-format.md`
   states the new rules rather than the old ones.

@@ -69,27 +69,34 @@ IDE-002 (renaming with referential stability) shares the root cause: identity is
 expressed by a bare key in a value tree. If either is ever taken, they should be
 decided together — one format migration, not two.
 
-## Decided — 2026-11-01
+## Direction recorded — 2026-11-01 (ADR-001 proposed, not yet accepted)
 
-ADR-001 (accepted) resolves this item the first way: **the identity key becomes
-`smut_id`**, in entity files, declarations and references, so bare `id` is ordinary
-data at any depth with no reservation and no special case. The operator's reasoning,
-recorded because it is the whole argument: brevity loses slightly, but the collision
-is worth more to solve, `smut_id` is not bad to type, and it will never conflict with
-anything.
+ADR-001 (*proposed*; awaiting the operator's acceptance act) answers this item the
+first way: **the identity key becomes `smut_id`**, in entity files, declarations and
+references, so a caller's own bare `id` is ordinary data at any depth. The operator's
+reasoning, recorded because it is the whole argument: the current collision can
+silently turn an imported payload into graph structure, and namespacing identity is a
+proportionate fix — brevity loses slightly, `smut_id` is not bad to type, and it will
+never conflict with anything.
 
-That closes the question this item asked (whether taking `id` is worth it) and
-leaves two implementation questions to the design, both named in the ADR:
+What this item asked (is taking `id` worth it) is therefore answered *in direction*,
+not yet in effect. Nothing is implemented; the current binary still emits `id` and
+still restructures nested `id`s.
+
+Two contract points the ADR settles, so this item does not restate them differently:
 
 - **Old stores.** The format version moves and the loader refuses an older store by
-  version with a message naming the migration, rather than reading both spellings.
-  Two spellings of identity is the ambiguity this change exists to remove, and the
-  store's standing rule is that validation reports and never repairs.
-- **Envelope vocabulary.** Entity-shaped objects carry `smut_id` (files, `objects[]`,
-  `changes[].previous`); response-only keys (`ids`, `changes[].id`,
-  `edges[].source`/`target`) are envelope vocabulary and are recommended to keep
-  their names.
+  version, naming what it read and what it reads. No migration verb, no dual-key
+  reader, no repair path — two spellings of identity is the ambiguity this change
+  exists to remove, and the store's standing rule is that validation reports and
+  never repairs.
+- **Envelope vocabulary.** An entity object carries `smut_id` wherever it appears —
+  files, `objects[]`, `changes[].previous` — **including `changes[].smut_id`**, which
+  was earlier drafted here as staying `id`. That earlier recommendation is withdrawn:
+  a field name also works in `where`/`select`, an envelope name does not, and using
+  the wrong one fails silently. Container-named id *values* (`ids`, `deleted`,
+  `missing`, `frontier`, `depths`, `edges[].source`/`.target`) keep their names.
 
-Still open here, and only here: none of the *behaviour* changes — the three
-outcomes measured above (silent hoist, reference-and-missing, exit 2) are what a
-domain `id` will simply stop encountering.
+The boundaries that survive are recorded in ADR-001 § "The boundaries this leaves":
+`smut_id` is structural at every depth, the `DROP` sentinel still costs one literal,
+and `null` remains an ordinary value.

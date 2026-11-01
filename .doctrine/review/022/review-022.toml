@@ -1,0 +1,137 @@
+id    = 22
+slug  = "v02-identity-and-interface-retrospective-adr-001-and-linked-backlog"
+title = "v0.2 identity and interface retrospective: ADR-001 and linked backlog"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "second-opinion"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Second opinion over ADR-001, IDE-002, IMP-005, IMP-007, ISS-002 and ISS-003 for candidate v0.2 interface stability. Examined current canonical entity reads, entity extraction/hoisting and reserved sentinel semantics, declaration responses, CLI flag and id generation definitions, loader validation and store format/version contract. Fresh offline debug build passed; temporary-store CLI probes independently reproduced identity collisions, cyclic one-batch declaration, dangling delete behavior, malformed nested identity panic and DROP behavior. Recorded 1 major record-contract inconsistency and 2 minor findings (qualification of the ADR argument and reconfirmed IMP-005). Recommendations and verification limits are in the prose companion. No implementation/acceptance changes; findings remain for responder adjudication."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "ISS-002"
+
+[[finding]]
+id = "F-1"
+status = "answered"
+severity = "major"
+title = "Linked records prescribe competing identity-envelope contracts and acceptance states"
+detail = "Expected: one reviewable proposed identity contract before v0.2 is locked. Observed: doctrine show ADR-001 reports proposed and explicitly chooses changes[].smut_id; doctrine show ISS-002 calls ADR-001 accepted and recommends retaining changes[].id in its Decided section; ISS-003 also calls ADR-001 accepted. ADR-001 Status says envelope vocabulary is decided, while ISS-002 still calls it an implementation question. The current implementation emits changes[].id (src/declare.rs:107-110). A design consuming the linked items can preserve the wrong public key or treat the proposal as accepted. Verified by current entity reads, not runtime speculation. Repair before acceptance: reconcile both linked items to the ADR's actual proposed state and current intended envelope rule; do not record acceptance until the operator accepts the reviewed proposition. No acceptance or governing text was changed in this review."
+disposition = "fix-now"
+response = """
+Agreed, and repaired. The disagreement was mine: ISS-002's addendum and ISS-003's addendum were written while ADR-001 still read 'accepted' and before the envelope rule was settled, and neither was updated when the ADR was set back to proposed.
+
+Repairs, all on the records rather than in prose about them:
+- ISS-002's 'Decided' section is now 'Direction recorded (ADR-001 proposed, not yet accepted)'. Its recommendation to retain changes[].id is explicitly withdrawn, with the reason the ADR gives: a field name also works in where/select, an envelope name does not, and using the wrong one fails silently. It defers to ADR-001 for the rule instead of restating a competing one.
+- ISS-003's 'Direction' section no longer claims ADR-001 accepted, and no longer asserts that minting depends on the rename (see F-2). It records the operator's framing: settled separately, works under either spelling, two calls and one atomic graph write.
+- ADR-001 stays proposed, with its Status section naming the operator's acceptance act as the outstanding step, per this finding's instruction not to record acceptance before it is given.
+- SL-004 was also carrying the stale framing (minting in scope, IDE-002 'dispositioned'); its scope is revised: minting out to ISS-003, IMP-005 folded in, IDE-002 deferred rather than resolved. Its title claimed a deliverable its scope no longer contains, so the title now reads 'the format break, and a loader that refuses what it cannot trust'.
+
+doctrine validate: corpus clean; doctrine doctor: 0 findings."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Agreed, and repaired. The disagreement was mine: ISS-002's addendum and ISS-003's addendum were written while ADR-001 still read 'accepted' and before the envelope rule was settled, and neither was updated when the ADR was set back to proposed.
+
+Repairs, all on the records rather than in prose about them:
+- ISS-002's 'Decided' section is now 'Direction recorded (ADR-001 proposed, not yet accepted)'. Its recommendation to retain changes[].id is explicitly withdrawn, with the reason the ADR gives: a field name also works in where/select, an envelope name does not, and using the wrong one fails silently. It defers to ADR-001 for the rule instead of restating a competing one.
+- ISS-003's 'Direction' section no longer claims ADR-001 accepted, and no longer asserts that minting depends on the rename (see F-2). It records the operator's framing: settled separately, works under either spelling, two calls and one atomic graph write.
+- ADR-001 stays proposed, with its Status section naming the operator's acceptance act as the outstanding step, per this finding's instruction not to record acceptance before it is given.
+- SL-004 was also carrying the stale framing (minting in scope, IDE-002 'dispositioned'); its scope is revised: minting out to ISS-003, IMP-005 folded in, IDE-002 deferred rather than resolved. Its title claimed a deliverable its scope no longer contains, so the title now reads 'the format break, and a loader that refuses what it cannot trust'.
+
+doctrine validate: corpus clean; doctrine doctor: 0 findings."""
+
+[[finding]]
+id = "F-2"
+status = "answered"
+severity = "minor"
+title = "ADR-001 overstates the removal of reservations and the dependency of minting on the rename"
+detail = "Expected: the ADR distinguishes the benefit of namespacing identity from independent authoring choices. Observed: Why says 'With no reserved spelling in the value space' and 'nothing reserved at all', yet the Decision still reserves smut_id at every depth. This is a narrower, less collision-prone reservation, not arbitrary-JSON transparency. It also claims the rename makes minting possible/cheap, although any externally supplied nonempty ids can already author a cyclic graph in one declare batch (src/declare.rs:181-230; src/entity.rs:31-45,159-174). A fresh-build scratch probe declared two prechosen ids with reciprocal references in one batch, missing=[], then traversed both edges successfully. Minting substitutes generated strings for those prechosen strings and is independent of the key spelling. It gives mint+declare (two invocations, one mutation), not one-call graph authoring. Repair: describe one reserved identity namespace explicitly, justify it by collision reduction, and describe minting as an additive independent verb. Retain the operator's rejection of placeholders/markers and accepted race; this finding does not reopen them. IDE-002 should remain deferred rather than treated as resolved: generated ids reduce naming pressure but cannot retarget existing references or fix existing semantic ids."
+disposition = "fix-now"
+response = """
+Agreed on both counts, and both were overclaims of mine; the rationale is rewritten.
+
+1. The reservation moves, it does not disappear. The first draft said 'with no reserved spelling in the value space' and 'nothing reserved at all' while the Decision reserves smut_id at every depth. Corrected: the Why now argues that a namespaced reservation is proportionate where a bare one is not — the store must reserve something for identity to be recognisable, and smut_id keeps the reservation while making it collide only with a key nobody's payload carries. Your framing is the one recorded: the current collision can silently turn an imported payload into graph structure; namespacing identity is a proportionate fix.
+
+2. Minting is independent of the rename. The draft claimed the rename makes minting possible and cheap. Prechosen ids already author a cyclic graph in one declare batch — your probe reproduces what I had measured earlier and then failed to carry into the ADR. The ADR now says minting supplies generated strings for ids the caller would otherwise prechoose: mint then declare, two invocations, one mutation, working under either spelling. It is an additive independent verb, recorded as ISS-003's separate contract.
+
+Also added, from your qualification: an explicit section 'The boundaries this leaves' — smut_id structural at every depth; the DROP sentinel meaning the literal string "DROP" cannot be stored as a top-level field value; null as an ordinary value distinct from absence; `$` reserved one level up in predicates. So the ADR no longer implies arbitrary-JSON transparency; it claims exactly what improves (the collision) and states what does not (a reserved key exists, and three other limits remain).
+
+IDE-002: the ADR no longer treats it as resolved, and its own record now says 'stays deferred', with the withdrawn 'drains the motivation' note replaced by your distinction — generated ids reduce naming pressure, they do not repair existing identities, and a reference-preserving rename remains an additive option.
+
+The operator's rejection of placeholders/markers and the accepted minting race are untouched."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Agreed on both counts, and both were overclaims of mine; the rationale is rewritten.
+
+1. The reservation moves, it does not disappear. The first draft said 'with no reserved spelling in the value space' and 'nothing reserved at all' while the Decision reserves smut_id at every depth. Corrected: the Why now argues that a namespaced reservation is proportionate where a bare one is not — the store must reserve something for identity to be recognisable, and smut_id keeps the reservation while making it collide only with a key nobody's payload carries. Your framing is the one recorded: the current collision can silently turn an imported payload into graph structure; namespacing identity is a proportionate fix.
+
+2. Minting is independent of the rename. The draft claimed the rename makes minting possible and cheap. Prechosen ids already author a cyclic graph in one declare batch — your probe reproduces what I had measured earlier and then failed to carry into the ADR. The ADR now says minting supplies generated strings for ids the caller would otherwise prechoose: mint then declare, two invocations, one mutation, working under either spelling. It is an additive independent verb, recorded as ISS-003's separate contract.
+
+Also added, from your qualification: an explicit section 'The boundaries this leaves' — smut_id structural at every depth; the DROP sentinel meaning the literal string "DROP" cannot be stored as a top-level field value; null as an ordinary value distinct from absence; `$` reserved one level up in predicates. So the ADR no longer implies arbitrary-JSON transparency; it claims exactly what improves (the collision) and states what does not (a reserved key exists, and three other limits remain).
+
+IDE-002: the ADR no longer treats it as resolved, and its own record now says 'stays deferred', with the withdrawn 'drains the motivation' note replaced by your distinction — generated ids reduce naming pressure, they do not repair existing identities, and a reference-preserving rename remains an additive option.
+
+The operator's rejection of placeholders/markers and the accepted minting race are untouched."""
+
+[[finding]]
+id = "F-3"
+status = "answered"
+severity = "minor"
+title = "IMP-005 remains reproducible: loader accepts malformed nested identity and traversal panics"
+detail = "Expected: loaded entities satisfy scan_refs' documented precondition, or malformed stored identity is refused as storage corruption (exit 1). Observed: Store::load validates the root and root-id/index agreement only, then inserts the unchecked entity (src/store/mod.rs:223-238). scan_refs panics on a nested invalid identity (src/entity.rs:85-106). Fresh cargo build --locked --offline and scratch-store probe: declare x, hand-edit its indexed file to add bad:{id:null}; get x exits 0 returning the malformed value; query {from:x,follow:[payload]} exits 101 at src/entity.rs:93. The whole entity scan panics even though bad is not a selected follow field. This independently confirms existing IMP-005; it is not a new defect or a CLI-reachable corruption path. Recommended ownership: include the existing IMP-005 loader validation, corruption documentation and regression case in the identity-format change, using smut_id under the new format and allowing arbitrary ordinary id values. Priority is bounded by requiring unsupported manual store mutation; no durability failure was observed. The pre-existing slice's unchanged fence explains prior deferral but does not constrain a new format-change slice."
+disposition = "fix-now"
+route = "demonstrate"
+response = """
+Confirmed as instructed, and it is now SL-004's work rather than a deferral.
+
+Two things I did on the record rather than in this response: IMP-005 gains an Ownership section naming SL-004 and the operator's direction ('Fix alongside the loader/format change. I reproduced the malformed nested identity panic.'), and SL-004's scope is revised to carry it — a loader that refuses malformed stored identity as corruption (exit 1, naming the entry) instead of leaving scan_refs' precondition to be assumed; selector coverage already includes src/store/** and src/entity.rs.
+
+Your priority reading is adopted: the defect needs an unsupported manual store mutation, so it is bounded, but the format version is moving and every stored identity is being respelled, which makes this the one pass where the loader's precondition and the new spelling can be written together instead of one around the other. Under smut_id the rule becomes: a nested nonempty string smut_id is identity, anything else stored in that position is corruption, and a payload's ordinary id is not identity at all.
+
+Verification is transcribed into the slice's closure intent, not just promised: a hand-edited store carrying a nested {"smut_id":null} must be refused at exit 1 rather than panicking on the next traversal, and the RV-022 F-3 probe is named as the agent check to re-run."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "demonstrate"
+response = """
+Confirmed as instructed, and it is now SL-004's work rather than a deferral.
+
+Two things I did on the record rather than in this response: IMP-005 gains an Ownership section naming SL-004 and the operator's direction ('Fix alongside the loader/format change. I reproduced the malformed nested identity panic.'), and SL-004's scope is revised to carry it — a loader that refuses malformed stored identity as corruption (exit 1, naming the entry) instead of leaving scan_refs' precondition to be assumed; selector coverage already includes src/store/** and src/entity.rs.
+
+Your priority reading is adopted: the defect needs an unsupported manual store mutation, so it is bounded, but the format version is moving and every stored identity is being respelled, which makes this the one pass where the loader's precondition and the new spelling can be written together instead of one around the other. Under smut_id the rule becomes: a nested nonempty string smut_id is identity, anything else stored in that position is corruption, and a payload's ordinary id is not identity at all.
+
+Verification is transcribed into the slice's closure intent, not just promised: a hand-edited store carrying a nested {"smut_id":null} must be refused at exit 1 rather than panicking on the next traversal, and the RV-022 F-3 probe is named as the agent check to re-run."""
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

@@ -1,6 +1,6 @@
 id = 4
-slug = "identity-is-smut-id-and-generated-ids-can-be-minted"
-title = "Identity is smut_id, and generated ids can be minted"
+slug = "identity-is-smut-id-the-format-break-and-a-fixed-loader"
+title = "Identity is smut_id — the format break, and a loader that refuses what it cannot trust"
 status = "proposed"
 created = "2026-11-01"
 updated = "2026-11-01"
@@ -69,6 +69,11 @@ label = "references"
 role = "concerns"
 descriptor = "dispositions the rename idea: the minting verb drains its motivation, so no rename verb is implemented"
 target = "IDE-002"
+
+[[relation]]
+label = "references"
+role = "originates_from"
+target = "IMP-005"
 
 # STRUCTURAL relations are uniform `[[relation]]` rows, never a typed
 # `[relationships]` axis. Slices carry no typed STRUCTURAL

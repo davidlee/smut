@@ -71,12 +71,18 @@ ISS-002 (`id` reserved in nested objects) shares the root cause — identity is
 expressed by one bare key name in a value tree — and any redesign of how identity
 is written should weigh both together.
 
-## Effect of ADR-001 — 2026-11-01
+## Effect of ADR-001 — 2026-11-01 — stays deferred
 
 `smut_id` is the identity key, and it does not decide this idea either way: renames
-would be just as absent, and just as tempting, under the new spelling. What it does
-change is the *urgency*. If the minting verb (ISS-003) lands, generated ids become
-the easy default everywhere, and the pressure to tidy a bad semantic id drops
-sharply — ids stop being commitments because they stop being chosen by hand. That
-argues for keeping this idea deferred until the minting verb and the key rename have
-been lived with.
+are just as absent, and just as tempting, under the new spelling.
+
+Operator position, which this item records rather than argues: "Keep deferred, rather
+than consider it resolved. Generated ids reduce naming pressure; they don't repair
+existing identities. A future reference-preserving rename can be additive."
+
+So the earlier note that the minting verb "drains the motivation" is too strong and is
+withdrawn. Pre-minting ids (ISS-003) reduces the number of names a caller invents by
+hand; it rewrites nothing. An entity already carrying `kind-of-ish-decision` from a
+hand-authored id keeps that id, keeps every reference pointing at it, and no verb can
+retarget them. The pressure this item describes therefore survives, and a rename that
+carries references stays an additive verb that nothing in ADR-001 forecloses.
