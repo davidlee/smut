@@ -976,3 +976,147 @@ mod tests {
         assert!(write_set.is_empty());
     }
 }
+
+#[cfg(test)]
+mod properties {
+    use super::*;
+    use crate::id::Id;
+    use crate::id::scripted::ScriptedSource;
+    use proptest::prelude::*;
+    use serde_json::{Value, json};
+
+    /// A field value from the shapes the algebra treats differently: `null`, an
+    /// integer, a float that equals it numerically, strings, the drop sentinel, a
+    /// nested reference and a nested declaration.
+    fn field_value() -> impl Strategy<Value = Value> {
+        prop_oneof![
+            Just(Value::Null),
+            Just(json!(1)),
+            Just(json!(1.0)),
+            "[a-z]{0,3}".prop_map(|text| json!(text)),
+            Just(json!("DROP")),
+            Just(json!([{"id": "b"}])),
+            Just(json!({"id": "c", "body": "nested"})),
+            Just(json!({"k": [1, 2]})),
+        ]
+    }
+
+    fn field_name() -> impl Strategy<Value = &'static str> {
+        prop_oneof![Just("body"), Just("title"), Just("refs")]
+    }
+
+    fn declaration() -> impl Strategy<Value = Value> {
+        (
+            prop_oneof![Just("a"), Just("b"), Just("c")],
+            prop::collection::btree_map(field_name(), field_value(), 0..3),
+        )
+            .prop_map(|(id, fields)| {
+                let mut object = Map::new();
+                object.insert(ENTITY_ID.to_owned(), json!(id));
+
+                for (name, value) in fields {
+                    object.insert(name.to_owned(), value);
+                }
+
+                Value::Object(object)
+            })
+    }
+
+    fn request() -> impl Strategy<Value = Value> {
+        prop::collection::vec(declaration(), 0..4).prop_map(Value::Array)
+    }
+
+    fn normalised(input: &Value) -> Batch {
+        let mut source = ScriptedSource::new(&["g1", "g2", "g3", "g4"]);
+
+        normalize(&Entities::new(), input, &mut source).expect("a generated request normalises")
+    }
+
+    proptest! {
+        #[test]
+        fn normalisation_is_deterministic_for_a_given_id_source(input in request()) {
+            let mut first_source = ScriptedSource::new(&["g1", "g2", "g3", "g4"]);
+            let mut second_source = ScriptedSource::new(&["g1", "g2", "g3", "g4"]);
+
+            let first = normalize(&Entities::new(), &input, &mut first_source)
+                .expect("a generated request normalises");
+            let second = normalize(&Entities::new(), &input, &mut second_source)
+                .expect("a generated request normalises");
+
+            prop_assert_eq!(first, second, "the same request and source give the same batch");
+        }
+
+        #[test]
+        fn the_fold_coalesces_repeated_declarations(input in request()) {
+            let batch = normalised(&input);
+            let mut repeated = batch.clone();
+            repeated.declarations.extend(batch.declarations.iter().cloned());
+
+            match (apply(&Entities::new(), batch), apply(&Entities::new(), repeated)) {
+                (Ok(once), Ok(twice)) => prop_assert_eq!(once, twice),
+                (Err(once), Err(twice)) => prop_assert_eq!(once, twice),
+                (once, twice) => prop_assert!(
+                    false,
+                    "repeating the declarations changed the verdict: {once:?} then {twice:?}"
+                ),
+            }
+        }
+
+        #[test]
+        fn the_fold_is_idempotent(
+            fields in prop::collection::btree_map(field_name(), field_value(), 0..3),
+        ) {
+            let ops: BTreeMap<String, Op> = fields
+                .iter()
+                .map(|(name, value)| {
+                    let op = if value == &json!("DROP") {
+                        Op::Drop
+                    } else {
+                        Op::Set(value.clone())
+                    };
+
+                    ((*name).to_owned(), op)
+                })
+                .collect();
+
+            let once = fold(vec![Decl { id: Id::new("a"), ops: ops.clone() }])
+                .expect("one declaration cannot conflict");
+            let repeated = fold(
+                (0..3)
+                    .map(|_| Decl { id: Id::new("a"), ops: ops.clone() })
+                    .collect(),
+            )
+            .expect("repeats of equal operations coalesce");
+
+            prop_assert_eq!(once, repeated);
+        }
+
+        #[test]
+        fn reapplying_a_batch_leaves_every_entity_unchanged(input in request()) {
+            let batch = normalised(&input);
+            let Ok(outcome) = apply(&Entities::new(), batch.clone()) else {
+                return Ok(());
+            };
+            let stored: Entities = outcome
+                .write_set
+                .put
+                .iter()
+                .map(|entity| {
+                    let id = Id::new(
+                        entity[ENTITY_ID]
+                            .as_str()
+                            .expect("a written entity carries its public id"),
+                    );
+
+                    (id, entity.clone())
+                })
+                .collect();
+            let again = apply(&stored, batch).expect("a batch that applied applies again");
+
+            for change in &again.response.changes {
+                prop_assert_eq!(change.status, Status::Unchanged, "{} stayed changed", change.id);
+            }
+            prop_assert!(again.write_set.is_empty(), "re-applying wrote {:?}", again.write_set);
+        }
+    }
+}
