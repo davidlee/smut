@@ -99,8 +99,9 @@ the vocabulary prose.
   operator reviews sections and accepts the lock.
 
 Two operator caveats bind the draft: the fixture gets a fresh-agent privacy
-read-through before it is committed (DEC-018), and the epistemic-records schema
-is shown for approval before that convention set ships (DEC-017).
+read-through before it is committed (DEC-018), and the conventions library ships
+one set with the second — the epistemic-records schema — deferred to `IMP-004`
+rather than half-designed here (DEC-017).
 
 <!-- doctrine:section sec-12 -->
 ## 4. System model and pipeline
@@ -552,7 +553,7 @@ smut conventions --help
 
 ### 9.2 The sets
 
-Two sets ship. Each is one screen, written for a human choosing and an agent
+One set ships. It is one screen, written for a human choosing and an agent
 following.
 
 **`hygiene`** — general structure and relations:
@@ -566,38 +567,32 @@ following.
 5. Keep the label vocabulary to a handful, define each in one line, normalise
    when adding one.
 6. State whose claim a claim is.
-7. Render in bounded chunks; render is a human channel, tool output is not.
+7. Distinguish a withdrawn record from a replaced one. `retracted` means the
+   content is withdrawn and kept as a record of its own error; `superseded` means
+   something newer replaced it, and `supersedes` is the edge that makes it so. A
+   store that says `superseded` retired something "with its retraction intact"
+   has collapsed the two, and a `where` on either status then lies — the store
+   this release is built from does exactly that (`vocab`).
+8. Render in bounded chunks; render is a human channel, tool output is not.
 
-**`epistemic-records`** — the one domain with evidence (the first-use store is
-an instance). The schema below is the **draft the operator approves before the
-set ships** (DEC-017); the approved text is what the binary embeds.
+That is the whole shipped surface. A second, domain-specific set —
+`epistemic-records`, with a 13-value type list, a shared status vocabulary and
+six relation labels — was drafted here and **removed on 2026-11-01**: its open
+questions were about *content* (which statuses exist, whether a citation needs an
+entity, whose a claim is), and those are product decisions for one narrow domain
+rather than mechanism for this release. The draft, the evidence against it and
+the five questions it must answer are preserved on `IMP-004`, which gets its own
+design conversation. Nothing in 0.2 depends on it: adding a set later is a file
+plus a match arm, and the mechanism is unchanged whether it ships one set or
+five.
 
-| Element | Values |
-| --- | --- |
-| types | `session`, `cluster`, `index`, `claim`, `question`, `answer`, `finding`, `observation`, `proposal`, `criterion`, `convention`, `source`, `refutation` |
-| statuses | `open`, `answered`, `settled`, `recorded`, `active`, `current`, `superseded`, `retracted` |
-| `part-of` | child → container (containment; the only structural edge) |
-| `about` | entity → subject it addresses |
-| `answers` | answer → question it answers (points upward against `part-of`) |
-| `supersedes` | new record → record it replaces; the old one keeps `superseded` |
-| `refutes` | refutation → claim |
-| `cites` | claim or finding → source |
-
-Direction discipline: write one direction per relation, chosen by the question
-you will ask most; never write both directions. A claim carries a `scope` field
-(`doctrine`, `smut`, `operator`, `external`) so a reader can tell whose claim it
-is without reconstructing the prose. A retracted record is kept with its
-retraction intact rather than deleted; a replaced record is kept too, as
-`superseded`. The two are different states with different jobs: `retracted` says
-the content is withdrawn, `superseded` says something newer replaced it and
-`supersedes` is the edge that makes it so. The store this set was derived from
-collapses the two — its `vocab` says `superseded` retired a finding "with its
-retraction intact" — so the distinction is advice that corrects a real drift in
-the operator's own record, not a taxonomy for its own sake.
+The advice above is not a schema, and the retraction distinction survives the
+deferral because it is lifecycle advice for any store, not a taxonomy for one
+domain. The store's own `vocab` is the evidence that it was needed.
 
 None of this is enforced. The tool prints it and refuses to check it.
 
-Both sets also say, in the printed prose rather than only in the guide, that the
+The set also says, in the printed prose rather than only in the guide, that the
 seeded `body` is advice a re-install replaces: keep an amendment by editing under
 a different id or by keeping it out of the seeded fields, not by editing the
 seeded body in place and trusting it to survive.
@@ -612,9 +607,9 @@ no second copy to drift:
  "title": "Conventions: general hygiene", "body": "# General hygiene\n\n..."}
 ```
 
-The id is fixed (`conventions-hygiene`, `conventions-epistemic-records`), so
-`smut conventions hygiene --format json | smut declare -` is an upsert, not a
-duplicate. Re-installing updates every field the seed supplies — `type`, `id`,
+The id is fixed (`conventions-hygiene`, and the same pattern for any set added
+later), so `smut conventions hygiene --format json | smut declare -` is an upsert,
+not a duplicate. Re-installing updates every field the seed supplies — `type`, `id`,
 `version`, `title`, `body` — and leaves fields the user added alone (0.1's patch
 semantics). **That includes `body`:** a convention the operator amended by hand
 is replaced by the seeded text the next time the pipe runs, without a warning. So
@@ -704,8 +699,6 @@ sets state principles and point at `learn` for the recipe; they do not repeat it
   incoming scan is acceptable.
 - The fixture's content is the operator's and is safe to commit after a
   fresh-agent privacy read-through (DEC-018).
-- The operator approves the epistemic-records schema before that set ships
-  (DEC-017).
 - No new crate is needed; the existing dependency set suffices.
 
 ### 10.3 Edge cases, resolved
@@ -757,12 +750,13 @@ are gated in the plan:
 - **The fixture's privacy.** DEC-018 requires a fresh-agent read-through before
   the fixture is committed; anything private is removed or the fixture is not
   committed. The design does not assume what that read finds.
-- **The epistemic schema's approval.** DEC-017 requires the operator to approve
-  the drafted schema in §9.2 before the set ships. The table is the draft; the
-  approved text is embedded.
+- **The deferred convention set.** `IMP-004` owns the epistemic-records set and
+  its questions. Nothing in 0.2 waits on it: the release ships one set, and the
+  mechanism is the same either way. If 0.2's use of `hygiene` changes what that
+  set should say, that is IMP-004's input, not a revision here.
 
-If either gate changes the answer, the affected section is revised before the
-phase that depends on it, not papered over at audit.
+If the privacy gate changes the answer, the affected section is revised before
+the phase that depends on it, not papered over at audit.
 
 <!-- doctrine:section sec-6 -->
 ## 12. Risks and mitigations
@@ -777,7 +771,7 @@ phase that depends on it, not papered over at audit.
 | Envelope widening breaks the 0.1 pin | Non-traversing responses keep exactly the five 0.1 keys; the compatibility pin stays and an additivity pin sits beside a 0.2 query (DEC-019) |
 | `backlinks` cost is mistaken for a bounded walk | README and guide state that the budget bounds expansions, not the per-hop store scan; no claim of a total-work bound |
 | The fixture commits something private | A fresh-agent read-through is a phase gate before the fixture commit; the operator resolves anything found (DEC-018) |
-| Conventions advice reads as a schema | Two epistemics in the guide; the command prints and never validates; tests assert no store is created or read |
+| Conventions advice reads as a schema | One set only, and it is structure advice rather than a domain taxonomy; the command prints and never validates; tests assert no store is created or read |
 | Predicate disambiguation is subtly wrong | Table-driven tests for literal, operator-only, mixed, `$eq` on a literal object with `$` keys, and missing/null |
 | The guide drifts from behaviour | `learn` tests assert the two-call recipe **with its direction** (containment asked by `backlinks`) and its guard (both truncation reasons read before ids are filtered), the new keys, the `traversal` member and the removal of the 0.1 release notice; the shipped example is the one the fixture test runs |
 | A criterion only polite input can reach | Every edge-case row in §10.3 that names a behaviour gets a test that produces that state, including `follow: []` with an induced edge between roots, `depth: 0` and an empty budget-ending queue; the composition guard gets a graph above the default cap whose only matching question orders beyond it |
@@ -819,7 +813,6 @@ durability guarantees and their tests remain in force unchanged.
   design and the scope update, so `doctrine verify research-current --slice 2`
   reports current before planning; `doctrine slice conformance` at audit
 - A fixture privacy read-through recorded before the fixture commit
-- The epistemic-records schema approved before its set ships
 
 ### 13.3 Acceptance scenarios
 
@@ -836,10 +829,12 @@ durability guarantees and their tests remain in force unchanged.
    frontier out by one and grows the edge set.
 4. A budget of one on a two-root store returns the first root's expansion,
    reports the second root in the frontier, and sets `traversal_budget`.
-5. `smut conventions epistemic-records --format json | smut declare -` creates
-   one entity with id `conventions-epistemic-records`; running it again updates
-   that entity rather than adding another, replacing the seeded `body` and keeping
-   a field the user added.
+5. `smut conventions hygiene --format json | smut declare -` creates one entity
+   with id `conventions-hygiene`; running it again updates that entity rather
+   than adding another, replacing the seeded `body` and keeping a field the user
+   added. `smut conventions` with no argument lists exactly one set, and
+   `smut conventions epistemic-records` is refused by name — the deferred set is
+   not half-shipped.
 6. A graph above the default limit whose only matching question orders beyond
    the cap: the first call truncates with `result_limit` and does not return the
    target, the second envelope over the received ids is complete-looking and
@@ -861,7 +856,7 @@ durability guarantees and their tests remain in force unchanged.
 | `src/select.rs` | Roots → `where` → walk → order → limit; `Selection.walk`; `Reason::TraversalBudget`; conditional `traversal` in `envelope` |
 | `src/error.rs` | New refusals: bad predicate/operator/type, bad depth/budget, unknown convention, bad convention format |
 | `src/conventions.rs` (new) | Set registry, listing, prose, seed construction, format dispatch |
-| `src/conventions/*.md` (new) | `hygiene.md`, `epistemic-records.md` |
+| `src/conventions/*.md` (new) | `hygiene.md` (the pattern keeps room for a later set) |
 | `src/learn.rs` | Rewrite the query/workflow sections; remove the 0.1 release notice |
 | `src/render_markdown.rs` | Disclose `traversal_budget` and dangling in the leading notice |
 | `src/cli.rs` | `conventions` subcommand and its format flag; parse the five query keys |
@@ -900,7 +895,7 @@ decisions from the inquiry. The alternatives are recorded on each entity.
 | DEC-014 | Edges are induced among returned objects, deduped, result order, dangling excluded |
 | DEC-015 | Budget counts entity expansions; `traversal_budget` only on a real decline |
 | DEC-016 | The two-call idiom is normative in `learn`, guard included; conventions carry the principle |
-| DEC-017 | Two convention sets, fixed-id versioned seeds the store owns; operator approves the epistemic schema |
+| DEC-017 | One convention set in 0.2, fixed-id versioned seeds the store owns, seeded body replaced on re-install; the epistemic set deferred to IMP-004 |
 | DEC-018 | The first-use store ships as a normalised array plus provenance; privacy read-through before commit |
 | DEC-019 | Grammar and envelope stay additive; compatibility tests are re-cut, not deleted |
 

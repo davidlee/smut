@@ -29,6 +29,18 @@ act = "conclude"
 role = "raiser"
 note = "Adversarial pass 2 (operator codex) plus one finding raised here. Four findings: the recipe direction (major), the composition control (minor), DEC-018 and the fixture impact row (minor), the seed upsert claim (minor). All verified against the store and the text, all repaired in place; the repairs staled the pass, and RV-013 takes over."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Independent follow-up verification of all four dispositions against current design §§9.2-9.4, §§13.1/13.3/14.1, scope objectives 8-9, full DEC-016/017/018 projections, slice notes and read-only jq inspection of the source store.
+F-1 VERIFIED: DEC-016 now uses backlinks:part-of; design teaches the direction and binds the shipped example to the fixture test with expected eight ids and the follow-variant miss. jq confirms session lacks part-of and five clusters point to it; eight open ids agree.
+F-2 VERIFIED at design level: client-side retention/reporting is explicit; the design requires running the shipped learn example and names the over-cap target-presence/omission facts, naive helper and contrasting partial conclusion. This settles the missing verification subject/observable result; actual implementation and a failing negative control still must be demonstrated during execution.
+F-3 VERIFIED: DEC-018 prose, choice and consequences distinguish pre-redaction source counts from committed-array counts, require redaction scope/resolver in provenance, and no longer claim a retracted-status record. The §14.1 row agrees.
+F-4 PARTLY/CONTEST: reopened with evidence. Main design/scope/test-contract clarification landed, but DEC-017 lacks the promised warning and the raise's vocab-overwrite example must be explicitly corrected in the response because its ID differs from both seed IDs.
+The ledger was already marked verified/concluded before this independent check; F-1..F-3 retain their verified states, and this basis records the fresh evidence. No new broad review, implementation tests, build, store writes, design edits or commits performed.
+"""
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
 
@@ -174,7 +186,7 @@ note = "DEC-018 body, choice and consequences, and the §14.1 row now describe t
 
 [[finding]]
 id = "F-4"
-status = "verified"
+status = "contested"
 severity = "minor"
 title = "The seed upsert silently overwrites a locally amended convention body while the text promises the store owns its copy"
 detail = """
@@ -215,6 +227,17 @@ Records swept: DEC-017's body, which says the store owns its copy and must not i
 act = "verify"
 role = "raiser"
 note = "§9.3, §9.2 prose note, scope objective 8 and the conventions test row now say the seeded body is replaced."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = """
+Independent verification: PARTLY repaired. Design §9.3 now explicitly warns that reinstall replaces a locally amended seeded body; §9.2 requires that warning in both printed sets, scope objective 8 agrees, and §13.1 Conventions names both overwrite and preservation assertions. Those changes address the core concern.
+
+Two points prevent accepting the full response as written. (1) The response explicitly lists DEC-017's body as swept, but current doctrine show DEC-017 still says only that the store owns its copy and reinstall updates the seed; it contains none of the supplied-field/local-body-edit warning now required elsewhere. Refresh that decision's prose to match the clarified ownership contract (no new mechanism).
+
+(2) F-4's concrete instance is factually wrong: it says rerunning the hygiene seed pipeline would erase the amendment in the existing vocab entity. jq over the live store confirms id:vocab; §9.3/DEC-017 fix seed ids to conventions-hygiene and conventions-epistemic-records, neither currently present. ID-keyed upsert therefore cannot touch vocab. Since the raise is immutable, explicitly correct this in the responder's durable answer: vocab is evidence of the practice of locally amending convention prose, not an entity overwritten by this pipeline. Use the valid counterexample of editing body on an installed conventions-hygiene or conventions-epistemic-records entity and reinstalling that same seed. No need to withdraw the underlying overwrite finding or change seed behavior.
+"""
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

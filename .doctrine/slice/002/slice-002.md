@@ -78,8 +78,12 @@ questions the first-use store actually asked.
 8. **Conventions library** — a separate read-only command
    `smut conventions [NAME]`, no store required, prose by default and one
    pipeable `--format json` declaration on request, never validated and never
-   auto-selected. Exactly two sets ship (DEC-017): `hygiene` and
-   `epistemic-records`, the only domain with evidence. Each JSON seed carries a
+   auto-selected. One set ships (DEC-017): `hygiene`, general structure and
+   relation advice. The second, `epistemic-records`, is **deferred to IMP-004**: its
+   content — which types and statuses exist, whether a citation needs an entity,
+   whose a claim is — is a product decision for one domain and needs its own design
+   conversation. 0.2 settles the mechanism, and adding a set later is a file plus a
+   match arm. Each JSON seed carries a
    fixed id and the release version, so re-installing replaces the fields the seed
    supplies — the `body` included — and leaves fields the user added; the store owns
    its copy only as an ordinary entity it may edit or delete, and the printed prose
@@ -140,6 +144,10 @@ The label filter was never the cost. Sequence the phases by risk:
   mechanism inside the store** — all stay out, the last three by intent.
 - **A conventions schema, checker or auto-selector** — the moment a set is
   checkable it is a schema with a friendlier name.
+- **The `epistemic-records` convention set.** Deferred to `IMP-004` (its draft,
+  the doctrine comparison and the open questions are preserved there). Shipping a
+  second set's half-argued taxonomy in 0.2 would put unconverged product content in
+  an acceptance-tested release; the mechanism is unaffected by the deferral.
 - **A storage-format change.** 0.2 widens the query surface, not the on-disk
   format; `format_version` stays 1 unless design records a reason.
 
@@ -153,7 +161,7 @@ Coarse fence; the exact touch-set is the design's job.
 | Selection pipeline | `src/select.rs`, `src/order.rs` | roots → traverse → dedupe → order → limit → project |
 | Reference identity | `src/entity.rs` | consume `reference_id`/`scan_refs`; no second definition |
 | New subsystems | `src/walk.rs`, `src/predicate.rs` (names indicative) | walker, frontier, edges, depth; predicate evaluation |
-| Conventions | `src/conventions.rs`, `src/conventions/*.md`, `src/learn.rs`, `src/cli.rs` | new command, embedded sets, guide pointer |
+| Conventions | `src/conventions.rs`, `src/conventions/*.md`, `src/learn.rs`, `src/cli.rs` | new command, one embedded set, guide pointer |
 | Envelope and diagnostics | `src/select.rs`, `src/render_markdown.rs`, `src/main.rs` | edges/frontier/depth, `traversal_budget`, `dangling`, Markdown disclosure |
 | Rejections | `src/error.rs` | malformed predicates, bad types, budget/depth |
 | Tests | `tests/**`, `tests/fixtures/**` | predicates, traversal, determinism, conventions, fixture acceptance |
@@ -168,7 +176,7 @@ Coarse fence; the exact touch-set is the design's job.
 | `backlinks` is O(store) per hop and unbounded by `budget` | State the cost in the guide and README; do not imply a total-work bound |
 | Envelope widening breaks 0.1 clients | New members are additive; 0.1 calls keep their shape; `tests/compatibility.rs` pins representative invocations |
 | Predicates grow into a query language | Brief's closed operator list; no nested paths, pipelines or pagination |
-| Conventions content is unendorsed | Shape is endorsed, contents are drafts; keep hygiene + evidenced epistemic set, ship few |
+| Conventions content is unendorsed | Shape is endorsed, contents are drafts; ship one set the operator already uses (`hygiene`); the evidenced domain set is deferred rather than half-argued (IMP-004) |
 | The fixture is a real personal record | Promotion is decided in design with provenance; it is the owner's own store |
 
 Assumptions carried from 0.1: single user, single host, local filesystem with
@@ -188,7 +196,7 @@ knowledge records, not scope prose.
 | DEC-014 | Edges are induced among returned objects, deduped, result order, dangling excluded |
 | DEC-015 | Budget counts entity expansions; `traversal_budget` only on a real decline |
 | DEC-016 | The two-call idiom is normative in `learn`; conventions carry the principle |
-| DEC-017 | Two convention sets, fixed-id versioned seeds, the store owns its copy |
+| DEC-017 | One convention set in 0.2, fixed-id versioned seeds, seeded body replaced on re-install; the epistemic set deferred to IMP-004 |
 | DEC-018 | First-use store ships as a normalised array plus provenance, not `.smut` internals |
 | DEC-019 | Grammar and envelope stay additive; compatibility tests are re-cut, not deleted |
 
@@ -210,7 +218,7 @@ them and they are acceptance criteria.
 4. the 0.1 compatibility suite unchanged and green, plus `cargo fmt` and clippy
    with zero warnings;
 5. `smut learn` and the README carrying the idioms the release introduces, and
-   `smut conventions` printing its sets without a store and `--format json`
+   `smut conventions` listing its one set without a store, with `--format json`
    round-tripping through `declare`;
 6. the slice's selectors diffed against git actuals (`doctrine slice
    conformance`) with each non-conformant cell explained.

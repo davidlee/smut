@@ -275,3 +275,37 @@ Four findings (three from the operator's codex pass, one raised here), all
   silently replaced on re-install. The operator's own `vocab` is exactly that
   amendment. Repaired in §9.3, §9.2's printed-prose note, the scope and the
   conventions test row.
+
+## Scope reduction: the epistemic-records set leaves 0.2 (2026-11-01)
+
+Operator direction: the epistemic schema is not converged and deserves its own
+design conversation. Removed from the design, not repaired again.
+
+- **What ships now:** `smut conventions` with **one** set, `hygiene`, plus the
+  mechanism unchanged — fixed-id seeds, `--format json`, pipe through `declare`,
+  never validated, never auto-selected. Adding a set later is a file plus a match
+  arm, so the deferral costs 0.2 nothing.
+- **What moved:** the draft taxonomy (13 types, 8 statuses, 6 relations, `scope`),
+  the five open questions (per-kind statuses, the missing disposition pair,
+  `source`/`refutation` as types, does the list survive a query, whose claim) and
+  the doctrine comparison now live on **IMP-004**
+  (`doctrine show IMP-004`), linked `originates_from SL-002`, `after SL-002`,
+  tags `conventions`/`epistemic`/`design-deferred`. The evidence stays where it
+  was gathered: `research/raw/thread-3-doctrine-epistemic-schema.md` and
+  `thread-3-synthesis-proposal.md`.
+- **DEC-017 narrowed** (title, context, choice, consequences): one set in 0.2;
+  the seed-body replacement caveat folded in; the epistemic set recorded as
+  deferred. Its slug still reads `conventions-two-sets-...` — durable, left
+  alone.
+- **Kept in 0.2 because it is lifecycle advice, not a taxonomy:** the
+  retracted-vs-superseded distinction moved into `hygiene` item 7, with the
+  store's own `vocab` as the evidence. Four review findings landed around that
+  taxonomy; this one was about a real drift in the operator's record.
+- **Deltas:** §3 caveat, §9.2 (rewritten, one set), §9.3 ids, §10.2 assumption
+  dropped, §11 residual gate replaced by a pointer to IMP-004, §12 risk row,
+  §13.2 gate dropped, §13.3 scenario 5 rewritten (hygiene round-trip + the
+  deferred name refused by name), §14.1 file list, §15 DEC-017 row; scope
+  objective 8, out-of-scope, risks row, settled table, verification item 5.
+- **Gate removed:** DEC-017 no longer requires operator approval of a schema
+  before a set ships, because no such set ships. §9.2's review is now ordinary
+  review, not approval.
