@@ -10,4 +10,5 @@ pub mod entity;
 pub mod error;
 pub mod id;
 pub mod numeric;
+pub mod order;
 pub mod store;

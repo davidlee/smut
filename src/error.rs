@@ -36,6 +36,14 @@ pub enum Reject {
         /// The top-level field assigned both a value and a drop, or two values.
         field: String,
     },
+    /// A field named in `order` holds an array or an object, which has no
+    /// ordering: sort values are `null`, booleans, numbers and strings only.
+    UnsortableValue {
+        /// The `order` entry's field.
+        field: String,
+        /// What the field held, for the message.
+        found: String,
+    },
 }
 
 /// The store could not be read or written: exit 1.
@@ -103,6 +111,11 @@ impl fmt::Display for Reject {
                 formatter,
                 "conflicting declarations for entity {id} on field {field}"
             ),
+            Reject::UnsortableValue { field, found } => write!(
+                formatter,
+                "cannot order by {field}: {found} has no ordering, and a sort value \
+                 must be null, a boolean, a number or a string"
+            ),
         }
     }
 }
@@ -145,7 +158,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 6] = [
+        let cases: [(Error, u8); 7] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -163,6 +176,14 @@ mod tests {
                 Reject::ConflictingDeclaration {
                     id: "smut".to_owned(),
                     field: "body".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnsortableValue {
+                    field: "tags".to_owned(),
+                    found: "an array".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -202,5 +223,12 @@ mod tests {
         };
         assert!(conflict.to_string().contains("smut"), "{conflict}");
         assert!(conflict.to_string().contains("body"), "{conflict}");
+
+        let unsortable = Reject::UnsortableValue {
+            field: "tags".to_owned(),
+            found: "an array".to_owned(),
+        };
+        assert!(unsortable.to_string().contains("tags"), "{unsortable}");
+        assert!(unsortable.to_string().contains("an array"), "{unsortable}");
     }
 }
