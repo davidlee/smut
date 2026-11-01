@@ -16,80 +16,136 @@ ref   = "SL-002"
 
 [[finding]]
 id = "F-1"
-status = "open"
+status = "answered"
 severity = "minor"
 title = "The label-vocabulary pin cannot fail on the deletion it names"
 detail = """`src/learn.rs:407-413`, against `:148` and `:215`. Deleting the "Labels and rendering" section leaves the test green: `"bounded"` also occurs in the budget paragraph ("no number in this specification makes them bounded") and `"handful"` in the Conventions paragraph ("a handful of labels"). PHASE-06 EX-1/VT-1 names that test as the proof of the vocabulary and bounded-render advice, so a pin that survives deleting its own subject certifies nothing — the exact DEF-3 class the slice notes record, now its fourth instance. Route: pin the section's own unique phrases ("Render in bounded chunks", "Keep the label vocabulary to a handful")."""
+disposition = "fix-now"
+response = """Conceded, and the most useful finding of the four passes. Fixed in `d8a7cb4`: the pin now names the section's own sentences ("Keep the label vocabulary to a handful", "Render in bounded chunks"). Negative control run and recorded — deleting lines 206-212 of `src/learn.rs` turns the test red with "the label vocabulary is minimal", where the old keywords left it green. The review is right that this is the DEF-3 class; it is now its fourth instance, and the notes carry the pattern, its mechanical cause (a keyword list is a contract against a document that keeps changing) and the escalating repairs the run used against it."""
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Conceded, and the most useful finding of the four passes. Fixed in `d8a7cb4`: the pin now names the section's own sentences ("Keep the label vocabulary to a handful", "Render in bounded chunks"). Negative control run and recorded — deleting lines 206-212 of `src/learn.rs` turns the test red with "the label vocabulary is minimal", where the old keywords left it green. The review is right that this is the DEF-3 class; it is now its fourth instance, and the notes carry the pattern, its mechanical cause (a keyword list is a contract against a document that keeps changing) and the escalating repairs the run used against it."""
 
 [[finding]]
 id = "F-2"
-status = "open"
+status = "answered"
 severity = "minor"
 title = "Two rules are written twice across two shipped surfaces, and the guide both asserts and defers them"
 detail = """`src/learn.rs:207-212` with `:215-217`, against `src/conventions/hygiene.md:15-16` and `:25`. Near-verbatim duplication of "keep the label vocabulary to a handful", "define each in one line", "normalise", "render in bounded chunks", "a human channel" — and `learn` hands the same advice to the conventions sets two paragraphs after stating it. Design §9.2 items 5/8 and §9.4 both mandate the material, so this is design-sanctioned overlap rather than a criterion breach: it is drift exposure. Nothing can see the two surfaces disagree — the guide's pins are keyword checks and the set's pin is byte-for-byte against its own embedded file. Route: record the ownership decision rather than rewrite; narrowing the guide to the *why* would re-read EX-1, which is a criterion question, not a repair."""
+disposition = "tolerated"
+response = "Accepted as a design-sanctioned overlap rather than a defect, and recorded rather than rewritten — the reviewer's own smaller move, and the right one: narrowing the guide to the *why* would re-read EX-1, which is a criterion question and not a repair. Recorded in the notes with the ownership the next editor needs: `hygiene.md` owns the rule, `learn` owns the why, and nothing detects the two drifts apart today — the sets are pinned byte-for-byte and the guide by keyword — so keeping them in step is a manual review duty. That residual is the real content of the finding, and it is now written down where an editor will meet it."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Accepted as a design-sanctioned overlap rather than a defect, and recorded rather than rewritten — the reviewer's own smaller move, and the right one: narrowing the guide to the *why* would re-read EX-1, which is a criterion question and not a repair. Recorded in the notes with the ownership the next editor needs: `hygiene.md` owns the rule, `learn` owns the why, and nothing detects the two drifts apart today — the sets are pinned byte-for-byte and the guide by keyword — so keeping them in step is a manual review duty. That residual is the real content of the finding, and it is now written down where an editor will meet it."
 
 [[finding]]
 id = "F-3"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "Three further pins are satisfiable by a sentence other than the one they are named for"
 detail = """`src/learn.rs:344`, `:418`, `:450`. `"100"` is satisfied by the preamble at `:97`, so the `limit` default is unpinned; `the_guide_points_at_smut_conventions_once` asserts presence while `"smut conventions"` occurs three times; `"nine"` is satisfied by `:96`/`:203` rather than the client-side paragraph the test is about. Same failure mode as F-1 at lower stakes: the assertion passes for a reason the test name disclaims, so an editor can weaken the guide's real claim with the suite green. Route: assert `"default 100"`/`"default 10000"`, count the pointer inside the Conventions section, and name the client-side paragraph's own sentence."""
+disposition = "fix-now"
+response = """Conceded on all three. Fixed in `d8a7cb4`: the defaults pin with their key word ("default 100", "default 10000"), the client-side pin names the paragraph's own nouns ("performs no propagation", "no prior-response input") instead of a bare "nine", and the conventions pointer is left as a presence assertion with the duplication ownership recorded separately. The wrap point the review made in its second line of attack turned out to matter immediately: my first strengthened pin failed because the phrase straddled a hard wrap, so every prose pin in the module now reads a whitespace-flattened view of the guide — a red means a missing claim, not a reflow."""
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Conceded on all three. Fixed in `d8a7cb4`: the defaults pin with their key word ("default 100", "default 10000"), the client-side pin names the paragraph's own nouns ("performs no propagation", "no prior-response input") instead of a bare "nine", and the conventions pointer is left as a presence assertion with the duplication ownership recorded separately. The wrap point the review made in its second line of attack turned out to matter immediately: my first strengthened pin failed because the phrase straddled a hard wrap, so every prose pin in the module now reads a whitespace-flattened view of the guide — a red means a missing claim, not a reflow."""
 
 [[finding]]
 id = "F-4"
-status = "open"
+status = "answered"
 severity = "nit"
 title = 'The module doc calls the guide "version-free" while the guide names 0.2'
 detail = """`src/learn.rs:3`, `:12-14` against `:129`. "Descriptive and version-free" / "A version-free banner is the honest one" versus the guide's own "cannot be filtered at all in 0.2"; design §9.4 says `learn` "remains descriptive and version-bound", and the banner's version figure was dropped with no criterion (a recorded decision in the C5 rows). Comments are this repo's audit trail, and §9.4's "version-bound" now has no referent anywhere in the guide. Route: one word in the module doc, and leave the locked design's phrasing to the audit rather than rewriting it mid-slice."""
+disposition = "fix-now"
+response = """Conceded. The module doc now says the guide is "descriptive and version-scoped, never version-pinning: it names the release the surface belongs to and no build number", which is what it does — the guide says "cannot be filtered at all in 0.2" and carries no figure. The locked design's "version-bound" phrasing is left alone, as the reviewer suggested: a design wording question belongs to reconcile, not to a repair commit."""
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Conceded. The module doc now says the guide is "descriptive and version-scoped, never version-pinning: it names the release the surface belongs to and no build number", which is what it does — the guide says "cannot be filtered at all in 0.2" and carries no figure. The locked design's "version-bound" phrasing is left alone, as the reviewer suggested: a design wording question belongs to reconcile, not to a repair commit."""
 
 [[finding]]
 id = "F-5"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "The clusters-drift deferral is recorded only in the note that says it is on a list"
 detail = """`tests/fixtures/interview/PROVENANCE.md:120-126`. The operator's ruled deferral covers the design's *line numbers*; `notes.md` `### Open` records DEF-1/2/3 but not "mutually-referencing clusters", so "is on the deferred-drift list for reconcile" is self-referential — it reads as tracked while nothing tracks it. Route: one bullet under `notes.md` `### Open` naming design §2's sentence and EX-3's "cluster" noun."""
+disposition = "fix-now"
+response = """Conceded — the deferral was self-referential, which is exactly the class this run keeps catching. The notes now carry it as a named reconcile item: design §2's "mutually-referencing clusters" does not hold of the committed array, the suite pins `finding-smut-17` <-> `prop-conventions-library`, and it sits beside the line-number drift the operator already deferred. It is now findable where reconcile looks."""
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Conceded — the deferral was self-referential, which is exactly the class this run keeps catching. The notes now carry it as a named reconcile item: design §2's "mutually-referencing clusters" does not hold of the committed array, the suite pins `finding-smut-17` <-> `prop-conventions-library`, and it sits beside the line-number drift the operator already deferred. It is now findable where reconcile looks."""
 
 [[finding]]
 id = "F-6"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "The fixture-to-`scan_refs` agreement is a regression guard, not evidence about this data"
 detail = '`tests/fixture.rs:303-322`. Both walks encode the same rule (an object with a string `id` is a leaf, arrays positional) and both collapse to a `BTreeSet` of targets, so labels are never compared — and every reference in `entities.json` is a flat `[{"id": ...}]` list, a shape on which the two definitions cannot differ. It is NOT vacuous (a change to either algorithm reddens it), but it proves the definitions have not diverged yet rather than that either is right over this data; the discriminating embedded case already lives at `src/walk.rs:590`. Route: keep the assertion, soften the comment from evidence to regression guard. This is a fair correction to my own RV-019 F-2 disposition, which claimed more for it than it does.'
+disposition = "fix-now"
+response = """Conceded, and the correction is to my own record: RV-019 F-2's disposition claimed the cross-check was "two accounts forced to agree… stronger than either alone". It is not — both walks encode the same rule, both collapse to unordered target sets, and every reference in this data is a flat one-element list, so it cannot differ. The assertion stays (it would catch either algorithm changing) and the comment now calls it the regression guard it is. Two reviewers have now corrected an overstatement of mine; both corrections are on the ledger rather than absorbed."""
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Conceded, and the correction is to my own record: RV-019 F-2's disposition claimed the cross-check was "two accounts forced to agree… stronger than either alone". It is not — both walks encode the same rule, both collapse to unordered target sets, and every reference in this data is a flat one-element list, so it cannot differ. The assertion stays (it would catch either algorithm changing) and the comment now calls it the regression guard it is. Two reviewers have now corrected an overstatement of mine; both corrections are on the ledger rather than absorbed."""
 
 [[finding]]
 id = "F-7"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "A compatibility test cites a PHASE-08 that does not exist"
 detail = """`tests/compatibility.rs:498` says "the guide's content is PHASE-08's to write". SL-002 has seven phases and PHASE-06 wrote the guide. Outside this diff but on the same path, and it is the kind of stale forward reference that sends a later reader looking for a phase that was never planned. Route: name PHASE-06. Reviewed here because it is the guide's own claim about who owns it."""
+disposition = "fix-now"
+response = "Conceded. `tests/compatibility.rs` now says the guide's content is PHASE-06's, which wrote it, and records that the old comment named a PHASE-08 that was never planned. Fixed in `d8a7cb4`."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Conceded. `tests/compatibility.rs` now says the guide's content is PHASE-06's, which wrote it, and records that the old comment named a PHASE-08 that was never planned. Fixed in `d8a7cb4`."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
