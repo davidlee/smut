@@ -324,6 +324,24 @@ One heavy phase per charter, pairs only for the two pure cores:
   shell-validated `Entities` snapshot (DEC-001), and the store loader owns turning
   either into exit 1; the alternatives (skip, or start over) lose corruption or
   invent data · decided
+- charter-2 · PHASE-02's charter authorised `src/error.rs` as a fifth, additive
+  path beyond the plan's four (`src/entity.rs`, `src/id.rs`, `src/declare.rs`,
+  `src/lib.rs`) · EX-4 and EX-5 are stated in terms of `Reject` for conflicting
+  batches and for null/numeric/empty ids, and `Reject` lives only in
+  `src/error.rs`; three variants, their `Display` arms and the exit-code table
+  rows were added, while `StoreError` and the two-class `Error` mapping stayed
+  untouched, so no error class was introduced · decided
+- charter-2 · the PHASE-02 worker wrote its own four `## Autonomy log` lines and
+  committed them as `7adefa4`, which the Implementation run assigns to the
+  orchestrator · the lines are substantive and correct, so they stand; recorded
+  here so the division of labour stays visible rather than being re-litigated
+  mid-run · decided
+- charter-2 · PHASE-02's response objects serialise their keys lexically
+  (`changes`, `ids`, `missing`) where the brief's example shows a different
+  order · JSON key order is insignificant and §4.2/DEC-007 make the canonical
+  stdout form lexical apart from the id-first entity root, so the example is
+  illustrative; if the brief's display order is ever wanted it is a PHASE-07
+  question, not a core change · deferred to PHASE-07
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
