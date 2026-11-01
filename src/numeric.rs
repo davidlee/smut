@@ -287,7 +287,7 @@ mod tests {
         #[test]
         fn compare_is_transitive(first in numbers(), second in numbers(), third in numbers()) {
             let mut values = [first, second, third];
-            values.sort_by(|left, right| compare(left, right));
+            values.sort_by(compare);
             let [smallest, middle, largest] = &values;
 
             let smallest_middle = compare(smallest, middle);
