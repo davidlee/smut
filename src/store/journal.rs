@@ -14,7 +14,7 @@ use std::path::Path;
 use serde_json::{Map, Value};
 
 use crate::declare::WriteSet;
-use crate::entity::{ENTITY_ID, Form, serialise_document, serialise_entity};
+use crate::entity::{ENTITY_ID, Form, serialise};
 use crate::error::StoreError;
 use crate::id::Id;
 use crate::store::boundary::Boundary;
@@ -90,7 +90,7 @@ impl Manifest {
             (REMOVES_KEY.to_owned(), names(&self.removes)),
         ]));
 
-        serialise_document(&document, Form::File)
+        serialise(&document, Form::File)
     }
 
     /// Parse a manifest's bytes, refusing every document §4.7 calls unreadable.
@@ -210,10 +210,7 @@ pub fn translate(
 
         taken.insert(basename.clone());
         puts.push(basename.clone());
-        files.push((
-            basename.clone(),
-            serialise_entity(entity, Form::File).into_bytes(),
-        ));
+        files.push((basename.clone(), serialise(entity, Form::File).into_bytes()));
         objects.push((id, basename));
     }
 
@@ -719,7 +716,7 @@ mod tests {
 
     use super::*;
     use crate::declare::Entities;
-    use crate::entity::{Form, serialise_entity};
+    use crate::entity::{Form, serialise};
     use crate::store::Snapshot;
 
     /// A scratch directory holding one empty store directory.
@@ -826,7 +823,7 @@ mod tests {
     }
 
     fn entity_bytes(entity: Value) -> Vec<u8> {
-        serialise_entity(&entity, Form::File).into_bytes()
+        serialise(&entity, Form::File).into_bytes()
     }
 
     #[test]
@@ -962,7 +959,7 @@ mod tests {
         assert_eq!(staged.files()[0].0, "Ab3.json");
         assert_eq!(
             staged.files()[0].1,
-            serialise_entity(&json!({"id": "alpha", "body": "changed"}), Form::File).into_bytes()
+            serialise(&json!({"id": "alpha", "body": "changed"}), Form::File).into_bytes()
         );
 
         let successor = Index::parse(&staged.files()[1].1).expect("a parseable index");

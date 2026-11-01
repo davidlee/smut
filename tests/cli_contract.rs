@@ -177,6 +177,25 @@ fn declare_writes_its_envelope_to_stdout_and_exits_zero() {
 }
 
 #[test]
+fn a_projected_entity_is_serialised_by_the_same_wrapper_as_a_stored_one() {
+    // DEC-007: one shared wrapper, "used for stored entity files and for
+    // projected entities alike", so a response's entity roots name `id` first
+    // and their remaining keys lexically — the same bytes rule as the file.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let ran = smut(&scratch, &["get", "a"]);
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    assert!(
+        ran.stdout
+            .contains(r#""objects":[{"id":"a","body":"First.","priority":3,"title":"Alpha"}]"#),
+        "{}",
+        ran.stdout
+    );
+}
+
+#[test]
 fn query_reads_its_specification_from_a_pipe_on_stdin_and_exits_zero() {
     let scratch = Scratch::new();
     store_of_three(&scratch);

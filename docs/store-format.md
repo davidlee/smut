@@ -106,7 +106,10 @@ write set always has the same shape and no member's absence ever means
 Entity files are serialised by one wrapper: the entity root puts `id` first and
 its remaining keys lexical, embedded ordinary objects are all-lexical, and
 arrays keep their order. Documents without an entity root — the index, the
-manifest — are all-lexical. Serialising and then re-parsing to arrange keys is
+manifest — are all-lexical. The rule is structural, not positional: the same
+wrapper serialises command output, so a projected entity inside a response's
+`objects` array names `id` first exactly as its file does. Only an object that
+is not an entity node is all-lexical. Serialising and then re-parsing to arrange keys is
 never done, because a parsed value erases the ordering a wrapper imposed.
 
 Two byte forms, deliberately different:

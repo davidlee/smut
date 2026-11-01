@@ -36,12 +36,19 @@ pub fn reference_id(value: &Value) -> Result<Option<&str>, Reject> {
         return Ok(None);
     };
 
-    match id {
-        Value::String(text) if !text.is_empty() => Ok(Some(text)),
-        other => Err(Reject::InvalidId {
-            found: describe_id(other),
-        }),
+    if names_entity_node(fields) {
+        return Ok(id.as_str());
     }
+
+    Err(Reject::InvalidId {
+        found: describe_id(id),
+    })
+}
+
+/// Whether an object's `id` member is a nonempty string — §3.1's entity node,
+/// and the one predicate the serialisation wrapper asks about a value.
+fn names_entity_node(fields: &Map<String, Value>) -> bool {
+    matches!(fields.get(ENTITY_ID), Some(Value::String(id)) if !id.is_empty())
 }
 
 /// `true` exactly when the value is an entity node: the boolean projection of
@@ -249,19 +256,17 @@ pub enum Form {
     Stdout,
 }
 
-/// The canonical bytes of one entity for `form`: its root names `id` first.
-pub fn serialise_entity(entity: &Value, form: Form) -> String {
-    render(entity, form, true)
-}
-
-/// The canonical bytes of a store document for `form`: with no entity root, its
-/// keys stay lexical.
-pub fn serialise_document(document: &Value, form: Form) -> String {
-    render(document, form, false)
-}
-
-fn render(value: &Value, form: Form, id_first: bool) -> String {
-    let canonical = Canonical { value, id_first };
+/// The canonical bytes of a value for `form` (§4.2, DEC-007).
+///
+/// One ordering, applied here at the byte boundary and nowhere else: an entity
+/// node — an object whose `id` is a nonempty string, [`reference_id`]'s own
+/// predicate — names `id` first and its remaining keys lexically; every other
+/// object is all-lexical; arrays keep their order. Because the rule is
+/// structural rather than positional, a projected entity inside a response's
+/// `objects` array is serialised by this same wrapper as a stored entity file,
+/// which is what "one shared wrapper" means.
+pub fn serialise(value: &Value, form: Form) -> String {
+    let canonical = Canonical { value };
 
     let rendered = match form {
         Form::File => serde_json::to_string_pretty(&canonical),
@@ -276,8 +281,6 @@ fn render(value: &Value, form: Form, id_first: bool) -> String {
 /// A value that serialises with §4.2's ordering.
 struct Canonical<'a> {
     value: &'a Value,
-    /// Only the entity root hoists `id`; embedded ordinary objects stay lexical.
-    id_first: bool,
 }
 
 impl Serialize for Canonical<'_> {
@@ -291,10 +294,7 @@ impl Serialize for Canonical<'_> {
                 let mut sequence = serializer.serialize_seq(Some(items.len()))?;
 
                 for item in items {
-                    sequence.serialize_element(&Canonical {
-                        value: item,
-                        id_first: false,
-                    })?;
+                    sequence.serialize_element(&Canonical { value: item })?;
                 }
 
                 sequence.end()
@@ -303,7 +303,10 @@ impl Serialize for Canonical<'_> {
                 let mut keys: Vec<&str> = fields.keys().map(String::as_str).collect();
                 keys.sort_unstable();
 
-                if self.id_first
+                // An entity node is the only object whose `id` is hoisted: an
+                // embedded *ordinary* object — one without a nonempty string
+                // `id` — stays all-lexical.
+                if names_entity_node(fields)
                     && let Some(position) = keys.iter().position(|key| *key == ENTITY_ID)
                 {
                     let id = keys.remove(position);
@@ -317,7 +320,6 @@ impl Serialize for Canonical<'_> {
                         key,
                         &Canonical {
                             value: &fields[key],
-                            id_first: false,
                         },
                     )?;
                 }
@@ -338,27 +340,47 @@ mod tests {
     const COMPACT_ENTITY: &str = "{\"id\":\"smut\",\"body\":\"hello\",\"title\":\"first\"}\n";
 
     fn sample() -> Value {
-        // Lexically `body` precedes `id`; the root rule has to move `id` ahead of it.
+        // Lexically `body` precedes `id`; the entity-node rule has to move `id`
+        // ahead of it.
         json!({"title": "first", "body": "hello", "id": "smut"})
     }
 
     #[test]
     fn the_file_form_is_pretty_and_puts_the_entity_id_first() {
-        assert_eq!(serialise_entity(&sample(), Form::File), PRETTY_ENTITY);
+        assert_eq!(serialise(&sample(), Form::File), PRETTY_ENTITY);
     }
 
     #[test]
     fn the_stdout_form_is_compact_and_puts_the_entity_id_first() {
-        assert_eq!(serialise_entity(&sample(), Form::Stdout), COMPACT_ENTITY);
+        assert_eq!(serialise(&sample(), Form::Stdout), COMPACT_ENTITY);
     }
 
     #[test]
     fn an_embedded_ordinary_object_is_lexical_and_is_not_hoisted() {
-        let entity = json!({"id": "a", "note": {"zebra": true, "id": "inner", "alpha": 1}});
+        // An ordinary *embedded* object carries no nonempty string `id`; only an
+        // entity node hoists one, and normalisation never leaves an entity node
+        // embedded (it becomes a declaration).
+        let entity = json!({"id": "a", "note": {"zebra": true, "alpha": 1}});
 
         assert_eq!(
-            serialise_entity(&entity, Form::Stdout),
-            "{\"id\":\"a\",\"note\":{\"alpha\":1,\"id\":\"inner\",\"zebra\":true}}\n"
+            serialise(&entity, Form::Stdout),
+            "{\"id\":\"a\",\"note\":{\"alpha\":1,\"zebra\":true}}\n"
+        );
+    }
+
+    #[test]
+    fn an_entity_node_names_its_id_first_wherever_it_appears() {
+        // DEC-007: the wrapper is shared by stored files and projections, so the
+        // rule is structural — it cannot depend on being at the top of the value.
+        let response = json!({
+            "objects": [{"title": "t", "id": "a"}],
+            "changes": [{"previous": {"body": "b", "id": "c"}, "id": "c"}],
+            "missing": [],
+        });
+
+        assert_eq!(
+            serialise(&response, Form::Stdout),
+            "{\"changes\":[{\"id\":\"c\",\"previous\":{\"id\":\"c\",\"body\":\"b\"}}],\"missing\":[],\"objects\":[{\"id\":\"a\",\"title\":\"t\"}]}\n"
         );
     }
 
@@ -367,7 +389,7 @@ mod tests {
         let entity = json!({"id": "a", "tags": ["zulu", "alpha", "mike"]});
 
         assert_eq!(
-            serialise_entity(&entity, Form::Stdout),
+            serialise(&entity, Form::Stdout),
             "{\"id\":\"a\",\"tags\":[\"zulu\",\"alpha\",\"mike\"]}\n"
         );
     }
@@ -377,7 +399,7 @@ mod tests {
         let entity = json!({"id": "a", "meta": {"zebra": true, "alpha": 1}, "body": "b"});
 
         assert_eq!(
-            serialise_entity(&entity, Form::File),
+            serialise(&entity, Form::File),
             "{\n  \"id\": \"a\",\n  \"body\": \"b\",\n  \"meta\": {\n    \"alpha\": 1,\n    \"zebra\": true\n  }\n}\n"
         );
     }
@@ -387,24 +409,28 @@ mod tests {
         let entity = json!({"id": "a", "one": 1, "float": 1.0});
 
         assert_eq!(
-            serialise_entity(&entity, Form::Stdout),
+            serialise(&entity, Form::Stdout),
             "{\"id\":\"a\",\"float\":1.0,\"one\":1}\n"
         );
     }
 
     #[test]
-    fn a_document_has_no_entity_root() {
+    fn a_document_without_an_entity_node_is_all_lexical() {
         let index = json!({"objects": {"smut": "Ab3.json"}, "format_version": 1});
 
         assert_eq!(
-            serialise_document(&index, Form::File),
+            serialise(&index, Form::File),
             "{\n  \"format_version\": 1,\n  \"objects\": {\n    \"smut\": \"Ab3.json\"\n  }\n}\n"
         );
 
-        let with_id = json!({"id": "x", "alpha": 1});
+        // The index's keys are ids, but its members are not an entity node, so
+        // nothing is hoisted.
         assert_eq!(
-            serialise_document(&with_id, Form::Stdout),
-            "{\"alpha\":1,\"id\":\"x\"}\n"
+            serialise(
+                &json!({"objects": {"zed": "B.json", "abe": "A.json"}}),
+                Form::Stdout
+            ),
+            "{\"objects\":{\"abe\":\"A.json\",\"zed\":\"B.json\"}}\n"
         );
     }
 
@@ -413,7 +439,7 @@ mod tests {
         let value = json!({"beta": 2, "alpha": 1});
 
         assert_eq!(
-            serialise_entity(&value, Form::Stdout),
+            serialise(&value, Form::Stdout),
             "{\"alpha\":1,\"beta\":2}\n"
         );
     }
@@ -428,7 +454,7 @@ mod tests {
         });
 
         for form in [Form::File, Form::Stdout] {
-            let rendered = serialise_entity(&entity, form);
+            let rendered = serialise(&entity, form);
             let parsed: Value = serde_json::from_str(&rendered).expect("canonical bytes parse");
 
             assert_eq!(parsed, entity);
@@ -438,7 +464,7 @@ mod tests {
     #[test]
     fn each_form_ends_with_exactly_one_newline() {
         for form in [Form::File, Form::Stdout] {
-            let rendered = serialise_entity(&sample(), form);
+            let rendered = serialise(&sample(), form);
 
             assert!(rendered.ends_with("}\n"), "{rendered:?}");
             assert!(!rendered.ends_with("}\n\n"), "{rendered:?}");
@@ -447,8 +473,8 @@ mod tests {
 
     #[test]
     fn an_empty_object_is_still_a_document() {
-        assert_eq!(serialise_document(&json!({}), Form::File), "{}\n");
-        assert_eq!(serialise_document(&json!({}), Form::Stdout), "{}\n");
+        assert_eq!(serialise(&json!({}), Form::File), "{}\n");
+        assert_eq!(serialise(&json!({}), Form::Stdout), "{}\n");
     }
 }
 

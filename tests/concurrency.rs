@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::{Value, json};
 
 use smut::declare::{Entities, WriteSet};
-use smut::entity::{Form, serialise_entity};
+use smut::entity::{Form, serialise};
 use smut::error::Reject;
 use smut::id::{Id, IdSource, Occupied};
 use smut::store::index::Index;
@@ -387,7 +387,7 @@ fn entity(id: &str, body: &str) -> Value {
 }
 
 fn entity_bytes(value: &Value) -> Vec<u8> {
-    serialise_entity(value, Form::File).into_bytes()
+    serialise(value, Form::File).into_bytes()
 }
 
 fn index_bytes(objects: &[(&str, &str)]) -> Vec<u8> {

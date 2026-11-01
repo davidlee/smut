@@ -424,7 +424,7 @@ fn ids_of(ids: Vec<String>) -> Vec<Id> {
 /// The canonical stdout bytes of a response: one compact line, ending in exactly
 /// one newline, which the shell writes verbatim.
 fn serialise(value: &Value) -> String {
-    crate::entity::serialise_document(value, Form::Stdout)
+    crate::entity::serialise(value, Form::Stdout)
 }
 
 /// The shell's only entropy: a NanoID candidate for a declaration that omits an

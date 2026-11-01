@@ -18,7 +18,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value};
 
-use crate::entity::{Form, serialise_document};
+use crate::entity::{Form, serialise};
 use crate::error::StoreError;
 use crate::id::Id;
 use crate::store::fs;
@@ -154,7 +154,7 @@ impl Index {
             (OBJECTS_KEY.to_owned(), Value::Object(objects)),
         ]));
 
-        serialise_document(&document, Form::File)
+        serialise(&document, Form::File)
     }
 
     /// Map `id` to `basename`, refusing an unsafe name or one already taken.

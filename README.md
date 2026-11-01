@@ -53,17 +53,17 @@ on purpose.
 $ smut declare '[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
 {"changes":[{"id":"smut","previous":null,"status":"created"},{"id":"q-query","previous":null,"status":"created"}],"ids":["smut"],"missing":[]}
 $ smut get smut q-query
-{"dangling":[],"missing":[],"objects":[{"body":"Persist conversational structure.","id":"smut","questions":[{"id":"q-query"}],"title":"Smut"},{"body":"Keep selection small.","id":"q-query","status":"open","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
+{"dangling":[],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","questions":[{"id":"q-query"}],"title":"Smut"},{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
 $ smut render '{"from":"smut","select":["title","body"]}'
 ## Smut
 
 Persist conversational structure.
 $ smut declare '{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}'
-{"changes":[{"id":"q-query","previous":{"body":"Keep selection small.","id":"q-query","status":"open","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
+{"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
 $ smut declare '{"id":"q-query","status":"DROP"}'
-{"changes":[{"id":"q-query","previous":{"body":"Use bounded traversal and simple predicates.","id":"q-query","status":"resolved","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
+{"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
 $ smut get q-query
-{"dangling":[],"missing":[],"objects":[{"body":"Use bounded traversal and simple predicates.","id":"q-query","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
+{"dangling":[],"missing":[],"objects":[{"id":"q-query","body":"Use bounded traversal and simple predicates.","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
 $ smut delete q-query
 {"deleted":["q-query"],"missing":[]}
 $ smut query '{"from":"smut","follow":["questions"]}'
