@@ -10,13 +10,19 @@ raiser    = "reviewer"
 responder = "implementer"
 rounds_base = 0
 contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Read-only pass over PHASE-04+05 (045c54c..653a173) in a pinned worktree: the fixture as the only copy of the data, PROVENANCE s truthfulness against a recounted array, VA-1 for the conventions command by imports and call paths, and the seed round-trip checked against declare s actual patch semantics. Verdict acceptable; seven findings (two minors, five nits), five fixed, one aligned by PHASE-06, one recorded. The minors were the ones that mattered: an unfalsifiable round-trip claim now structural, and a second reference walk now cross-checked."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
 
 [[finding]]
 id = "F-1"
-status = "answered"
+status = "verified"
 severity = "minor"
 title = "The provenance note's round-trip claim is asserted only as a count"
 detail = """`tests/fixtures/interview/PROVENANCE.md:94-96` against `tests/fixture.rs:271-296`. The note asserts that declared into an empty directory the array creates 66 entities and a full `query` reads back an array "structurally identical" to the file; the nearest test asserts only `ids_of(&envelope).len() == declared.entities.len()` plus `truncated: false`. A normalisation that dropped a field, coerced a value or reordered an array inside one entity would leave the test green while falsifying the note — a documentation claim with no falsifier, in the one artefact EX-2/EX-4 make the phase's evidence. Route: assert the objects array equals the committed entities (the query's default order is ascending id and the array is sorted by id, so the sides already line up), or soften the sentence to a manual check. Batched to the PHASE-06 boundary because that phase owns `tests/fixture.rs`."""
@@ -33,9 +39,14 @@ role = "responder"
 disposition = "fix-now"
 response = """Conceded and fixed in `850488c`. The round-trip test now asserts the store's objects array equals the committed entities, so a normalisation that dropped a field, coerced a value or reordered an array fails the test rather than the note. Verified green on the real array, which also proves the note's "structurally identical" claim is true as written — it was a claim with no falsifier, not a false claim."""
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-2"
-status = "answered"
+status = "verified"
 severity = "minor"
 title = "The fixture suite re-implements the reference walk it should share or cross-check"
 detail = """`tests/fixture.rs:228-268` against `src/entity.rs:71`. `targets_of`/`collect_references` re-walks JSON depth-first, treats an object with a string `id` as a reference and declines to descend — a behavioural copy of `scan_refs`, whose comment concedes the mirror. `scan_refs` is `pub` and reachable as `smut::entity::scan_refs`. The fixture's "22 entities with no incoming reference" and its mutual-reference assertion are computed with the test's definition, so a divergence (e.g. a nested array-of-references case) silently makes the property a statement about a different relation than the walker's. Counter-argument that keeps this minor: an independent computation is evidence, not circularity, so the copy is defensible. Route: either consume `smut::entity::scan_refs`, or keep the independence and assert the two agree over the whole fixture — the second is stronger than either alone, and it is what this batch will do."""
@@ -52,9 +63,14 @@ role = "responder"
 disposition = "fix-now"
 response = "Conceded, and resolved the way the reviewer framed the tension rather than by picking a side: the fixture keeps its independent walk (independence is evidence, and the reviewer said so), and now asserts it agrees with `smut::entity::scan_refs` over every one of the 66 entities. Two accounts forced to agree is stronger than either alone, and the comment records why the second definition is worth its cost. Fixed in `850488c`; the assertion passes, which is itself evidence the two definitions had not yet diverged."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-3"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "`seed()`'s doc claims a field order the printer cannot produce"
 detail = '`src/conventions.rs:115-117`: "ordered by `id`, `type`, `version`, `title`, `body`". The `fields` array is built in that order but inserted into a `serde_json::Map` (a `BTreeMap`, design §10.2) and printed through `entity::serialise`, whose entity-node rule hoists `id` and sorts the rest (`src/entity.rs:305-315`). Actual printed order: `id`, `body`, `title`, `type`, `version`. In this codebase comments are the audit trail, and the slice notes already record the lexical order as an illustrative deviation, so this comment is now the only place claiming otherwise. Route: say it prints `id` first and the remaining four keys lexically.'
@@ -71,9 +87,14 @@ role = "responder"
 disposition = "fix-now"
 response = "Conceded. The doc now says the field order supplied is id/type/version/title/body but that id is hoisted and the rest print lexically, so the bytes read id, body, title, type, version — what `entity::serialise` actually does. Fixed in `850488c`."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-4"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "`body_of`'s doc says one trailing newline; the code strips all of them"
 detail = '''`src/conventions.rs:162-165`: `trim_end_matches('\n')` removes every trailing newline while the doc (and the module doc at `:15-17`) say one. Harmless today because `hygiene.md` ends with exactly one, but a blank line added later would silently shorten `body` and leave the trailing-newline story wrong in two places. Route: `strip_suffix('\n')`, or say "any trailing newlines".'''
@@ -90,9 +111,14 @@ role = "responder"
 disposition = "fix-now"
 response = """Conceded. The doc says "any trailing newline" rather than "the one", which is what `trim_end_matches`' behaviour actually is. Chose the wording over `strip_suffix` because stripping every trailing newline is the intended behaviour for a body that feeds a declaration, not an accident to narrow. Fixed in `850488c`."""
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-5"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The fixed id is a literal in the shipped prose with nothing tying it to `id_of`"
 detail = """`src/conventions/hygiene.md:31` against `src/conventions.rs:180-182`. EX-2's "so no second copy can drift" is applied to title and body but not the id: `id_of` derives `conventions-<name>`, the prose hard-codes `conventions-hygiene`, and `tests/conventions.rs:274-291` pins the seed id as a literal without comparing it to the prose. Renaming `HYGIENE.name` would leave the printed set telling the reader to look for an id the seed no longer emits, with everything green. Route: one assertion in the existing prose test that the printed set contains the seed's emitted id."""
@@ -109,9 +135,14 @@ role = "responder"
 disposition = "fix-now"
 response = "Conceded. The prose test now reads the seed's emitted id and asserts the printed set contains it, so a renamed set whose prose still named the old id goes red. Fixed in `850488c`."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-6"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The set's pointer to `smut learn` names a recipe the guide does not carry on this tree"
 detail = """`src/conventions/hygiene.md:41` against `src/learn.rs:88`: the set says the two-call recipe and its guard live in `smut learn`, while `learn` still says traversal "arrive[s] in 0.2, and are refused here" and contains neither. PHASE-06 owns them (`plan.toml`), and the test certifying EX-5 asserts only that the string `smut learn` appears. So the pointer is true at release *provided PHASE-06 lands*; if that phase were dropped or re-scoped, the shipped set would be false and nothing would go red. Route: no edit; record the cross-phase obligation so the audit can check it, and let PHASE-06's handback be the evidence."""
@@ -128,9 +159,14 @@ role = "responder"
 disposition = "aligned"
 response = "Closed by PHASE-06 rather than by an edit, and verified: `src/learn.rs` now carries the two-call recipe (`:172-179`, with the direction stated) and the completeness guard, so `hygiene.md`'s pointer has a referent on this tree. The obligation the finding named — that the pointer must not outlive the phase that makes it true — is discharged by the same commit that landed the phase, and the audit can check both in one place. No edit was needed; recorded here so the dependency is visible rather than inferred."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
+
 [[finding]]
 id = "F-7"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = """EX-3's "mutually-referencing cluster" is pinned as a mutual pair, and the noun drifted unrecorded"""
 detail = """`tests/fixture.rs:349`, `plan.toml:136`, `design.md` §2. No two `type: cluster` entities reference each other — every cluster's only reference is `part-of` to `session` — so the suite pins `finding-smut-17` <-> `prop-conventions-library` (verified both directions in the committed array) and the phase sheet calls it "a mutually referencing pair". Design §2 additionally describes the source store as holding "mutually-referencing clusters", which the committed array does not. An auditor comparing EX-3's wording to the test will find a noun that changed without a recorded reason. Route: one clause in `PROVENANCE.md`'s counts section recording what actually holds; the design sentence is locked and belongs to the deferred drift item at reconcile."""
@@ -146,6 +182,11 @@ act = "dispose"
 role = "responder"
 disposition = "fix-now"
 response = """Conceded. `PROVENANCE.md` now records two qualifications an auditor would otherwise re-derive: no cluster references another cluster (every cluster's only reference is `part-of` to `session`), the mutual pair the suite pins is `finding-smut-17` <-> `prop-conventions-library`, and the design's "mutually-referencing clusters" sentence is on the deferred-drift list for reconcile alongside the line-number drift the operator already deferred. Fixed in `850488c`."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat at d8a7cb4: the claim holds at the cited line and the assertion would fail on the defect it names (round-trip structural equality; scan_refs agreement over 66 entities; two comments matching entity::serialise and trim_end_matches; the seed-id tie; the recipe the hygiene pointer names; the cluster drift recorded in PROVENANCE and the notes)."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

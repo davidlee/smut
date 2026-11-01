@@ -10,6 +10,12 @@ raiser    = "reviewer"
 responder = "implementer"
 rounds_base = 0
 contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Read-only adversarial pass over PHASE-02+03 (515c6f8..2ea81fa) in a pinned worktree: predicate purity, roots-only placement, budget-before-expansion with frontier ordering, reason uniqueness and order, and the completeness of the FUTURE_KEYS retirement. Behavioural verdict acceptable; four findings (one minor front-door prose, three nits). The minor was fixed; F-3 was contested once and repaired properly on the second attempt with a refusal loop over six candidate keys, verified with a mutation. F-4 tolerated as a recorded decision with its cost named."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
@@ -64,7 +70,7 @@ note = "Verified: the module doc now says §6.1 fixes the AST and a binary-level
 
 [[finding]]
 id = "F-3"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "A test name claims exclusivity its body does not assert"
 detail = """`src/spec.rs:516`: `the_acceptance_set_is_exactly_the_nine_keys` proves only that each of the nine is accepted; the "exactly" is carried by `an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release` (`:432-449`) and the CLI's `an_unknown_key_stays_unknown_and_names_no_release`. The name has already been wrong twice (four → seven → nine, per its own comment), and the criterion it serves — EX-8's "every key 0.2 does not know is refused plainly" — is satisfiable from the file while the named test cannot fail on a tenth accepted key. Route: either assert the tenth-key refusal at the loop's tail, or rename to `the_nine_keys_are_each_accepted`."""
@@ -98,6 +104,11 @@ role = "responder"
 note = "Correcting a mistyped commit sha in my own response — the repair commit is faaa83b, not 6e1d9e6 (which does not exist). Integrity of the record, not a change of answer."
 disposition = "fix-now"
 response = """The contest was right and my previous answer was wrong. The rename landed, but it justified itself with a false claim: "a tenth accepted key would fail there" — the two unknown-key tests probe only `sort`, and `parse` dispatches key by key, so a tenth arm for `offset` left both green. Set identity was enforced by nothing. Repaired in `faaa83b` (an earlier version of this response cited `6e1d9e6`, a sha I mistyped and which does not exist) by taking the reviewer's original second option instead of the cheap one: the test is now `the_nine_keys_are_accepted_and_nothing_else_is`, keeping the nine acceptance rows and adding a refusal loop over six plausible future keys (`sort`, `offset`, `page`, `filter`, `fields`, `include`), each asserted to be `UnknownSpecificationKey` rather than a bad value. Negative control run and recorded: adding an `offset` arm to `spec::parse` turns the test red with "offset is not in the surface and must be refused". The comment no longer claims coverage owned elsewhere; it records why the claim was false."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified by the independent seat: `src/spec.rs:566-574` — an accepted tenth key panics at the acceptance loop, and a candidate refused for its value (rather than as unknown) reddens the variant assertion, so `UnknownSpecificationKey` is genuinely required of all six candidates."
 
 [[finding]]
 id = "F-4"
