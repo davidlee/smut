@@ -30,8 +30,8 @@ mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
 This tree is **0.1.1 plus the 0.2 work** — not the published patch release:
-`where`, `follow`, `backlinks`, `depth` and `budget` are the whole 0.2 query
-surface, `where` filters the roots and the traversal keys walk the graph, and
+`where`, `follow`, `backlinks`, `depth` and `budget` are what 0.2 adds to the
+query surface — `where` filters the roots, the traversal keys walk the graph, and
 the envelope reports what the walk found. The 0.1.1 on crates.io has none of
 them, and the version moves to 0.2.0 when the release is complete. Mermaid
 arrives in 1.0 only: where it would be, `smut` refuses by name instead of

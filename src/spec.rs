@@ -513,7 +513,13 @@ mod tests {
     }
 
     #[test]
-    fn the_acceptance_set_is_exactly_the_nine_keys() {
+    fn the_nine_keys_are_each_accepted() {
+        // Named for what it does. The exclusivity half of "exactly" is not
+        // asserted here: `an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release`
+        // (this module) and the CLI's `an_unknown_key_stays_unknown_and_names_no_release`
+        // own it, so a tenth accepted key would fail there. The old name
+        // claimed it twice over and could not fail on the thing it claimed.
+        //
         // Re-cut from `the_acceptance_set_is_exactly_the_four_keys`, whose name
         // and body the widened surface falsified: each accepted key is exercised
         // with one value its own grammar allows. Re-cut again in PHASE-02

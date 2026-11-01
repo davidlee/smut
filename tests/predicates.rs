@@ -7,7 +7,8 @@
 //! accept or refuse the whole specification, then `select` and `envelope` to
 //! compute the result. Nothing here names the predicate AST: `where` is
 //! internal, so a test that asserted on its shape would pin an implementation
-//! detail the design leaves open. The refusals are asserted the same way, by the
+//! detail that only the unit tests need to name — §6.1 fixes the AST, but a
+//! binary-level test should not read it. The refusals are asserted the same way, by the
 //! behaviour and the message text a user sees, because the refusal variants are
 //! the implementation's to choose.
 //!
@@ -100,8 +101,11 @@ fn missing_and_present_null_differ_exactly_where_the_table_says() {
 fn contains_matches_a_substring_or_an_array_member_and_nothing_else() {
     // §6.3's `$contains` row, positively: a string field takes a substring
     // operand, an array field takes a structurally equal member, and any other
-    // combination simply does not match. Without this case the operator would be
-    // pinned only by the refusals in `missing_and_present_null_differ_exactly_where_the_table_says`.
+    // combination simply does not match. `$contains` has no refusal path — any
+    // operand parses, and the field's own shape decides the outcome — so this
+    // case is its only positive pin; the negative half lives in
+    // `missing_and_present_null_differ_exactly_where_the_table_says`'s non-match
+    // row.
     let entities = [
         json!({"id": "text", "f": "keep selection small"}),
         json!({"id": "list", "f": ["one", {"k": 2}]}),
