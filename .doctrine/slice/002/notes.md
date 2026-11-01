@@ -7,8 +7,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
-`4a192e7`; R1 repaired `b499a60`; PHASE-03…07 planned) · design locked at run
-rev 62; plan repaired round 1
+`4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04…07 planned) ·
+design locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -50,6 +50,23 @@ rev 62; plan repaired round 1
   asserts the brief's closing dangling step), `tests/readme_example.rs`'s
   0.2-refusal test (now the traversal assertion). Nothing outside §14.1 touched;
   the §14.2 unchanged set is unmodified.
+
+- **PHASE-03** (`21688c8`, C3) — `src/predicate.rs`: the §6.1 AST, the §6.2
+  parser (literal = `$eq`, operator-only = ANDed, mixed refused naming the field,
+  `$` reserved, `$and`/`$or`/`$not`) and `Predicate::holds` over one entity's
+  top-level fields, with 11 unit tests (VT-1). `select::run` filters roots
+  between `missing` and the walk, through the same single `Request` value
+  (EX-13). `where` is the ninth key, so `FUTURE_KEYS`,
+  `Reject::FutureSpecificationKey` and its display arm and exit-code row retire
+  (EX-8); three predicate refusals (`MixedPredicateObject`,
+  `UnknownPredicateOperator`, `InvalidPredicateValue`) join `Reject`, all exit 2
+  before store access (EX-6). New `tests/predicates.rs` (12 tests, VT-2/VT-3 +
+  the EX-6 CLI case); DEC-019 re-cuts in `tests/compatibility.rs`
+  (`where_accepted_…`, DEF-3), `tests/cli_contract.rs`, `tests/selection.rs`,
+  `src/spec.rs` (future-key test deleted with its apparatus, acceptance set →
+  nine), `src/error.rs` (two assertions) and the README's key-refusal sentence.
+  Gates green in both feature configurations; five negative controls each turned
+  the owning test red. `src/learn.rs` untouched (GAP-1).
 
 ### Learned
 
@@ -102,6 +119,25 @@ rev 62; plan repaired round 1
   transition, not only after the commit.
 - The Markdown notice reads `selection.walk` directly; no second field was added
   to `Selection`, so the JSON `dangling` and the rendered lines cannot disagree.
+- A VT keyword is a **string match in a mandated file**, so a claim can be true
+  in prose and still read FAIL: `VT-3`'s `roots-only` failed while the suite said
+  "roots only". Put the mandate's exact token in the test that owns the claim,
+  and re-read a phase's keyword set against the *finished* file, not the plan.
+- The predicate's placement is one line, and its correctness is entirely about
+  *where* it sits. The discriminating tests are the frontier of a filtered
+  root's walk (empty) and a discovered entity that fails the predicate
+  (returned): both mutations — filter after the walk, and filter discovered ids
+  too — are caught only by those two assertions.
+- `serde_json::Value` is `Eq`, so `Spec` keeps its derives with an
+  `Option<Predicate>` inside it; the cost is `cli::Invocation` crossing clippy's
+  200-byte `large_enum_variant` threshold, silenced once with a documented allow
+  rather than boxing a field §5 declares unboxed.
+- `$`-prefix scanning is the whole disambiguation: `operators == 0` is a literal,
+  `operators == members.len()` is an operator object, anything between is a
+  refusal — so `{}` parses as `Eq({})`, never as an empty operator set.
+- `doctrine slice record-delta --start <commit>` takes the phase's entering HEAD
+  itself, not `<commit>^`: passing the parent pulls a foreign commit (the R1
+  repair batch) into the phase's delta.
 
 ### Open
 
@@ -130,6 +166,16 @@ rev 62; plan repaired round 1
   where-accepted pin produces. C3 must not trust the keyword, and PHASE-03's
   `EX-7` still owns the assertion itself. PHASE-01's own nine mandates all read
   `PASS` after the phase closed its conformance boundary.
+- **DEF-2 discharged at C3.** PHASE-01 `EX-5`'s last unobservable clause was the
+  `where`-only case ("`traversal` absent for a query supplying only `where`"):
+  PHASE-03's `where_accepted_adds_a_predicate_without_disturbing_the_pinned_query`
+  asserts exactly the five 0.1 members for a `where`-only query. `budget`-only
+  was PHASE-02's. Nothing outstanding.
+- **DEF-3 discharged at C3.** `VT-4`'s keywords are `["additivity", "where_accepted"]`
+  and the token now sits in the re-cut test's own name and module doc; the PASS is
+  earned by the pin that computes a predicate, not by the word `where` being in
+  the file since PHASE-01. The pin also refuses to be vacuous: it asserts a
+  second query over a field the store *does* hold, so "accept and ignore" fails.
 - **RV-012 F-4 is contested** and awaits the responder seat: the raiser accepted
   the §9.3/§9.2/scope/§13.1 repairs but rejected the response on two points —
   (1) DEC-017's prose was listed as swept while it still said only that the store
@@ -997,3 +1043,60 @@ the auditor sees a named gap with an owner rather than a discovery at audit.
 | 2026-11-02 | PHASE-01 | F-2 tolerated → PHASE-06, over my own earlier fix-now position | decided (#12) | The guide's staleness is the whole section PHASE-06 rewrites; a partial repair would be replaced in two phases |
 | 2026-11-02 | PHASE-02 | PHASE-02's own autonomy decisions are **unrecorded**: the child was killed before writing them | gap, disclosed | The diff, the criteria and the seat's verification stand in their place; the sheet (gitignored) may hold its own notes. An auditor should read this as a missing record, not a missing decision |
 | 2026-11-02 | C2 | C2 committed `515c6f8` (IDE-001, smut vs cordage) mid-charter | noted | A backlog idea captured through the project's own sink, unrelated to PHASE-02 source; harmless, but it is why the PHASE-02 boundary's `code_start_oid` is a doc commit |
+
+### C3 — PHASE-03 landed (2026-11-02)
+
+Charter: C3, **PHASE-03 only** (one phase per charter, ruled at C2). Entering
+HEAD `2f49644`, tree clean; phase flipped `in_progress` at `2f49644`; phase
+commit `21688c8` (11 files, +1430/−120); boundary `2f49644..21688c8`,
+provenance `solo`; trailing notes commit after it.
+
+Cost: **two worker children** — one red wave (12 integration tests + three
+DEC-019 re-cuts) and one implementation (the module, the retirement, the wiring).
+No rebrief, no repeat on an area. Every worker's green claim was re-run at the
+sub-orchestrator tier, and all five gates were run by me on the final tree.
+
+**Verified here, not taken on report:**
+
+| check | result |
+| --- | --- |
+| `cargo fmt --check` | clean |
+| `cargo clippy --all-targets -- -D warnings` | clean |
+| `cargo clippy --all-targets --all-features -- -D warnings` | clean |
+| `cargo test` | exit 0 — 14 suites: lib 313, `predicates` 12, `cli_contract` 35, `traversal` 30, `selection` 10, `render` 12, `compatibility` 9, … |
+| `cargo test --features fault-injection` | exit 0 — lib 326 and `durability_crash` 44, so the feature is not vacuous |
+| `doctrine slice verify-vt 2` | **PHASE-03 VT-1…VT-4 all PASS** (PHASE-01 9/9, PHASE-02 4/4 still PASS; PHASE-04+ fail/unattributable as expected) |
+| §14.2 fence | `git show --stat 21688c8` touches `README.md`, `src/{cli,error,lib,predicate,select,spec}.rs`, `tests/{cli_contract,compatibility,predicates,selection}.rs` — no `src/entity.rs`, `src/order.rs`, `src/store/**`, `docs/store-format.md`, `justfile`, `flake.nix`, and no `src/learn.rs` |
+
+**Red observed before green**, all four targets, all for the same right reason:
+the pre-existing by-name `where` refusal (`FutureSpecificationKey { key: "where" }`
+/ "where is not supported in 0.1; it arrives in 0.2"). The suite was written from
+§6.2/§6.3/§7.1 and drove `spec::parse` + `select` only, so it could not lean on
+the implementation's shape; the implementation then satisfied it with **no test
+edits**.
+
+**The phase's two genuine risks were controlled by mutation, not asserted:**
+`where` moved after the walk, and `where` also filtering discovered ids, both
+turn `where_filters_roots_before_the_walk_and_the_limit` red on "a discovered
+entity failing `where` is returned: roots only". Present-null-as-absent,
+`$contains` on a non-container, and the inverted disambiguation rule each turn
+their own test red. Each mutation was restored and the suite re-run green before
+the next.
+
+**One finding from `verify-vt`, fixed inside the phase commit:** `VT-3` read
+`FAIL — keyword roots-only absent` because the suite spelled it "roots only". The
+token was moved into the VT-3 banner and the module doc — the same class as
+DEF-3 inverted (a claim whose *evidence* was there but whose *mandate string* was
+not). No criterion was narrowed.
+
+### Autonomy log additions (C3)
+
+| date | phase | decision | class | reason |
+| --- | --- | --- | --- | --- |
+| 2026-11-02 | PHASE-03 | Interpreter entry points fixed as `predicate::parse(&Value) -> Result<Predicate, Reject>` and `Predicate::holds(&Value) -> bool`; the AST is §6.1 verbatim | decided (#1, #2) | §6.1 locks the AST and EX-5 locks the placement; the entry point is implementation anatomy, so it is named in the sheet before briefing a worker |
+| 2026-11-02 | PHASE-03 | Three new `Reject` variants (`MixedPredicateObject`, `UnknownPredicateOperator`, `InvalidPredicateValue`); a non-object `where` reuses `InvalidSpecificationValue { key: "where" }` | decided (#6) | §14.1 lists "bad predicate/operator/type" as refusals without naming variants; a wrong operand type is not a specification *value* of a key, so it earns its own class rather than a misused existing one |
+| 2026-11-02 | PHASE-03 | `#[allow(clippy::large_enum_variant)]` on `cli::Invocation`, documented at the lint site | decided (#1, #9) | `Spec` grew by `Option<Predicate>` (locked by §5) and the `Request` variant crossed clippy's 200-byte threshold — verified by removing the allow and reading the lint. Boxing the field would contradict §5; the lint is about a stack copy, not a correctness guard, so it is suppressed once with its reason, never a check removed |
+| 2026-11-02 | PHASE-03 | `tests/predicates.rs` copies `tests/cli_contract.rs`'s `Scratch` rather than creating `tests/common` | decided (#3) | The plan's answer to the same question, applied; a third harness fork would be the drift the review lane looks for |
+| 2026-11-02 | PHASE-03 | `VT-3`'s `roots-only` token moved into the test file inside the phase commit, then the commit amended and the boundary re-recorded (`record-delta`) before `verify-vt` | decided (#6, #7) | The obligation was met; only the mandate's literal was not. Amending keeps the phase one contiguous commit so `code_end_oid` is the tree the mandate was verified against |
+| 2026-11-02 | PHASE-03 | Research advisory (`slice research 2` reports drift from the added `plan.md`/`plan.toml`) left unrestamped | deferred, recorded (not escalated) | The drift is a plan-stage artefact added after the design, not design drift; the baseline is a design/plan-stage artefact and PHASE-01/02 ran under the same advisory. Restamping mid-phase would be an unrequested write outside this charter |
+| 2026-11-02 | PHASE-03 | `src/learn.rs` left untouched although it still refuses `where` in prose (GAP-1) | deferred (recorded decision, upheld) | PHASE-06 EX-1/EX-4 rewrite that section wholesale; the C2 ruling and R1's F-2 disposition stand |

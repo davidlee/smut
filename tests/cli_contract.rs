@@ -897,9 +897,10 @@ fn a_malformed_budget_is_refused_before_any_store_access() {
 
 #[test]
 fn an_unknown_key_stays_unknown_and_names_no_release() {
-    // §5 "Unknown keys stay unknown": `FUTURE_KEYS` retires, so `sort` is
-    // reported plainly rather than promised to a release — and `budget`'s
-    // arrival must not turn every unrecognised key into a future key.
+    // §5 "Unknown keys stay unknown": `FUTURE_KEYS` retired with `where` in
+    // PHASE-03, so `sort` is reported plainly rather than promised to a release
+    // — and `budget`'s arrival must not turn every unrecognised key into a
+    // future key.
     let scratch = Scratch::new();
     let ran = smut(&scratch, &["query", r#"{"sort":[{"field":"title"}]}"#]);
 
