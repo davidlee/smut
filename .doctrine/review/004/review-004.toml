@@ -269,7 +269,7 @@ note = "Confirmed; brief entry written (§1 + slice scope)."
 
 [[finding]]
 id = "F-10"
-status = "answered"
+status = "verified"
 severity = "major"
 title = "PHASE-05/VH-1 is undischarged: no human read of tests/durability_crash.rs against §4.3–§4.5"
 detail = """
@@ -289,9 +289,34 @@ role = "responder"
 disposition = "fix-now"
 response = "Accepted as owed work, not as a passed criterion. The mechanical half is re-verified and green; the read is the human's. Disposition is fix-now because it must be discharged before this release is called closed: the audit seat presents the 22-row boundary → test table (regenerable from `src/store/mod.rs`'s registry and the suite's own test names) plus the file's one-line code-path-ordering claim, and asks for a plain confirmation. On that reply this finding is verified with the human's answer as its basis; if the human declines, it re-disposes to follow-up with a backlog chore instead."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Obligation closed by owner waiver of the human mode, not by a human read. Owner's direction in this session: the durability read "really seems more like an agent job than a me job", so the human half of PHASE-05/VH-1 was waived and the read delegated to the seat. Recorded here rather than left implicit: the criterion's mode was not discharged as authored.
+
+Agent read against §4.3, §4.4, §4.5 — five things checked, not re-derived from the suite's own account:
+
+1. Coverage is complete and clean in both directions. 22 registry names, 22 tests, no orphans either way: commit path 15 `interrupted_at__*`, recovery path 7 `recovery_interrupted__*`. Measured by extracting `Boundary`'s variants from `src/store/mod.rs` and the suite's `fn` names and pairing them.
+
+   Correction to this finding's detail: it says 8 `recovery_interrupted__*`. Measured is 7 — the eighth grep hit is the coverage guard's `format!("fn recovery_interrupted__{}(", ...)` literal at L1259, not a test. 15 + 7 = 22.
+
+2. Every test arms the boundary its name claims (checked per test site, not assumed from the helper).
+
+3. Repeated recovery is explicit per step. Each `recovery_interrupted__*` aborts inside recovery (child process, SIGABRT asserted) and then requires the next command to converge on the tree of an uninterrupted twin (`settled()`), so convergence — not mere survival — is what each recovery boundary asserts.
+
+4. Failure reactions cover §4.3's asymmetry and §4.5: 7 `a_failed_*_is_pre_commit` tests, 6 `*_rolls_forward` tests over exactly the post-decision boundaries (`ParentDirectorySynced`, `PutsApplied`, `IndexApplied`, `RemovalsApplied`, `DoneRenamed`, `CleanupRemoved`), and 4 `a_failed_recovery_*` tests.
+
+5. The file claims only code-path ordering (module doc L14–19); nothing in it claims kernel or disk behaviour.
+
+Green at head: `cargo test --features fault-injection --test durability_crash` → 44 passed, 0 failed; 0 by default by construction.
+
+No new finding. The one gap the read exposes is the registry's, not the suite's: four post-decision `.smut` fsyncs share three boundary names, so they cannot be interrupted in isolation. That is F-7's design gap, corroborated independently by this read; its fix is the §4.3/§4.4 write already in the reconciliation brief.
+"""
+
 [[finding]]
 id = "F-11"
-status = "answered"
+status = "verified"
 severity = "major"
 title = "PHASE-08/VH-1 is undischarged: no human read of README.md as a newcomer"
 detail = """
@@ -310,6 +335,23 @@ act = "dispose"
 role = "responder"
 disposition = "fix-now"
 response = "Accepted as owed work, not as a passed criterion. The mechanical half is pinned by `tests/readme_example.rs`; the newcomer read is the human's. Disposition is fix-now for the same reason as F-10: the audit seat lays out the route through the README (sections, the runnable worked-example command sequence, the quoted guarantee, one code location per sharp edge) and asks for a plain confirmation, after which this is verified against the human's reply — or re-disposed to follow-up if declined."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Discharged by the owner's own read, with the runnable half delegated to the seat and verified against the built binary.
+
+Owner's words in this session: read `README.md` and "it reads well enough"; asked the seat to confirm that the worked example runs.
+
+Verified, not taken from the earlier audit:
+
+- `cargo test --test readme_example` → 2 passed (`the_readme_worked_example_runs_and_prints_what_it_records`, `the_worked_example_ends_with_the_0_2_refusal`).
+- The `console` block re-run by hand against the release build at head in a scratch store: all six JSON responses, the Markdown render and the closing `follow` refusal match the README's recorded bytes in order, the refusal exiting 2.
+- The guarantee remains byte-identical across `design.md §4.6`, `README.md` and `docs/store-format.md`; the seven sharp edges are unchanged.
+
+No new finding.
+"""
 
 [[finding]]
 id = "F-12"

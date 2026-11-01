@@ -14,6 +14,11 @@ CLI, and an embedded agent guide. Out of scope, deferred to later releases with
 their own design runs: the predicate language and graph traversal (IMP-001), and
 the Mermaid renderer with its hardening and documentation tail (IMP-002).
 
+One consequence is stated rather than left to be inferred: the brief's end-to-end
+acceptance example uses `follow` and `where`, so 0.1 runs only its prefix — which
+the README's worked example pins, ending on the deliberate refusal — and the
+traversal steps are 0.2's (IMP-001).
+
 ### Current state
 
 The repository is scaffolding: `Cargo.toml` with no dependencies, a
@@ -260,8 +265,11 @@ never narrows what is persisted.
 ### 4.2 Canonical serialisation
 
 One entity ordering, applied at the final serialisation boundary through a shared
-wrapper (DEC-007): the entity root puts `id` first and its remaining keys
-lexical; embedded ordinary objects are all-lexical; arrays keep their order.
+wrapper (DEC-007): the wrapper's subject is the **entity node** — an object whose
+`id` is a nonempty string, DEC-005's one predicate — so an entity node names `id`
+first and its remaining keys lexical **wherever it appears**, including a
+projected entity inside a response's `objects` array; every other object is
+all-lexical; arrays keep their order.
 
 Two byte forms, deliberately different:
 
@@ -340,6 +348,20 @@ Applying never begins before that parent fsync succeeds. Symmetrically,
 is deleted, or power loss could restore the `commit` name after its replay
 material is gone.
 
+Two `.smut` fsyncs in this protocol are left unnamed by the paragraphs above, and
+both are stated here: the one at the **end of apply** — after the removals, and
+performed even when the write set removes nothing, because the applied bytes must
+be durable before the state moves again — and the one **after the `commit → done`
+rename**, before any journal content is deleted.
+
+The boundary registry names a moment, not a syscall. The post-apply fsync shares
+`RemovalsApplied` with the last removal, and the post-rename fsync shares
+`DoneRenamed` with the rename, so neither can be interrupted in isolation. That is
+deliberate rather than a coverage gap: both are post-decision steps with the
+identical roll-forward reaction of §4.5, which is exactly what a boundary name
+exists to distinguish. A future reader should not read the shared names as a claim
+that these steps are separately interruptible.
+
 Within a commit the order is **puts → index → removals**, so the committed index
 never names a file that does not exist. This is a convenience for humans reading
 the directory, not a guarantee to unlocked observers: an external reader can
@@ -356,7 +378,13 @@ that keeps a crashed store recoverable instead of refused.
 3. `done` → finish cleanup. `prepare` → discard. `commit` → validate the manifest
    completely (format version, safe and unique basenames, `puts` and `removes`
    disjoint, reserved names excluded, every listed put present, every staged file
-   listed), then replay, then rename to `done`, fsync, and clear.
+   listed), then replay, then `fsync(.smut)` so the replayed bytes are durable
+   before the state moves, then rename to `done`, `fsync(.smut)` again so the
+   rename is durable, and clear. The first of those two fsyncs mirrors §4.3's
+   apply rule for the same reason: without it a power loss could make the state
+   transition durable while the replayed bytes are not, which is the republication
+   of torn bytes the barrier exists to prevent. Both share the
+   `RecoveryDoneRenamed` boundary with the rename — one reaction, so one name.
 
 Replay is a total re-execution: each staged file is written to `<name>.tmp`,
 fsynced, and renamed over its target; each removal is unlinked again. Nothing is
@@ -664,15 +692,19 @@ holds placeholders; this slice replaces them.
 <!-- doctrine:section sec-12 -->
 ## 12. Code impact
 
-All paths are new except where noted. The `justfile` and `Cargo.toml` carry the
-only edits to existing files.
+All paths are new except where noted: `justfile` and `Cargo.toml` are edited, and
+`README.md` is *edited* around the owner's pre-existing brand block and `smut.jpg`
+reference rather than created.
 
 | path | change |
 | --- | --- |
-| `Cargo.toml` | dependencies `serde`, `serde_json`, `nanoid`, `fs4`, `clap`; dev-dependency `proptest`; a test-only `fault-injection` feature |
+| `Cargo.toml` | dependencies `serde`, `serde_json`, `nanoid`, `fs4`, `clap`; dev-dependency `proptest`; a test-only `fault-injection` feature. Because the dependency set changes, it rewrites the committed `Cargo.lock`; it also carries the crate's published identity (description, license, repository, homepage, readme, keywords, categories, and an `exclude` list for governance-only paths) |
+| `Cargo.lock` | rewritten by the dependency set above; committed, so it is a delivered path rather than an artefact |
+| `LICENSE` | the FSF's verbatim GPL-3.0 text — the owner's licence decision, recorded here rather than only in the manifest |
 | `src/main.rs` | replace the placeholder: dispatch, error → exit code, emit |
 | `src/cli.rs` | clap definitions; input acquisition; flag validation |
 | `src/input.rs` | byte ingestion and the strict duplicate-key JSON visit |
+| `src/lib.rs` | the library target: the modules re-exported so `tests/**` can drive the store in-process (§11.1); the binary stays a thin dispatcher |
 | `src/error.rs` | `Reject` (exit 2) and `StoreError` (exit 1), and the mapping |
 | `src/id.rs` | `Id`; `IdSource`; the reserved-id set used during generation |
 | `src/entity.rs` | `reference_id`, `scan_refs`, `extract`, the `Entity` serialisation wrapper |
@@ -694,7 +726,15 @@ only edits to existing files.
 | `justfile` | replace placeholders with `build`, `test`, `lint`, `fmt`, `check` |
 
 **Design-target selectors** committed by this section: `src/**`, `tests/**`,
-`docs/**`, `README.md`, `Cargo.toml`, `justfile`.
+`docs/**`, `README.md`, `Cargo.toml`, `Cargo.lock`, `justfile`.
+
+`LICENSE` is a delivery, not a predicted design target: it landed after the last
+recorded phase delta, on the owner's post-audit licence decision (`2e6cfe7`). It
+is therefore listed in the table above and deliberately kept out of the selector
+set — `slice conformance` reads recorded phase deltas, so a selector that can only
+ever read as *undelivered* would misdescribe what the design predicted. The same
+reasoning is what tolerates `.doctrine/slice/001/notes.md` reading *undeclared*
+(RV-004 F-5): it is the run record, not an implementation path.
 
 `proptest` is the one dependency this design adds beyond the five settled during
 research, and it is a dev-dependency only: the numeric comparator and the fold

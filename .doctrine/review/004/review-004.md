@@ -195,3 +195,98 @@ surfaces, so record it here rather than let reconcile miss it:
   and truthful if the reconcile pass prefers the table to stay complete.
 - No new finding, no changed disposition: `cargo publish --dry-run` is clean, the
   name is free, and the slice's code and gates are unchanged.
+
+## Reconciliation Outcome
+
+Owner agreed the six per-slice edits and the governance item; this records what
+landed, what changed shape while landing, and the state the slice is in for
+`/close`.
+
+### Direct edits applied
+
+- **`design.md §12` — selector omission and path errata (F-4, F-6, addendum).**
+  The load-bearing verb first: `doctrine slice selector add SL-001 Cargo.lock
+  --intent design-target` (note: "the dependency set rewrites the committed lock
+  file"). Mirrored in §12's selector line and in the `Cargo.toml` row, which also
+  now carries the crate's published identity and the `exclude` list. The intro
+  sentence stops calling `README.md` new — it is *edited* around the owner's
+  pre-existing brand block — and the module map gains `src/lib.rs` as the library
+  target with §11.1's `tests/**` layers as its reason.
+- **`design.md §12` — `LICENSE` row (addendum).** The owner's post-audit licence
+  decision is recorded in the table as a delivered path.
+- **`design.md §4.2` — the wrapper's subject (F-1).** The rule is now structural:
+  the wrapper's subject is the entity node (an object with a nonempty string `id`)
+  wherever it appears, including inside `objects`; every other object is lexical.
+  This is what `78a7eb1` implements.
+- **`design.md §4.3` — the two unnamed `.smut` fsyncs (F-7).** Named: the one at the
+  end of apply (after the removals, and performed even when nothing is removed) and
+  the one after the `commit → done` rename. The section now says a boundary names a
+  moment, not a syscall, so the shared names (`RemovalsApplied`, `DoneRenamed`) are
+  deliberate rather than a coverage gap.
+- **`design.md §4.4` — the recovery recipe's fsyncs (F-7).** The recipe gains the
+  fsync after replay and before the rename, and the fsync after it, with why the
+  first mirrors §4.3's apply rule and why both share `RecoveryDoneRenamed`.
+- **`design.md §1` — the brief's acceptance-example boundary (F-9).** One sentence:
+  the brief's end-to-end example uses `follow` and `where`, so 0.1 runs its prefix
+  (pinned by the README's worked example) and the traversal steps are 0.2's.
+  `slice-001.md` already carried the 0.1/0.2/1.0 release split, so no second copy
+  was written.
+
+### Governance
+
+- **DEC-007 — amended, not revised.** The clarification landed through
+  `doctrine knowledge edit`: the `choice` facet now names the entity node as the
+  wrapper's subject, and the body gains a *Serialisation clarification* section
+  citing F-1, `78a7eb1` and the pinning test.
+- **REV-001 (`reconcile-sl-001`) — abandoned without a change row.** The revision
+  engine refuses the target: *"`revises` target must be one of [SPEC, PRD, REQ,
+  ADR, POL, STD], got a DEC"*. A decision is a knowledge record, not a governed
+  artefact in the REV target set, and the refusal is not overridable — so the
+  sanctioned surface is `knowledge edit`. The REV stands as the record of why the
+  ordinary route did not apply; its narrative carries the finding link.
+
+### Registry correction made during the pass
+
+`LICENSE` was first added to `design-target` alongside `Cargo.lock`, and
+`slice conformance` immediately read it **undelivered** — true to the engine and
+false to the facts, because `LICENSE` was delivered in `2e6cfe7`, after the last
+recorded phase delta. The selector was removed and the reason recorded in §12:
+`slice conformance` measures *recorded phase deltas*, so a path delivered outside
+one can only ever read as undelivered as a selector. This is the mirror image of
+F-5's tolerated `notes.md`. `Cargo.lock` stayed: it *was* rewritten inside the
+phases that changed the dependency set, and it now reads conformant.
+
+### Human acts recorded
+
+- **F-10 / PHASE-05/VH-1** — the owner waived the criterion's *human mode* and
+  directed agent discharge; the read was performed against §4.3–§4.5 and found the
+  suite complete against the registry, with the shared-name gap belonging to the
+  design (F-7) rather than the tests. Deviation recorded, not laundered.
+- **F-11 / PHASE-08/VH-1** — the owner read the README and reported it reads well
+  enough; the runnable half was verified here (`readme_example` 2/2, and the
+  transcript re-run by hand against the release build).
+
+### Post-audit state recorded here rather than reconciled
+
+- `smut` 0.1.0 is **published** (crates.io API: created 2026-11-01T08:30:46Z, one
+  version, not yanked), which settles the licence question by the act.
+- The operator's interview store (`interview.local/.smut`, 66 entities) was read
+  and triaged: **no 0.1 conformance defect**, two findings corroborated
+  independently (F-9, F-7), and 0.2 design input captured. Its residue became
+  `IMP-003` (the cheap 0.1.x fixes), `ISS-001` (the published page's dead relative
+  links) and a *Trigger met* section on `IMP-001`.
+
+### Verification after the writes
+
+`just check` → exit 0, 0 warnings, 354 default / 411 under
+`--features fault-injection`; `doctrine check gate` → exit 0; `doctrine validate`
+→ corpus clean; `slice verify-vt SL-001` → 28 PASS / 0 FAIL; `slice conformance
+SL-001` → 33 conformant, **0 undelivered**, 1 undeclared
+(`.doctrine/slice/001/notes.md`, tolerated by F-5).
+
+### Not reconciled, deliberately
+
+No finding was re-disposed and no brief item was skipped: the tolerated set
+(F-5, F-8, F-12…F-15) and the aligned pair (F-16, F-17) are untouched, per the
+brief's "no write owed". Nothing is outstanding for `/close` except the terminal
+transition itself.

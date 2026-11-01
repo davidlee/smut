@@ -84,3 +84,15 @@ framework would not be — non-entity values serialise as ordinary `serde_json`.
   stdout are both right and cost nothing to specify.
 - Linking the store into renderers as free access — rejected: it invites bypassing
   `limit` and selecting entities nobody asked for.
+
+## Serialisation clarification (SL-001 audit, RV-004 F-1)
+
+The wrapper's subject is the **entity node**, not the value's position in a
+document: an object whose `id` is a nonempty string names `id` first *wherever it
+appears* — inside a response's `objects` array and inside `changes[]` exactly as
+in a stored entity file — and a value that is not an entity node stays all-lexical.
+`78a7eb1` collapsed the two entry points into one wrapper, so the rule is
+structural rather than a flag carried by the root; design §4.2 states it for the
+slice, and
+`tests/cli_contract.rs::a_projected_entity_is_serialised_by_the_same_wrapper_as_a_stored_one`
+pins it against the spawned binary.

@@ -1011,3 +1011,95 @@ recorded here and in RV-004's reconciliation brief addendum.
   a relative one), so the "brand block byte-preserved" claim now covers the copy
   text only, and `smut.jpg` is excluded from the crate: **37 files, 556.8 KiB
   (132.9 KiB compressed)**, `cargo publish --dry-run` clean.
+
+### Published, and the two `VH-` obligations closed (2026-11-01)
+
+The owner published outside this jail. Verified from here rather than taken as
+reported: the crates.io API answers for `smut` — 0.1.0, created
+`2026-11-01T08:30:46Z`, one version, not yanked, with the packaged description,
+keywords and categories. Consequences: `0.1.0` can never be re-published, and the
+licence question the brief left open is settled *by the act* as GPL-3.0-only.
+
+**F-10 / PHASE-05/VH-1 — the human read was waived by the owner, not performed.**
+The owner's direction: the durability read "really seems more like an agent job
+than a me job". So the criterion's *mode* was waived and its content delegated;
+the deviation is recorded here rather than laundered as a human read. The agent
+read performed, against §4.3/§4.4/§4.5:
+
+- 22 registry names ↔ 22 tests, no orphans in either direction: 15 commit
+  (`interrupted_at__*`), 7 recovery (`recovery_interrupted__*`). The audit
+  finding's "8 recovery" counted the coverage guard's `format!` literal at L1259;
+the corrected pair is 15 + 7 = 22.
+- Every test arms the boundary its name claims (checked per site).
+- Repeated recovery is explicit per step: each recovery test aborts inside
+  recovery and requires the next command to converge on an uninterrupted twin's
+  tree, so convergence — not survival — is what each name asserts.
+- §4.3's asymmetry and §4.5's roll-forward are covered by 7 pre-commit-failure
+  tests, 6 `*_rolls_forward` tests over exactly the post-decision boundaries, and
+  4 failed-recovery tests.
+- The file claims code-path ordering only (module doc L14–19).
+
+Green at head: `cargo test --features fault-injection --test durability_crash` →
+44 passed; 0 by default by construction.
+
+**F-11 / PHASE-08/VH-1 — the owner read it: "it reads well enough".** The
+runnable half was delegated and verified: `cargo test --test readme_example` → 2
+passed, and the `console` block re-run by hand against the release build at head
+matches the README's recorded bytes in order, exiting 2 on the closing `follow`
+refusal.
+
+**Residual the publish exposes.** The now-public README carries two *relative*
+links — `docs/store-format.md` and `LICENSE` — which a crates.io README cannot
+resolve; the brand image was already absolutised for exactly this reason. Minted
+as a backlog issue rather than left in this note.
+
+### External use evidence: the operator's interview store (read 2026-11-01)
+
+The owner used the shipped binary in two live sessions and kept the transcript as
+a **smut store**: `interview.local/.smut` (untracked — `.gitignore` carries
+`.smut`), 66 entities, entry points `start-here` then `audit-handoff`. Read here
+through the binary (`get start-here`, one wide `query`, `render`), not the raw
+JSON.
+
+**Triage verdict: it yields no 0.1 conformance defect.** All twenty
+`finding-smut-*` were sentenced against the design and the brief:
+
+- `DROP` eating a literal (08) and array-replace losing a reference list (20):
+  §3.2's fold, §8.3's edge-case table and `learn`'s *Declaring* section specify
+  both. Silent loss is real; it is a design cost, not an implementation
+  divergence.
+- Opaque filenames (10), no file input (03), no timestamps (09): absent from the
+  brief and the design by scope, and contravened by neither.
+- `--show-fields` printing compact JSON (11), and heading competition and weak
+  boundaries (13): §7.1 requires exactly this — non-strings as compact JSON,
+  bodies verbatim, and "bodies may still absorb *each other* — accepted and
+  stated, not denied".
+- The argv/JSON two-dialect complaint (02): clap exit 2 by design (§7.2,
+  DEC-008), and the store's own `a-error-verdict` retracts it.
+- The guide's silence on locking and disk layout (12): DEC-010 sends layout to
+  `docs/store-format.md` and limits `learn` to the 0.1 surface; the README's
+  Portability note carries `flock` and the acceptance platform. The store
+  inspected `learn` only.
+- Tool-output truncation (14): the harness, not smut.
+
+**What it does change here.** It corroborates two audit findings independently:
+F-9 (three separate statements that the brief's end-to-end flow is not
+0.1-runnable, and that the two-call composition is the 0.1 idiom) and F-7 — with
+the mapping measured in `src/store/journal.rs` rather than inferred:
+`RemovalsApplied` (L374) covers apply's closing `fsync(.smut)`, including a batch
+that removed nothing; `DoneRenamed` (L396) covers the fsync after the `commit →
+done` rename; `RecoveryDoneRenamed` covers *both* the pre-rename and post-rename
+fsync (L577, L583).
+
+**What it changes for 0.2.** IMP-001's own pick-up trigger — "used in anger …
+`where`'s absence is a felt gap" — is now met. The one genuinely new design
+question is result provenance (nodes, induced edges, unexpanded frontier).
+
+**One claim from it that does not transfer.** `obs-build-environment` describes a
+different checkout (`/home/david/dev/smut`, read-only `target/`) and concludes the
+full suite cannot run offline; here `--all-targets` runs offline against the Nix
+toolchain. Perishable, as that record says of itself.
+
+**Disposition.** Product evidence, not audit evidence. Captured in IMP-001's body
+and two new backlog items; the store itself is *not* promoted into the repo — as
+a 0.2 acceptance fixture it is IMP-001's decision, not SL-001's.
