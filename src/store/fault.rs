@@ -21,10 +21,13 @@
 //!   is how a crash is injected at a named protocol moment.
 //!
 //! The environment is read once per process, and only when the seam is first
-//! consulted; tests arm it directly through [`arm`] instead.
+//! consulted. A test can arm the seam directly instead through [`install`],
+//! which applies to the calling thread only, so one test's arming can never
+//! reach the thread of another test running beside it.
 
+use std::cell::RefCell;
 use std::io;
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::sync::OnceLock;
 
 use crate::store::boundary::Boundary;
 
@@ -107,20 +110,24 @@ impl Faults {
     }
 }
 
-/// The seam as this process currently has it armed, reading the environment on
-/// first use.
-pub fn armed() -> Faults {
-    *seam()
+/// The seam as the calling thread currently has it armed, falling back to the
+/// process environment, which is read once.
+fn armed() -> Faults {
+    if let Some(faults) = ARMED.with_borrow(|armed| *armed) {
+        return faults;
+    }
+
+    *ENVIRONMENT.get_or_init(Faults::from_environment)
 }
 
-/// Replace this process's seam.
+/// Arm the calling thread's seam, replacing anything the environment armed.
 pub fn install(faults: Faults) {
-    *seam() = faults;
+    ARMED.with_borrow_mut(|armed| *armed = Some(faults));
 }
 
-/// Disarm this process's seam.
+/// Return the calling thread's seam to the process environment's arming.
 pub fn reset() {
-    install(Faults::default());
+    ARMED.with_borrow_mut(|armed| *armed = None);
 }
 
 /// Return the injected failure when `boundary` is armed to fail.
@@ -143,34 +150,21 @@ pub fn cap_write(boundary: Boundary, requested: usize) -> usize {
     armed().shorten(boundary, requested)
 }
 
-fn seam() -> MutexGuard<'static, Faults> {
-    static ARMED: OnceLock<Mutex<Faults>> = OnceLock::new();
+static ENVIRONMENT: OnceLock<Faults> = OnceLock::new();
 
-    ARMED
-        .get_or_init(|| Mutex::new(Faults::from_environment()))
-        .lock()
-        .expect("the fault seam is not poisoned")
+thread_local! {
+    static ARMED: RefCell<Option<Faults>> = const { RefCell::new(None) };
 }
 
 #[cfg(test)]
 pub(crate) fn arm(faults: Faults) -> Armed {
-    static EXCLUSIVE: Mutex<()> = Mutex::new(());
-
-    let exclusive = EXCLUSIVE
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
     install(faults);
-
-    Armed {
-        _exclusive: exclusive,
-    }
+    Armed
 }
 
-/// Keeps one test's arming to itself, and disarms it on drop.
+/// Disarms the calling thread's seam on drop.
 #[cfg(test)]
-pub(crate) struct Armed {
-    _exclusive: MutexGuard<'static, ()>,
-}
+pub(crate) struct Armed;
 
 #[cfg(test)]
 impl Drop for Armed {
