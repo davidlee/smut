@@ -69,6 +69,46 @@ pub enum Reject {
         /// What that key accepts, for the message.
         expected: String,
     },
+    /// One JSON object in the input gives the same key twice, which would lose
+    /// the earlier assignment. Refused as the key is read, before a `Value`
+    /// exists (§3.1, DEC-006).
+    DuplicateKey {
+        /// The key that appears twice.
+        key: String,
+    },
+    /// A JSON value is followed by something that is not whitespace. There is no
+    /// newline-delimited stream mode in 0.1 (DEC-008).
+    TrailingInput,
+    /// The input is not one JSON value.
+    MalformedJson {
+        /// What the parser reported, for the message.
+        reason: String,
+    },
+    /// A command that takes one JSON input was given neither an operand nor
+    /// piped input, and stdin is an interactive terminal (DEC-008).
+    MissingInput,
+    /// The command line is not one the grammar accepts: clap refused it, and its
+    /// message is the diagnostic (DEC-008).
+    InvalidUsage {
+        /// The rendered usage diagnostic.
+        message: String,
+    },
+    /// `--heading-level` takes 1 to 6, and this is not one of them (DEC-009).
+    InvalidHeadingLevel {
+        /// What the flag held, for the message.
+        found: String,
+    },
+    /// A `--format` a later release will write, refused by name with that
+    /// release (DEC-008).
+    FutureFormat {
+        /// The format's name.
+        format: String,
+    },
+    /// A `--format` no release plans. `markdown` is the only value in 0.1.
+    UnknownFormat {
+        /// The format's name.
+        format: String,
+    },
 }
 
 /// The store could not be read or written: exit 1.
@@ -231,6 +271,33 @@ impl fmt::Display for Reject {
             Reject::InvalidSpecificationValue { key, expected } => {
                 write!(formatter, "{key} must be {expected}")
             }
+            Reject::DuplicateKey { key } => write!(
+                formatter,
+                "duplicate JSON key: {key}, and one object cannot give a key twice"
+            ),
+            Reject::TrailingInput => {
+                write!(formatter, "trailing input after the JSON value")
+            }
+            Reject::MalformedJson { reason } => {
+                write!(formatter, "malformed JSON: {reason}")
+            }
+            Reject::MissingInput => write!(
+                formatter,
+                "no JSON input: pass one JSON argument, pass '-' to read stdin, or pipe \
+                 it in with no argument"
+            ),
+            Reject::InvalidUsage { message } => formatter.write_str(message),
+            Reject::InvalidHeadingLevel { found } => write!(
+                formatter,
+                "--heading-level takes a whole number from 1 to 6, and {found} is not one"
+            ),
+            Reject::FutureFormat { format } => write!(
+                formatter,
+                "--format {format} is not supported in 0.1; planned for 1.0"
+            ),
+            Reject::UnknownFormat { format } => {
+                write!(formatter, "unknown --format {format}, and 0.1 writes markdown")
+            }
         }
     }
 }
@@ -367,7 +434,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 12] = [
+        let cases: [(Error, u8); 20] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -423,6 +490,50 @@ mod tests {
                 Reject::InvalidSpecificationValue {
                     key: "limit".to_owned(),
                     expected: "a positive integer".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::DuplicateKey {
+                    key: "title".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (Reject::TrailingInput.into(), INVALID_INPUT),
+            (
+                Reject::MalformedJson {
+                    reason: "EOF while parsing a value".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (Reject::MissingInput.into(), INVALID_INPUT),
+            (
+                Reject::InvalidUsage {
+                    message: "error: unexpected argument".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::InvalidHeadingLevel {
+                    found: "7".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::FutureFormat {
+                    format: "mermaid".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownFormat {
+                    format: "dot".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -565,5 +676,53 @@ mod tests {
         };
         assert!(unknown.to_string().contains("unknown"), "{unknown}");
         assert!(unknown.to_string().contains("sort"), "{unknown}");
+
+        let duplicate = Reject::DuplicateKey {
+            key: "title".to_owned(),
+        };
+        assert!(duplicate.to_string().contains("title"), "{duplicate}");
+        assert!(duplicate.to_string().contains("duplicate"), "{duplicate}");
+
+        let trailing = Reject::TrailingInput;
+        assert!(
+            trailing.to_string().contains("trailing input"),
+            "{trailing}"
+        );
+
+        let malformed = Reject::MalformedJson {
+            reason: "expected value at line 1 column 1".to_owned(),
+        };
+        assert!(
+            malformed.to_string().contains("expected value"),
+            "{malformed}"
+        );
+
+        let missing = Reject::MissingInput;
+        assert!(missing.to_string().contains("stdin"), "{missing}");
+
+        let usage = Reject::InvalidUsage {
+            message: "error: unexpected argument '--nope'".to_owned(),
+        };
+        assert!(usage.to_string().contains("--nope"), "{usage}");
+
+        let level = Reject::InvalidHeadingLevel {
+            found: "7".to_owned(),
+        };
+        for named in ["--heading-level", "1", "6", "7"] {
+            assert!(level.to_string().contains(named), "{level}");
+        }
+
+        let mermaid = Reject::FutureFormat {
+            format: "mermaid".to_owned(),
+        };
+        assert!(mermaid.to_string().contains("mermaid"), "{mermaid}");
+        assert!(mermaid.to_string().contains("0.1"), "{mermaid}");
+        assert!(mermaid.to_string().contains("1.0"), "{mermaid}");
+
+        let dot = Reject::UnknownFormat {
+            format: "dot".to_owned(),
+        };
+        assert!(dot.to_string().contains("dot"), "{dot}");
+        assert!(dot.to_string().contains("markdown"), "{dot}");
     }
 }
