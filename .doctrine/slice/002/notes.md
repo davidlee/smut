@@ -6,7 +6,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (design run RV-007) · 33fc45e
+fresh-as-of: 2026-11-01 · reviewing (run rev 55, pass RV-014 stale, RV-012 F-4
+contested) · commit 603c718
 
 ### Produced
 
@@ -15,11 +16,14 @@ fresh-as-of: 2026-11-01 · reviewing (design run RV-007) · 33fc45e
 - Research artefact + raw threads; baseline restamped after the design.
 - DEC-012…DEC-019 from the eight inquiry dispositions; DEC-014 amended to the
   induced subgraph of returned entities.
-- 15-section `design.md`, materialised at revision 33; RV-005/RV-006 are
-  superseded stale passes, RV-007 is the review pass (F-1…F-4 raised,
-  disposed fix-now, repaired).
+- 15-section `design.md`, now at run revision 55; review passes RV-007…RV-014
+  across four adversarial windows, every finding terminal except RV-012 F-4
+  (contested, awaiting the responder).
 - 16 `design-target` selectors matching §14.
 - IMP-001 moved to `started`.
+- `IMP-004` — the epistemic-records convention set, deferred out of 0.2 with its
+  draft taxonomy, the five open questions and the doctrine comparison
+  (`originates_from SL-002`, `after SL-002`); DEC-017 narrowed to one set.
 
 ### Learned
 
@@ -41,16 +45,27 @@ fresh-as-of: 2026-11-01 · reviewing (design run RV-007) · 33fc45e
   ordering and the limit, so DEC-012 lagged DEC-014 until the review repair.
 - Fixture counts are pre-redaction source measurements; the test pins properties
   plus the committed array's own counts, so the privacy gate cannot redden it.
+- Seed ids are fixed **per set** (`conventions-hygiene`, and one per later set),
+  so an upsert cannot touch an entity with a different id: the store's `vocab` is
+  evidence of the practice of amending convention prose, *not* a record this
+  pipeline overwrites. The valid overwrite counterexample is editing `body` on an
+  installed `conventions-hygiene` and re-running its own seed.
 
 ### Open
 
-- User review of `design.md` (RV-007), then lock (`design-accepted`), `/plan`,
-  `/phase-plan`.
-- DEC-017: the epistemic-records schema needs operator approval before that set
-  ships.
+- **RV-012 F-4 is contested** and awaits the responder seat: the raiser accepted
+  the §9.3/§9.2/scope/§13.1 repairs but rejected the response on two points —
+  (1) DEC-017's prose was listed as swept while it still said only that the store
+  owns its copy, and (2) the finding's `vocab` counterexample is impossible
+  because `vocab` has a different id from any seed. Point (1) is now satisfied by
+  the deferral refactor (DEC-017 carries the supplied-field/body-replacement
+  warning); point (2) needs the durable answer corrected, not a design change.
+- Section review of `design.md` (all 15, none attested), then the pass
+  disposition (`conducted`), then `design-accepted` to lock; `/plan`, `/phase-plan`.
+- IMP-004: the epistemic set's own design conversation (not this slice's work).
 - DEC-018: a fresh-agent privacy read-through precedes the fixture commit.
-- The design run state is gitignored but live at `.doctrine/state/slice/002/`;
-  resume with `doctrine design resume SL-002`.
+- The design run state is gitignored but live; resume with `doctrine design resume
+  SL-002`.
 
 ## Design surface triage (exploring, 2026-11-01)
 
