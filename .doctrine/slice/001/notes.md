@@ -191,6 +191,96 @@ as *evidenced*: the plan owes implementation evidence for them, and §11.1's
 distinction (code-path ordering asserted by injection, power-loss durability
 assumed) is the line that evidence has to respect.
 
+## Implementation run
+
+Durable record of the unattended implementation run. Every charter points here
+instead of restating it.
+
+### Tiering
+
+pi-subagents replaces the Claude tiering, with the same three layers and the
+same discipline (no context above ~250k, the seat reads hand-backs and not code):
+
+| tier | what | model | why |
+|---|---|---|---|
+| seat | this session, human attached | deepseek-flash | holds escalation and the envelope |
+| charter | `capsule-orchestrator` — 1 chartered run of phases | deepseek-flash:high | spawns, verifies gate + commits, records lifecycle |
+| phase | `capsule-worker` — exactly one phase | deepseek-flash:high | implements TDD in the main worktree |
+
+Agent definitions live outside the repo at
+`~/.pi/agent/agents/{capsule-orchestrator,capsule-worker}.md` (harness config,
+not slice artefacts — nothing added to §12's module map). `deepseek-flash`'s 1M
+window is why it is the default at both tiers: a Rust phase plus the design
+sections it must read does not fit a 272k window comfortably.
+
+**Escalation ladder when a phase resists:** one re-brief of the same worker on
+the same model; if the phase fails twice, the charter stops and the seat decides
+whether to re-charter on `gpt-6.1-sol:high` (real judgement) or park it. Nothing
+below the seat picks a stronger model on its own.
+
+### Division of labour (load-bearing)
+
+- **The worker owns code and commits.** Scoped `git commit -- <paths>` only;
+  never `git add .`, never pathless, never `stash`/`checkout`/`reset`.
+- **The orchestrator owns doctrine lifecycle and the autonomy log.** It flips
+  `in_progress` immediately *before* the worker spawns (stamping `code_start_oid`
+  at `HEAD`) and `completed` only *after* the worker's work is committed, because
+  the flip stamps `code_end_oid` at `HEAD`. A premature flip records the wrong
+  boundary.
+- **No worker carries two phases.** One worker, one phase.
+- **Workers are spawned foreground.** The tree is strictly serial: nothing else
+  in it can make progress while a phase is being built.
+- **No worktrees, no confinement, no import step.** Main worktree throughout.
+
+### Escalation
+
+`capsule-worker → contact_supervisor → capsule-orchestrator →
+contact_supervisor → seat → human`. Subagents in this harness *can* ask, unlike
+the Claude path, so the seat is only reached for decisions that are really the
+human's (see the interrupt tier in the orchestrator's envelope).
+
+### Environment (probed 2026-11-01, before the first charter)
+
+- Host gate command, as the orchestrators will run it: `just check` once
+  PHASE-01 wires the justfile; until then the equivalent is
+  `cargo clippy --all-targets -- -D warnings && cargo fmt --check && just test`.
+- Toolchain is on the global PATH already (`cargo 1.100.0-beta.7`, `just 1.58.0`,
+  `clippy 0.1.100`, `rustfmt 1.11.0-beta`); no `nix develop` wrapper needed and
+  `IN_NIX_SHELL` is unset. `CARGO_TARGET_DIR` is unset.
+- crates.io is reachable (`cargo search serde` succeeds), so PHASE-01's five
+  runtime dependencies can be resolved.
+- Baseline green: `cargo build` and `cargo test` both pass, `0` tests executed.
+  Tree clean at `b0eac66` when the run started.
+- `doctrine` is on PATH at `/home/david/.local/share/doctrine/bin/doctrine` for
+  every tier.
+- Harness probe before the first charter: a `capsule-orchestrator` spawned a
+  foreground `capsule-worker`, which ran `cargo --version` and
+  `doctrine slice phase --help`; nested fan-out works (depth 2 available, 62 of
+  64 spawns unspent).
+- **Minting ids fails in this checkout** (no `origin` credentials): backlog and
+  knowledge items raised during the run are recorded in prose here and minted
+  once a remote is reachable.
+- **`verify-vt` is red by construction** until the files exist. Run it at each
+  phase conclude; treat a red row the phase does not own as expected.
+- No sandbox is involved (main worktree, unconfined), so there are no
+  sandbox-only failures to work around and no safety rule to widen. The flip
+  side is that the durability suite must be told `GIT_GUARD`-style guards apart
+  from real failures if that ever comes up.
+- No operator-supplied fixtures, credentials or private data are needed for
+  0.1; nothing was captured.
+
+### Charter plan
+
+One heavy phase per charter, pairs only for the two pure cores:
+`01` · `02+03` · `04` · `05` · `06` · `07` · `09` · `08`.
+
+### Autonomy log
+
+<!-- one line per envelope decision: PHASE-NN · what · why · decided|deferred|escalated -->
+
+- run · seat is pi, tiers are pi subagents, agent defs outside the repo · the
+  human asked for this path rather than `/dispatch` · decided
+
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · f16167d
