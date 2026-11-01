@@ -316,8 +316,10 @@ mod tests {
     /// unadvertised (`!GUIDE.contains("$in")`). Both are false once the keys are
     /// accepted and taught — PHASE-01 took three, PHASE-02 `budget`, PHASE-03
     /// `where` — so the pin becomes a 0.2-coverage pin: every key is taught, the
-    /// predicate operators are taught, and the release notice is gone. The
-    /// narrowed `!` assertion is `the_release_notice_is_gone`'s job below.
+    /// predicate operators are taught, and the release notice is gone. The two
+    /// reversed assertions stay in this test, narrowed to their absence form
+    /// (`!GUIDE.contains("arrive in 0.2")`, `!GUIDE.contains("refused here")`),
+    /// because a deleted pin would let 0.1's notice return unnoticed.
     #[test]
     fn the_guide_teaches_the_0_2_keys_and_the_release_notice_is_gone() {
         for key in KEYS {
