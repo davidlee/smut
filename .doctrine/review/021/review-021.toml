@@ -17,6 +17,16 @@ act = "conclude"
 role = "raiser"
 note = "Conformance audit of SL-002 at implementation-complete (7/7 phases, entry HEAD a9aee11), on the primary worktree since the implementation ran there. Examined: the scope's 11 objectives and the brief's query contract against the delivered binary by running it (grammar refusals and types; the five operators, three clauses, identities, disambiguation and the $eq escape; both traversal directions with [] / * / named fields; depth and the frontier; budget as expansions; truncation reasons; induced edges from unexpanded and select-hidden endpoints; dangling dedupe and walk-scoping; get never traversing; the Markdown notice; the conventions command end to end including the seed pipe, re-install replacement and the deferred-set refusal); the six §13.3 acceptance scenarios in their owning suites plus two acceptance facts re-derived by hand; PHASE-07's release surface (README, learn, 0.2.0 in both manifests) against the binary; the relationships between phases; the §14.2 fence across the whole slice by diff; the claimed reference single-sourcing by grep; and every durable claim-vs-code sentence (guide, conventions prose, PROVENANCE, store-format, and the run record's own statements about the repository). Gates re-run here rather than inherited: fmt, clippy both configurations, 16 suites / 506 tests, check gate, verify-vt 25 PASS, conformance 26/0/4. Six findings, 0 blocker, all terminal; the review lane's 23 priors were treated as evidence and none silently reopened."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Re-concluded after F-7, raised from the external GPT code review the operator ordered before reconcile (codex, gpt-6-luna, reasoning effort high, read-only, range b47dd79..HEAD) and verified by reproduction at this seat: a hand-edited entity with a non-string nested id panics a traversal query at exit 101 (src/entity.rs:93), where 0.1 read the same store — new exposure through the walker and the induced-edge derivation, unreachable through any declaration.
+
+The review's other product was negative: it reported predicates, traversal ordering, cycles, depth and budget boundaries, provenance scoping, the conditional traversal member, truncation reasons, the 0.1 envelope shape, the conventions seed and the guide/README claims as checked and sound, which corroborates this audit's own probing from a second independent reader. Its one capability gap — a read-only sandbox that stopped it running cargo test — is covered by this seat's own gate run (fmt, clippy both configurations, 16 suites / 506 tests, check gate, verify-vt 25 PASS, conformance 26/0/4).
+
+All seven findings terminal: F-1 and F-2 to reconcile, F-3 and F-4 corrected in notes.md and on the ledgers, F-5 tolerated with the operator's escalation open, F-6 aligned, F-7 delegated to IMP-005 by the operator's choice. No blocker."""
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
 
@@ -313,6 +323,68 @@ Re-ran conformance at this seat: the four cells are unchanged from the PHASE-07 
 act = "verify"
 role = "raiser"
 note = "Aligned: four review-lane cells, undelivered 0, each already explained in the PHASE-07 sheet. Re-ran conformance at this seat and the cells are unchanged."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "A hand-edited entity with a non-string nested `id` panics a traversal query (exit 101) where 0.1 read the same store fine"
+detail = """
+Raised from the external GPT code review the operator ordered before reconcile (codex, gpt-6-luna, reasoning effort high, read-only sandbox, range b47dd79..HEAD, transcript /tmp/sl002-gpt-review.log), then verified independently at this seat. The reviewer named src/walk.rs:281; the panic is in src/entity.rs:93 via that call.
+
+Expected: a malformed store is refused — docs/store-format.md's posture is "every inconsistency listed under Corruption is refused, never reconstructed", exit 1 for a store that could not be read. A read-only query must not panic.
+
+Observed: `smut query '{"from":"a-focus","follow":["about"]}'` against a store whose a-focus entity file carries an extra {"bad":{"id":null}} panics:
+
+  thread 'main' panicked at src/entity.rs:93:28:
+  scan_refs requires a validated entity: an `id` that is not a nonempty string is corruption
+  
+exit 101. The same store answers `get a-focus` (exit 0) and `query '{"from":"a-focus"}'` (exit 0): only the traversal read path reaches scan_refs on a stored entity.
+
+Reproduction (scratch, no tracked file touched): declare tests/fixtures/interview/entities.json into /tmp/acc; `jq '. + {bad:{"id":null}}'` into the file the index maps to a-focus; run the query above. Panic reproduced at this seat, exit 101.
+
+Why it is new exposure rather than a 0.1 defect: at b47dd79 the only scan_refs caller was src/declare.rs:220, which scans a *declaration* — and a declaration carrying an invalid id is refused at exit 2 (verified: `smut declare '{"id":"r2","bad":{"id":null}}'` → "invalid entity id: null, and an id must be a nonempty string"). 0.1 therefore never scanned a stored entity, so this store shape was inert in 0.1 and 0.2's walker plus its induced-edge derivation (src/select.rs, via the same scan) make it a crash. Refuse-on-read would be the 0.1 posture; a panic is not it.
+
+Not reachable through any declaration, so no CLI-only user meets it: it needs a hand-edited store, which README calls unsupported ("editing .smut/ by hand is not supported"). The panic is also deliberate, with a message that says "is corruption", in a codebase whose accepted style is panic-on-invariant-breach (walk::stored_entity; and the autonomy log's decided "depths() panics … rather than omitting").
+
+No existing test covers it: tests/store_corruption.rs covers malformed JSON, non-object entities and top-level id disagreement; the loader (src/store/mod.rs:210-238) validates exactly those and not nested ids. The reviewer's own suggestion (validate nested ids at load) is the shape of the fix, and it sits in src/store/** — a §14.2-fenced path. The alternative, a refusal in the callers, needs a refusal shape the design does not specify (no rule for a malformed nested id in §10.3's 32 rows).
+
+Disposition pending: the three candidate homes are the fenced src/store/** or src/entity.rs, or an unspecified new refusal in src/walk.rs/src/select.rs — a scope/fence decision this audit cannot take on its own. Put to the operator in the audit report: tolerate + a backlog item for the hardening, authorise an in-slice loader refusal, or reopen the design for a posture."""
+disposition = "follow-up"
+response = """
+Accepted, and routed as the operator chose: tolerate in 0.2, own the hardening as work.
+
+Observation confirmed at this seat by reproduction, not by trusting the review: panic at src/entity.rs:93, exit 101, from a store whose entity file carries {"bad":{"id":null}}, while `get` and a non-traversing `query` answer the same store at exit 0. It is a 0.2-introduced read path — at b47dd79 the only scan_refs caller was declare.rs:220 over a validated declaration — but not reachable through any declaration, so it needs a hand-edited store.
+
+Why not fixed here, stated rather than implied: the three candidate homes are src/store/mod.rs and src/entity.rs (§14.2-fenced for this slice) or a refusal in src/walk.rs/src/select.rs whose shape the design does not specify (§10.3's 32 rows contain no rule for a malformed nested id). Crossing that fence is a scope change, which the operator declined; inventing a refusal shape is a design act this audit may not take.
+
+Captured as IMP-005 ("Store loader refuses a malformed nested id instead of letting a traversal read panic"), with the reproduction, the reason it is 0.2's, the fence that stopped the in-slice fix, and the three obligations the fix owes (a load-time exit-1 refusal, an assertion in tests/store_corruption.rs, and a line in docs/store-format.md's Corruption section — which is the same pass RV-021 F-5 belongs to).
+
+The panic stays as a recorded sharp edge until IMP-005 runs; nothing in 0.2's behaviour or gates changes."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Accepted, and routed as the operator chose: tolerate in 0.2, own the hardening as work.
+
+Observation confirmed at this seat by reproduction, not by trusting the review: panic at src/entity.rs:93, exit 101, from a store whose entity file carries {"bad":{"id":null}}, while `get` and a non-traversing `query` answer the same store at exit 0. It is a 0.2-introduced read path — at b47dd79 the only scan_refs caller was declare.rs:220 over a validated declaration — but not reachable through any declaration, so it needs a hand-edited store.
+
+Why not fixed here, stated rather than implied: the three candidate homes are src/store/mod.rs and src/entity.rs (§14.2-fenced for this slice) or a refusal in src/walk.rs/src/select.rs whose shape the design does not specify (§10.3's 32 rows contain no rule for a malformed nested id). Crossing that fence is a scope change, which the operator declined; inventing a refusal shape is a design act this audit may not take.
+
+Captured as IMP-005 ("Store loader refuses a malformed nested id instead of letting a traversal read panic"), with the reproduction, the reason it is 0.2's, the fence that stopped the in-slice fix, and the three obligations the fix owes (a load-time exit-1 refusal, an assertion in tests/store_corruption.rs, and a line in docs/store-format.md's Corruption section — which is the same pass RV-021 F-5 belongs to).
+
+The panic stays as a recorded sharp edge until IMP-005 runs; nothing in 0.2's behaviour or gates changes."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and delegated: IMP-005 exists and carries the reproduction, the fence, and the obligations the fix owes. Terminal here; the repair is IMP-005's."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

@@ -31,6 +31,10 @@ seat took on other ledgers, and the two record corrections. See
   opened by the stage round trip, concluded with its basis recorded.
 - 16 `design-target` selectors matching §14.
 - IMP-001 moved to `started`.
+- `IMP-005` — the store loader should refuse a malformed nested `id` rather than
+  let a traversal read panic on it (minted at audit, RV-021 F-7; `after SL-002`
+  in spirit, owner whichever release next touches the loader or the store-format
+  document).
 - `IMP-004` — the epistemic-records convention set, deferred out of 0.2 with its
   draft taxonomy, the five open questions and the doctrine comparison
   (`originates_from SL-002`, `after SL-002`); DEC-017 narrowed to one set.
@@ -1786,7 +1790,7 @@ the whole slice, not per phase) · `Cargo.lock`'s only change is the version lin
   (`q-audit-cost`, `q-channel-fix`, `q-fix-order`, `q-impact-query`,
   `q-more-friction`, `q-promotion`, `q-split`, `q-variance-mechanism`).
 
-### What audit found — six findings, 0 blocker, 0 major-but-gating
+### What audit found — seven findings, 0 blocker
 
 | id | sev | subject | disposition |
 | --- | --- | --- | --- |
@@ -1796,6 +1800,19 @@ the whole slice, not per phase) · `Cargo.lock`'s only change is the version lin
 | F-4 | minor | three design-stage ledgers non-terminal at audit | fix-now (performed) |
 | F-5 | minor | `docs/store-format.md` speaks in 0.1's voice inside a §14.2 fence | tolerated → operator/IMP-002 |
 | F-6 | nit | four conformance cells are the review lane's own artefacts | aligned |
+| F-7 | minor | a hand-edited store with a non-string nested `id` panics a traversal query (exit 101) | follow-up → IMP-005 |
+
+F-7 came from the external GPT review the operator ordered before reconcile,
+not from this seat's own probing, and was reproduced here before it was accepted:
+`smut query '{"from":"a-focus","follow":["about"]}'` against a store whose
+entity file carries `{"bad":{"id":null}}` panics at `src/entity.rs:93` (exit
+101), while `get` and a non-traversing `query` answer the same store at exit 0.
+At `b47dd79` the only `scan_refs` caller was `declare.rs:220` over a *validated
+declaration*, so 0.1 never scanned a stored entity and the walker made this
+reachable — a 0.2-introduced read path, not inherited. It is not reachable
+through any declaration, and the fix's honest home (`src/store/mod.rs`, or
+`src/entity.rs`) is inside the §14.2 fence, which is why the operator tolerated
+it in 0.2 and minted `IMP-005` for the hardening.
 
 Every finding is terminal; the pass is concluded. The reconciliation brief lives
 in `review-021.md` `## Reconciliation Brief` — per-slice direct edits
@@ -1870,3 +1887,47 @@ tests.
   repository were false and cost one command each to disprove.
 - **Governance status is part of canon.** Eight decisions shipped as `proposed`;
   nothing in the build, the gates or `conformance` can see that.
+
+## Operator rulings — audit, 2026-11-02
+
+Two rulings taken at the audit's close, recorded here because reconcile is held
+behind the second one and neither survives in conversation.
+
+1. **`DEC-012`…`DEC-019` assented to, as 0.2's settled decisions.** Asked at
+   `RV-021` F-1 (all eight read `proposed` while design §15 indexes them as
+   settled and the tree implements them); the operator's reply was "agreed". This
+   underwrites the brief's governance entry: reconcile records the eight accepted
+   on this assent, and the records' own `decided_by: operator and agent` is
+   thereby true rather than assumed. The audit did not infer it and did not flip
+   the status itself.
+2. **Hold before reconcile, for an external code review of the whole slice.**
+   Operator: "hold before reconcile for a GPT code review of the whole slice."
+   Reconcile therefore does not open until that review has run and its findings
+   are adjudicated; any new defect joins `RV-021` (a raise clears the concluded
+   marker, so the pass is concluded again afterwards).
+3. **The review's one finding is tolerated in 0.2 and owned as `IMP-005`.**
+   Operator's choice, from three options put with the fence stated: "1." — *tolerate
+   + backlog it*. So `F-7` is disposed `follow-up`, the panic stays a recorded
+   sharp edge, and the hardening lives in `IMP-005` with its reproduction, the
+   fence that stopped the in-slice fix, and the three obligations the fix owes. The
+   alternative — an in-slice loader refusal — would have been a scope change across
+   `src/store/**` (or `src/entity.rs`), which the operator declined; the third
+   option was to leave it undocumented, which was not chosen.
+
+Instrument and scope, recorded so the result is attributable rather than an
+anonymous second opinion: `codex exec`, GPT model at
+`model_reasoning_effort="high"`, sandbox `read-only`, range `b47dd79..HEAD`
+(`codex exec review --base` refuses a custom prompt, which is why the plain form
+was used), brief at `/tmp/sl002-gpt-review-brief.md`, transcript at
+`/tmp/sl002-gpt-review.log`. The brief gave it the brief/scope/design as the
+contract, `RV-017`…`RV-021` as priors it must not re-raise, and asked for a
+ranked findings list with evidence plus an explicit "checked, nothing found"
+section. It was instructed not to write to the tree; the tree stayed clean and it
+reported the one uncommitted file it saw (this one) as untouched.
+
+**Its result:** one finding (`F-7`, verified above) and a negative report —
+predicates, traversal ordering, cycles, depth and budget boundaries, provenance
+scoping, the conditional `traversal` member, truncation reasons, the 0.1 envelope
+shape, the conventions seed, and the guide/README claims all checked and sound.
+A read-only sandbox stopped it running `cargo test`; this seat's own gate run
+covers that gap.
