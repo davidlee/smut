@@ -57,13 +57,24 @@ impl fmt::Display for Id {
 /// The core's only way to obtain a fresh id candidate (DEC-001).
 ///
 /// The source offers candidates; it does not decide whether they are usable. The
-/// caller draws from it until it finds one outside the [`Occupied`] set, so a
-/// source that repeats itself is still safe and a source that never yields a free
-/// candidate loops by contract, not by accident.
+/// caller draws from it until it finds one outside the [`Occupied`] set, spending
+/// at most [`MAX_CANDIDATES`] draws: a source that repeats itself is drawn past, and
+/// a source that *never* yields a free candidate is a broken contract rather than a
+/// reason to hang.
 pub trait IdSource {
     /// Offers the next candidate, in whatever order the source chooses.
     fn candidate(&mut self) -> String;
 }
+
+/// How many candidates one allocation may draw before the source's contract counts
+/// as broken.
+///
+/// Not an entropy allowance: with the shell's 63-symbol, 8-character alphabet a
+/// collision is a curiosity and two in a row will not happen. The bound exists for
+/// the other case — a source that repeats itself, which is a bug in the source (or a
+/// test double) and must fail loudly instead of spinning. Store basename allocation
+/// redraws on a collision too, and spends from this same budget.
+pub const MAX_CANDIDATES: usize = 16;
 
 /// The ids a generated candidate must avoid: the snapshot's keys, every explicit
 /// id in the request, and every id generated earlier in the same batch.
@@ -96,8 +107,15 @@ impl Occupied {
     }
 
     /// Draws candidates until one is unoccupied, records it, and returns it.
+    ///
+    /// At most [`MAX_CANDIDATES`] draws. A source that never frees a candidate has
+    /// broken the [`IdSource`] contract, and a broken contract is asserted rather
+    /// than spun on: the shell's source draws fresh entropy every call, so this is a
+    /// guard against our own bug, not an outcome a caller can meet — which is why it
+    /// is not a `Reject`. The brief fixes two failure classes (exit 1 storage, exit 2
+    /// input), and an internal invariant that cannot hold is neither.
     pub fn generate(&mut self, source: &mut dyn IdSource) -> Id {
-        loop {
+        for _ in 0..MAX_CANDIDATES {
             let candidate = source.candidate();
 
             if !self.holds(&candidate) {
@@ -107,6 +125,11 @@ impl Occupied {
                 return id;
             }
         }
+
+        panic!(
+            "the id source drew {MAX_CANDIDATES} occupied candidates: its contract is broken, \
+             and redrawing could not end"
+        );
     }
 }
 
@@ -115,6 +138,37 @@ impl Occupied {
 #[cfg(test)]
 pub(crate) mod scripted {
     use super::IdSource;
+
+    /// A source that hands back one pre-chosen candidate forever, however often
+    /// it is drawn from: the degenerate source the candidate bound exists for.
+    #[derive(Debug)]
+    pub struct RepeatingSource {
+        candidate: String,
+        drawn: usize,
+    }
+
+    impl RepeatingSource {
+        /// A source that always offers `candidate`.
+        pub fn new(candidate: &str) -> Self {
+            RepeatingSource {
+                candidate: candidate.to_owned(),
+                drawn: 0,
+            }
+        }
+
+        /// How many candidates have been handed out.
+        pub fn draws(&self) -> usize {
+            self.drawn
+        }
+    }
+
+    impl IdSource for RepeatingSource {
+        fn candidate(&mut self) -> String {
+            self.drawn += 1;
+
+            self.candidate.clone()
+        }
+    }
 
     /// A source that hands back pre-chosen candidates.
     #[derive(Debug)]
@@ -154,7 +208,7 @@ pub(crate) mod scripted {
 
 #[cfg(test)]
 mod tests {
-    use super::scripted::ScriptedSource;
+    use super::scripted::{RepeatingSource, ScriptedSource};
     use super::*;
 
     #[test]
@@ -203,6 +257,35 @@ mod tests {
         let mut source = ScriptedSource::new(&["first"]);
 
         assert_eq!(occupied.generate(&mut source), Id::new("first"));
+    }
+
+    /// The bound, and the reason it exists: a source that never yields a free
+    /// candidate is a breached contract, not a hang. `RepeatingSource` offers one
+    /// occupied id forever, so the loop can only end through the assertion — and
+    /// it must end, after exactly the documented number of draws.
+    ///
+    /// Caught rather than asserted with `#[should_panic]` so the test can also pin
+    /// *how many* candidates were spent: a bound that terminated early would still
+    /// be a bound, but not the one the constant states.
+    #[test]
+    fn generation_terminates_after_the_candidate_bound_rather_than_spinning() {
+        let mut occupied = Occupied::new();
+        occupied.occupy(Id::new("stuck"));
+        let mut source = RepeatingSource::new("stuck");
+
+        let spun = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            occupied.generate(&mut source)
+        }));
+
+        assert!(
+            spun.is_err(),
+            "a source that never frees a candidate must not be drawn from forever"
+        );
+        assert_eq!(
+            source.draws(),
+            MAX_CANDIDATES,
+            "the bound is the draws spent"
+        );
     }
 
     #[test]

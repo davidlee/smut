@@ -31,10 +31,14 @@ from a hyphen-free alphabet. Hyphen-free is the smaller surprise; `_` is
 harmless. Whatever is chosen, it wants a test that generated ids avoid the
 leading-hyphen case, or a documented statement that they do not.
 
-Note that the id *is* the entity's basename in `.smut/` (the store refuses an
-unsafe basename rather than hashing it), so the length also decides how the
-directory listing reads. Shorter is in the direction of IMP-003 cluster 3
-(opaque filenames), though that item's hash-fallback premise is now stale.
+The public id does **not** reach a path: `docs/store-format.md` makes an entity's
+basename an internal uid, independent of the public id and stable until deletion,
+and `index.json` is the only place the two meet. The length is therefore a pure
+wording change on the human surface — no filename, no directory-listing and no
+path-length consequence. The internal uid is a second, independent draw
+(`fresh_basename` in `src/store/journal.rs`, also `nanoid::nanoid!()`), invisible
+except in diagnostics and in `ls`: out of scope here, and IMP-003 cluster 3's
+business rather than this item's.
 
 ## 2. Retry — the loop exists; its bound does not
 
@@ -56,14 +60,27 @@ failure than a refused declaration. A max-retries constant (16 draws is already
 absurd) turns the spin into a refusal, and gives the test something to assert:
 a source that always repeats one occupied candidate must *terminate*, not loop.
 
+A second, unbounded redraw loop exists for internal uids: `fresh_basename_from`
+in `src/store/journal.rs` redraws until a basename is free of the taken set and
+the directory. Whatever bound the public-id loop gets, the same question is asked
+of that one; the shareable thing is a constant and a failure shape, not a loop,
+because the two draw different types and one of them probes the filesystem.
+
 Decisions the design must settle, in order:
 
-- **Where the bound lives** — in `Occupied::generate` (the core's collision
-  contract, where the loop is) rather than in `Generated` (the shell, which
-  supplies candidates and knows nothing of the set). Core is the coherent side.
-- **What exhaustion is** — a new refusal rejection, or reuse of an existing
-  store/write error. Exit 1 (the store could not be written) reads truer than 2
-  (invalid input): nothing the caller supplied was invalid.
+- **Where the bound lives, and what it can report.** `Occupied::generate` is the
+  truthful site — the collision test is there, and `Generated` knows nothing of
+  the set — but it returns `Id`, so bounding it means returning
+  `Result<Id, Reject>`. DEC-001 rule 1 binds `Reject` to exit 2 *because the core
+  cannot express anything but user error*, and an exhausted source is not user
+  error: the bound collides with an accepted decision. Options: widen the core's
+  error to admit an internal-invariant class (reopening DEC-001 rule 1), assert
+  the invariant instead of reporting it (panic, exit 101), or leave the core
+  unbounded by contract and place the bound in the shell's source. This wants the
+  operator.
+- **What exhaustion is** — contingent on the above. My earlier guess (exit 1, the
+  store could not be written) is precisely what the layering currently cannot
+  say.
 - **Whether the constant is observable** — recommended no; it is an internal
   guard, and `smut learn` should not teach a number a caller can do nothing with.
   The guide's id paragraph gains at most a clause about the shape of a generated
@@ -87,3 +104,44 @@ declaration examples, which currently show a generated id inline.
 Immediately — independent of 0.2's closure, no dependency, no store-format
 change. Small enough to ride along with any phase that already touches
 declaration, and cheap enough to be its own.
+
+## Outcome — implemented 2026-11-01
+
+Landed outside slice governance, by operator direction ("don't slice it,
+implement it"). Both halves are in, plus the second loop.
+
+**Length and alphabet** — `src/cli.rs`: `ID_LENGTH = 8` and `ALPHABET`, nanoid's
+`SAFE` set with the hyphen removed (63 symbols, `_` kept). The literal is written
+out so a draw allocates nothing, and a test pins it against
+`nanoid::alphabet::SAFE` filtered of `-`, so the two cannot drift. Measured
+against the built binary: 200 generated ids, all 8 characters, all unique, none
+containing a hyphen. Explicit ids are untouched — `{"id":"-weird"}` still needs
+`--` and `{"id":"a"}` is still accepted.
+
+**The bound, and how it reports.** This is where the item's guess was wrong and
+the decision went the other way. `MAX_CANDIDATES = 16` (`src/id.rs`) now bounds
+`Occupied::generate`, and exhausting it **asserts** — it does not return an exit
+code. The reasoning, since it reverses what this item proposed: the brief fixes
+two failure classes and `error.rs` says "exactly these two classes, and no third"
+(exit 1 storage, exit 2 input). An exhausted id source is neither — it is our own
+broken contract, since `nanoid` draws fresh entropy every call and 63^8 ≈ 2.5 ×
+10^14 — so reporting it as either class would be a lie, and a `Reject` variant
+would have contradicted DEC-001 rule 1 as well. Asserting an unreachable
+invariant is the codebase's existing convention (`unreachable!` in `src/order.rs`),
+and IMP-005's "refuse rather than panic" is about malformed *user data*, which
+this is not. Test: `generation_terminates_after_the_candidate_bound_rather_than_spinning`
+catches the panic and pins both termination and the draw count.
+
+**The second loop, also bounded.** `fresh_basename_from` (`src/store/journal.rs`)
+redrew forever on a claimed basename. Here the failure *is* a store condition, so
+it reports through a new `StoreError::NoFreshBasename { attempts }` — exit 1, no
+governance tension. One constant governs both loops.
+
+**Not touched, deliberately.** `smut learn` gains nothing: it promises no length,
+and stating 8 would turn an opaque id's shape into a guarantee. The README needed
+nothing — it shows only explicit ids, so this item's earlier claim that it carried
+a generated one inline was wrong. `docs/store-format.md` is untouched: basenames
+are internal uids, unaffected by public-id length.
+
+Gate: `just check` clean (build, both clippy configurations at `-D warnings`,
+`cargo fmt --check`, both feature test runs — 350 tests).

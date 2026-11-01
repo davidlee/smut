@@ -225,6 +225,14 @@ pub enum StoreError {
         /// What the contradiction is.
         reason: String,
     },
+    /// Every basename draw was already claimed, so the store could not place a new
+    /// entity file. Reported rather than redrawn forever (`id::MAX_CANDIDATES`):
+    /// against real entropy this means the store's uid space is exhausted, and
+    /// against a broken source it means the source is repeating itself.
+    NoFreshBasename {
+        /// How many candidates were spent before giving up.
+        attempts: usize,
+    },
 }
 
 /// Everything a command can fail with: exactly these two classes, and no third.
@@ -401,6 +409,11 @@ impl fmt::Display for StoreError {
             StoreError::InvalidWriteSet { reason } => {
                 write!(formatter, "the write set cannot be stored: {reason}")
             }
+            StoreError::NoFreshBasename { attempts } => write!(
+                formatter,
+                "could not find a free entity file name in {attempts} draws: every candidate \
+                 was already claimed"
+            ),
         }
     }
 }

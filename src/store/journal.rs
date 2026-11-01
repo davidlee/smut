@@ -16,7 +16,7 @@ use serde_json::{Map, Value};
 use crate::declare::WriteSet;
 use crate::entity::{ENTITY_ID, Form, serialise};
 use crate::error::StoreError;
-use crate::id::Id;
+use crate::id::{Id, MAX_CANDIDATES};
 use crate::store::boundary::Boundary;
 use crate::store::fs as durable;
 use crate::store::index::Index;
@@ -264,12 +264,17 @@ fn fresh_basename(directory: &Path, taken: &BTreeSet<String>) -> Result<String, 
 
 /// [`fresh_basename`] over a candidate source, so the redraw path is testable
 /// without pretending entropy can be predicted.
+///
+/// Redraws on a candidate another mapping or a file in the store already claims, at
+/// most [`MAX_CANDIDATES`] times. Unlike id generation, running out is a condition of
+/// the store rather than a broken contract — so it is a [`StoreError`] the caller
+/// is told about (exit 1), not an assertion.
 fn fresh_basename_from(
     directory: &Path,
     taken: &BTreeSet<String>,
     mut candidate: impl FnMut() -> String,
 ) -> Result<String, StoreError> {
-    loop {
+    for _ in 0..MAX_CANDIDATES {
         let basename = candidate();
 
         if taken.contains(&basename) {
@@ -282,6 +287,10 @@ fn fresh_basename_from(
             Err(source) => return Err(failure("fresh_uid", directory, source)),
         }
     }
+
+    Err(StoreError::NoFreshBasename {
+        attempts: MAX_CANDIDATES,
+    })
 }
 
 /// Commit `write_set` as one batch: stage, decide, apply, clear (§4.3).
@@ -1021,6 +1030,24 @@ mod tests {
         .expect("a free name");
 
         assert_eq!(basename, "Free.json");
+    }
+
+    /// The uid redraw has the same shape of failure as id generation's, and the
+    /// same answer: a candidate that never frees is reported, not redrawn forever.
+    /// A filesystem collision is a real condition here, so the outcome is a store
+    /// failure the caller can be told about rather than an assertion.
+    #[test]
+    fn a_basename_that_never_frees_is_reported_rather_than_redrawn_forever() {
+        let scratch = Scratch::new();
+        let taken = BTreeSet::from(["Mapped.json".to_owned()]);
+
+        let error = fresh_basename_from(&scratch.directory(), &taken, || "Mapped.json".to_owned())
+            .expect_err("an occupied candidate every time is reported");
+
+        assert!(
+            matches!(error, StoreError::NoFreshBasename { .. }),
+            "{error}"
+        );
     }
 
     #[test]
