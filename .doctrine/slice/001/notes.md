@@ -301,6 +301,12 @@ One heavy phase per charter, pairs only for the two pure cores:
 - PHASE-01 · `--help` advertises only `--help`/`--version` · the 0.1 grammar
   lands with `src/cli.rs` in PHASE-07 (EX-7 says that phase completes the
   grammar), and help text listing unwired commands would lie · decided
+- seat · read-only intent at the seat briefly issued `doctrine slice phase SL-001
+  PHASE-01 --status in_progress` while PHASE-01 was already `in_progress`, which
+  appended a second, note-less `in_progress` progress row at 05:44:06 · the
+  transition was idempotent (`code_start_oid` unchanged at `6e2a1f1`), so only
+  the log gained a no-op line; the read-only verbs at this altitude are
+  `doctrine slice status SL-001` and `doctrine slice phases` · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
