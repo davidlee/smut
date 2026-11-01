@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · **audit** (RV-021 concluded) · HEAD `a9aee11` at audit entry
+fresh-as-of: 2026-11-02 · **close** (reconciled `b79c1aa`; RV-021 concluded at audit) · HEAD `b79c1aa`
 
 _Superseded stamp (implementation): implementing, slice ready for audit (PHASE-01 `45983c7`;
 PHASE-02 `1324dae` + `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`;
@@ -1751,15 +1751,15 @@ Two structural lessons, both paid for:
   line-number drift the operator deferred: §2's "mutually-referencing clusters",
   and §9.4's "version-bound" for a guide that now carries no build number.
 - **IMP-004** holds the deferred `epistemic-records` set and its five questions.
-- **RV-021 F-1 → reconcile.** DEC-012…DEC-019 are `proposed` while the release
-  ships under them; the brief records them accepted, on the operator's assent.
-- **RV-021 F-2 → reconcile.** The "mutually-referencing clusters" claim lives in
-  design §2, design §13.1 **and** `slice-002.md` objective 10; the handover named
-  one tier. Plan PHASE-04 EX-3 shares the clause and is off-surface.
 - **RV-021 F-5 → operator or IMP-002.** `docs/store-format.md` speaks in 0.1's
   voice; §14.2 fences it, so the fix is a scope change this audit may not grant.
 - **RV-021 F-3 → close.** Landing is a force-push (`--force-with-lease` against
   `dfc2887`), not a fast-forward. Operator ruled: wait, push the finished slice.
+- **The design run is not to be materialised.** Reconciling prose through it
+  invalidated `cpa-design-accepted` and four section attestations (rev 64) and
+  reverting did not restore them (rev 65). `design.md` is the artefact of record;
+  `doctrine design materialise` would revert the reconcile edits and
+  `design show` prints the frozen runtime state. Operator ruling recorded.
 
 ## Audit close (2026-11-02) — RV-021, the record corrections, and what audit did not redo
 
@@ -1931,3 +1931,48 @@ scoping, the conditional `traversal` member, truncation reasons, the 0.1 envelop
 shape, the conventions seed, and the guide/README claims all checked and sound.
 A read-only sandbox stopped it running `cargo test`; this seat's own gate run
 covers that gap.
+
+## Close (2026-11-02) — the spec-coherence gate, walked
+
+Pre-check: rollup `7/7` with no blocked, anomalous or untracked phase; `RV-021`
+`done · await=none` (seven findings terminal, pass concluded); `doctrine check
+gate` exit 0 at the closing tree; harvest current (this section rewritten in
+place, nothing silently dropped).
+
+Every reconciliation-brief item resolved, and by which path:
+
+| brief item | finding | path |
+| --- | --- | --- |
+| design §1/§2 line pins, Guide anchor, §9.4 wording | F-2 | applied to `design.md`; recorded in `## Reconciliation Outcome` |
+| design §2, design §13.1, scope obj 10 cluster claim | F-2 | applied to `design.md` and `slice-002.md`; recorded |
+| DEC-012…DEC-019 → accepted | F-1 | governance written through `doctrine knowledge status`, on the operator's assent; recorded |
+| `docs/store-format.md` 0.1 voice | F-5 | **tolerated** with rationale in the finding; escalated to the operator and to IMP-002 |
+| four conformance cells | F-6 | **aligned**, rationale in the finding |
+| the load-time refusal for a malformed nested id | F-7 | **delegated** to `IMP-005` with reproduction, fence and obligations |
+| record corrections (push state, byte-identity) | F-3 | applied to this file at audit |
+| three non-terminal design ledgers | F-4 | acts performed at audit (RV-012 F-4 verified; RV-005/RV-006 concluded) |
+
+No REV was needed: nothing in the brief changed a published doc (ADR / spec /
+requirement / policy / standard). The two governance-class writes went through
+the surfaces that own them — `design.md` by direct edit, the decision records by
+their status verb — which is the substance the REV path exists to guarantee, and
+both are recorded in the RV's `## Reconciliation Outcome`.
+
+One deliberate deviation, stated so close does not read as a clean sweep:
+reconciling the design prose through the managed run invalidated the run's own
+acceptance (rev 64: `act_invalidated cpa-design-accepted`, four
+`review_invalidated`), and the revert did not restore it (rev 65). The operator
+ruled: edit `design.md` directly and never materialise. So the run's runtime state
+carries pre-reconcile prose with invalid attestations, and `design.md` is the
+artefact of record. A future agent reading `doctrine design show 2` is reading
+frozen history, not the reconciled design.
+
+**Landing.** Local `main` forked from the public tip `dfc2887` (PHASE-06 boundary +
+RV-019) and is now far ahead; the push is the operator's force-push:
+`git push --force-with-lease=main:dfc2887a47d153726b5ddefd9a2018e5b34b08ae origin main`.
+Nothing is tagged and nothing is published: `0.2.0` still exists only in this
+tree, and crates.io still carries 0.1.1.
+
+**Origin.** `IMP-001` (fulfilled by SL-002) resolves with this closure; the
+deferred `epistemic-records` set stays with `IMP-004`, and the loader hardening
+with `IMP-005`.
