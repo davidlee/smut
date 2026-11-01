@@ -603,11 +603,39 @@ One heavy phase per charter, pairs only for the two pure cores:
   `objects` is open for `/audit`), `render` as exact text, and a `smut: ` line as
   exit-non-zero plus that stderr · the charter invited the file and asked for
   this line; it is the only `.doctrine` write this worker made · decided
+- charter-8 · PHASE-08 carried exactly one worker on the plan's three paths plus
+  the invited `tests/readme_example.rs`, and no re-brief · the worker's gate
+  (349 default / 406 fault-injection, +2) and the doc claims were re-checked by
+  the orchestrator: the worked example re-run end to end against
+  `target/release/smut` in a fresh `/tmp` store, byte-identical to the README's
+  `console` block; the §4.6 guarantee `diff`ed against `design.md`, `README.md`
+  and `docs/store-format.md` (three-way identical); the brand copy's first 383
+  bytes `cmp`ed against `bb5de77:README.md` · decided
+- PHASE-08 · the ID-first envelope question is left exactly as PHASE-07 left it,
+  and the phase is checked for not foreclosing it: `tests/readme_example.rs`
+  compares a JSON transcript line as a parsed `Value` and only `render` as
+  text, and neither `README.md` nor `docs/store-format.md` states a stdout key
+  order (the format doc's canonical-bytes section scopes ordering to *files*) ·
+  the review must still rule; the documentation regenerates by being re-run ·
+  decided
+- PHASE-08 · the README's worked example is the brief's end-to-end example
+  truncated where 0.1 stops, and it ends by *showing* the `follow` refusal as
+  the boundary · the brief's nine steps use `follow` twice and `where` once,
+  which 0.1 refuses by name, so running it verbatim is impossible; the brief is
+  untouched, `tests/compatibility.rs` already pins the 0.1-runnable prefix and
+  both refusals, and no example claims behaviour this build lacks · decided
+- PHASE-08 · closed `completed` with `VH-1` recorded outstanding · VH-1 is a
+  human read of evidence that now exists (the README's sections, the copied
+  worked-example command sequence, the design's own guarantee, and one code
+  location per sharp edge), and the seat carries it to the human as it did
+  PHASE-05's; the phase is complete-with-a-review-pending, not
+  complete-with-a-hole · decided
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 7 close (PHASE-01…PHASE-07 and PHASE-09
-complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
+fresh-as-of: 2026-11-01 · charter 8 close (PHASE-01…PHASE-09 all complete; the
+slice's phases are done and it moves to `/audit`; VH-1 outstanding on a human for
+PHASE-05 and PHASE-08) · PHASE-08 tip `54440dc`
 
 ### Produced
 
@@ -619,8 +647,8 @@ complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
   `7d841fd…0e2a519`); PHASE-06 the Markdown renderer and its notice evidence
   (6 commits, `5d3af21…f5d0773`); PHASE-07 the clap grammar, ingress, pipeline
   wiring, envelopes, delete contract and learn guide (10 commits,
-  `212e574…585096d`). `docs/` and `README.md` remain undelivered by design —
-  PHASE-08.
+  `212e574…585096d`); PHASE-08 the documentation set (6 commits,
+  `75c8471…54440dc`). Every path §12 names is now delivered.
 - `just check` green at every close; after PHASE-07: 276 lib + 6 bin + 26
   `tests/cli_contract.rs` + 5 `tests/render.rs` + 5 `tests/selection.rs` + 12
   `tests/store_corruption.rs` + 0 (default-gated) durability = **330** on default
@@ -672,6 +700,22 @@ complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
   zero flakes, ~40 ms per run. `slice verify-vt` green for PHASE-01…PHASE-07 and
   PHASE-09; PHASE-08's VT-1 red only because `docs/` does not exist yet.
 
+- PHASE-08 delivered the prose (6 commits, `75c8471…54440dc`): `README.md`
+  edited around the owner's 383-byte brand block and `smut.jpg` reference (byte
+  `cmp`-identical) with `## What it is`, `## Build`, `## Worked example`,
+  `## Commands`, `## Sharp edges`, `## What smut promises`, `## Portability`,
+  `## Learn`; `docs/store-format.md` (303 lines) carrying `format_version` 1, the
+  layout, the index, entity files, the manifest, canonical bytes, the state-as-name
+  protocol with the staged barrier as three numbered obligations, puts→index→
+  removals, roll-forward-only apply failure, recovery's three steps and complete
+  `commit` validation, reserved names, corruption responses with the build's real
+  messages, what is never adopted, portability, and §4.6 quoted verbatim; and
+  `src/learn.rs`'s guide completed for the 0.1 surface. Every claim in both
+  documents was produced by running the binary in a scratch store, and the
+  README's transcript is now pinned by `tests/readme_example.rs`.
+- `just check` green at close: **349** default and **406** with
+  `--features fault-injection` (the two suites of `tests/readme_example.rs` are
+  the only addition). `slice verify-vt`: 9/9 phases, every row PASS.
 - Design locked: run rev 53, 12 sections attested, RV-002 and RV-003 terminal
   (commits 1b1f574, c32f316, f28860e).
 - Plan authored, then revised after an independent review: 9 phases,
@@ -744,6 +788,17 @@ complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
   and injecting `std::io::IsTerminal` from `main`; the `Refuse` branch is then a
   `Reject` with a unit test per branch, and the pipe branch is proven end to end
   by a spawned binary whose stdin is a pipe.
+- (unminted) A documentation phase is testable as a phase: parse the README's
+  `` ```console `` block out of the file itself, run each `$ `-prefixed command in
+  a scratch store, compare a JSON line as a parsed `Value` and a `smut: ` line as
+  (exit≠0, empty stdout, exact stderr). The prose then cannot drift from the
+  binary without a test failing, and comparing parsed values keeps an open
+  key-ordering question un-pre-empted.
+- (unminted) Two guide claims that read plausibly were false until run: 0.1 does
+  not report a deleted reference target as `missing` (the container keeps
+  `{"id":"x"}` and both `missing` and `dangling` stay `[]`, because nothing
+  traverses), and `smut render '{"from":"smut"}'` prints a bare heading when the
+  entity has no body. Running the examples is what found them.
 - (unminted) "The shell adds no trailing newline" is one rule instead of three:
   the byte boundary (`Form::Stdout`, `render`) owns the single `\n`, and `main`
   writes with `print!`. Pinning it with a count assertion
@@ -751,6 +806,20 @@ complete, PHASE-08 not begun, VH-1 outstanding on a human) · `9e41e47`
 
 ### Open
 
+- PHASE-08 leaves nothing open against its own bar: `EX-1…EX-4` hold,
+  `VT-1`/`VT-2` green, `VH-1` carried to the human. Its two forward notes are the
+  first two below.
+- **VH-1 outstanding** (PHASE-08, by seat decision): a human reads `README.md` as
+  a newcomer — that the worked example runs, the sharp edges match what they hit,
+  and the quoted guarantee is the design's own wording. The packet (section list,
+  copy-pasteable command sequence, the guarantee in full, one code location per
+  sharp edge) is in the charter-8 hand-back.
+- (unminted) `src/spec.rs` reports a *known* 0.2 key with a wrong type
+  (`{"where":1}`) as a named-future refusal rather than a type error; harmless in
+  0.1 and worth a look when 0.2 lands.
+- (unminted) Nothing in 0.1 populates `dangling`, so `docs/store-format.md` and
+  the guide say so in prose; a 0.2 reader will want the envelope documentation to
+  say when it starts being populated.
 - PHASE-09 leaves nothing open against its own bar: `EX-1…EX-3` hold,
   `VT-1…VT-3` green, no `src/` change. Two forward notes below.
 - For `/audit`, from PHASE-09: `Store::load()` treats a **directory**-shaped live
