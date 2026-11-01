@@ -16,47 +16,79 @@ ref   = "SL-002"
 
 [[finding]]
 id = "F-1"
-status = "open"
+status = "answered"
 severity = "minor"
 title = 'README calls five keys "the whole 0.2 query surface", contradicting the nine-key list on the same page'
 detail = """`README.md:32-34` against `README.md:103-104`. Expected: the surface named "whole" is the nine keys of §5, or the five are named as what 0.2 *adds* — PHASE-03 EX-8 asks for the nine-key surface. Observed, verbatim: "This tree is **0.1.1 plus the 0.2 work** ... `where`, `follow`, `backlinks`, `depth` and `budget` are the whole 0.2 query surface", while the Commands section 70 lines later says "The specification keys are `from`, `where`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth` and `budget`". The following clause ("The 0.1.1 on crates.io has none of them") repairs it on a charitable reading, so no capability is over-claimed — the count is. It is the release's front door, the sentence R1 raised as F-3 lived in, and DEC-019's rule is that prose falsified in a phase is re-cut in that phase. Route: one-word repair ("are what 0.2 adds to the query surface") in the trailing prose batch; no phase re-open. Raised route: fix-now; the responder batches it to the PHASE-04 boundary because the file is not being written by this charter."""
+disposition = "fix-now"
+response = 'Conceded; fixed in the batch commit above. The sentence now reads "`where`, `follow`, `backlinks`, `depth` and `budget` are what 0.2 adds to the query surface — `where` filters the roots, the traversal keys walk the graph, and the envelope reports what the walk found", so it agrees with the nine-key list in Commands. Worth recording for the audit: this paragraph has now been edited three times in opposite directions (0.1.1-with-traversal → 0.1.1-plus-0.2-work-but-five-keys-are-everything → what 0.2 adds), each time by a different seat. PHASE-07 EX-1 rewrites the README example and is the right place to write this paragraph once, with the nine-key list and the version bump in front of it.'
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Conceded; fixed in the batch commit above. The sentence now reads "`where`, `follow`, `backlinks`, `depth` and `budget` are what 0.2 adds to the query surface — `where` filters the roots, the traversal keys walk the graph, and the envelope reports what the walk found", so it agrees with the nine-key list in Commands. Worth recording for the audit: this paragraph has now been edited three times in opposite directions (0.1.1-with-traversal → 0.1.1-plus-0.2-work-but-five-keys-are-everything → what 0.2 adds), each time by a different seat. PHASE-07 EX-1 rewrites the README example and is the right place to write this paragraph once, with the nine-key list and the version bump in front of it.'
 
 [[finding]]
 id = "F-2"
-status = "open"
+status = "answered"
 severity = "nit"
 title = 'A test comment cites a "refusal" the test it names does not contain'
 detail = """`tests/predicates.rs:103-104`: "Without this case the operator would be pinned only by the refusals in `missing_and_present_null_differ_exactly_where_the_table_says`" — but that test (`:65-97`) contains one `$contains` row and it is a non-match, not a refusal; its own comment says "it does not refuse either" (`:87-88`), and `$contains` has no refusal path at all (any operand parses; only the field's shape decides). Second instance in the same file: the module doc (`:9-13`) says a test asserting the AST shape "would pin an implementation detail the design leaves open", but design §6.1 locks the AST verbatim and `src/predicate.rs` derives `PartialEq`/`Eq` on it precisely so `src/spec.rs:546-560` can assert it. Comments that misdescribe coverage send the next reader hunting for a test that is not there — the class R1 raised as F-4. Route: reword both; no behaviour involved."""
+disposition = "fix-now"
+response = "Conceded; both comments reworded in the batch commit. The `$contains` comment now states what the reviewer established — the operator has no refusal path, any operand parses and the field's shape decides — with the negative half correctly attributed to the table test's non-match row. The module doc now says §6.1 fixes the AST and a binary-level test should not read it, rather than claiming the design leaves it open."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Conceded; both comments reworded in the batch commit. The `$contains` comment now states what the reviewer established — the operator has no refusal path, any operand parses and the field's shape decides — with the negative half correctly attributed to the table test's non-match row. The module doc now says §6.1 fixes the AST and a binary-level test should not read it, rather than claiming the design leaves it open."
 
 [[finding]]
 id = "F-3"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "A test name claims exclusivity its body does not assert"
 detail = """`src/spec.rs:516`: `the_acceptance_set_is_exactly_the_nine_keys` proves only that each of the nine is accepted; the "exactly" is carried by `an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release` (`:432-449`) and the CLI's `an_unknown_key_stays_unknown_and_names_no_release`. The name has already been wrong twice (four → seven → nine, per its own comment), and the criterion it serves — EX-8's "every key 0.2 does not know is refused plainly" — is satisfiable from the file while the named test cannot fail on a tenth accepted key. Route: either assert the tenth-key refusal at the loop's tail, or rename to `the_nine_keys_are_each_accepted`."""
+disposition = "fix-now"
+response = "Conceded; renamed to `the_nine_keys_are_each_accepted`, with the comment naming both unknown-key tests that carry the exclusivity half. Chose the rename over adding a tenth-key assertion inside the loop because that assertion already exists twice (module and CLI) and duplicating it here would be the parallel-implementation smell this run keeps catching. The name now claims what the body can fail on; the criterion (EX-8) keeps its two owners."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Conceded; renamed to `the_nine_keys_are_each_accepted`, with the comment naming both unknown-key tests that carry the exclusivity half. Chose the rename over adding a tenth-key assertion inside the loop because that assertion already exists twice (module and CLI) and duplicating it here would be the parallel-implementation smell this run keeps catching. The name now claims what the body can fail on; the criterion (EX-8) keeps its two owners."
 
 [[finding]]
 id = "F-4"
-status = "open"
+status = "answered"
 severity = "nit"
 title = "The binary-driving test harness is now copied into a sixth file"
 detail = "`tests/predicates.rs:445-556` (`Scratch`, `Ran`, `run`, `smut`). `struct Scratch` appears in nine test files and the full harness set in five (`cli_contract.rs:20-125`, `compatibility.rs:31-130`, `predicates.rs:445-556`, `readme_example.rs`, `traversal.rs:180-282`); PHASE-03 added the sixth copy deliberately and recorded the decision in the C3 autonomy log. A change to the scratch-store protocol or to the one-compact-JSON-line contract must now be made in five places, and the copied `assert_one_json_line` is the shared definition of a machine-readable reply. Test-only, per-crate, and consistent with the repo's existing pattern — hence nit. Route: no edit now; consolidating to `tests/common/mod.rs` is a phase that already touches the affected files, and PHASE-07 owns the fence."
+disposition = "tolerated"
+response = "Tolerated, with the reason the reviewer itself supplied and one addition. PHASE-03 added the sixth copy deliberately and logged it; the repo has no `tests/common` by design and each suite is its own binary, so a shared module would be a new test-only crate surface. Consolidating would touch five files that no current phase owns, and PHASE-07 EX-5 proves its fence by diff over the files it names. The cost is real and named: `assert_one_json_line` is now defined in five places, so a change to the one-compact-JSON-line contract is a five-site edit. If it is ever consolidated, it is one commit at a phase that already touches all five."
 
 [[finding.turn]]
 act = "raise"
 role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = "Tolerated, with the reason the reviewer itself supplied and one addition. PHASE-03 added the sixth copy deliberately and logged it; the repo has no `tests/common` by design and each suite is its own binary, so a shared module would be a new test-only crate surface. Consolidating would touch five files that no current phase owns, and PHASE-07 EX-5 proves its fence by diff over the files it names. The cost is real and named: `assert_one_json_line` is now defined in five places, so a change to the one-compact-JSON-line contract is a five-site edit. If it is ever consolidated, it is one commit at a phase that already touches all five."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
