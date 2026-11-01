@@ -509,7 +509,8 @@ impl State {
     }
 }
 
-/// Every journal state directory that is present, in the registry's order.
+/// Every journal state directory that is present, ordered by name so the
+/// ambiguity refusal names them the same way every time.
 fn present_states(directory: &Path) -> Result<Vec<State>, StoreError> {
     let mut found = Vec::new();
 
@@ -587,20 +588,41 @@ fn replay_commit(directory: &Path) -> Result<(), StoreError> {
     clear(directory, DONE_STATE, Boundary::RecoveryCleanupRemoved)
 }
 
-/// The staged directory holds exactly what the manifest lists (§4.4).
+/// The staged directory holds exactly what the manifest lists, and every listed
+/// put is a file this build may publish (§4.4).
+///
+/// This is complete before the first replay byte is written: a staged set that
+/// disagrees with its manifest is corruption, and replaying the part that is
+/// readable would publish half a batch to repair it.
 fn validate_staged(state: &Path, manifest: &Manifest) -> Result<(), StoreError> {
     let listed: BTreeSet<&str> = manifest.puts().iter().map(String::as_str).collect();
-    let staged = names(state)?;
 
     for basename in manifest.puts() {
-        if !staged.iter().any(|name| name == basename) {
-            return Err(corrupt(format!(
-                "it puts {basename}, which the staging directory does not hold"
-            )));
+        let path = state.join(basename);
+        let metadata = std::fs::symlink_metadata(&path).map_err(|source| {
+            if source.kind() == io::ErrorKind::NotFound {
+                corrupt(format!(
+                    "it puts {basename}, which the staging directory does not hold"
+                ))
+            } else {
+                failure("read_staged", &path, source)
+            }
+        })?;
+
+        if metadata.file_type().is_symlink() {
+            return Err(StoreError::SymlinkedEntry {
+                entry: basename.clone(),
+            });
+        }
+        if !metadata.is_file() {
+            return Err(StoreError::Corrupt {
+                entry: basename.clone(),
+                reason: "a staged entry is a file".to_owned(),
+            });
         }
     }
 
-    for name in staged {
+    for name in names(state)? {
         if name != MANIFEST_BASENAME && !listed.contains(name.as_str()) {
             return Err(StoreError::Corrupt {
                 entry: name,
@@ -1488,23 +1510,26 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn recovery_refuses_a_symlinked_staged_file_rather_than_following_it() {
+    fn recovery_refuses_a_symlinked_staged_file_before_replaying_anything() {
         let scratch = Scratch::seeded();
         let outside = scratch.path.join("outside.json");
         fs::write(
             &outside,
-            entity_bytes(json!({"id": "alpha", "body": "outside"})),
+            entity_bytes(json!({"id": "gamma", "body": "outside"})),
         )
         .expect("an entity outside the store");
         write_state(
             &scratch,
             COMMIT_STATE,
-            &manifest_json(&["Ab3.json"], &[]),
-            &[],
+            &manifest_json(&["Ab3.json", STAGED_UID], &[]),
+            &[(
+                "Ab3.json",
+                &entity_bytes(json!({"id": "alpha", "body": "changed"})),
+            )],
         );
         std::os::unix::fs::symlink(
             &outside,
-            scratch.directory().join(COMMIT_STATE).join("Ab3.json"),
+            scratch.directory().join(COMMIT_STATE).join(STAGED_UID),
         )
         .expect("a symlinked staged file");
 
@@ -1516,7 +1541,8 @@ mod tests {
         );
         assert_eq!(
             scratch.loaded().entities()[&Id::new("alpha")]["body"],
-            json!("first")
+            json!("first"),
+            "validation is complete before the first replayed put"
         );
     }
 }
