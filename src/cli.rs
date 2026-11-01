@@ -606,6 +606,19 @@ mod tests {
     }
 
     #[test]
+    fn a_second_json_operand_is_a_usage_rejection() {
+        for command in ["declare", "query", "render"] {
+            assert!(
+                matches!(
+                    rejection(parse_of(&[command, "{}", "{}"])),
+                    Reject::InvalidUsage { .. }
+                ),
+                "{command} takes exactly one operand"
+            );
+        }
+    }
+
+    #[test]
     fn a_double_dash_reaches_an_opaque_id() {
         let Request::Get(command) =
             request(parse_of(&["get", "--", "-weird-id"]).expect("an opaque id"))
