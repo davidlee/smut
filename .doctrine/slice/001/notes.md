@@ -633,11 +633,11 @@ One heavy phase per charter, pairs only for the two pure cores:
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · **audit complete** (RV-004: 17 findings — 3
-`fix-now` landed, 5 `design-wrong` to reconcile, 6 `tolerated`, 2 `aligned`, 2
-human reads outstanding; 28/28 verification rows PASS) · **4 post-audit
-packaging commits** (`2e6cfe7` GPL-3.0-only + crates.io metadata, `094005f`
-README image, `105db99` notes) · head `105db99`
+fresh-as-of: 2026-11-01 · **slice closed** — `done`, RV-004 concluded 17/17
+terminal, reconcile outcome recorded, conformance 33 conformant / 0 undelivered /
+1 tolerated undeclared · **published**: 0.1.0, then 0.1.1 after `ISS-001` ·
+**0.2 input captured**: IMP-001 trigger met, IMP-003, the operator's interview
+store · head `1649741`
 
 ### Produced
 
