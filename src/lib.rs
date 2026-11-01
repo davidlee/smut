@@ -11,6 +11,7 @@ pub mod error;
 pub mod id;
 pub mod numeric;
 pub mod order;
+pub mod render_markdown;
 pub mod select;
 pub mod spec;
 pub mod store;
