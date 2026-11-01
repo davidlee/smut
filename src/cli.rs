@@ -764,10 +764,16 @@ mod tests {
     }
 
     #[test]
-    fn a_format_refusal_reaches_no_store_even_when_the_specification_is_bad() {
-        let reject = rejection(parse_of(&["render", "{}", "--format", "mermaid"]));
-
-        assert!(!matches!(reject, Reject::UnknownCommand(_)), "{reject}");
+    fn a_format_refusal_happens_before_the_operand_is_read() {
+        // On a terminal with no operand the operand step would be a usage
+        // refusal, and `{` alone would be a parse failure: the flag is checked
+        // first, so a refusal never waits on stdin.
+        assert_eq!(
+            rejection(parse_with(&["render", "--format", "mermaid"], "{", true)),
+            Reject::FutureFormat {
+                format: "mermaid".to_owned()
+            }
+        );
     }
 
     #[test]
