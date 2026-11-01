@@ -1,0 +1,5 @@
+The brief fixes two failure classes: exit 2 for invalid input/usage (Reject), exit 1 for storage/runtime failure (StoreError), and `Error` says "exactly these two classes, and no third". DEC-001 rule 1 sharpens it: Reject from the core is always 2 *because the core cannot express anything but user error*.
+
+Consequence for a condition that is neither — an internal invariant that must hold but might not (e.g. an id source that never yields a free candidate): do not widen Reject or StoreError to cover it. Assert it (panic/unreachable!), matching src/order.rs's `unreachable!("sort values are validated before any comparison")`. Reported exit codes must stay truthful about who can act on them.
+
+Checked when IMP-006 bounded the id-source redraw: the tempting choice was a Reject variant or exit 1, and neither class fits.

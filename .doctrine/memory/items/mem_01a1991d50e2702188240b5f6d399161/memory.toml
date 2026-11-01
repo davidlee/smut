@@ -1,0 +1,42 @@
+memory_uid = "mem_01a1991d50e2702188240b5f6d399161"
+memory_key = "mem.fact.smut.failure-classes"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "smut's failure taxonomy is exactly two classes, so internal invariants assert instead of reporting"
+summary = "Reject is exit 2 and StoreError is exit 1, and error.rs forbids a third class; a genuinely internal invariant asserts (or uses unreachable!) rather than inventing an error variant."
+created = "2026-11-01"
+updated = "2026-11-01"
+
+[scope]
+paths = ["src/error.rs", "src/id.rs", "src/order.rs"]
+globs = []
+commands = []
+tags = ["failure-classes", "error-handling"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "commit"
+commit = "184b763de39581aa12ecdb1a5c933dba5f0a20fe"
+tree = "53e52d6d8ef120f71b91af74498d73cd4c3decbb"
+ref_name = "refs/heads/main"
+checkout_state_id = ""
+base_commit = "184b763de39581aa12ecdb1a5c933dba5f0a20fe"
+verified_sha = ""
+normalizer = ""
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "medium"
+
+[ranking]
+severity = "none"
+weight = 0
+
