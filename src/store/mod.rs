@@ -268,3 +268,4 @@ mod tests {
 
 #[cfg(feature = "fault-injection")]
 pub mod fault;
+pub mod fs;
