@@ -306,7 +306,10 @@ impl Store {
     /// Create `.smut/` and make its entry durable, tolerating a lost race.
     ///
     /// A process using a possibly new `.smut/` syncs the parent entry itself
-    /// rather than trusting the process that won `mkdir` (DEC-004).
+    /// rather than trusting the process that won `mkdir` (DEC-004). The fsync
+    /// goes through [`durable::sync_directory`], the crate's only fsync site;
+    /// it is labelled [`Boundary::ParentDirectorySynced`], which is the
+    /// registry's name for a directory fsync that makes an entry durable.
     fn initialise(&self) -> Result<(), StoreError> {
         let directory = self.directory();
 
