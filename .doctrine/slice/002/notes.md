@@ -6,10 +6,10 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · implementing (PHASE-01 `45983c7`; PHASE-02 `1324dae` +
-`4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`; PHASE-04 `fddbe33`;
-PHASE-05 `cb46e37`; PHASE-06 `46c6699` + `a6ddb25`; PHASE-07 planned) · design
-locked at run rev 62; plan repaired round 1
+fresh-as-of: 2026-11-02 · implementing, slice ready for audit (PHASE-01 `45983c7`;
+PHASE-02 `1324dae` + `4a192e7`; R1 repaired `b499a60`; PHASE-03 `21688c8`;
+PHASE-04 `fddbe33`; PHASE-05 `cb46e37`; PHASE-06 `46c6699` + `a6ddb25`;
+PHASE-07 `2b9250b`) · design locked at run rev 62; plan repaired round 1
 
 ### Produced
 
@@ -133,6 +133,36 @@ locked at run rev 62; plan repaired round 1
   stale doc cross-reference was corrected, in `a6ddb25`, and `rustfmt` reflowed
   the inherited `KEYS` list. Gates green in both feature configurations;
   `verify-vt` PHASE-06 VT-1/VT-2 PASS with PHASE-01…05 still PASS.
+
+- **PHASE-07** (`2b9250b`, C7 — the slice's last) — the release surface and the
+  closure sweep. README: the release paragraph written once against §5 (nine
+  keys named, the four 0.1 had, the five 0.2 adds, `0.2.0`, envelope additive
+  5→6 keys), the `--version` line, the worked example extended to the brief's
+  own example through Markdown (nested declare, `get`, `follow`+`select` query,
+  the same selection rendered, amend, `where` filter, the Mermaid step refused
+  by name as 1.0's, `DROP`, delete, and the walk that reports the delete's
+  dangling reference), the `conventions` section, a traversal section stating
+  what `budget` does not bound (per-hop incoming scan, whole-store root scan)
+  and what provenance is (`depths` result-scoped, `edges` induced among returned
+  entities, `frontier` walk-scoped, `dangling`, both reasons, depth ≠
+  truncation), and `--format` de-versioned. Tests: §13.3 scenarios 3
+  (`a_wildcard_walk_over_the_five_clusters_moves_the_frontier_out_by_one`), 4
+  (`a_budget_of_one_expands_the_first_root_and_leaves_the_second_in_the_frontier`)
+  and 6
+  (`an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions`, with
+  the naive helper kept as the wrong answer and the budget half reporting both
+  reasons), plus the two §10.3 rows a read-only sweep found partial (row 5's
+  `follow: []` + `backlinks` + depth clause, row 16's "edge recorded once" for a
+  cycle and a self-edge); `tests/readme_example.rs` gained the pin that the
+  console block carries the whole example. EX-5: `Cargo.toml`/`Cargo.lock` at
+  `0.2.0`, no dependency change; the two diagnostics that claimed "0.1" are
+  de-versioned because the bump falsifies them, with three wording pins re-cut
+  (DEC-019). Gates green in both feature configurations; the fault-injection gate
+  asserts its own non-vacuity (`durability_crash` executed 44, lib 346 under the
+  feature vs 333 without) and was negative-controlled. `verify-vt`: PHASE-07
+  VT-1/VT-2/VT-3 PASS, 25 PASS across PHASE-01…07. Conformance 26 conformant, 0
+  undelivered, 4 undeclared (the review lane's RV-017/018 artefacts). §14.2 fence
+  proven empty by `git diff` against the entering tree.
 
 ### Learned
 
@@ -961,6 +991,15 @@ decided / deferred / escalated. Empty until a phase opens.
 | 2026-11-02 | PHASE-06 | The banner lost `0.1`, and "`--format markdown` is the only format in 0.1" became "Markdown is the only render format. A Mermaid diagram arrives in 1.0." | decided (#10, EX-4) | The crate version is PHASE-07's to move, so a figure in the guide is false in one direction or the other; the Mermaid-as-1.0 claim is design (§14.1) and stays |
 | 2026-11-02 | PHASE-06 | Two assertions added beyond the inherited set: `a_complete_looking_second_envelope_is_no_evidence_about_the_first` and `the_guide_teaches_exactly_the_nine_keys` | decided (#3, #9, VA-1) | Additive strictness. The first proves the guard is not vacuous on a real capped call (the fixture's own graph at `limit: 3`); the second is the plan's "teaches exactly nine and no other" row, read off the guide's own key block rather than from a second list |
 | 2026-11-02 | PHASE-06 | One inherited doc cross-reference corrected in a separate `docs(sl-002)` commit (`a6ddb25`) instead of folded into the phase commit | decided (#4) | RV-019's review commit landed on top while this seat worked, so HEAD had moved and an `--amend` landed on the reviewer's commit; that was undone from the reflog before anything left the machine and the reviewer's commit is byte-identical to its original (`991a831`). The correction therefore rides its own commit and the phase boundary stays `46c6699`. Recorded as the run's one operational miss |
+| 2026-11-02 | PHASE-07 | README's console block is the brief's end-to-end example in the brief's order, plus the `get` of both entities PHASE-01 recorded; the Mermaid step is kept and shown refused | decided (#10, EX-1) | EX-1 names the brief's example through Markdown. Keeping the brief's own Mermaid step inside the transcript carries the 1.0 promise in the block itself, and the runner already treats a `smut: ` line as a demanded diagnostic, so the refusal is executed rather than described |
+| 2026-11-02 | PHASE-07 | The release paragraph is written once: nine keys named as the surface, the four 0.1 had, the five 0.2 adds, `0.2.0`, envelope 5→6 keys | decided (#10, EX-1) | RV-018 recorded that this sentence had been edited three times in opposite directions (0.1.1-with-traversal → 0.1.1-plus-0.2-work-with-five-keys-as-everything → what 0.2 adds). §5's table and the EX-5 bump are both in front of it now, so the count and the version are stated once and agree with `## Commands` |
+| 2026-11-02 | PHASE-07 | `--format {format} is not supported in 0.1; planned for 1.0` → `… in this release …`, and `unknown --format {format}, and 0.1 writes markdown` → `… this release writes markdown` | decided (#6, #7, #10, EX-5) | Moving the crate to `0.2.0` makes both sentences false in the commit that moves it, and one of them is printed by the README's own transcript. The refusal, its exit code, the named format and the 1.0 promise are unchanged, so nothing semantic moves; three tests pinning the old wording were re-cut with their reason in place (DEC-019), never deleted. Not escalated: no behaviour, scope, dependency or bound changes |
+| 2026-11-02 | PHASE-07 | §13.3 scenario 3's five-cluster walk is wildcarded in both directions (`follow: "*"` + `backlinks: "*"`) | decided (#6, #10, VT-3) | In the fixture's shape a cluster carries one outgoing `part-of` to the session and is named by ten incoming ones; `session` stores no references, so a pure `follow` has no depth-2 ring and "moves the frontier out by one" would be unproducible. The criterion's words are "a depth-2 walk moves the frontier out by one and grows the edge set", which only the bidirectional reading satisfies; recorded so the audit can weigh the reading rather than discover it |
+| 2026-11-02 | PHASE-07 | Scenario 6's over-cap graph is a 122-entity scratch store, its 120 intervening entities `resolved`, and the budget half adds `depth: 2` | decided (#6, #10, VT-1) | The committed fixture is 66 entities and cannot exceed the 100 cap, so the state has to be built; `resolved` is what lets the guide's own `EXAMPLE_FILTER` (id ∪ status) come back empty for the received ids, which is what makes the naive composition answer "no open questions". At the default depth the 121 discoveries sit on the boundary, so declining one would be a depth selection rather than truncation — `depth: 2` is what makes the budget cut a real decline, and both reasons then co-occur in the documented order |
+| 2026-11-02 | PHASE-07 | `tests/cli_contract.rs`'s `smut 0.1.1` literal → `smut 0.2.0`, kept as a literal rather than `env!("CARGO_PKG_VERSION")` | decided (#6, #7, EX-5) | EX-5 moves the release number; the test is the one place it is asserted as a literal, so a bump that missed a file (`src/main.rs`, `src/cli.rs`, the README's `--version` line) is still caught. A `env!` form would have made the assertion unfalsifiable |
+| 2026-11-02 | PHASE-07 | The §10.3 sweep was delegated to a read-only `reviewer` child; a `worker` child chartered for scenario 6 was interrupted before it wrote anything and the seat wrote the test | decided (#11) | The reviewer produced the 32-row table and a BLOCK verdict naming five gaps (two partial rows, three scenarios), which is what closed the phase's real risk. The worker idled past 50 s with no write and no activity; interrupting it lost nothing (`git status` was clean for `tests/fixture.rs`) and the seat wrote the test against the contract it had already pinned. Recorded as this phase's worker miss, with zero lines lost |
+| 2026-11-02 | PHASE-07 | The 4 conformance `undeclared` cells (`.doctrine/review/017`, `.doctrine/review/018`) are tolerated and explained, not declared or absorbed | decided (VA-2, envelope #8) | They are the review lane's own `RV` entities, which §14's selector list has no selector for by design; declaring one would make the review lane a design target, and disposing of them is the raiser's seat. Recorded in the phase sheet with the 0 `undelivered` cells and the post-`record-delta` re-run |
+| 2026-11-02 | PHASE-07 | `doctrine slice record-delta 2 PHASE-07 --commit 2b9250b` run explicitly, because the phase was flipped `completed` without ever entering `in_progress` under the binding | decided (operational) | The verb warned that `code_start_oid` was never stamped, so the boundary registry would have had no row and conformance would have called every selector undelivered. Recording `--commit` (the safe default: exactly `2b9250b`'s own patch) restores the row; the miss is the missing `in_progress` flip, not the delta. Recorded rather than hidden |
 
 ### G0 closed (2026-11-02)
 
