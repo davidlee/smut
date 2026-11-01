@@ -17,6 +17,10 @@ use smut::spec;
 
 const TRUNCATED: &str = "> truncated: result_limit; additional entities omitted";
 
+/// The dangling line's one spelling: a `> dangling: ` prefix, then three
+/// single-backtick spans with no spaces around the `.` or around the `->`.
+const DANGLING: &str = "> dangling: `root`.`link` -> `gone`";
+
 fn store(entities: &[Value]) -> Entities {
     entities
         .iter()
@@ -176,5 +180,114 @@ fn truncation_and_missing_share_one_leading_block() {
     assert_eq!(
         document,
         format!("{TRUNCATED}\n> missing: `gone`\n\n## Alpha\n")
+    );
+}
+
+// ── VT-8: the notice's trigger and its dangling lines (§8.3, EX-14) ─────────
+
+#[test]
+fn a_dangling_only_result_still_carries_the_notice() {
+    // The trigger is truncated **or** a non-empty `missing` **or** a non-empty
+    // dangling list: a walk that reported a dangling reference is an incomplete
+    // answer even though nothing was omitted from the result.
+    let store = store(&[json!({"id": "root", "title": "Root", "link": {"id": "gone"}})]);
+
+    let document = rendered(
+        &store,
+        json!({"from": "root", "follow": ["link"], "depth": 1}),
+        &Options::default(),
+    );
+
+    assert_eq!(first_block(&document), DANGLING, "{document:?}");
+    assert_notice_leads(&document, DANGLING, "## Root");
+}
+
+#[test]
+fn the_notice_orders_truncated_missing_and_dangling_lines() {
+    // All three triggers at once: the lines appear in the order truncated,
+    // missing, dangling, and the whole block is asserted as one string so a
+    // reordering cannot pass.
+    let store = store(&[
+        json!({"id": "root", "title": "Root", "link": {"id": "gone"}}),
+        json!({"id": "other", "title": "Other"}),
+    ]);
+
+    let document = rendered(
+        &store,
+        json!({
+            "from": ["miss", "root", "other"],
+            "limit": 1,
+            "follow": ["link"],
+            "depth": 1
+        }),
+        &Options::default(),
+    );
+
+    let notice = format!("{TRUNCATED}\n> missing: `miss`\n{DANGLING}");
+
+    assert_eq!(first_block(&document), notice, "{document:?}");
+    assert_eq!(
+        first_block(&document).lines().count(),
+        3,
+        "one line per kind, in order: {document:?}"
+    );
+    assert!(
+        document.contains("## Root"),
+        "the entity's blocks follow the notice: {document:?}"
+    );
+}
+
+#[test]
+fn each_dangling_triple_prints_once_in_encounter_order() {
+    // Two absent targets in one requested array field are two triples, so two
+    // lines, in the order the walk met them.
+    let store = store(&[json!({
+        "id": "root",
+        "title": "Root",
+        "link": [{"id": "gone-one"}, {"id": "gone-two"}],
+    })]);
+
+    let document = rendered(
+        &store,
+        json!({"from": "root", "follow": ["link"], "depth": 1}),
+        &Options::default(),
+    );
+
+    let notice = "> dangling: `root`.`link` -> `gone-one`\n\
+                  > dangling: `root`.`link` -> `gone-two`";
+
+    assert_eq!(first_block(&document), notice, "{document:?}");
+    assert_eq!(
+        document.matches("> dangling: ").count(),
+        2,
+        "one line per triple: {document:?}"
+    );
+}
+
+#[test]
+fn a_complete_traversal_result_carries_no_notice() {
+    // A walk that finished inside its depth bound and found every target is a
+    // complete answer, so the document opens with the entity's heading.
+    let store = store(&[
+        json!({"id": "root", "title": "Root", "next": {"id": "child"}}),
+        json!({"id": "child", "title": "Child"}),
+    ]);
+
+    let document = rendered(
+        &store,
+        json!({"from": "root", "follow": ["next"], "depth": 2}),
+        &Options::default(),
+    );
+
+    assert_eq!(
+        first_block(&document),
+        "## Root",
+        "the document starts with the entity's heading: {document:?}"
+    );
+    assert!(
+        !document.contains("dangling")
+            && !document.contains("missing")
+            && !document.contains("truncated"),
+        "no notice at all: {document:?}"
     );
 }

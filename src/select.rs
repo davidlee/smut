@@ -1,10 +1,20 @@
-//! Selection: roots → order → limit, and the projection and envelope downstream.
+//! Selection: roots → walk → order → limit, and the projection and envelope
+//! downstream.
 //!
 //! A [`Selection`] borrows the snapshot, so it carries full entities while the
 //! ordered id list stays the only thing a renderer may walk (DEC-007). The same
 //! engine serves `query` and `get`: `get` is selection with explicit roots, no
-//! fields, no keys and no cap at all, which is why it cannot truncate
-//! (DEC-001 rules 4 and 8).
+//! fields, no keys, no cap at all and no traversal, which is why it cannot
+//! truncate (DEC-001 rules 4 and 8) and never carries a [`Walk`].
+//!
+//! The walk — when the request supplied `follow` or `backlinks` — runs on the
+//! snapshot's full entities, after the roots are resolved and before ordering.
+//! That is why a `select` hiding a reference field cannot erase connectivity,
+//! and why the result limit cannot widen what the walk discovered (§4, §7.1).
+//! The envelope's `dangling` member is now the walk's diagnostics and the
+//! conditional `traversal` member is its provenance; both are derived here,
+//! after the limit, and both read references only through
+//! [`crate::entity::scan_refs`].
 //!
 //! Nothing here touches the filesystem: the envelope is a pure function of a
 //! selection, so query and get tests need no store on disk.
@@ -14,11 +24,12 @@ use std::collections::BTreeSet;
 use serde_json::{Map, Value};
 
 use crate::declare::Entities;
-use crate::entity::ENTITY_ID;
+use crate::entity::{ENTITY_ID, scan_refs};
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{self, SortKey};
-use crate::spec::{Limit, Spec};
+use crate::spec::{DEFAULT_DEPTH, Limit, Spec};
+use crate::walk::{self, Fields, Walk};
 
 /// An ordered, deduped, post-limit view of the snapshot.
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +46,17 @@ pub struct Selection<'a> {
     pub truncated: bool,
     /// Why rows were omitted, unique and ordered.
     pub reasons: Vec<Reason>,
+    /// The walk this selection came from, `Some` exactly when the request
+    /// supplied `follow` or `backlinks`.
+    ///
+    /// A walk is provenance, never an order: [`Self::ids`] stays the only list a
+    /// renderer may walk, and the limit applies after ordering, so carrying a
+    /// walk never widens the result past `limit`.
+    ///
+    /// The envelope and the Markdown notice are pure functions of the selection
+    /// (DEC-012), so carrying the walk is what lets either say what a traversal
+    /// did; `get` never carries one.
+    pub walk: Option<Walk<'a>>,
 }
 
 /// Why a selection is incomplete.
@@ -57,37 +79,74 @@ impl Reason {
 pub fn select<'a>(store: &'a Entities, spec: &'a Spec) -> Result<Selection<'a>, Reject> {
     run(
         store,
-        spec.from.as_deref(),
-        spec.select.as_deref(),
-        &spec.order,
-        spec.limit,
+        Request {
+            roots: spec.from.as_deref(),
+            fields: spec.select.as_deref(),
+            keys: &spec.order,
+            limit: spec.limit,
+            follow: spec.follow.as_ref(),
+            backlinks: spec.backlinks.as_ref(),
+            depth: spec.depth,
+        },
     )
 }
 
 /// `get`'s constructor: the explicit roots, in order and deduped, with no
-/// projection, no ordering and no cap at all.
+/// projection, no ordering, no traversal and no cap at all.
 ///
 /// It runs the same engine as [`select`]; what it does not do is start from a
 /// parsed spec, because a spec can ask for the default limit and `get` must
 /// never truncate (DEC-001 rule 4).
 pub fn get<'a>(store: &'a Entities, ids: &'a [Id]) -> Selection<'a> {
-    run(store, Some(ids), None, &[], Limit::unlimited())
-        .expect("get supplies no sort keys, so no sort value is validated")
+    run(
+        store,
+        Request {
+            roots: Some(ids),
+            fields: None,
+            keys: &[],
+            limit: Limit::unlimited(),
+            // `get` never traverses: no direction is followed, so no walk runs
+            // whatever the depth says.
+            follow: None,
+            backlinks: None,
+            depth: DEFAULT_DEPTH,
+        },
+    )
+    .expect("get supplies no sort keys, so no sort value is validated")
 }
 
-/// Roots → order → limit. Both public constructors are this one call.
-fn run<'a>(
-    store: &'a Entities,
+/// Everything one selection request carries.
+///
+/// One value rather than positional parameters: PHASE-02 adds the traversal
+/// budget and PHASE-03 adds the root predicate to **this same value**, so
+/// clippy's `too_many_arguments` is never the design constraint. Every field
+/// borrows from the specification the caller holds, so a request copies no
+/// request data.
+struct Request<'a> {
     roots: Option<&'a [Id]>,
     fields: Option<&'a [String]>,
-    keys: &[SortKey],
+    keys: &'a [SortKey],
     limit: Limit,
-) -> Result<Selection<'a>, Reject> {
+    follow: Option<&'a Fields>,
+    backlinks: Option<&'a Fields>,
+    depth: u64,
+}
+
+/// The traversal budget this phase must not apply.
+///
+/// `budget` is still a key 0.1 refuses, and PHASE-02 makes it real. Until then
+/// every walk is unbounded, so this phase can neither truncate a walk nor set
+/// [`Walk::exhausted`] (EX-3). There is deliberately no budget-shaped parameter
+/// or field to fill in later.
+const UNBOUNDED_BUDGET: u64 = u64::MAX;
+
+/// Roots → walk → order → limit. Both public constructors are this one call.
+fn run<'a>(store: &'a Entities, request: Request<'a>) -> Result<Selection<'a>, Reject> {
     let mut ids: Vec<&'a Id> = Vec::new();
     let mut missing: Vec<&'a Id> = Vec::new();
     let mut seen = BTreeSet::new();
 
-    match roots {
+    match request.roots {
         None => ids.extend(store.keys()),
         Some(roots) => {
             for root in roots {
@@ -103,9 +162,27 @@ fn run<'a>(
         }
     }
 
-    order::sort_ids(&mut ids, store, keys)?;
+    // A supplied direction is a traversal even when it names nothing to follow,
+    // so `follow: []` still walks — and therefore still reports.
+    let walk = if request.follow.is_some() || request.backlinks.is_some() {
+        let walked = walk::walk(
+            store,
+            &ids,
+            request.follow,
+            request.backlinks,
+            request.depth,
+            UNBOUNDED_BUDGET,
+        );
+        ids = walked.order.clone();
 
-    let cap = limit.cap();
+        Some(walked)
+    } else {
+        None
+    };
+
+    order::sort_ids(&mut ids, store, request.keys)?;
+
+    let cap = request.limit.cap();
 
     let mut truncated = false;
     let mut reasons = Vec::new();
@@ -121,10 +198,11 @@ fn run<'a>(
     Ok(Selection {
         ids,
         store,
-        fields,
+        fields: request.fields,
         missing,
         truncated,
         reasons,
+        walk,
     })
 }
 
@@ -180,13 +258,16 @@ fn project_one(selection: &Selection<'_>, id: &Id) -> Value {
 
 /// The query/get response envelope: the projected objects plus every diagnostic,
 /// present even when empty or false.
+///
+/// The five 0.1 members are always there; `traversal` is the one conditional
+/// member, present exactly when the selection came from a walk (§8.1).
 pub fn envelope(selection: &Selection<'_>) -> Value {
-    Value::Object(Map::from_iter([
+    let mut members = Map::from_iter([
         ("objects".to_owned(), Value::Array(project(selection))),
         ("missing".to_owned(), id_list(&selection.missing)),
-        // Structurally empty in 0.1, so widening it later changes the content
-        // and never the shape.
-        ("dangling".to_owned(), Value::Array(Vec::new())),
+        // Structurally empty without a walk, so widening it in 0.2 changed the
+        // content and never the shape.
+        ("dangling".to_owned(), dangling(selection)),
         ("truncated".to_owned(), Value::Bool(selection.truncated)),
         (
             "truncation_reasons".to_owned(),
@@ -198,7 +279,116 @@ pub fn envelope(selection: &Selection<'_>) -> Value {
                     .collect(),
             ),
         ),
-    ]))
+    ]);
+
+    if let Some(traversal) = traversal(selection) {
+        members.insert("traversal".to_owned(), traversal);
+    }
+
+    Value::Object(members)
+}
+
+/// The walk's diagnostics: one triple per requested-field reference to an
+/// entity the store does not hold, in encounter order; `[]` when no walk ran.
+fn dangling(selection: &Selection<'_>) -> Value {
+    let Some(walk) = &selection.walk else {
+        return Value::Array(Vec::new());
+    };
+
+    Value::Array(
+        walk.dangling
+            .iter()
+            .map(|found| {
+                Value::Object(Map::from_iter([
+                    (
+                        "source".to_owned(),
+                        Value::String(found.source.as_str().to_owned()),
+                    ),
+                    ("field".to_owned(), Value::String(found.field.to_owned())),
+                    ("target".to_owned(), Value::String(found.target.to_owned())),
+                ]))
+            })
+            .collect(),
+    )
+}
+
+/// The conditional `traversal` member: `None` exactly when the request started
+/// no walk, which is why `get`, a from/select/order/limit query and a depth-only
+/// query all keep the five 0.1 keys (§8.1).
+///
+/// Its three views have three different scopes. `depths` and `edges` are
+/// **result-scoped** — they are derived from the returned objects after the
+/// limit, so an id the limit omitted has no entry — while `frontier` is
+/// **walk-scoped**, the walk's own account, which the limit cannot cut (§8.2).
+fn traversal<'a>(selection: &Selection<'a>) -> Option<Value> {
+    let walk = selection.walk.as_ref()?;
+
+    Some(Value::Object(Map::from_iter([
+        ("depths".to_owned(), Value::Object(depths(selection, walk))),
+        ("edges".to_owned(), Value::Array(edges(selection))),
+        ("frontier".to_owned(), id_list(&walk.frontier)),
+    ])))
+}
+
+/// One integer per **returned** id: the walk's minimum discovery depth, roots 0.
+fn depths<'a>(selection: &Selection<'a>, walk: &Walk<'a>) -> Map<String, Value> {
+    selection
+        .ids
+        .iter()
+        .map(|id| {
+            // A silently omitted depth would be an envelope lying about a
+            // returned object.
+            let depth = walk.depths.get(id).copied().unwrap_or_else(|| {
+                panic!("every returned id was discovered, so the walk recorded its depth: {id}")
+            });
+
+            (id.as_str().to_owned(), Value::from(depth))
+        })
+        .collect()
+}
+
+/// The induced subgraph of the returned objects, in **result order**.
+///
+/// Derived after the limit, from each returned id's full **stored** entity:
+/// every reference [`scan_refs`] reports is a candidate, and a pair is kept only
+/// when its target is a returned id too, so dangling targets are never edges. A
+/// returned node that was never expanded still contributes, and an edge in a
+/// field the traversal never named counts when both endpoints are returned:
+/// because the scan reads full entities, a `select` that hides the reference
+/// field cannot erase connectivity. Pairs are deduped by
+/// `(source, field, target)`, keeping the first occurrence, so one target
+/// reachable twice through one field is one edge.
+///
+/// The trap this order guards (DEC-014): **discovery order is not result
+/// order**. `selection.ids` is post-order and post-limit, and `edges` is an
+/// account of what was returned, never a second account of the walk.
+fn edges<'a>(selection: &Selection<'a>) -> Vec<Value> {
+    let returned: BTreeSet<&'a str> = selection.ids.iter().map(|id| id.as_str()).collect();
+    let mut edges = Vec::new();
+    let mut seen: BTreeSet<(&'a str, &'a str, &'a str)> = BTreeSet::new();
+
+    for id in &selection.ids {
+        let entity = selection
+            .store
+            .get(id.as_str())
+            .unwrap_or_else(|| panic!("a selection's ids come from its store: {id}"));
+
+        for (field, target) in scan_refs(entity) {
+            if !returned.contains(target) {
+                continue;
+            }
+
+            if seen.insert((id.as_str(), field, target)) {
+                edges.push(Value::Object(Map::from_iter([
+                    ("source".to_owned(), Value::String(id.as_str().to_owned())),
+                    ("field".to_owned(), Value::String(field.to_owned())),
+                    ("target".to_owned(), Value::String(target.to_owned())),
+                ])));
+            }
+        }
+    }
+
+    edges
 }
 
 fn id_list(ids: &[&Id]) -> Value {
@@ -526,6 +716,34 @@ mod tests {
             envelope(&selected_by_get),
             envelope(&selected_by_spec),
             "one engine, one envelope"
+        );
+    }
+
+    #[test]
+    fn the_walks_edges_follow_result_order_not_discovery_order() {
+        // DEC-014: the walk discovers the roots in `from` order — `a` then `b` —
+        // but `order` returns `b` first, and `edges` is the induced subgraph of
+        // the returned objects in *result* order, not a second account of the
+        // walk.
+        let store = store(&[
+            json!({"id": "a", "next": {"id": "c"}, "title": "Zulu"}),
+            json!({"id": "b", "next": {"id": "c"}, "title": "Able"}),
+            json!({"id": "c", "title": "Middle"}),
+        ]);
+        let spec = parse(json!({
+            "from": ["a", "b"],
+            "follow": ["next"],
+            "order": [{"field": "title"}]
+        }));
+        let selection = select(&store, &spec).expect("strings sort");
+
+        assert_eq!(selected(&selection), ["b", "c", "a"]);
+        assert_eq!(
+            envelope(&selection)["traversal"]["edges"],
+            json!([
+                {"source": "b", "field": "next", "target": "c"},
+                {"source": "a", "field": "next", "target": "c"},
+            ])
         );
     }
 }

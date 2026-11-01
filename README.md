@@ -29,9 +29,11 @@ That is two entities and one reference, stored durably as one batch. An agent
 mid-conversation can keep its working structure in a store and render it to
 Markdown whenever the structure is the point rather than the content.
 
-This release is **0.1**: writing, reading back, and rendering. Predicates and
-traversal arrive in 0.2, and Mermaid in 1.0; where those would be, `smut` refuses
-by name instead of guessing. The commands below are the whole surface.
+`smut` is at **0.1.1**, and traversal is here: `follow`, `backlinks` and
+`depth` walk the graph, and the envelope reports what the walk found. `where`
+and `budget` arrive later in 0.2, and Mermaid in 1.0; where those would be,
+`smut` refuses by name instead of guessing. The commands below are the whole
+surface.
 
 ## Build
 
@@ -48,8 +50,8 @@ The binary is self-contained: `target/release/smut` is the whole program, and
 ## Worked example
 
 A scratch directory, a store, and the round trip. This is the transcript of
-running the release build; the failure at the end is the boundary of 0.1, shown
-on purpose.
+running the release build; the last step follows a reference to an entity that
+was just deleted, so the walk reports it as dangling rather than recreating it.
 
 ```console
 $ smut declare '[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
@@ -69,7 +71,7 @@ $ smut get q-query
 $ smut delete q-query
 {"deleted":["q-query"],"missing":[]}
 $ smut query '{"from":"smut","follow":["questions"]}'
-smut: follow is not supported in 0.1; it arrives in 0.2
+{"dangling":[{"field":"questions","source":"smut","target":"q-query"}],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","questions":[{"id":"q-query"}],"title":"Smut"}],"traversal":{"depths":{"smut":0},"edges":[],"frontier":[]},"truncated":false,"truncation_reasons":[]}
 ```
 
 What the transcript shows, in order: one declaration that produced two entities
@@ -77,7 +79,8 @@ and made the nested declaration an id-only reference; a read of both; a Markdown
 render of the selected fields; an amend that preserved the fields it did not
 name; a `DROP` that removed exactly one field; a delete, after which `smut`'s
 reference to the deleted entity is left dangling rather than cascaded; and
-finally the traversal query this release cannot answer.
+finally a traversal query that follows a reference to the entity just deleted:
+the walk reports it as dangling, and nothing is recreated.
 
 ## Commands
 
@@ -95,10 +98,14 @@ on stdin, when the argument is absent or is `-`. With no argument and a terminal
 attached you get usage instead of a silent wait. Trailing input after the JSON
 value is refused, and so is a duplicate key inside one object.
 
-The specification keys are `from`, `select`, `order` and `limit`; absent `from`
-means every entity in id order, absent `select` means every field, and no
-`limit` still caps a result at 100 with `"truncated": true` and a reason.
-`get` is selection with the ids you name, no limit and no truncation.
+The specification keys are `from`, `select`, `order`, `limit`, `follow`,
+`backlinks` and `depth`; absent `from` means every entity in id order, absent
+`select` means every field, and no `limit` still caps a result at 100 with
+`"truncated": true` and a reason. `follow` and `backlinks` take `"*"` or an
+array of top-level field names, `depth` defaults to 1 (0 is roots only), and a
+supplied traversal key adds a `traversal` member carrying `depths`, `edges` and
+`frontier`. `get` is selection with the ids you name, no limit and no
+truncation.
 
 `render` flags: `--format markdown` (the only format in 0.1), `--heading-field`
 (default `title`), `--heading-level 1-6` (default 2), `--show-fields`,
@@ -125,9 +132,9 @@ a success envelope.
 - **`1` and `1.0` are distinct for equality and equal for ordering.** In one
   batch they contradict each other and the batch is refused; in an `order` they
   tie, and the tie breaks by id.
-- **`where` and traversal arrive in 0.2.** `where`, `follow`, `backlinks`,
-  `depth` and `budget` are refused by name, with the release that will accept
-  them. An unrecognised key is reported as unknown, without a promise.
+- **`where` and `budget` arrive later in 0.2.** Both are refused by name, with
+  the release that will accept them; `follow`, `backlinks` and `depth` are
+  accepted now. An unrecognised key is reported as unknown, without a promise.
 - **`--` reaches an opaque id.** Ids are opaque, case-sensitive strings and may
   begin with a hyphen, so `smut get -- -weird-id` names that id. Without `--` it
   is a usage error.

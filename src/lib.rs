@@ -18,3 +18,4 @@ pub mod render_markdown;
 pub mod select;
 pub mod spec;
 pub mod store;
+pub mod walk;

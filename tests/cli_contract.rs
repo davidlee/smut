@@ -647,3 +647,167 @@ fn delete_against_an_absent_store_exits_one_and_creates_nothing() {
     assert!(ran.stderr.contains("no store"), "{}", ran.stderr);
     assert!(!scratch.has_store());
 }
+
+// ── VT-5: the traversal grammar through the binary (§5) ─────────────────────
+
+#[test]
+fn the_traversal_keys_accept_the_wildcard_as_a_whole_value() {
+    // The wildcard has one legal spelling: `"*"` as the key's whole value.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    for specification in [r#"{"from":"a","follow":"*"}"#, r#"{"backlinks":"*"}"#] {
+        let ran = smut(&scratch, &["query", specification]);
+
+        assert_eq!(ran.code, 0, "{specification}: {}", ran.stderr);
+        assert!(ran.stderr.is_empty(), "{specification}: {}", ran.stderr);
+        assert_eq!(
+            ran.stdout.matches('\n').count(),
+            1,
+            "{specification} is one compact line: {:?}",
+            ran.stdout
+        );
+
+        let envelope = ran.json();
+        assert!(
+            envelope.get("traversal").is_some(),
+            "{specification} supplied a traversal key, so the envelope carries it: {envelope}"
+        );
+    }
+}
+
+#[test]
+fn a_wildcard_array_element_is_refused_naming_the_string_form() {
+    // An array must contain field names; an element `"*"` is refused, and the
+    // refusal points at the string form, because a mixed list would need a
+    // precedence rule between wildcard lexical order and named-field query
+    // order. It is a malformed value, not a key a later release will accept, so
+    // it names no release.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    for (key, specification) in [
+        ("follow", r#"{"from":"a","follow":["*"]}"#),
+        ("backlinks", r#"{"backlinks":["*"]}"#),
+    ] {
+        let ran = smut(&scratch, &["query", specification]);
+
+        assert_eq!(ran.code, 2, "{specification}: {}", ran.stderr);
+        assert_eq!(
+            ran.stdout, "",
+            "{specification}: a refusal prints no envelope"
+        );
+        for needle in [key, "*", "string"] {
+            assert!(
+                ran.stderr.contains(needle),
+                "{specification}: the refusal names {needle:?}: {}",
+                ran.stderr
+            );
+        }
+        assert!(
+            !ran.stderr.contains("0.2"),
+            "{specification}: the wildcard is spelled as the string on its own, so this is not \
+             a key deferred to a release: {}",
+            ran.stderr
+        );
+    }
+}
+
+#[test]
+fn a_requested_field_no_entity_carries_is_accepted() {
+    // A named field nobody uses is not a defect: it simply follows nothing.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let ran = smut(
+        &scratch,
+        &["query", r#"{"from":"a","follow":["nonexistent"]}"#],
+    );
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let envelope = ran.json();
+    assert_eq!(
+        envelope["traversal"]["frontier"],
+        json!([]),
+        "no target was discovered, so nothing is left unexpanded: {envelope}"
+    );
+    assert_eq!(
+        envelope["traversal"]["depths"],
+        json!({"a": 0}),
+        "{envelope}"
+    );
+}
+
+#[test]
+fn depth_zero_is_valid_and_selects_the_roots_alone() {
+    // `depth` is nonnegative and defaults to 1; zero is a legal, roots-only
+    // walk — every root is discovered, none is expanded, so every root is also
+    // frontier.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let ran = smut(
+        &scratch,
+        &["query", r#"{"from":"a","depth":0,"follow":"*"}"#],
+    );
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let envelope = ran.json();
+    assert_eq!(
+        envelope["traversal"]["frontier"],
+        json!(["a"]),
+        "the root was discovered and declined: {envelope}"
+    );
+    assert_eq!(envelope["traversal"]["depths"], json!({"a": 0}));
+    assert_eq!(envelope["traversal"]["edges"], json!([]));
+    assert_eq!(
+        envelope["objects"],
+        json!([{"body": "First.", "id": "a", "priority": 3, "title": "Alpha"}]),
+        "a roots-only walk returns the root alone: {envelope}"
+    );
+}
+
+#[test]
+fn a_bad_depth_is_refused_before_any_store_access() {
+    // A malformed value rejects the whole request at step 1 of the pipeline,
+    // before the store is opened, locked or created. There is no store in this
+    // scratch directory, so a refusal that reached the store would be the
+    // exit-1 "no store" answer instead. The diagnostic must describe the shape
+    // of an accepted value rather than defer the key to a later release, since
+    // a refusal that only says "not supported in 0.1" would satisfy the rest of
+    // this test without the key ever being accepted.
+    let scratch = Scratch::new();
+
+    for specification in [
+        r#"{"depth":-1}"#,
+        r#"{"depth":1.5}"#,
+        r#"{"depth":18446744073709551616}"#,
+    ] {
+        let ran = smut(&scratch, &["query", specification]);
+
+        assert_eq!(ran.code, 2, "{specification}: {}", ran.stderr);
+        assert_eq!(
+            ran.stdout, "",
+            "{specification}: a refusal prints no envelope"
+        );
+        assert!(
+            ran.stderr.contains("depth"),
+            "{specification}: the refusal names the key: {}",
+            ran.stderr
+        );
+        assert!(
+            ran.stderr.contains("nonnegative"),
+            "{specification}: the refusal describes the accepted value shape: {}",
+            ran.stderr
+        );
+        assert!(
+            !ran.stderr.contains("0.2"),
+            "{specification}: a malformed value is not a key deferred to a later release: {}",
+            ran.stderr
+        );
+        assert!(
+            !scratch.has_store(),
+            "{specification} was refused before the store was touched"
+        );
+    }
+}

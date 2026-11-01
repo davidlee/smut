@@ -355,17 +355,20 @@ fn an_unknown_key_is_refused_without_naming_0_2() {
     );
 }
 
-/// The brief's end-to-end acceptance example, for the steps 0.1 can run.
+/// The brief's end-to-end acceptance example, re-cut for every step 0.2 can run
+/// (EX-12, DEC-019: renamed and re-commented, not deleted).
 ///
-/// Two of the example's invocations use `follow` and one uses `where`, which are
-/// named-future keys refused by name (pinned above), so the workflow's 0.1 part
-/// is what is fixed here: the nested declaration, the patch that preserves
-/// unnamed fields, `DROP` of one field, the delete envelope, and the reference
-/// that survives the delete. The example's closing "the final query reports a
-/// dangling reference" needs traversal, which 0.1 does not have, so the final
-/// query here pins `dangling: []` for a store that never traversed.
+/// 0.1 could run the workflow only up to the delete and had to stop there: the
+/// brief's closing "the final query reports a dangling reference" needs
+/// traversal, which 0.1 does not have. 0.2 has it, so the closing query now
+/// follows `smut`'s `questions` and reports the reference `q-query` left behind
+/// — the example's last step is what the brief says it is. `where` is still
+/// refused by name (pinned above), so the `where` invocation stays out of the
+/// run; what is fixed here is the nested declaration, the patch that preserves
+/// unnamed fields, `DROP` of one field, the delete envelope, and the traversal
+/// query that reports the deleted entity as dangling.
 #[test]
-fn the_briefs_end_to_end_example_still_runs_where_0_1_can() {
+fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
     let scratch = Scratch::new();
 
     let declared = run(
@@ -428,7 +431,10 @@ fn the_briefs_end_to_end_example_still_runs_where_0_1_can() {
         json!({"deleted": ["q-query"], "missing": []})
     );
 
-    let survivors = run(&scratch, &["query", r#"{"from":"smut"}"#]);
+    let survivors = run(
+        &scratch,
+        &["query", r#"{"from":"smut","follow":["questions"]}"#],
+    );
     survivors.assert_one_json_line("smut after the delete");
     assert_eq!(
         survivors.json()["objects"],
@@ -440,7 +446,11 @@ fn the_briefs_end_to_end_example_still_runs_where_0_1_can() {
         }])
     );
     assert_eq!(survivors.json()["missing"], json!([]));
-    assert_eq!(survivors.json()["dangling"], json!([]));
+    assert_eq!(
+        survivors.json()["dangling"],
+        json!([{"source": "smut", "field": "questions", "target": "q-query"}]),
+        "the brief's closing step: the traversal reports the deleted entity as dangling"
+    );
 }
 
 #[test]
@@ -454,4 +464,78 @@ fn learn_writes_a_non_empty_guide_and_touches_no_store() {
     assert!(ran.stderr.is_empty(), "{}", ran.stderr);
     assert!(!ran.stdout.trim().is_empty(), "learn prints a guide");
     assert!(!scratch.has_store(), "learn creates neither store nor lock");
+}
+
+// ── VT-6: a traversal query is additive beside the 0.1 pins ──────────────────
+
+#[test]
+fn a_traversal_query_adds_one_member_beside_the_pinned_0_1_envelope() {
+    // DEC-019 additivity: 0.2 widens the envelope by exactly one conditional
+    // member and changes nothing else. `beta` points at `alpha`, so a depth-1
+    // walk (the default) discovers `alpha` at the boundary and never expands it
+    // — which is why `alpha` is frontier even though it is returned.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let walked = run(
+        &scratch,
+        &["query", r#"{"from":"beta","follow":["points_at"]}"#],
+    );
+    walked.assert_one_json_line("a traversal query");
+    assert_eq!(
+        keys(&walked.json()),
+        BTreeSet::from([
+            "dangling",
+            "missing",
+            "objects",
+            "traversal",
+            "truncated",
+            "truncation_reasons",
+        ]),
+        "the five 0.1 members plus exactly one conditional member: {}",
+        walked.json()
+    );
+
+    let envelope = walked.json();
+    assert_eq!(
+        envelope["objects"],
+        json!([
+            {
+                "body": "Second.",
+                "id": "beta",
+                "points_at": {"id": "alpha"},
+                "title": "Beta",
+            },
+            {
+                "body": "First thought.",
+                "id": "alpha",
+                "kind": "note",
+                "title": "Alpha",
+            },
+        ]),
+        "discovery order puts the root before what it discovered: {envelope}"
+    );
+    assert_eq!(
+        envelope["traversal"]["depths"],
+        json!({"beta": 0, "alpha": 1}),
+        "{envelope}"
+    );
+    assert_eq!(
+        envelope["traversal"]["edges"],
+        json!([{"source": "beta", "field": "points_at", "target": "alpha"}]),
+        "{envelope}"
+    );
+    assert_eq!(
+        envelope["traversal"]["frontier"],
+        json!(["alpha"]),
+        "the default depth of 1 stops at the discovered target: {envelope}"
+    );
+    assert_eq!(envelope["dangling"], json!([]));
+    assert_eq!(envelope["truncated"], json!(false));
+
+    // The point of the pin: the 0.2 envelope appeared without touching the 0.1
+    // one beside it.
+    let pinned = run(&scratch, &["query", "{}"]);
+    pinned.assert_one_json_line("the pinned 0.1 query, after a traversal query");
+    assert_eq!(pinned.json(), default_query_pin());
 }

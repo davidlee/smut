@@ -5,6 +5,8 @@
 //! is exercised across module boundaries rather than only inside each unit. No
 //! filesystem is involved, because none of these modules touch one.
 
+use std::collections::BTreeSet;
+
 use serde_json::{Value, json};
 use smut::declare::Entities;
 use smut::id::Id;
@@ -37,6 +39,16 @@ fn parse(input: Value) -> spec::Spec {
 
 fn selected<'a>(selection: &'a Selection<'a>) -> Vec<&'a str> {
     selection.ids.iter().map(|id| id.as_str()).collect()
+}
+
+/// An envelope's top-level key set, so a conditional member cannot hide.
+fn keys(document: &Value) -> BTreeSet<&str> {
+    document
+        .as_object()
+        .expect("an envelope is an object")
+        .keys()
+        .map(String::as_str)
+        .collect()
 }
 
 #[test]
@@ -136,4 +148,157 @@ fn the_public_spec_edge_names_the_release_for_a_key_it_will_accept() {
         spec::parse(&json!({"where": {"type": "question"}})).expect_err("`where` is 0.2, not 0.1");
 
     assert!(rejection.to_string().contains("0.2"), "{rejection}");
+}
+
+// ── VT-9: the traversal member's scope split (§8.1-§8.3) ────────────────────
+
+#[test]
+fn a_traversal_selection_carries_a_traversal_member_that_get_never_has() {
+    // §8.1 presence keys on the *request*: a supplied `follow` adds `traversal`.
+    // The root reaches a child which reaches a grandchild, so a depth-1 walk
+    // discovers the child at the boundary and never meets the grandchild.
+    let store = store(&[
+        json!({"id": "root", "next": {"id": "child"}}),
+        json!({"id": "child", "next": {"id": "grandchild"}}),
+        json!({"id": "grandchild"}),
+    ]);
+    let specification = parse(json!({"from": "root", "follow": ["next"], "depth": 1}));
+
+    let selection = select(&store, &specification).expect("every discovered id is stored");
+    let document = envelope(&selection);
+
+    assert_eq!(
+        keys(&document),
+        BTreeSet::from([
+            "dangling",
+            "missing",
+            "objects",
+            "traversal",
+            "truncated",
+            "truncation_reasons",
+        ]),
+        "the five 0.1 members plus exactly one conditional member: {document}"
+    );
+
+    let traversal = &document["traversal"];
+    assert_eq!(
+        traversal["depths"],
+        json!({"root": 0, "child": 1}),
+        "depths is result-scoped, so it names only returned ids: {traversal}"
+    );
+    assert_eq!(
+        traversal["edges"],
+        json!([{"source": "root", "field": "next", "target": "child"}]),
+        "the induced subgraph of the returned objects: {traversal}"
+    );
+    assert_eq!(
+        traversal["frontier"],
+        json!(["child"]),
+        "the child sits at the depth boundary: discovered, never expanded: {traversal}"
+    );
+
+    // `get` supplies no specification at all, so it can never traverse; 150
+    // entities make sure a fabricated cap or walk would show.
+    let many = numbered(150);
+    let roots: Vec<Id> = many.keys().cloned().collect();
+    let fetched = envelope(&get(&many, &roots));
+
+    assert!(
+        !fetched
+            .as_object()
+            .expect("an envelope is an object")
+            .contains_key("traversal"),
+        "get never traverses, so it has no traversal member: {fetched}"
+    );
+    assert_eq!(
+        keys(&fetched),
+        BTreeSet::from([
+            "dangling",
+            "missing",
+            "objects",
+            "truncated",
+            "truncation_reasons",
+        ]),
+        "get's envelope is still the 0.1 five: {fetched}"
+    );
+    assert_eq!(fetched["truncated"], json!(false));
+}
+
+#[test]
+fn depths_and_edges_are_result_scoped_while_frontier_and_dangling_are_walk_scoped() {
+    // One query, all four scopes. The walk reaches `middle` and then `leaf`, and
+    // `middle` names an absent target; the limit then cuts the result to the
+    // root, so `leaf` is discovered but not returned and the dangling source is
+    // an id the caller never sees.
+    let store = store(&[
+        json!({"id": "root", "next": {"id": "middle"}}),
+        json!({"id": "middle", "next": [{"id": "leaf"}, {"id": "gone"}]}),
+        json!({"id": "leaf"}),
+    ]);
+    let specification = parse(json!({
+        "from": "root",
+        "follow": ["next"],
+        "depth": 2,
+        "limit": 1
+    }));
+
+    let selection = select(&store, &specification).expect("every discovered id is stored");
+    let document = envelope(&selection);
+    let traversal = &document["traversal"];
+
+    assert_eq!(selected(&selection), ["root"], "the limit cut the result");
+    assert_eq!(
+        traversal["frontier"],
+        json!(["leaf"]),
+        "frontier is walk-scoped, so the result limit cannot cut it: {traversal}"
+    );
+    assert_eq!(
+        traversal["depths"],
+        json!({"root": 0}),
+        "depths is result-scoped: an omitted id has no depth: {traversal}"
+    );
+    assert_eq!(
+        traversal["edges"],
+        json!([]),
+        "edges are induced among returned objects, so a cut edge is not reported: {traversal}"
+    );
+    assert_eq!(
+        document["dangling"],
+        json!([{"source": "middle", "field": "next", "target": "gone"}]),
+        "dangling is walk-scoped: the source was cut by the limit and is still reported: {document}"
+    );
+    assert_eq!(document["truncated"], json!(true));
+}
+
+#[test]
+fn truncation_reasons_stays_unique_and_names_only_the_result_limit() {
+    // §8.3 orders reasons as they can occur: `traversal_budget` first, then
+    // `result_limit`. `budget` is still a refused key in this phase — PHASE-02
+    // makes it real — so a truncated traversal query can only report
+    // `["result_limit"]`. The earlier position of `traversal_budget` is
+    // asserted where that reason is introduced, PHASE-02's reason-order test in
+    // `tests/traversal.rs`; this is recorded plan defect DEF-1, and this comment
+    // is the re-cut's reason.
+    let store = store(&[
+        json!({"id": "root", "next": [{"id": "one"}, {"id": "two"}]}),
+        json!({"id": "one"}),
+        json!({"id": "two"}),
+    ]);
+    let specification = parse(json!({"from": "root", "follow": ["next"], "limit": 1}));
+
+    let selection = select(&store, &specification).expect("every discovered id is stored");
+    let document = envelope(&selection);
+    let reasons = document["truncation_reasons"]
+        .as_array()
+        .expect("truncation_reasons is an array")
+        .iter()
+        .map(|reason| reason.as_str().expect("a reason is a string"))
+        .collect::<Vec<_>>();
+
+    assert_eq!(reasons, ["result_limit"], "{document}");
+    assert_eq!(
+        reasons.iter().collect::<BTreeSet<_>>().len(),
+        reasons.len(),
+        "each reason appears once: {reasons:?}"
+    );
 }

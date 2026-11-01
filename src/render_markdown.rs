@@ -276,7 +276,16 @@ fn longest_backtick_run(content: &str) -> usize {
 }
 
 /// The completeness notice, as the document's first block: truncation has no row
-/// count (DEC-009), and missing ids use the same safe delimiters as identity.
+/// count (DEC-009), missing ids use the same safe delimiters as identity, and
+/// each dangling triple gets one line.
+///
+/// The trigger is `truncated` **or** a non-empty `missing` **or** a non-empty
+/// dangling list (empty when no walk ran), and the lines appear in that order:
+/// truncated, missing, dangling. The dangling lines exist because the JSON
+/// envelope's `dangling` is real (§8.3): a renderer that dropped the release's
+/// new diagnostic would be the one channel left lying. Provenance — `depths`,
+/// `edges`, `frontier` — is never rendered, because the notice is
+/// incompleteness and diagnostics, not provenance.
 fn completeness_notice(selection: &Selection<'_>) -> Option<String> {
     let mut lines = Vec::new();
 
@@ -309,6 +318,19 @@ fn completeness_notice(selection: &Selection<'_>) -> Option<String> {
             .collect();
 
         lines.push(format!("> missing: {}", spans.join(", ")));
+    }
+
+    // One line per triple, in the walk's encounter order: the walk already
+    // deduplicated, so a triple prints once.
+    if let Some(walk) = &selection.walk {
+        for found in &walk.dangling {
+            lines.push(format!(
+                "> dangling: {}.{} -> {}",
+                code_span(found.source.as_str()),
+                code_span(found.field),
+                code_span(found.target),
+            ));
+        }
     }
 
     (!lines.is_empty()).then(|| lines.join("\n"))

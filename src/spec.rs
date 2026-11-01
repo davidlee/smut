@@ -1,8 +1,14 @@
-//! The 0.1 query specification: four accepted keys, and two kinds of refusal.
+//! The 0.1 query specification: seven accepted keys, and two kinds of refusal.
 //!
-//! `from`, `select`, `order` and `limit` are the whole surface (DEC-011). Keys a
-//! later release will define are refused *by name* with that release, so the
-//! refusal is a promise a user can act on; keys nobody planned are refused
+//! `from`, `select`, `order`, `limit`, `follow`, `backlinks` and `depth` are the
+//! whole surface (DEC-011). A traversal key is either the wildcard `"*"` or an
+//! array of top-level field names; the wildcard has that one spelling, because a
+//! mixed array would need a precedence rule between query order and lexical
+//! order that the brief does not give. The new keys imply neither each other nor
+//! a traversal: `depth` without `follow` or `backlinks` parses and is inert.
+//!
+//! Keys a later release will define are refused *by name* with that release, so
+//! the refusal is a promise a user can act on; keys nobody planned are refused
 //! plainly as unknown, because naming a release for them would be a guess
 //! presented as a promise. `query {}` is valid and selects everything subject to
 //! the default limit.
@@ -17,13 +23,17 @@ use serde_json::Value;
 use crate::error::Reject;
 use crate::id::Id;
 use crate::order::{Direction, SortKey};
+use crate::walk::Fields;
 
 /// The result cap when a specification supplies none (§6.2).
 pub const DEFAULT_LIMIT: u64 = 100;
 
+/// The traversal depth when a specification supplies none (§5).
+pub const DEFAULT_DEPTH: u64 = 1;
+
 /// The keys a later release will accept, and the release to name when refusing
 /// them.
-const FUTURE_KEYS: [&str; 5] = ["where", "follow", "backlinks", "depth", "budget"];
+const FUTURE_KEYS: [&str; 2] = ["where", "budget"];
 
 /// How many results a selection may return.
 ///
@@ -77,6 +87,16 @@ pub struct Spec {
     pub order: Vec<SortKey>,
     /// The result cap.
     pub limit: Limit,
+    /// The outgoing fields a traversal follows; `None` means no outgoing
+    /// traversal, while `Some` of an empty list is a supplied traversal that
+    /// follows nothing.
+    pub follow: Option<Fields>,
+    /// The incoming fields a traversal follows; `None` means no incoming
+    /// traversal, read with the same distinction as [`Spec::follow`].
+    pub backlinks: Option<Fields>,
+    /// The traversal depth; `0` is roots only, and a depth without `follow` or
+    /// `backlinks` starts no traversal.
+    pub depth: u64,
 }
 
 /// Parses a query specification, rejecting anything 0.1 does not define.
@@ -91,6 +111,9 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
         select: None,
         order: Vec::new(),
         limit: Limit::DEFAULT,
+        follow: None,
+        backlinks: None,
+        depth: DEFAULT_DEPTH,
     };
 
     for (key, value) in fields {
@@ -99,6 +122,9 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
             "select" => spec.select = Some(parse_select(value)?),
             "order" => spec.order = parse_order(value)?,
             "limit" => spec.limit = Limit::capped(parse_limit(value)?),
+            "follow" => spec.follow = Some(parse_fields("follow", value)?),
+            "backlinks" => spec.backlinks = Some(parse_fields("backlinks", value)?),
+            "depth" => spec.depth = parse_depth(value)?,
             key if FUTURE_KEYS.contains(&key) => {
                 return Err(Reject::FutureSpecificationKey {
                     key: key.to_owned(),
@@ -192,6 +218,44 @@ fn parse_limit(value: &Value) -> Result<u64, Reject> {
     }
 }
 
+/// Parses a traversal key's value: the wildcard or a list of field names.
+fn parse_fields(key: &str, value: &Value) -> Result<Fields, Reject> {
+    match value {
+        Value::String(field) if field == "*" => Ok(Fields::All),
+        Value::Array(items) => {
+            let mut labels: Vec<String> = Vec::with_capacity(items.len());
+
+            for item in items {
+                let label = item
+                    .as_str()
+                    .ok_or_else(|| invalid(key, "`*` or an array of top-level field names"))?;
+
+                if label == "*" {
+                    return Err(invalid(
+                        key,
+                        "an array of field names, because the wildcard is the string `*` on its own",
+                    ));
+                }
+
+                // Duplicates are a set for edge selection and must never reorder
+                // the first occurrence (§5).
+                if !labels.iter().any(|asked| asked == label) {
+                    labels.push(label.to_owned());
+                }
+            }
+
+            Ok(Fields::Named(labels))
+        }
+        _ => Err(invalid(key, "`*` or an array of top-level field names")),
+    }
+}
+
+fn parse_depth(value: &Value) -> Result<u64, Reject> {
+    value
+        .as_u64()
+        .ok_or_else(|| invalid("depth", "a nonnegative integer"))
+}
+
 fn invalid(key: &str, expected: &str) -> Reject {
     Reject::InvalidSpecificationValue {
         key: key.to_owned(),
@@ -213,8 +277,16 @@ mod tests {
         parse(&input).expect_err("the specification should have been rejected")
     }
 
+    /// An integer JSON number beyond `u64`: `18446744073709551616`, i.e. 2^64.
+    fn beyond_u64() -> Value {
+        serde_json::from_str("18446744073709551616").expect("a JSON number beyond u64")
+    }
+
     #[test]
-    fn query_accepts_exactly_from_select_order_and_limit() {
+    fn query_accepts_the_0_1_keys() {
+        // Re-cut from `query_accepts_exactly_from_select_order_and_limit`: the
+        // name claimed an exhaustive surface and the surface has widened to
+        // seven keys, so only the claim is dropped and the body is unchanged.
         let parsed = spec(json!({
             "from": "smut",
             "select": ["title", "body"],
@@ -234,6 +306,8 @@ mod tests {
 
     #[test]
     fn an_empty_spec_selects_everything_subject_to_the_default_limit() {
+        // Re-cut because the whole `Spec` is compared: the traversal keys add
+        // their own defaults, `None` for both directions and `DEFAULT_DEPTH`.
         let parsed = spec(json!({})).expect("an empty spec is valid");
 
         assert_eq!(
@@ -243,6 +317,9 @@ mod tests {
                 select: None,
                 order: Vec::new(),
                 limit: Limit::DEFAULT,
+                follow: None,
+                backlinks: None,
+                depth: DEFAULT_DEPTH,
             }
         );
         assert_eq!(DEFAULT_LIMIT, 100);
@@ -337,7 +414,9 @@ mod tests {
 
     #[test]
     fn each_named_future_key_is_rejected_by_name_citing_the_release() {
-        for key in ["where", "follow", "backlinks", "depth", "budget"] {
+        // EX-12 re-cut: `follow`, `backlinks` and `depth` are accepted now, so
+        // the loop keeps exactly the keys still refused by name.
+        for key in ["where", "budget"] {
             let rejection = rejection(json!({key: {}}));
 
             assert_eq!(
@@ -438,18 +517,190 @@ mod tests {
     }
 
     #[test]
-    fn the_acceptance_set_is_exactly_the_four_keys() {
-        for key in ["from", "select", "order", "limit"] {
-            assert!(
-                spec(json!({key: match key {
-                    "from" => json!("smut"),
-                    "select" => json!([]),
-                    "order" => json!([]),
-                    _ => json!(1),
-                }}))
-                .is_ok(),
-                "{key} is accepted"
+    fn the_acceptance_set_is_exactly_the_seven_keys() {
+        // Re-cut from `the_acceptance_set_is_exactly_the_four_keys`, whose name
+        // and body the widened surface falsified: each accepted key is exercised
+        // with one value its own grammar allows.
+        for (key, value) in [
+            ("from", json!("smut")),
+            ("select", json!([])),
+            ("order", json!([])),
+            ("limit", json!(1)),
+            ("follow", json!("*")),
+            ("backlinks", json!(["questions"])),
+            ("depth", json!(0)),
+        ] {
+            assert!(spec(json!({key: value})).is_ok(), "{key} is accepted");
+        }
+    }
+
+    #[test]
+    fn a_traversal_key_takes_the_wildcard_or_an_array_of_field_names() {
+        // Rule: `follow`/`backlinks` are `"*"` or an array of top-level field
+        // names, with an empty array a supplied traversal that follows nothing.
+        assert_eq!(
+            spec(json!({"follow": "*"})).expect("the wildcard").follow,
+            Some(Fields::All)
+        );
+        assert_eq!(
+            spec(json!({"backlinks": "*"}))
+                .expect("the wildcard")
+                .backlinks,
+            Some(Fields::All)
+        );
+        assert_eq!(
+            spec(json!({"follow": ["a", "b"]}))
+                .expect("field names in query order")
+                .follow,
+            Some(Fields::Named(vec!["a".to_owned(), "b".to_owned()]))
+        );
+        assert_eq!(
+            spec(json!({"backlinks": ["questions"]}))
+                .expect("one field name")
+                .backlinks,
+            Some(Fields::Named(vec!["questions".to_owned()]))
+        );
+        assert_eq!(
+            spec(json!({"follow": []}))
+                .expect("an empty field list")
+                .follow,
+            Some(Fields::Named(Vec::new()))
+        );
+    }
+
+    #[test]
+    fn the_traversal_keys_are_absent_and_depth_is_one_by_default() {
+        // Rule: absent `follow`/`backlinks` mean no traversal in that direction,
+        // and absent `depth` is `DEFAULT_DEPTH`.
+        let parsed = spec(json!({})).expect("an empty spec is valid");
+
+        assert_eq!(parsed.follow, None);
+        assert_eq!(parsed.backlinks, None);
+        assert_eq!(parsed.depth, DEFAULT_DEPTH);
+        assert_eq!(DEFAULT_DEPTH, 1);
+    }
+
+    #[test]
+    fn depth_accepts_zero_and_any_integer_a_json_number_holds() {
+        // Rule: `depth` is a nonnegative integer, so `0` (roots only) is valid
+        // and nothing caps it below `u64::MAX`.
+        assert_eq!(spec(json!({"depth": 0})).expect("roots only").depth, 0);
+        assert_eq!(spec(json!({"depth": 5})).expect("five hops").depth, 5);
+        assert_eq!(
+            spec(json!({"depth": u64::MAX}))
+                .expect("the largest integer a JSON number holds")
+                .depth,
+            u64::MAX
+        );
+    }
+
+    #[test]
+    fn depth_without_a_traversal_key_is_accepted_and_inert() {
+        // Rule: the new keys do not imply each other or a traversal, so `depth`
+        // alone parses and leaves both directions absent.
+        let parsed = spec(json!({"depth": 3})).expect("depth alone is valid");
+
+        assert_eq!(parsed.depth, 3);
+        assert_eq!(parsed.follow, None);
+        assert_eq!(parsed.backlinks, None);
+    }
+
+    #[test]
+    fn the_wildcard_has_one_spelling_so_an_array_element_star_is_refused() {
+        // Rule: the wildcard is the string `*` on its own; an array holds field
+        // names only, never a wildcard element.
+        for key in ["follow", "backlinks"] {
+            for value in [json!(["*"]), json!(["a", "*"])] {
+                let rejection = rejection(json!({key: value.clone()}));
+
+                assert_eq!(
+                    rejection,
+                    Reject::InvalidSpecificationValue {
+                        key: key.to_owned(),
+                        expected: "an array of field names, because the wildcard is the string `*` on its own"
+                            .to_owned(),
+                    },
+                    "{key}: {value}"
+                );
+
+                let message = rejection.to_string();
+                assert!(message.contains(key), "{message}");
+                assert!(message.contains('*'), "{message}");
+                assert!(message.contains("string"), "{message}");
+                assert!(!message.contains("0.2"), "{message}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_traversal_key_refuses_a_shape_outside_its_grammar() {
+        // Rule: only `"*"` and an array are traversal values, so a bare
+        // non-wildcard string, a number, null and an object are all refused.
+        for key in ["follow", "backlinks"] {
+            for value in [json!("questions"), json!(1), json!(null), json!({"a": "b"})] {
+                assert_eq!(
+                    rejection(json!({key: value.clone()})),
+                    Reject::InvalidSpecificationValue {
+                        key: key.to_owned(),
+                        expected: "`*` or an array of top-level field names".to_owned(),
+                    },
+                    "{key}: {value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_follow_array_element_must_be_a_field_name() {
+        // Rule: the array grammar is top-level field names only, so a non-string
+        // element is refused rather than coerced.
+        for value in [json!([1]), json!(["a", 1]), json!([null])] {
+            assert_eq!(
+                rejection(json!({"follow": value.clone()})),
+                Reject::InvalidSpecificationValue {
+                    key: "follow".to_owned(),
+                    expected: "`*` or an array of top-level field names".to_owned(),
+                },
+                "{value}"
             );
         }
+    }
+
+    #[test]
+    fn depth_refuses_a_negative_fractional_string_or_beyond_u64_value() {
+        // Rule: `value.as_u64()` is the test, so `-1`, `1.5`, `1.0`, a string
+        // and an integer beyond u64 are refused and never defaulted to 1.
+        for value in [json!(-1), json!(1.5), json!(1.0), json!("2"), beyond_u64()] {
+            assert_eq!(
+                rejection(json!({"depth": value.clone()})),
+                Reject::InvalidSpecificationValue {
+                    key: "depth".to_owned(),
+                    expected: "a nonnegative integer".to_owned(),
+                },
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    fn duplicate_labels_collapse_to_their_first_occurrence() {
+        // Rule: duplicates are a set for edge selection and must never reorder
+        // the first occurrence (§5), so `["b", "a", "b"]` keeps `b` first.
+        assert_eq!(
+            spec(json!({"follow": ["b", "a", "b"]}))
+                .expect("a repeated label")
+                .follow,
+            Some(Fields::Named(vec!["b".to_owned(), "a".to_owned()]))
+        );
+        assert_eq!(
+            spec(json!({"backlinks": ["a", "b", "a", "c", "b"]}))
+                .expect("later duplicates of earlier labels")
+                .backlinks,
+            Some(Fields::Named(vec![
+                "a".to_owned(),
+                "b".to_owned(),
+                "c".to_owned(),
+            ]))
+        );
     }
 }

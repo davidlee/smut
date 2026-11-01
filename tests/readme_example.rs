@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 const README: &str = include_str!("../README.md");
 
@@ -248,21 +248,48 @@ fn the_readme_worked_example_runs_and_prints_what_it_records() {
     }
 }
 
+/// The example ends with the traversal answer, not a refusal. This is a DEC-019
+/// re-cut, renamed and re-asserted, never deleted: 0.1's example ended at the
+/// boundary it could not cross, and 0.2's example ends with the walk, so the old
+/// assertion would have pinned the README to a refusal the binary no longer
+/// makes.
 #[test]
-fn the_worked_example_ends_with_the_0_2_refusal() {
+fn the_worked_example_ends_with_a_0_2_traversal() {
     let steps = worked_example();
     let last = steps.last().expect("the example has commands");
 
     assert!(
         last.command.contains("follow"),
-        "the example stops at a 0.2 key rather than pretending to traverse: {}",
+        "the example ends with the traversal query: {}",
         last.command
     );
     assert!(
-        last.output.contains("0.2"),
-        "the refusal names the release: {}",
+        !last.output.starts_with("smut: "),
+        "the last step shows an envelope, not a diagnostic: {}",
         last.output
     );
+
+    let envelope: Value =
+        serde_json::from_str(&last.output).expect("the last step prints one JSON envelope");
+
+    assert!(
+        envelope.get("traversal").is_some(),
+        "the envelope reports the walk it performed: {envelope}"
+    );
+    assert_eq!(
+        envelope["dangling"],
+        json!([{"field": "questions", "source": "smut", "target": "q-query"}]),
+        "the walk reports the reference to the deleted entity as dangling"
+    );
+
+    let ids: Vec<&str> = envelope["objects"]
+        .as_array()
+        .expect("the envelope carries an objects array")
+        .iter()
+        .map(|object| object["id"].as_str().expect("every object has an id"))
+        .collect();
+
+    assert_eq!(ids, ["smut"], "the walk returns the source entity alone");
 }
 
 /// crates.io renders the README against its own paths, so a relative link is dead
