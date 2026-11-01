@@ -6,9 +6,8 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (run rev 57, pass RV-015 concluded as a
-rebinding pass, RV-012 F-4 answered awaiting raiser verification) · commit
-603c718 + this session's ledger/run acts
+fresh-as-of: 2026-11-02 · ready (design locked at run rev 62; plan repaired
+round 1, 7 phases materialised, 25 VT mandates) · commit c3e5a49
 
 ### Produced
 
@@ -26,6 +25,15 @@ rebinding pass, RV-012 F-4 answered awaiting raiser verification) · commit
 - `IMP-004` — the epistemic-records convention set, deferred out of 0.2 with its
   draft taxonomy, the five open questions and the doctrine comparison
   (`originates_from SL-002`, `after SL-002`); DEC-017 narrowed to one set.
+- `plan.toml` / `plan.md` — seven phases, 25 VT mandates each carrying
+  `test_file` + `keywords`, plus VA/VH rows; sequencing is the scope's risk order
+  with the walker first.
+- Plan review round 1 — two read-only reviewers (obligation coverage over 236
+  design obligations; sequencing against the tree, verdict BLOCK), integrated:
+  38 findings, 36 conceded, 2 escalated, 0 rejected. Two sequencing blockers
+  repaired (README console block re-recorded at PHASE-01; `FUTURE_KEYS` retires
+  at PHASE-03). Escalations: the privacy gate's negative outcome, and design
+  line-number drift.
 
 ### Learned
 
