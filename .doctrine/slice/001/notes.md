@@ -193,66 +193,32 @@ assumed) is the line that evidence has to respect.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · reviewing (design run rev 51, pass RV-003 concluded) · uncommitted
+fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · cf57949
 
 ### Produced
 
-- SL-001 re-scoped from the whole brief to **0.1 notebook**; slug
-  `smut-0-1-notebook`. The rest is carried by IMP-001 (0.2 graph) and IMP-002
-  (1.0 presentation), the latter `after` the former.
-- Research round: `research/research.md` (thread 1 governance applicability,
-  thread 2 substrate/prior art) plus `raw/`. Crate versions verified against
-  crates.io; baseline re-stamped after the re-scope.
-- Inquiry map: 11 nodes, **all resolved**, each against an accepted decision —
-  DEC-001 boundary, DEC-002 equality, DEC-003 journal, DEC-004 pipeline/lock,
-  DEC-005 references, DEC-006 ordering, DEC-007 projection/serialisation,
-  DEC-008 CLI, DEC-009 Markdown, DEC-010 docs, DEC-011 spec surface. All linked
-  `shapes` → SL-001.
-- `design.md`: 12 sections, materialised at rev 37; design-target selectors
-  recorded (src/**, tests/**, docs/**, README.md, Cargo.toml, justfile).
-- Review: RV-001 (hostile self-pass) raised 3 findings — 1 major (§5 pipeline had
-  no absent-store branch for reads/deletes), 2 minor (index staging unstated;
-  `store/fault.rs` ungated) — all fixed, verified, concluded. The pass went stale
-  over the fixes, so the run was taken back to drafting and re-entered,
-  opening RV-002 over the settled content, concluded with no new findings.
-- RV-002, second round: 1 blocker + 2 majors from an external pass, all
-  `design-wrong`/`review`, integrated in revisions 38–42 across eight sections
-  and DEC-001/003/009. Re-entered reviewing at 43; `review.scope` and
-  `review.selectors` discharged; **RV-003** opened over rev 45.
-- RV-003 self-pass concluded over rev 49 (1 minor raised, repaired, verified);
-  RV-002 F-1 contested by the raiser over the staged-index omission and repaired
-  at 51, with the class swept. Final materialisation at revision 51.
-- Commits: `acf53fc` (design run, decisions, review ledgers). No source code yet.
-- `.doctrine` committed with the artefacts, not separately.
-- Verification gate: **N/A** — no source code and `justfile` has no `gate`
-  recipe yet; §11.4 of the design commits to wiring it.
-- Left untouched: pre-existing `flake.nix` / `flake.lock` modifications and an
-  untracked `flake.lock~`, owner's business.
+- Design locked: run rev 53, 12 sections attested, RV-002 and RV-003 terminal
+  (commits 1b1f574, c32f316, f28860e).
+- Plan authored, then revised after an independent review: 9 phases,
+  PHASE-01…PHASE-09 (commits 5224e4a, f16167d).
+- Errata recorded in `plan.md` rather than silently repaired: design §12 calls
+  `README.md` new while owner copy pre-exists; §12 lists no lib target while
+  §11.1's `tests/**` layers need one.
+- Research baseline re-stamped after the scope and design drift.
+- Verification gate: `doctrine check gate` is N/A (no code yet); `doctrine
+  validate` clean; `slice verify-vt` red by construction until phases land.
+- `.doctrine` committed with the artefacts, never separately.
 
 ### Learned
 
-- Design-run mechanics that refuse or silently stale when improvised —
-  `mem_01a1957016217433b68d54b18d8fb094`: inquiry disposition needs a `cp-` node
-  with `dispose`; editing sections during reviewing stales the pass (back-edge to
-  drafting is the remedy); the research baseline hashes the scope doc, so
-  restamp after editing it; `selector add` upserts by path.
-- The brief's own "implementation sequence" is a build order, not a delivery
-  order — carrying it as a plan makes nothing usable until nearly everything
-  exists.
-- A comparator that switches numeric domains per pair can be **cyclic**, not
-  merely imprecise; only exact comparison is a total order.
+- mem_01a1959995dc7611882307746b4495fd — six recurring review finding classes:
+  obligation-versus-API, absorbable guarantee, recipe narrower than the claim
+  above it, vacuous cfg-gated suite, tests needing a lib target, unmeetable
+  criteria.
 
 ### Open
 
-- A design that states an obligation its declared API cannot discharge (F-2) is
-  not a detail to carry into implementation: the rule and the signature have to
-  agree before the boundary is load-bearing. Same shape as F-3 — a guarantee an
-  attacker-supplied input can silently defeat is not a guarantee, so place it
-  where no input precedes it.
-- **Awaiting the gate**: RV-002 F-1 needs the raiser's verify (answered at rev
-  51); then 12 section attestations, a `review-disposed` naming **RV-003** as
-  conducted, then `design-accepted`. All user-lane.
-- `proptest` dev-dependency proposed in §12, beyond the five settled crates —
-  unvetoed, not yet objected to.
-- First-write path §5.1 vs the §4.3 barrier is the sharpest unprobed seam;
-  recorded under `review.passes` above.
+- QUE (unminted — id reservation needs an authenticated remote push, which this
+  checkout cannot do): should design §12 and §11.4 be amended for the lib target
+  and the pre-existing README? The plan departs from the table and records why in
+  `plan.md`.
