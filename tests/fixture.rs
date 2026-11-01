@@ -301,8 +301,8 @@ fn the_committed_array_declares_into_a_store_that_reads_back_the_same_entities()
 
     // And the fixture's own reference walk is held to the crate's. This is a
     // regression guard, not independent evidence about this data: both walks
-    // encode the same rule and collapse to unordered target sets, and every
-    // reference in the committed array is a flat one-element list — a shape on
+    // encode the same rule and collapse to unordered target sets, and the
+    // committed array's references are flat `[{"id": ...}, ...]` lists, a shape on
     // which the two definitions cannot differ. It would catch either algorithm
     // changing, which is what it is for (RV-020 F-6, correcting RV-019 F-2's
     // overstated disposition).

@@ -10,7 +10,7 @@
 //! The prose is `include_str!`-embedded from `src/conventions/<file>.md` rather
 //! than written inline, so the path the slice's `src/conventions/**` selector
 //! matches holds the bytes that ship (VA-1). The seed's `body` is that same
-//! string trimmed of its one trailing newline, so the listing, the prose and the
+//! string with any trailing newline trimmed, so the listing, the prose and the
 //! declaration are one copy printed three ways and cannot drift.
 //!
 //! The refusal to *install* anything is deliberate: the id is fixed, so a second

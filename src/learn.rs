@@ -1,8 +1,8 @@
 //! The embedded guide `smut learn` prints (DEC-010).
 //!
 //! Descriptive and version-scoped, never version-pinning: it names the release
-//! the surface belongs to and no build number.
-//! conventions, `DROP`, the batch responses, the nine query keys with their
+//! the surface belongs to and no build number. It covers the commands, the patch
+//! and reference conventions, `DROP`, the batch responses, the nine query keys with their
 //! defaults, the predicate summary including missing versus null, traversal in
 //! both directions with what `budget` does not bound, the envelope's conditional
 //! `traversal` member and its truncation reasons, the two-call recipe with its
@@ -355,15 +355,16 @@ mod tests {
 
     #[test]
     fn the_guide_teaches_the_defaults_and_the_roots_only_rule() {
-        // The defaults are pinned with their key word: a bare "100" is satisfied
-        // by the preamble, so it would not fail if the `limit` default sentence
-        // were deleted (RV-020 F-3).
+        // Pinned by each key's own clause, not by a bare number: "default 100" is
+        // a substring of "default 10000", and "default 1" of both, so a numeric
+        // pin would survive deleting the sentence it names (RV-020 F-3, contested
+        // and re-cut after the verifier showed the first attempt was still vacuous).
         for taught in [
             "roots-only",
             "root scan",
-            "default 100",
-            "default 10000",
-            "default 1",
+            "cap on the result, default 100",
+            "cap on entity expansions, default 10000",
+            "default 1. 0 is roots-only",
         ] {
             assert!(guide().contains(taught), "the guide omits {taught}");
         }
@@ -444,9 +445,12 @@ mod tests {
 
     #[test]
     fn the_guide_points_at_smut_conventions_once() {
+        // The pointer sentence, not the phrase: `smut conventions` also occurs in
+        // the header's synopsis, so a presence assertion on the phrase alone would
+        // survive deleting this section (RV-020 F-3, second half).
         assert!(
-            guide().contains("smut conventions"),
-            "one pointer line, and the recipe stays here"
+            guide().contains("a set never validates, never selects and never touches a store"),
+            "the Conventions section points at the command and says what it is not"
         );
     }
 

@@ -1563,7 +1563,7 @@ from the reflog (`reset --soft`, no push, no other writer's file lost) and
 `991a831` is the reviewer's commit byte for byte. The correction then went out
 as its own `docs(sl-002)` commit, and the boundary stays `46c6699`.
 
-**Two things for the seat.** (1) `src/learn.rs` is now version-free; PHASE-07's
+**Two things for the seat.** (1) `src/learn.rs` is now version-scoped (it names the release and carries no build number); PHASE-07's
 version bump must not reintroduce a figure in the guide, and `tests/fixture.rs`
 reads the library (`smut::learn`), which is the one structural addition a future
 fixture test can build on. (2) `verify-vt` PHASE-07 reads three missing keywords

@@ -1,4 +1,5 @@
-//! The README's worked example, executed (PHASE-08 EX-4).
+//! The README's worked example, executed (PHASE-01 EX-11, extended by PHASE-07
+//! VT-2; an earlier header named a PHASE-08 that was never planned).
 //!
 //! `README.md` carries exactly one `console` block: the worked example. This
 //! test reads that block out of the README, runs every command in it, in order,
