@@ -633,9 +633,8 @@ One heavy phase per charter, pairs only for the two pure cores:
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · charter 8 close (PHASE-01…PHASE-09 all complete; the
-slice's phases are done and it moves to `/audit`; VH-1 outstanding on a human for
-PHASE-05 and PHASE-08) · PHASE-08 tip `54440dc`
+fresh-as-of: 2026-11-01 · **audit** (all 9 phases complete; 28/28 verification
+rows PASS; lifecycle `started → audit` committed as `eb26398`) · head `eb26398`
 
 ### Produced
 
@@ -727,6 +726,13 @@ PHASE-05 and PHASE-08) · PHASE-08 tip `54440dc`
 - Verification gate: `doctrine check gate` is N/A (no code yet); `doctrine
   validate` clean; `slice verify-vt` red by construction until phases land.
 - `.doctrine` committed with the artefacts, never separately.
+- **At audit entry, seat-verified on `eb26398`:** `just check` exit 0 with **0
+  warnings**, **349** executed default / **406** with `--features
+  fault-injection`; `slice verify-vt` **28 PASS / 0 FAIL** across 9 phases;
+  `slice conformance` **32 conformant, 2 undeclared** (`Cargo.lock`,
+  `.doctrine/slice/001/notes.md`), **0 undelivered**; `doctrine validate` clean;
+  tree clean; 77 commits since `b0eac66`. Boundary table for every phase is in
+  `.doctrine/state/slice/001/boundaries.toml` (gitignored runtime state).
 
 ### Learned
 
@@ -829,12 +835,14 @@ PHASE-05 and PHASE-08) · PHASE-08 tip `54440dc`
   this is not a behaviour any command can reach — but
   `tests/concurrency.rs`'s "the fixture is unrecovered" assertion rests on it and
   would invert if the review rules that `load()` must refuse a live journal.
-- For PHASE-08 (unminted): the brief's end-to-end acceptance example **cannot be
-  run verbatim in 0.1** — three of its nine steps use `follow`/`where`, which 0.1
-  refuses by name citing 0.2. The README's worked example must be 0.1-shaped, or
-  the refusals must be shown as part of the example. `tests/compatibility.rs`
-  already pins the 0.1-runnable prefix of it and both refusals, so whatever the
-  README says can be checked against that file.
+- ~~For PHASE-08: the brief's end-to-end acceptance example cannot be run
+  verbatim in 0.1.~~ **Landed:** the README's worked example is that flow
+  truncated at the 0.1 boundary and ends by showing the `follow` refusal, pinned
+  by `tests/readme_example.rs`; `tests/compatibility.rs` pins the runnable prefix
+  and both refusals. **But the divergence itself is unrecorded against the
+  brief** — the brief is product authority and still carries a nine-step
+  acceptance example three of whose steps 0.1 refuses by design. For `/audit`:
+  is the brief owed an erratum, or is refusal-by-name the intended 0.1 boundary?
 - PHASE-07 leaves nothing open of its own: `EX-1…EX-7` hold, `VT-1`/`VT-2` green,
   `VA-1` discharged by reading the ingress path rather than by a test. Its three
   forward notes are the first three below.
