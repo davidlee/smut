@@ -984,6 +984,18 @@ fn a_budget_equal_to_the_permitted_expansions_completes_the_walk() {
         "every entity within the depth bound was expanded and returned: {traversal}"
     );
     assert_frontier(&traversal, json!(["left-leaf", "right-leaf"]));
+
+    let fan = budget_fan();
+    let specification = spec::parse(&json!({
+        "from": "root", "follow": ["kids"], "depth": 2, "budget": 3
+    }))
+    .expect("the boundary specification is valid");
+    let selection = select(&fan, &specification).expect("every discovery is stored");
+    let walk = selection.walk.expect("a supplied `follow` starts a walk");
+    assert!(
+        !walk.exhausted,
+        "an exact budget declines no permitted expansion, so the walk is not exhausted"
+    );
 }
 
 #[test]
@@ -1012,6 +1024,18 @@ fn one_fewer_than_the_permitted_expansions_declines_the_next_permitted_one() {
 
     let traversal = traversal_member(&document);
     assert_frontier(&traversal, json!(["right", "left-leaf"]));
+
+    let fan = budget_fan();
+    let specification = spec::parse(&json!({
+        "from": "root", "follow": ["kids"], "depth": 2, "budget": 2
+    }))
+    .expect("the boundary specification is valid");
+    let selection = select(&fan, &specification).expect("every discovery is stored");
+    let walk = selection.walk.expect("a supplied `follow` starts a walk");
+    assert!(
+        walk.exhausted,
+        "a permitted expansion was declined, so the walk reports itself exhausted"
+    );
 }
 
 #[test]
