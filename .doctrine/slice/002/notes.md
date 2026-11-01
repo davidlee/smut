@@ -722,3 +722,19 @@ decided / deferred / escalated. Empty until a phase opens.
 | --- | --- | --- | --- | --- |
 | 2026-11-02 | — | Review lane adopted: one `code-review` RV per charter batch, review parallel to the next writer, repairs batched to the boundary | decided (operator-directed) | Explicit review was missing; maintainability and quality need a seat that is not the implementer |
 | 2026-11-02 | — | DEC-018 read-through waived; PHASE-04's provenance note must record the waiver, not omit the step | decided (operator ruling) | Owner's consent, given from recall; recorded verbatim so the gate reads as satisfied-by-ruling |
+
+### G0 closed (2026-11-02)
+
+Operator assented to the revised run record. Two further rulings:
+
+- **Design line-number drift — deferred to reconcile.** Operator: "deal with it at
+  reconcile". Recorded, not repaired mid-slice; the locked run stays closed. The
+  audit/reconcile stage owns either the `REV` that corrects §1/§2/§9.4's line
+  references or the recorded decision to leave them. This is a ruled deferral, not
+  an omission: no criterion depends on the drift, and nothing in the run reads
+  those lines.
+- **Assent to the charter schedule and the authority envelope** as recorded:
+  five charters (C1…C5), the review lane with per-batch `code-review` RVs and
+  batched repairs, gates G1 (answered) / G2 / halt-before-audit.
+
+C1 (PHASE-01) opens on this basis.
