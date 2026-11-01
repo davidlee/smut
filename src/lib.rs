@@ -7,3 +7,4 @@
 #![forbid(unsafe_code)]
 pub mod entity;
 pub mod error;
+pub mod store;
