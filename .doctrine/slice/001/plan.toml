@@ -1,0 +1,224 @@
+# Implementation plan for SL-001 — the authored, durable phase plan.
+#
+# This is the single source of each phase's objective, criteria, verification,
+# and links. Runtime status lives separately under .doctrine/state/ (phase
+# tracking) — never record progress here. Hand-edit freely: the tool reads this
+# file but does not rewrite it.
+schema  = "doctrine.plan.overview"
+version = 1
+slice   = "SL-001"
+
+[specs]
+primary       = []
+collaborators = []
+
+[requirements]
+targets      = []
+dependencies = []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ordering logic: pure core first (02, 03), then the store (04, 05), then the
+# edges (06, 07), then the prose (08). Each phase lands with its own tests
+# green; nothing is "temporarily" unchecked. The durability phase (05) is the
+# one the user named as hardest and is deliberately given the sharpest
+# verification rather than the last slot.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[phase]]
+id        = "PHASE-01"
+name      = "Crate foundation: dependencies, error boundary, durable-write primitives, gates"
+objective = "Stand up the crate spine every later phase builds on: the five runtime dependencies plus the test-only fault-injection feature and proptest as a dev-dependency; the two error classes and their exit-code mapping; the canonical serialisation wrapper applied at the byte boundary; and the durable-write helpers (complete write, file fsync, temp-publish, parent fsync) that the journal will sequence. Wire the justfile gates so `just check` is one word from the first commit."
+entrance_criteria = [
+  { id = "EN-1", text = "Design locked at run revision 53; §12's dependency list and module map are the authority for names." },
+  { id = "EN-2", text = "Devshell supplies cargo, rustfmt and clippy (flake.nix, edition 2024 already declared)." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "Cargo.toml declares serde, serde_json, nanoid, fs4, clap; proptest as a dev-dependency; a `fault-injection` feature whose code is compiled out of default builds." },
+  { id = "EX-2", text = "src/error.rs defines Reject and StoreError and one exhaustive mapping to exit codes 2 and 1, with no third variant; the mapping is unit-tested." },
+  { id = "EX-3", text = "src/store/fs.rs owns durable writes: complete write, file fsync, temp-publish-then-rename, parent fsync, and the reserved temporary namespace. No caller open-codes an fsync, and the module's tests assert the call order it promises." },
+  { id = "EX-4", text = "src/store/fault.rs provides the gated injection seam (fail a named step, short-write, fail fsync/rename/unlink); a test asserts it is inert without the feature." },
+  { id = "EX-5", text = "src/entity.rs's serialisation wrapper is the single byte-boundary form (id-first root, 2-space pretty for files, compact for stdout); unit-tested with the arrays-in-order and embedded-lexical cases." },
+  { id = "EX-6", text = "justfile replaces its placeholders: build, test, lint (clippy -D warnings), fmt (--check), check (all of them). All five run green." },
+]
+verification = [
+  { id = "VT-1", expects = "the error boundary maps Reject to exit 2 and StoreError to exit 1, exhaustively, in one table test", test_file = "src/error.rs", keywords = ["Reject", "StoreError"], waived = false },
+  { id = "VT-2", expects = "the durable-write helper is the only fsync site: it fsyncs the file before the rename and the parent after it, and a test asserts that order", test_file = "src/store/fs.rs", keywords = ["sync_all", "rename"], waived = false },
+  { id = "VT-3", expects = "the serialisation wrapper emits the two byte forms deliberately: pretty for files, compact for stdout, with the entity root id-first", test_file = "src/entity.rs", keywords = ["fn ", "id"], waived = false },
+  { id = "VA-1", expects = "the reviewer confirms the declared dependency set matches §12 exactly — nothing added, nothing dropped — and that the fault-injection feature contributes no code to a default build" },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-02"
+name      = "Declaration core: entity, references, identifiers, normalize and apply"
+objective = "Build the pure declaration algebra over an in-memory snapshot: the one reference predicate and its preorder recording, the injected IdSource with the snapshot-occupancy collision contract of DEC-001 rule 3, structural JSON equality, the per-field Set/Drop fold, the DROP sentinel, whole-batch conflict rejection with per-entity pre-batch `previous` values, and the `missing` list. No filesystem, no clock, no entropy beyond the injected source."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01 exit criteria met; Reject is the core's only error type." },
+  { id = "EN-2", text = "DEC-001 rule 3 and DEC-002 are open beside the work: the generation contract takes the snapshot it must avoid." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/entity.rs exposes is_reference, scan_refs and extract; the predicate is defined once and hoists nested declarations, recording labels on the containing entity in preorder." },
+  { id = "EX-2", text = "src/id.rs defines Id and IdSource; normalize refuses a candidate that the passed snapshot, an explicit id in the request, or an earlier generated id already occupies — a generated collision can never become an upsert." },
+  { id = "EX-3", text = "src/declare.rs declares normalize(store, input, ids) and apply(store, batch) returning Outcome { response, write_set } and nothing else; WriteSet is in public-id space." },
+  { id = "EX-4", text = "Batch behaviour: same id twice with disjoint fields applies both; conflicting fields reject the whole batch with no partial mutation and no `previous` reported; omission preserves; arrays and embedded objects replace wholesale; DROP removes a field and is not assignable as a value." },
+  { id = "EX-5", text = "Structural equality treats 1 and 1.0 as distinct and is key-order-insensitive; the DROP-of-absent-field no-op and the id-only-reference cases behave as §8.3 states." },
+  { id = "EX-6", text = "Property tests hold for the fold (idempotent, coalescing) and for normalisation (deterministic for a given id source)." },
+]
+verification = [
+  { id = "VT-1", expects = "declaration algebra: single and array declarations, forward and nested references, generated ids, DROP, wholesale replacement, conflict rejection", test_file = "src/declare.rs", keywords = ["normalize", "Outcome", "DROP"], waived = false },
+  { id = "VT-2", expects = "the reference predicate and preorder recording are defined once and exercised: id-only, embedded, nested", test_file = "src/entity.rs", keywords = ["is_reference", "scan_refs"], waived = false },
+  { id = "VT-3", expects = "generation avoids the three occupied sets, one test per set, including a forced collision with a stored id", test_file = "src/id.rs", keywords = ["IdSource", "occupied"], waived = false },
+  { id = "VT-4", expects = "proptest: the fold is idempotent and coalescing over generated batches", test_file = "src/declare.rs", keywords = ["proptest"], waived = false },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-03"
+name      = "Selection core: spec surface, ordering, numeric comparison, projection and envelope"
+objective = "Build selection as a pure pipeline — roots, order, limit, project — plus spec parsing and the query envelope. Ordering is per-key missing-last with an ID tiebreak; numbers compare exactly; the spec surface accepts from/select/order/limit and rejects the named 0.2 keys by name. `get` reuses the same engine with traversal off and the default limit bypassed."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01 exit criteria met; Entities and Reject available to the core." },
+  { id = "EN-2", text = "DEC-005, DEC-006, DEC-007 and DEC-011 open beside the work." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/spec.rs parses the four accepted keys, rejects where/follow/backlinks/depth/budget by name citing 0.2, reports arbitrary unknown keys plainly, and rejects a non-object spec — all as Reject." },
+  { id = "EX-2", text = "src/order.rs implements per-key missing-last (never a final partition), direction applied only to non-equal results, and an ID-ascending tiebreak making the order total; every sort value is validated before sorting begins." },
+  { id = "EX-3", text = "src/numeric.rs compares integers and floats exactly by decomposing the float, with no per-pair domain switch; it carries property tests for totality and transitivity over ±2^53, i64/u64 extremes, subnormals and signed zeros." },
+  { id = "EX-4", text = "src/select.rs builds Selection { ids, store, fields, missing, truncated, reasons } by borrowing full entities; missing roots are excluded, reported in `from` order, unique, and never consume limit; limit 0 is rejected and the default is 100; `truncated` appears only on real omission." },
+  { id = "EX-5", text = "project and envelope are pure and filesystem-free: flat non-inlined objects, `id` always present, selected-but-absent fields omitted rather than null, missing/dangling/truncated/truncation_reasons always present, dangling structurally empty." },
+  { id = "EX-6", text = "get bypasses the default limit through an internal constructor and never truncates." },
+]
+verification = [
+  { id = "VT-1", expects = "the comparator: missing-last per key, direction on non-equal only, ID tiebreak, type order null<false<true<number<string, byte-wise strings", test_file = "src/order.rs", keywords = ["missing", "cmp"], waived = false },
+  { id = "VT-2", expects = "exact numeric comparison with the totality/transitivity property tests and the cyclic alternative absent", test_file = "src/numeric.rs", keywords = ["proptest", "total"], waived = false },
+  { id = "VT-3", expects = "selection and envelope: from-order discovery, dedupe, missing excluded and reported, limit and truncation, flat envelope with always-present diagnostics fields", test_file = "src/select.rs", keywords = ["Selection", "envelope"], waived = false },
+  { id = "VT-4", expects = "spec validation: four accepted keys, named-future rejection citing 0.2, plain unknown-key report, non-object rejection", test_file = "src/spec.rs", keywords = ["where", "unknown"], waived = false },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-04"
+name      = "Store format, index, lock and validation"
+objective = "Give the store its on-disk shape and its refusal behaviour: the `.smut/` layout with a permanent lock inode, the versioned index, basename safety, and load-plus-validate that covers both what the index explains and what it does not. Nothing here writes an index — publication is PHASE-05's commit path, so exactly one code path can create one."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01 exit criteria met; the serialisation wrapper and error boundary exist." },
+  { id = "EN-2", text = "DEC-004 open beside the work; §4.1, §4.2 and §5.2 are the authority for layout and validation." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/store/index.rs reads, validates and serialises the index: format_version 1, public id to basename mapping, unknown version refused with exit-1 semantics, parse and shape errors refused rather than repaired." },
+  { id = "EX-2", text = "Basename safety is enforced on read and write: no separators, no `.`/`..`, no symlink escape, no reserved names (lock, index.json, manifest.json, the three journal names, anything ending .tmp)." },
+  { id = "EX-3", text = "The lock is a permanent inode opened without truncation, never replaced, renamed or unlinked; the lock type is exclusive and covers reads as well as writes." },
+  { id = "EX-4", text = "Validation refuses, with the entry named where the entry is the evidence: missing indexed file, duplicate path mapping, id/content disagreement, malformed JSON, unknown format version, and any unexplained entry in `.smut/`. An index-less `.smut/` holding entity files is refused, never initialised over." },
+  { id = "EX-5", text = "No module in this phase creates index.json: the only writer is the commit path (PHASE-05), and a test asserts the loader never writes." },
+]
+verification = [
+  { id = "VT-1", expects = "index round-trip and refusal set: unknown format_version, malformed JSON, duplicate mapping, missing mapped file", test_file = "src/store/index.rs", keywords = ["format_version", "refuse"], waived = false },
+  { id = "VT-2", expects = "load-and-validate refuses every §5.2 corruption case, naming the offending entry, and refuses an index-less store that holds entity files", test_file = "tests/store_corruption.rs", keywords = ["unexplained", "missing"], waived = false },
+  { id = "VA-1", expects = "the reviewer confirms the loader performs no writes — one code path creates the index — by reading every filesystem write in the phase's diff" },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-05"
+name      = "Journal: staged barrier, durable commit decision, recovery, and the evidence for both"
+objective = "Implement the protocol the whole durability claim rests on: stage every put file and the manifest, fsync each staged put file and the manifest individually, fsync the staging directory, rename to the commit state, fsync `.smut`, apply puts-then-index-then-removals, fsync, rename to done, fsync, unlink. Recovery refuses ambiguity without destroying evidence, cleans only reserved temporaries, discards a prepare state, and validates a commit state completely before replaying it totally. Barrier failure before the rename is pre-commit (discard, store untouched); failure after it is roll-forward-only. Then produce the interruption evidence the design promises rather than assumes."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-04 exit criteria met: layout, index, lock and validation exist so a crash can be observed against a real store." },
+  { id = "EN-2", text = "PHASE-01's fault seam is available and inert by default; §4.3, §4.4, §4.5 and DEC-003 are the authority for every ordering." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/store/journal.rs drives the state machine through the PHASE-01 durable-write helpers only, in the §4.3 order, with no open-coded fsync anywhere in the protocol." },
+  { id = "EX-2", text = "The barrier is explicit and complete: every staged put file — each entity file and the staged index.json — plus manifest.json is fully written and fsynced individually, then the staging directory is fsynced, then the commit rename, then the parent fsync. A barrier failure before the rename discards the staging state, exits 1, and leaves the store exactly as it was." },
+  { id = "EX-3", text = "Recovery runs under the lock and strictly before store validation; it refuses without modifying evidence when more than one state directory exists, removes only reserved temporaries, finishes a done state, discards a prepare state, and validates a commit state completely (version, safe unique basenames, disjoint puts/removes, reserved names excluded, every listed put present, every staged file listed) before replaying it totally and renaming to done." },
+  { id = "EX-4", text = "Apply failure after the rename is roll-forward-only: exit 1, journal left in the commit state for the next command." },
+  { id = "EX-5", text = "tests/durability_crash.rs interrupts at every named boundary — after each staged fsync, between the staging fsyncs and the rename, after the rename and before the parent fsync, at each apply step, before the done rename, during cleanup — and asserts that recovery yields either the whole batch or the pre-commit state, never a mixed one." },
+  { id = "EX-6", text = "Repeated recovery is explicit: a recovery interrupted by a later command's recovery converges to the same state, tested for each interrupted recovery step rather than one representative." },
+  { id = "EX-7", text = "Injected faults cover a failed fsync on each barrier member separately (including the staged index), a short write, a failed rename and a failed unlink, each asserting the protocol's stated reaction." },
+  { id = "EX-8", text = "No test asserts power-loss durability. The suite asserts code-path ordering only, and the file says so once, matching design §11.1's two claims." },
+]
+verification = [
+  { id = "VT-1", expects = "the state machine: prepare/commit/done transitions, staged manifest as the write set, puts-then-index-then-removals order", test_file = "src/store/journal.rs", keywords = ["manifest", "commit"], waived = false },
+  { id = "VT-2", expects = "interruption at every named boundary leaves a recoverable store; each boundary is a separate test", test_file = "tests/durability_crash.rs", keywords = ["prepare", "commit", "recover"], waived = false },
+  { id = "VT-3", expects = "barrier ordering asserted by injection: each staged put file, the manifest and the staging directory fsynced before the rename, with a failing index fsync caught", test_file = "tests/durability_crash.rs", keywords = ["fsync", "index"], waived = false },
+  { id = "VT-4", expects = "repeated recovery converges: recovery interrupted mid-replay is completed by the next command, asserted per interrupted step", test_file = "tests/durability_crash.rs", keywords = ["recovery_interrupted"], waived = false },
+  { id = "VH-1", expects = "human reads the crash suite against §4.3/§4.4/§4.5 and confirms every named boundary has a test, repeated recovery is explicit, and the file claims only code-path ordering — this is the implementation evidence for the durability claim" },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-06"
+name      = "Markdown renderer: layout, safe delimiters, fallback, leading completeness notice"
+objective = "Render a Selection as Markdown: heading from a selected non-empty string field, verbatim untrimmed body, other fields only on request, identity as a safely fenced code span, the visibility fallback, and the completeness notice as the document's first block, so no stored content can absorb it."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-03 exit criteria met: Selection, project and the diagnostics fields exist." },
+  { id = "EN-2", text = "DEC-009 open beside the work; it is the authority for layout, encoding and notice placement." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/render_markdown.rs renders entities in selection order separated by one blank line, heading only when selected, string and non-empty, newlines in heading text collapsed, body emitted verbatim as its own block untrimmed." },
+  { id = "EX-2", text = "Field labels are escaped and ids are fenced with a run longer than the longest backtick run inside them, padded at the edges, each its own span, never joined ambiguously." },
+  { id = "EX-3", text = "The visibility fallback fires when nothing else would be visible, and an empty or whitespace-only body cannot suppress it; a non-string body remains displayable under --show-fields; --heading-field body renders once." },
+  { id = "EX-4", text = "The completeness notice is the document's first block, before any entity content: `> truncated: result_limit; additional entities omitted` and `> missing: ...`, with no N-of-M form. Both notices still render when the selection yields no entities." },
+  { id = "EX-5", text = "The notice survives hostile bodies: a body ending in an unclosed HTML comment and a body ending in an unclosed fence are both tested with a truncated selection, and the notice remains the first rendered block in each." },
+]
+verification = [
+  { id = "VT-1", expects = "layout and encoding: heading rules, verbatim body, show-fields, safe id fencing, fallback on visibility", test_file = "src/render_markdown.rs", keywords = ["fallback", "fence"], waived = false },
+  { id = "VT-2", expects = "the notice leads the document and survives an unclosed comment and an unclosed fence", test_file = "tests/render.rs", keywords = ["<!--", "truncated"], waived = false },
+  { id = "VT-3", expects = "zero-entity selections still emit diagnostics without entity output", test_file = "tests/render.rs", keywords = ["missing"], waived = false },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-07"
+name      = "Pipeline and CLI: end-to-end contract, concurrency, and the round-trip seam"
+objective = "Connect the parts into the binary the brief describes: clap grammar with `--` for opaque ids, one JSON operand or stdin with the TTY heuristic, strict duplicate-key parsing, the eleven-step pipeline in DEC-004's order, the JSON envelopes, exit codes, stdout/stderr separation, and the embedded learn command. Then prove the seams no unit test reaches — the round trip, the concurrent initialisation, and the interrupted-batch guarantees observed from outside the process."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-02 through PHASE-06 exit criteria met: core, store, journal and renderer all tested in isolation." },
+  { id = "EN-2", text = "DEC-004, DEC-008, DEC-010's learn content and DEC-011 open beside the work." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "src/cli.rs defines declare, get, delete, query, render, learn plus --help/--version; exactly one JSON operand, `-` reads stdin explicitly, absent operand on a TTY prints usage and exits 2, absent operand on a pipe reads stdin, trailing non-whitespace exits 2." },
+  { id = "EX-2", text = "src/input.rs rejects duplicate JSON keys during parsing, before any store access, via a visitor that checks each key as it is yielded." },
+  { id = "EX-3", text = "The pipeline runs in DEC-004's order: validate the whole request, pre-compute against an empty snapshot only when the store is absent, create-and-fsync-parent then lock, recover, load and validate, recompute authoritatively, commit unless the write set is empty, serialise fully under the lock, unlock, write. Only declare ever creates a store; a read or delete against an absent store is exit 1 with nothing created and no invented `missing` list." },
+  { id = "EX-4", text = "Envelopes, exit codes and streams match the brief: Reject is 2, StoreError is 1, success including reported missing ids and truncation is 0; JSON on stdout, diagnostics never only on stderr, learned text from `learn`." },
+  { id = "EX-5", text = "--format mermaid is refused with exit 2 and a message naming 1.0, never a bare backlog id." },
+  { id = "EX-6", text = "tests/roundtrip.rs proves normalize to write set to commit to reload preserves the same entities, including generated ids and DROP." },
+  { id = "EX-7", text = "tests/concurrency.rs proves two simultaneous first declarations create the store once (fn two_simultaneous_first_declarations), termination before the first lock acquisition leaves nothing half-written, one process recovering another's transaction yields one coherent state, and a stale empty-snapshot precheck never persists a colliding generated id (fn stale_empty_snapshot_precheck)." },
+  { id = "EX-8", text = "tests/compatibility.rs pins representative 0.1 invocations so widening the spec surface in 0.2 cannot silently change them." },
+]
+verification = [
+  { id = "VT-1", expects = "the command contract: envelopes, exit codes 0/1/2, stdin and `-`, `--`, the TTY heuristic, trailing garbage, --format refusal naming 1.0", test_file = "tests/cli_contract.rs", keywords = ["exit", "stdin"], waived = false },
+  { id = "VT-2", expects = "the round-trip seam: normalize to write set to commit to reload preserves entities", test_file = "tests/roundtrip.rs", keywords = ["reload"], waived = false },
+  { id = "VT-3", expects = "concurrent initialisation and cross-process recovery, by scenario name", test_file = "tests/concurrency.rs", keywords = ["two_simultaneous_first_declarations", "stale_empty_snapshot_precheck"], waived = false },
+  { id = "VT-4", expects = "0.1 invocations stay valid when the spec surface widens", test_file = "tests/compatibility.rs", keywords = ["where"], waived = false },
+  { id = "VA-1", expects = "the reviewer confirms duplicate-key rejection happens during parsing with no store access taken, by reading the ingress path in the diff" },
+]
+specs        = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-08"
+name      = "Documentation, learn content, and the claim the format document makes"
+objective = "Write the prose the release owes: the README edited rather than replaced (the repository already carries owner-written brand copy and an image), the versioned on-disk-format document carrying the fsync obligations, the recovery algorithm and the commit-before-acknowledgement ambiguity, and the embedded learn guide confined to the 0.1 surface. Everything documented must be what the code does, checked by running it."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-07 exit criteria met: the binary behaves, so documentation can be checked against behaviour rather than intent." },
+  { id = "EN-2", text = "DEC-010 open beside the work; design §4.6 is the exact wording of the guarantee to quote." },
+]
+exit_criteria = [
+  { id = "EX-1", text = "README.md keeps its existing brand copy and image reference and gains: what smut is, one worked example, the command table, the sharp edges (embedded id cannot be inline metadata, DROP is a field sentinel, store-not-found is exit 1, 1 vs 1.0, where arrives in 0.2, `--` for opaque ids, bodies may absorb each other but never the completeness notice), the atomic-visibility paragraph quoted from DEC-003, and the portability note. It is edited, not overwritten: the note in this plan records that §12 calls it `new` and the tree disagrees." },
+  { id = "EX-2", text = "docs/store-format.md carries format_version 1, the layout, canonical serialisation, the journal states with their fsync obligations including the staged barrier, the recovery algorithm, the reserved names, the corruption responses, what is never adopted, and the guarantee with its commit-before-acknowledgement ambiguity." },
+  { id = "EX-3", text = "src/learn.rs prints concise, version-matched instructions covering the 0.1 surface only: commands, patch and reference conventions, DROP, batch responses, query defaults, missing versus null, and the create/amend/render workflows; it advertises no 0.2 behaviour." },
+  { id = "EX-4", text = "Every command and envelope shown in the README is executed and matches; `just check` is green; the example in the README is run verbatim." },
+]
+verification = [
+  { id = "VT-1", expects = "the format document states the barrier and the ambiguity it licenses", test_file = "docs/store-format.md", keywords = ["fsync", "format_version", "ambiguity"], waived = false },
+  { id = "VT-2", expects = "the learn guide covers the 0.1 surface and names 0.2 only as future", test_file = "src/learn.rs", keywords = ["DROP", "0.2"], waived = false },
+  { id = "VH-1", expects = "human reads the README as a newcomer: the worked example runs, the sharp edges match what they hit, and the quoted guarantee is the design's own wording" },
+]
+specs        = []
+requirements = []
