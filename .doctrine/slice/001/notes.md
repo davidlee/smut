@@ -342,12 +342,48 @@ One heavy phase per charter, pairs only for the two pure cores:
   stdout form lexical apart from the id-first entity root, so the example is
   illustrative; if the brief's display order is ever wanted it is a PHASE-07
   question, not a core change · deferred to PHASE-07
+- charter-2 · PHASE-03 authorised `src/error.rs` additively again, for six new
+  `Reject` variants (unsortable value, not-a-specification, unknown order member,
+  future spec key, unknown spec key, invalid spec value) · DEC-011's rejections
+  are stated in terms of `Reject` and there is no other home for them; the
+  two-class `Error` mapping and `StoreError` stayed untouched · decided
+- charter-2 · `Limit` is an opaque struct over a private enum, with the cap lifted
+  only by a `pub(crate)` constructor that `get` uses · a public `Unlimited`
+  variant would let any caller assemble a defaulted-and-bypassed `Spec`, which is
+  exactly what DEC-001 rule 4 forbids; the crate-visible constructor keeps the
+  bypass internal as the rule states · decided
+- charter-2 · `from: ""` is accepted as a necessarily-missing root instead of
+  being rejected · DEC-005 makes an empty string invalid only where an id is
+  *read* as one; the spec surface DEC-011 fixes names no such rejection and
+  inventing one would narrow it · decided
+- charter-2 · the PHASE-03 worker spotted that `src/entity.rs`'s canonical
+  wrapper serialises nested objects lexically, so a projected entity inside an
+  envelope's `objects` array is not id-first, though DEC-007 wants an entity root
+  id-first wherever it appears · the fix lands at the byte boundary with the
+  owner of `src/entity.rs` once the CLI projects into an envelope, not in the
+  selection core · deferred to PHASE-07
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · f16167d
+fresh-as-of: 2026-11-01 · charter 2 close (PHASE-01…PHASE-03 complete) · 3fc8086
 
 ### Produced
+
+- PHASE-01 landed the crate spine (9 commits, `e0ce040…397c5c8`); PHASE-02 the
+  declaration core (9 commits, `614ea33…7adefa4`); PHASE-03 the selection core
+  (7 commits, `e08bb7f…3fc8086`). `docs/` and `README.md` remain undelivered by
+  design — PHASE-08.
+- `just check` green at both closes: 142 lib + 4 bin + 5 `tests/selection.rs`
+  (151) on default features, 152 + 4 + 5 (161) with `--features
+  fault-injection`.
+- `slice verify-vt` green for every row PHASE-01/02/03 own (12/12); later phases
+  red because their files do not exist yet.
+- `slice conformance`: 16 declarations conformant; two undeclared (`Cargo.lock`,
+  `.doctrine/slice/001/notes.md` — neither is in §12's selector list) and the two
+  deliberately undelivered targets.
+- serde `derive` settled **off** for the run so far: responses are assembled as
+  `serde_json::Value` and every byte form comes from PHASE-01's hand-written
+  wrapper.
 
 - Design locked: run rev 53, 12 sections attested, RV-002 and RV-003 terminal
   (commits 1b1f574, c32f316, f28860e).
@@ -370,6 +406,10 @@ fresh-as-of: 2026-11-01 · plan (design locked, run rev 53) · f16167d
 
 ### Open
 
+- Two byte-boundary defects for PHASE-07 to fold in: nested entity objects are
+  serialised lexically rather than id-first (DEC-007), and the response/envelope
+  key order is lexical where the brief's examples show a display order (accepted
+  as insignificant; DEC-007 fixes the stdout form).
 - QUE (unminted — id reservation needs an authenticated remote push, which this
   checkout cannot do): should design §12 and §11.4 be amended for the lib target
   and the pre-existing README? The plan departs from the table and records why in
