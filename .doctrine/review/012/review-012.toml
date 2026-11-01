@@ -186,7 +186,7 @@ note = "DEC-018 body, choice and consequences, and the §14.1 row now describe t
 
 [[finding]]
 id = "F-4"
-status = "contested"
+status = "answered"
 severity = "minor"
 title = "The seed upsert silently overwrites a locally amended convention body while the text promises the store owns its copy"
 detail = """
@@ -199,12 +199,13 @@ What it should say: the seed's body is supplied, so a local amendment to it is r
 disposition = "fix-now"
 route = "refresh"
 response = """
-Accepted. The record lags the behaviour it describes: an upsert of supplied fields is what the section specifies, and the ownership sentence claims more than that. No protection is added - read-only or protected seeds would be a new mechanism, and the section is right that the pipe is the whole mechanism.
+Both points accepted; neither changes the design.
 
-Records edited: 9.3 gains the sentence that a local amendment to a supplied field is replaced on re-install, with the three options the operator actually has - amend a different entity, keep the amendment outside the seeded fields, or re-apply it. The epistemic-records and hygiene prose each carry one line saying the seeded body is advice that gets replaced, since the set's printed text is where a reader meets the idea first.
+Point 1 is satisfied, after the fact. The deferral refactor (commit 603c718) rewrote DEC-017 in all three tiers, and it now reads: re-install "replaces every field the seed supplies, body included: the store owns its copy only as an ordinary entity it may edit or delete, and an amendment to the seeded body does not survive the next install", with consequences "The store may amend its copy but the seeded body is replaced on re-install; the binary never reads it back". The verification ran against the pre-refactor text (rev 54); the sweep the earlier response claimed is now actually in the record. The same warning is in 9.3 and in the set's printed prose, as 9.2 requires.
 
-Records swept: DEC-017's body, which says the store owns its copy and must not imply edit protection; the 9.4 guide bullet that points at conventions; and the conventions command tests in 13.1, which already assert the upsert overwrites and can now assert that a user-added field survives while an amended supplied field does not - the exact pair the earlier wording blurred.
-"""
+Point 2 is conceded: the finding's counterexample is impossible, and its instance was wrong. Seed ids are fixed per set (conventions-hygiene, and the same pattern for any set added later), so an id-keyed upsert cannot touch an entity carrying a different id, vocab in particular. vocab is evidence of the practice of amending convention prose by hand, not a record this pipeline overwrites. The valid counterexample is editing body on an installed conventions-hygiene and re-running its own seed, which is exactly what 9.3 now warns about and what the 13.1 Conventions test row asserts: on re-install a user-added field survives while an amended seeded body is replaced.
+
+No new mechanism is added and nothing in the design changes on this round. The repair is already in 9.3, the 9.2 prose note, scope objective 8, the 13.1 test row and DEC-017; this dispose corrects a durable answer, not the design. Verification of it belongs to the raiser."""
 
 [[finding.turn]]
 act = "raise"
@@ -238,6 +239,20 @@ Two points prevent accepting the full response as written. (1) The response expl
 
 (2) F-4's concrete instance is factually wrong: it says rerunning the hygiene seed pipeline would erase the amendment in the existing vocab entity. jq over the live store confirms id:vocab; §9.3/DEC-017 fix seed ids to conventions-hygiene and conventions-epistemic-records, neither currently present. ID-keyed upsert therefore cannot touch vocab. Since the raise is immutable, explicitly correct this in the responder's durable answer: vocab is evidence of the practice of locally amending convention prose, not an entity overwritten by this pipeline. Use the valid counterexample of editing body on an installed conventions-hygiene or conventions-epistemic-records entity and reinstalling that same seed. No need to withdraw the underlying overwrite finding or change seed behavior.
 """
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Both points accepted; neither changes the design.
+
+Point 1 is satisfied, after the fact. The deferral refactor (commit 603c718) rewrote DEC-017 in all three tiers, and it now reads: re-install "replaces every field the seed supplies, body included: the store owns its copy only as an ordinary entity it may edit or delete, and an amendment to the seeded body does not survive the next install", with consequences "The store may amend its copy but the seeded body is replaced on re-install; the binary never reads it back". The verification ran against the pre-refactor text (rev 54); the sweep the earlier response claimed is now actually in the record. The same warning is in 9.3 and in the set's printed prose, as 9.2 requires.
+
+Point 2 is conceded: the finding's counterexample is impossible, and its instance was wrong. Seed ids are fixed per set (conventions-hygiene, and the same pattern for any set added later), so an id-keyed upsert cannot touch an entity carrying a different id, vocab in particular. vocab is evidence of the practice of amending convention prose by hand, not a record this pipeline overwrites. The valid counterexample is editing body on an installed conventions-hygiene and re-running its own seed, which is exactly what 9.3 now warns about and what the 13.1 Conventions test row asserts: on re-install a user-added field survives while an amended seeded body is replaced.
+
+No new mechanism is added and nothing in the design changes on this round. The repair is already in 9.3, the 9.2 prose note, scope objective 8, the 13.1 test row and DEC-017; this dispose corrects a durable answer, not the design. Verification of it belongs to the raiser."""
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
