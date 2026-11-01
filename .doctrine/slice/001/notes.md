@@ -635,7 +635,9 @@ One heavy phase per charter, pairs only for the two pure cores:
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-01 · **audit complete** (RV-004: 17 findings — 3
 `fix-now` landed, 5 `design-wrong` to reconcile, 6 `tolerated`, 2 `aligned`, 2
-human reads outstanding; 28/28 verification rows PASS) · head `984cc46`
+human reads outstanding; 28/28 verification rows PASS) · **4 post-audit
+packaging commits** (`2e6cfe7` GPL-3.0-only + crates.io metadata, `094005f`
+README image, `105db99` notes) · head `105db99`
 
 ### Produced
 
