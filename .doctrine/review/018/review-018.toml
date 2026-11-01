@@ -1,0 +1,62 @@
+id    = 18
+slug  = "code-review-of-sl-002-phase-02-phase-03-budget-truncation-and-the-roots-only-predicate"
+title = "code review of SL-002 PHASE-02 + PHASE-03 — budget, truncation and the roots-only predicate"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "reviewer"
+responder = "implementer"
+rounds_base = 0
+contests_base = 0
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "open"
+severity = "minor"
+title = 'README calls five keys "the whole 0.2 query surface", contradicting the nine-key list on the same page'
+detail = """`README.md:32-34` against `README.md:103-104`. Expected: the surface named "whole" is the nine keys of §5, or the five are named as what 0.2 *adds* — PHASE-03 EX-8 asks for the nine-key surface. Observed, verbatim: "This tree is **0.1.1 plus the 0.2 work** ... `where`, `follow`, `backlinks`, `depth` and `budget` are the whole 0.2 query surface", while the Commands section 70 lines later says "The specification keys are `from`, `where`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth` and `budget`". The following clause ("The 0.1.1 on crates.io has none of them") repairs it on a charitable reading, so no capability is over-claimed — the count is. It is the release's front door, the sentence R1 raised as F-3 lived in, and DEC-019's rule is that prose falsified in a phase is re-cut in that phase. Route: one-word repair ("are what 0.2 adds to the query surface") in the trailing prose batch; no phase re-open. Raised route: fix-now; the responder batches it to the PHASE-04 boundary because the file is not being written by this charter."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-2"
+status = "open"
+severity = "nit"
+title = 'A test comment cites a "refusal" the test it names does not contain'
+detail = """`tests/predicates.rs:103-104`: "Without this case the operator would be pinned only by the refusals in `missing_and_present_null_differ_exactly_where_the_table_says`" — but that test (`:65-97`) contains one `$contains` row and it is a non-match, not a refusal; its own comment says "it does not refuse either" (`:87-88`), and `$contains` has no refusal path at all (any operand parses; only the field's shape decides). Second instance in the same file: the module doc (`:9-13`) says a test asserting the AST shape "would pin an implementation detail the design leaves open", but design §6.1 locks the AST verbatim and `src/predicate.rs` derives `PartialEq`/`Eq` on it precisely so `src/spec.rs:546-560` can assert it. Comments that misdescribe coverage send the next reader hunting for a test that is not there — the class R1 raised as F-4. Route: reword both; no behaviour involved."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-3"
+status = "open"
+severity = "nit"
+title = "A test name claims exclusivity its body does not assert"
+detail = """`src/spec.rs:516`: `the_acceptance_set_is_exactly_the_nine_keys` proves only that each of the nine is accepted; the "exactly" is carried by `an_unknown_key_is_reported_plainly_as_unknown_and_names_no_release` (`:432-449`) and the CLI's `an_unknown_key_stays_unknown_and_names_no_release`. The name has already been wrong twice (four → seven → nine, per its own comment), and the criterion it serves — EX-8's "every key 0.2 does not know is refused plainly" — is satisfiable from the file while the named test cannot fail on a tenth accepted key. Route: either assert the tenth-key refusal at the loop's tail, or rename to `the_nine_keys_are_each_accepted`."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-4"
+status = "open"
+severity = "nit"
+title = "The binary-driving test harness is now copied into a sixth file"
+detail = "`tests/predicates.rs:445-556` (`Scratch`, `Ran`, `run`, `smut`). `struct Scratch` appears in nine test files and the full harness set in five (`cli_contract.rs:20-125`, `compatibility.rs:31-130`, `predicates.rs:445-556`, `readme_example.rs`, `traversal.rs:180-282`); PHASE-03 added the sixth copy deliberately and recorded the decision in the C3 autonomy log. A change to the scratch-store protocol or to the one-compact-JSON-line contract must now be made in five places, and the copied `assert_one_json_line` is the shared definition of a machine-readable reply. Test-only, per-crate, and consistent with the repo's existing pattern — hence nit. Route: no edit now; consolidating to `tests/common/mod.rs` is a phase that already touches the affected files, and PHASE-07 owns the fence."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
