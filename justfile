@@ -19,3 +19,10 @@ fmt:
     cargo fmt --check
 
 check: build lint fmt test
+
+# The lifecycles that call the gate by its cadence name get the same sequence:
+# `doctrine check gate` (phase close) and `doctrine check prove` (prove clean)
+# default to these recipes, and both are the non-mutating `check` above. Aliasing
+# keeps one definition of the gate rather than a second one that can drift.
+gate: check
+prove: check
