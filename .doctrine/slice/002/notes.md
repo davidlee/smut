@@ -184,3 +184,60 @@ is a known defect, each is the place a later reader is most likely to be wrong:
 
 Nothing here blocks the lock: each item is a check for the phase that builds it,
 and each has a place in §13.1's test map.
+
+## RV-009 — adversarial pass (codex), 2026-11-01
+
+Independent second pass by the operator's codex reviewer, after the RV-007
+repairs. Three findings, all verified against the text and all `fix-now`:
+
+- F-1 `major` (review) — **the two-call recipe laundered truncation.** The guide
+  recipe extracted ids from a first response without reading `truncated`; with
+  101 discovered entities and the open question ordered last, the second call
+  reports "no open questions" in a `truncated: false` envelope. The acceptance
+  fixture is under the default limit, so the suite could not have caught it.
+  Repaired: §9.4 normative guard, invariant 13 ("composition does not launder
+  incompleteness"), §12 risk row, §13.1 Guide + new Composition row, §13.3
+  scenario 6 (over-cap graph and budget-cut variant), scope objective 9, and
+  DEC-016's body + consequences.
+- F-2 `minor` (refresh) — §10.3's `follow: []` row promised "no edges, empty
+  frontier", contradicting §7.2/§8.2 (induced edges) and the depth/budget
+  frontier rules. Repaired to "no outgoing discoveries", with the same
+  qualification on the named-field row. Sweep: every no-edge promise.
+- F-3 `minor` (dedupe) — §9.2 defined `retracted` and then said `superseded` is
+  the status for a retraction. The clause goes; retracted = withdrawn,
+  superseded = replaced (the `supersedes` edge). §2 and §13.1 already used the
+  distinction.
+
+Lesson on the machinery: repairs to a materialised design cost the open pass its
+fingerprints, and the run only rebinds its pass on re-entering `reviewing`. So
+the order that wastes least ceremony is **raise → dispose → repair everything →
+adopt → one stage round trip → one pass → conclude**. Repairing between passes
+buys a fresh stale ledger each time (RV-008, RV-009, RV-010 all paid for this).
+
+## RV-011 — fixture-claim correction (found while checking thread 3)
+
+- F-1 `minor` (refresh) — §2 and the §13.1 fixture row claimed the acceptance
+  graph holds "a retracted finding". It holds none: 28 statused entities with no
+  `retracted` anywhere, and the one retired finding (`finding-smut-16`) is
+  `superseded`. The store's own `vocab` says `superseded` retired it "with its
+  retraction intact" — the same conflation RV-009 F-3 found in the draft, sitting
+  in the evidence the draft was written from. Repaired in §2, §13.1, the scope
+  objective and §9.2, which now names the conflation as the drift the distinction
+  corrects.
+- Consequence for planning: the fixture property list is **superseded finding +
+  settled finding + mutual cluster + unreferenced entities**, and no retracted
+  record. Do not manufacture one to satisfy an old sentence.
+
+## Research thread 3 (delegated)
+
+`.doctrine/slice/002/research/raw/thread-3-doctrine-epistemic-schema.md` — what
+doctrine's own record model does (24 kinds, 7 knowledge kinds with kind-specific
+facets, per-kind status vocabularies, derived liveness, outbound-only relations,
+supersession that requires a successor) and a comparison table against the §9.2
+draft. `.doctrine/slice/002/research/raw/thread-3-synthesis-proposal.md` — its
+own synthesis for what the set should say.
+
+Corrected by the orchestrator: the findings file first claimed no verb prints a
+schema; `doctrine design contract --format prompt` does (embedded
+`knowledge::RecordKind`), it is just design-scoped. Everything else spot-checked
+against the store and the CLI.

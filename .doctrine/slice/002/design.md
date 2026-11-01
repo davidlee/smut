@@ -50,7 +50,7 @@ not reopen its mechanisms; it extends four seams.
 | Comparator: per-key missing-last, ID tiebreak, exact numbers | `src/order.rs:66` | Unchanged; traversal-discovered ids sort exactly like roots |
 | Envelope: flat objects, `missing`, `dangling`, `truncated`, reasons | `src/select.rs` `envelope` | Add one conditional `traversal` member; `dangling` gains traversal content |
 | Markdown completeness notice | `src/render_markdown.rs:280` | Disclose `traversal_budget` and dangling diagnostics in the same leading block |
-| Guide | `src/learn.rs:113` | Teach the 0.2 surface and the two-call idiom; remove the 0.1 release notice |
+| Guide | `src/learn.rs:113` | Teach the 0.2 surface, the two-call idiom and its completeness guard; remove the 0.1 release notice |
 | Compatibility pins | `tests/compatibility.rs:316` | Keep the 0.1 query pin; re-cut the `where`-refusal test into an additivity pin |
 | Store format | `docs/store-format.md` | Unchanged; `format_version` stays 1 |
 
@@ -58,11 +58,14 @@ The first-use store is product evidence, not defect evidence: 66 entities, 44
 distinct reference targets, 22 with nothing pointing at them — measured before
 the privacy read-through of §11, so source evidence rather than a test assertion
 (§13.1 pins the committed array) — labels `part-of`
-(65), `about` (48), `answers` (5) and `projects` (1). It contains a superseded
-record, a retracted finding and mutually-referencing clusters. It is the
-acceptance graph (DEC-018), with one caveat: its `vocab` entity says `projects`
-is unused while `a-focus` uses it, so tests assert against entities, never
-against the vocabulary prose.
+(65), `about` (48), `answers` (5) and `projects` (1). It contains one superseded
+finding retired in place, settled and open findings, and mutually-referencing
+clusters. It contains no retracted record at all: its own `vocab` says
+`superseded` retired `finding-smut-16`, which is the conflation §9.2 now names.
+It is the acceptance graph (DEC-018), with two caveats: its `vocab` entity says
+`projects` is unused while `a-focus` uses it, and its status list collapses
+retraction into supersession, so tests assert against entities, never against
+the vocabulary prose.
 
 <!-- doctrine:section sec-11 -->
 ## 3. Forces and constraints
@@ -584,7 +587,13 @@ Direction discipline: write one direction per relation, chosen by the question
 you will ask most; never write both directions. A claim carries a `scope` field
 (`doctrine`, `smut`, `operator`, `external`) so a reader can tell whose claim it
 is without reconstructing the prose. A retracted record is kept with its
-retraction intact rather than deleted; `superseded` is the status for that.
+retraction intact rather than deleted; a replaced record is kept too, as
+`superseded`. The two are different states with different jobs: `retracted` says
+the content is withdrawn, `superseded` says something newer replaced it and
+`supersedes` is the edge that makes it so. The store this set was derived from
+collapses the two — its `vocab` says `superseded` retired a finding "with its
+retraction intact" — so the distinction is advice that corrects a real drift in
+the operator's own record, not a taxonomy for its own sake.
 
 None of this is enforced. The tool prints it and refuses to check it.
 
@@ -614,8 +623,20 @@ semantics). The binary never reads it back.
 - the `traversal` provenance member and the truncation reasons;
 - the **two-call recipe** (DEC-016):
   `select:["id"]` traversal, then `where` over those ids as roots;
+- the recipe's **completeness guard** (below), which is part of the recipe, not
+  advice beside it;
 - a minimal label vocabulary and the bounded-render advice;
 - one pointer line to `smut conventions`.
+
+The recipe carries an obligation, and it is normative: inspect `truncated` and
+`truncation_reasons` on the **first** response before extracting ids. Either
+reason — `result_limit` or `traversal_budget` — makes the second answer a
+statement about the ids you received, not about the graph. Raise `limit` or
+`budget` where the store allows it and repeat; otherwise say the answer is
+partial. A `truncated: false` second envelope is never evidence of coverage,
+because it cannot see what the first call dropped. This is the one composition
+rule the release must teach, since `where` over roots is otherwise silent about
+everything discovery did not return.
 
 It removes 0.1's "where and traversal arrive in 0.2" notice. The conventions
 sets state principles and point at `learn` for the recipe; they do not repeat it.
@@ -646,6 +667,9 @@ sets state principles and point at `learn` for the recipe; they do not repeat it
     runtime failures are exit 1.
 11. `get` never traverses, never truncates and never carries a `Walk`.
 12. The six determinism rules are behaviour, not incidental ordering.
+13. Composition does not launder incompleteness: `where` over a previous
+    call's ids says nothing about what that call truncated, and a second
+    envelope's `truncated: false` is not evidence about the first.
 
 ### 10.2 Assumptions
 
@@ -668,8 +692,8 @@ sets state principles and point at `learn` for the recipe; they do not repeat it
 | supplied root absent | `missing`, in `from` order, unique; never consumes `limit` |
 | supplied root fails `where` | omitted, not `missing` |
 | a discovered entity fails `where` | still discovered and returned: roots-only |
-| `follow: []` | traversal member present; roots expanded, no edges, empty frontier |
-| a named traversal field no entity carries | no edges; not an error |
+| `follow: []` | no outgoing discoveries; the member is present, induced edges among the returned objects still apply, and the frontier follows `depth`, `budget` and any supplied `backlinks` |
+| a named traversal field no entity carries | no outgoing discoveries from that label; not an error, and induced edges among returned objects are unaffected |
 | two returned nodes neither of which was expanded | their edge is still in `edges` |
 | an edge in a field not named in `follow`/`backlinks` | included when both endpoints are returned |
 | `follow: "*"` | wildcard, `scan_refs` order |
@@ -731,8 +755,8 @@ phase that depends on it, not papered over at audit.
 | The fixture commits something private | A fresh-agent read-through is a phase gate before the fixture commit; the operator resolves anything found (DEC-018) |
 | Conventions advice reads as a schema | Two epistemics in the guide; the command prints and never validates; tests assert no store is created or read |
 | Predicate disambiguation is subtly wrong | Table-driven tests for literal, operator-only, mixed, `$eq` on a literal object with `$` keys, and missing/null |
-| The guide drifts from behaviour | `learn` tests assert the two-call recipe, the new keys, the `traversal` member and the removal of the 0.1 release notice |
-| A criterion only polite input can reach | Every edge-case row in §10.3 that names a behaviour gets a test that produces that state, including `follow: []`, `depth: 0` and an empty budget-ending queue |
+| The guide drifts from behaviour | `learn` tests assert the two-call recipe and its guard (both truncation reasons read before ids are filtered), the new keys, the `traversal` member and the removal of the 0.1 release notice |
+| A criterion only polite input can reach | Every edge-case row in §10.3 that names a behaviour gets a test that produces that state, including `follow: []` with an induced edge between roots, `depth: 0` and an empty budget-ending queue; the composition guard gets a graph above the default cap whose only matching question orders beyond it |
 | A general claim is narrower than its recipe | The budget/backlink claim is stated with its exact boundary, and the determinism table names the mechanism per rule |
 | Fault-injection suites pass vacuously | The gate runs the feature matrix and asserts a non-zero executed test count for the injected suites |
 
@@ -752,9 +776,10 @@ durability guarantees and their tests remain in force unchanged.
 | Determinism | `tests/traversal.rs` | Named fields in query order (different from lexical), wildcard lexical, array order, outgoing before incoming, incoming source ID order; a rebuilt store with shuffled index entries and filenames yields an identical envelope |
 | Envelope | `tests/traversal.rs`, `tests/selection.rs` | `traversal` presence condition, `depths`/`edges` result-scoped, `frontier`/`dangling` walk-scoped, limit cut, reason order, `get` never traverses; edges induced from returned entities including an unrequested field and a returned-but-unexpanded node |
 | Hidden fields | `tests/traversal.rs` | `select` hides a reference field; edges and connectivity survive |
-| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded record, a retracted finding, a mutually-referencing cluster — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
+| Fixture | `tests/fixture.rs` | Declare `entities.json` into a scratch store; the properties the acceptance case needs — a non-empty array, at least one entity with no incoming reference, a superseded finding retired in place (`finding-smut-16`), a settled finding, a mutually-referencing cluster — and no retracted record, which the array does not hold — plus the counts of the committed array, measured at the phase that commits it and recorded in that phase sheet, not taken from §2; two-call composition answers "open questions under session" |
 | Conventions | `tests/conventions.rs` | Listing, prose, unknown name, `--format json` round-trips through `declare`, fixed id, version, re-install upserts, no store created |
-| Guide | `src/learn.rs` unit tests | Two-call recipe, 0.2 keys, `traversal`, conventions pointer; the 0.1 "arrives in 0.2" text is gone |
+| Guide | `src/learn.rs` unit tests | Two-call recipe **and its completeness guard** (both truncation reasons inspected before ids are extracted), 0.2 keys, `traversal`, conventions pointer; the 0.1 "arrives in 0.2" text is gone |
+| Composition | `tests/fixture.rs`, `src/learn.rs` tests | An over-cap graph: the first call truncates with `result_limit`, and the guarded recipe reports a partial answer instead of "no open questions"; the control candidate — a recipe or test that drops the first envelope and asserts the filtered answer complete — is rejected by the assertion |
 | Render | `tests/render.rs` | Leading notice discloses `traversal_budget` and dangling without a stored byte able to absorb it |
 | Compatibility | `tests/compatibility.rs` | 0.1 `query {}` pinned unchanged; additivity pin after a 0.2 query; the re-cut carries its reason |
 | Regression | existing `tests/*` | 0.1 declaration, store, recovery, order, render and CLI suites stay green |
@@ -787,6 +812,11 @@ durability guarantees and their tests remain in force unchanged.
 5. `smut conventions epistemic-records --format json | smut declare -` creates
    one entity with id `conventions-epistemic-records`; running it again updates
    that entity rather than adding another.
+6. A graph above the default limit whose only matching question orders beyond
+   the cap: the first call truncates with `result_limit`, and the guided recipe
+   reports the partial answer rather than "no open questions". The same graph
+   under a budget that cuts discovery reports `traversal_budget`, and the
+   filtered second call does not turn either into apparent completeness.
 
 <!-- doctrine:section sec-8 -->
 ## 14. Code impact and selector commitments
@@ -839,7 +869,7 @@ decisions from the inquiry. The alternatives are recorded on each entity.
 | DEC-013 | Frontier is discovered-but-unexpanded; depth and budget cut it, limit does not |
 | DEC-014 | Edges are induced among returned objects, deduped, result order, dangling excluded |
 | DEC-015 | Budget counts entity expansions; `traversal_budget` only on a real decline |
-| DEC-016 | The two-call idiom is normative in `learn`; conventions carry the principle |
+| DEC-016 | The two-call idiom is normative in `learn`, guard included; conventions carry the principle |
 | DEC-017 | Two convention sets, fixed-id versioned seeds the store owns; operator approves the epistemic schema |
 | DEC-018 | The first-use store ships as a normalised array plus provenance; privacy read-through before commit |
 | DEC-019 | Grammar and envelope stay additive; compatibility tests are re-cut, not deleted |

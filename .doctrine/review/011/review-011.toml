@@ -1,0 +1,73 @@
+id    = 11
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Pass over the fully repaired materialisation at revision 43 (watermark 7339ad9c). Delta since RV-010 is the RV-009 sweep: the §2 guide row and the §12 guide-drift row now name the completeness guard, and §15 carries it in the DEC-016 summary. Re-read all fifteen sections; re-checked §9.4/§13.1/§13.3 against F-1, the two §10.3 rows against §7.2/§8.2, and the §9.2 retraction sentence. DEC-016 refreshed in the same round. No new findings, and no remaining ledger carries an open item."
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Pass over revision 43. One finding raised during verification of the research artefacts: the design claimed the fixture holds a retracted finding, and the store holds none - one superseded finding retired in place (finding-smut-16) and no retracted status anywhere. Repaired in §2, the §13.1 fixture row, the scope objective and §9.2; verified; the repair staled this pass, and RV-012 took over at revision 46."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "minor"
+title = "The fixture claim of a retracted finding is false: the store has one superseded finding and no retracted record at all"
+detail = """
+Verified against the fixture itself, not against the design text: the first-use store contains no record with a retracted status. Its 28 statused entities are settled 8, open 8, answered 6, current 2, active 2, superseded 1, recorded 1 (jq over interview.local/.smut, 66 entities; 38 carry no status at all). The one retired finding is finding-smut-16, and the status written on it is superseded, not retracted.
+
+So design section 2's claim - "It contains a superseded record, a retracted finding and mutually-referencing clusters" - is false of the source store, and the 13.1 fixture property "a retracted finding" cannot hold. An implementation following the design either doctors the fixture, which DEC-018's provenance note would then have to record as an edit to the operator's own record, or quietly drops the assertion.
+
+The cause is visible in the store: its own vocab convention record says superseded was added in the second session to retire finding-smut-16 "with its error and its retraction intact", and records the status list as open, answered, settled, recorded, active, current, superseded. The store conflates retraction with supersession - the same conflation RV-009 F-3 found in the 9.2 prose, and here it is in the evidence the convention was drafted from. Repair: section 2 and the fixture row name what the store actually holds (a superseded finding, retired in place, plus settled and open findings), and 9.2 earns one clause stating that the store the convention was derived from conflates the two, which is exactly the drift the distinction prevents.
+"""
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The store is right and the design record lags it: superseded is what was written on the one retired finding, and no entity carries retracted. The 38 unstatused entities are not the issue here; the issue is a claim about a property the acceptance graph does not have.
+
+Records edited: section 2's sentence about what the fixture contains, and the fixture row in 13.1. Section 2 will say the store holds a superseded finding retired in place, settled and open findings, and mutually-referencing clusters. The fixture row's property list will assert a superseded finding and a settled one, and will state plainly that no retracted record exists in the committed array, so a later phase does not manufacture one to satisfy a sentence.
+
+Records swept: the acceptance scenario in 13.3 that reads the first-use store, and 9.2, which gains one clause recording that the store the convention was derived from conflates retraction with supersession - which is the practice the distinction is meant to correct, and worth saying in the text the operator approves.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. The store is right and the design record lags it: superseded is what was written on the one retired finding, and no entity carries retracted. The 38 unstatused entities are not the issue here; the issue is a claim about a property the acceptance graph does not have.
+
+Records edited: section 2's sentence about what the fixture contains, and the fixture row in 13.1. Section 2 will say the store holds a superseded finding retired in place, settled and open findings, and mutually-referencing clusters. The fixture row's property list will assert a superseded finding and a settled one, and will state plainly that no retracted record exists in the committed array, so a later phase does not manufacture one to satisfy a sentence.
+
+Records swept: the acceptance scenario in 13.3 that reads the first-use store, and 9.2, which gains one clause recording that the store the convention was derived from conflates retraction with supersession - which is the practice the distinction is meant to correct, and worth saying in the text the operator approves.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Section 2, the fixture row, the scope objective and §9.2 now say what the store holds: one superseded finding, no retracted record, and the conflation named as the drift the advice corrects."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

@@ -17,8 +17,145 @@ act = "conclude"
 role = "raiser"
 note = "Pass over the repaired materialisation at revision 34 (watermark cd95c78b). Re-read sections 1-15; checked the four repairs against their dispositions (presence condition, edge order in scope and DEC-012, walker types, fixture assertion), re-checked the code references the design leans on, and confirmed the assumption that serde_json is built without preserve_order (Cargo.toml line 29). No new findings: the repairs are the only changes and each restores agreement rather than adding surface."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Independent adversarial design pass completed against the implementation brief, SL-002 design/scope, reference scan and selection code, DEC-013/014/015 and the prior RV-007 dispositions. Prior repairs are incorporated. Raised three new findings: one major composition-completeness gap and two minor semantic contradictions. Predicate identities, multi-source BFS minimum depths, direction ordering, depth-before-budget checking, result-scoped induced edges and conditional envelope presence were examined with no further supported finding. Counterexamples are deductions from specified behavior, not runtime verification of unimplemented 0.2 code. Findings remain open for the design responder; this conclusion records completion of review, not design acceptance or lifecycle advancement.
+"""
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Adversarial second pass by the operator codex reviewer: completeness of the two-call composition, empty-follow edge cases, retraction/supersession wording. Three findings raised, all verified, all repaired in place; the repairs are what made this pass stale, and the repaired materialisation was re-reviewed as RV-010."
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-002"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Two-call filtering needs an explicit completeness guard before discarding the traversal envelope"
+detail = """
+Expected: the normative recipe for answering graph questions must preserve the first call's incompleteness or establish completeness before presenting the filtered answer. Observed: design §9.4 (lines 615-616), §13.1 fixture row and §13.3 scenario 2 prescribe extracting ids then filtering those roots, without requiring inspection/propagation of the first envelope's truncation. The default limit is 100 and the acceptance fixture has fewer than 100 entities, so the acceptance scenario cannot expose this failure.
+Counterexample (design deduction): session s references q001..q100 in array order; only q100 is an open question. A depth-1 traversal discovers 101 entities, returns s and q001..q099 under the default limit, and sets result_limit. Passing just these ids into the second query produces no open questions and a fresh truncated:false envelope. Budget truncation has the same composition hazard. No predicate or traversal implementation bug is needed.
+Repair: require the guide recipe to inspect both truncation reasons before extracting ids, retry with adequate explicit bounds where possible or retain an explicit incomplete-answer warning across the second call; do not treat a nontruncated second envelope as proof of complete graph coverage. Add an acceptance graph above the default cap with its sole matching question beyond the cap, plus a budget-cut case. Keep roots-only where and the existing limits; the defect is in the composition contract and its verification.
+"""
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted, on the observation that the recipe as written composes two envelopes with no completeness obligation, and that the acceptance graph sits under the default limit so neither the guide text nor the suite can expose it. The counterexample is a design deduction I cannot fault: discovery of 101 entities with an open question ordered last returns 100 rows, the second call filters the surviving ids, and its untruncated envelope reads as a complete answer.
+
+The claim it defeats is mine: that roots-only where plus the two-call recipe is sufficient as stated. DEC-016 fixes where the idiom lives, not that it is complete as drafted, so the decision stands and the text under it changes.
+
+Repair in this review. Section 9.4 gains the guard as part of the normative recipe: inspect truncated and truncation_reasons on the first response; either truncation reason makes the second answer a statement about the ids you received, not about the graph; raise limit or budget where the store allows it, and otherwise say the answer is partial. A false second envelope is never evidence of coverage. A new invariant carries it: composition does not launder incompleteness. Section 13.3 scenario 2 keeps the fixture run and a new scenario 6 uses a graph above the default cap whose only matching question is ordered beyond it, plus a budget-cut case, so the suite can fail on the defect. The Guide and Fixture rows of 13.1 follow.
+
+Separable second arm, named here rather than smuggled in: the negative control. The concrete incorrect candidate a check must reject is a guide recipe, or a fixture test, that drops the first envelope with result_limit set and then asserts the filtered answer is complete. I am placing that as a test obligation in 13.1 beside the above-cap scenario; if the raiser wants the criterion tracked on the ledger rather than in the design, raise it as a sibling and it will be disposed on its own merits.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = """
+Accepted, on the observation that the recipe as written composes two envelopes with no completeness obligation, and that the acceptance graph sits under the default limit so neither the guide text nor the suite can expose it. The counterexample is a design deduction I cannot fault: discovery of 101 entities with an open question ordered last returns 100 rows, the second call filters the surviving ids, and its untruncated envelope reads as a complete answer.
+
+The claim it defeats is mine: that roots-only where plus the two-call recipe is sufficient as stated. DEC-016 fixes where the idiom lives, not that it is complete as drafted, so the decision stands and the text under it changes.
+
+Repair in this review. Section 9.4 gains the guard as part of the normative recipe: inspect truncated and truncation_reasons on the first response; either truncation reason makes the second answer a statement about the ids you received, not about the graph; raise limit or budget where the store allows it, and otherwise say the answer is partial. A false second envelope is never evidence of coverage. A new invariant carries it: composition does not launder incompleteness. Section 13.3 scenario 2 keeps the fixture run and a new scenario 6 uses a graph above the default cap whose only matching question is ordered beyond it, plus a budget-cut case, so the suite can fail on the defect. The Guide and Fixture rows of 13.1 follow.
+
+Separable second arm, named here rather than smuggled in: the negative control. The concrete incorrect candidate a check must reject is a guide recipe, or a fixture test, that drops the first envelope with result_limit set and then asserts the filtered answer is complete. I am placing that as a test obligation in 13.1 beside the above-cap scenario; if the raiser wants the criterion tracked on the ledger rather than in the design, raise it as a sibling and it will be disposed on its own merits.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Guard in §9.4, invariant 13, §13.1 Composition row and §13.3 scenario 6; DEC-016 body and consequences refreshed; scope objective 9."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The follow-empty edge-case row contradicts induced edges and depth/budget rules"
+detail = """
+Expected: follow:[] disables outgoing discovery while the independently supplied backlinks, depth, budget and induced-edge contract continue to apply. Observed: design §10.3 line 671 promises roots expanded, no edges, empty frontier without qualification. This conflicts with §§7.1, 8.2 and the adjacent edge-case rows.
+Counterexamples (design deductions): store a with link:{id:b}, b stored, query from:[a,b], follow:[] must still return the induced a-link-b edge under DEC-014. Adding depth:0 puts both roots in frontier under DEC-013; using budget:1 at default depth leaves b in frontier and reports traversal_budget under DEC-015. Supplying backlinks:'*' can discover further entities despite follow:[]. The next row, a named field nobody carries implies no edges, has the same induced-edge ambiguity.
+Repair: state no outgoing discoveries for empty follow, rather than no edges; qualify expansion/frontier by depth/budget and the other direction. Sweep no-edge promises for this distinction and test these combinations, rather than asserting the current unconditional row as §12 requires.
+"""
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. Section 8.2 and DEC-014 are right and the two edge-case rows lag them: edges are induced among returned objects after the limit, so an empty follow cannot promise no edges, and the frontier is governed by depth, budget and the other direction rather than by follow alone. Both counterexamples hold on the current text - two roots joined by a reference under an empty follow still induce that edge, and depth zero, a budget cut or a supplied backlinks each change the frontier.
+
+Records edited: the follow-empty row and the named-field-nobody-carries row in section 10.3. The follow-empty row will state no outgoing discoveries, with induced edges among returned objects unchanged and the frontier following depth, budget and the other direction. The named-field row will state no outgoing discoveries from that label, with the same qualification.
+
+Class swept: every no-edge or empty-frontier promise in the design, which today means those two rows and the risk table line about a named field; the tests must construct the combinations rather than assert the unconditional rows - empty follow with an induced edge between roots, empty follow with depth zero, and empty follow with backlinks supplied.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = """
+Accepted. Section 8.2 and DEC-014 are right and the two edge-case rows lag them: edges are induced among returned objects after the limit, so an empty follow cannot promise no edges, and the frontier is governed by depth, budget and the other direction rather than by follow alone. Both counterexamples hold on the current text - two roots joined by a reference under an empty follow still induce that edge, and depth zero, a budget cut or a supplied backlinks each change the frontier.
+
+Records edited: the follow-empty row and the named-field-nobody-carries row in section 10.3. The follow-empty row will state no outgoing discoveries, with induced edges among returned objects unchanged and the frontier following depth, budget and the other direction. The named-field row will state no outgoing discoveries from that label, with the same qualification.
+
+Class swept: every no-edge or empty-frontier promise in the design, which today means those two rows and the risk table line about a named field; the tests must construct the combinations rather than assert the unconditional rows - empty follow with an induced edge between roots, empty follow with depth zero, and empty follow with backlinks supplied.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Both rows qualified to "no outgoing discoveries"; sweep of no-edge promises complete.'
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "Epistemic convention tells users to label retractions as superseded despite defining retracted"
+detail = """
+Expected: the shipped convention should distinguish a retracted record from a superseded one so status predicates select the intended epistemic state. Observed: §9.2 lists both statuses (line 575), assigns superseded to a replaced record (line 579), then says a retracted record is retained and superseded is the status for that (lines 586-587). These are incompatible instructions in the exact prose to be embedded and approved. A user following the latter instruction makes where:{status:"retracted"} miss retained retractions, including the kind the acceptance fixture deliberately preserves.
+Repair: use retracted for a retraction and reserve superseded for replacement; carry that distinction into the operator-approved prose and its seed. This is a verified textual contradiction with inferred downstream selection consequences, not an assertion about current runtime code.
+"""
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate that goes is the trailing clause of the retraction sentence in 9.2, which assigns superseded to a retraction. The owner that survives is the status vocabulary the same section already states: retracted is the status of a record whose content is withdrawn, superseded is the status of a record a newer record replaces, and the supersedes relation is what makes a record superseded not retracted. The vocabulary is the account to keep because it is the one a where predicate selects on, and the one the table row and the supersedes row already agree with.
+
+Class swept: the 9.2 prose, the seed text built from that same prose so the two cannot drift, and the status vocabulary wherever the design names it - section 2 and the 13.1 fixture row already use a superseded record and a retracted finding as distinct, so they corroborate the surviving owner rather than needing repair. The repaired sentence will say a retracted record is kept with its retraction intact rather than deleted, and that replacement keeps the old record with superseded, which leaves both statuses with exactly one job.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "dedupe"
+response = """
+Accepted. The duplicate that goes is the trailing clause of the retraction sentence in 9.2, which assigns superseded to a retraction. The owner that survives is the status vocabulary the same section already states: retracted is the status of a record whose content is withdrawn, superseded is the status of a record a newer record replaces, and the supersedes relation is what makes a record superseded not retracted. The vocabulary is the account to keep because it is the one a where predicate selects on, and the one the table row and the supersedes row already agree with.
+
+Class swept: the 9.2 prose, the seed text built from that same prose so the two cannot drift, and the status vocabulary wherever the design names it - section 2 and the 13.1 fixture row already use a superseded record and a retracted finding as distinct, so they corroborate the surviving owner rather than needing repair. The repaired sentence will say a retracted record is kept with its retraction intact rather than deleted, and that replacement keeps the old record with superseded, which leaves both statuses with exactly one job.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Retraction clause repaired; retracted and superseded now have one job each."
 
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.

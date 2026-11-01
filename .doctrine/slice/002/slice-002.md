@@ -85,18 +85,22 @@ questions the first-use store actually asked.
    single, descriptive, version-bound document.
 9. **The guide carries the idioms** — `learn` is the normative home of the
    two-call composition (DEC-016): traverse for ids with `select:["id"]`, then
-   filter those ids as roots with `where`. It also teaches the label vocabulary
-   and bounded rendering. Conventions state the principle and point at `learn`
-   rather than repeating the recipe. A behaviour without its sentence in the
+   filter those ids as roots with `where`. The recipe is normative including its
+   completeness guard: the first response's truncation reasons are read before
+   its ids are filtered, because the second call cannot see what the first
+   dropped. It also teaches the label vocabulary and bounded rendering.
+   Conventions state the principle and point at `learn` rather than repeating the
+   recipe. A behaviour without its sentence in the
    guide is an unfinished fix (`finding-smut-17`), even when the behaviour needs
    no code.
 10. **Acceptance fixture** — the first-use store is the acceptance graph: real,
     small enough to read whole, and already containing the awkward cases (a
-    superseded reference, a retracted claim, mutually-referencing clusters) and
-    22 entities with no incoming reference, so `backlinks` has a hit and a miss
-    without inventing either. It is promoted as one normalised entity array plus
-    a provenance note, declared into a scratch store by the tests; `.smut`
-    internals are not committed (DEC-018).
+    superseded finding retired in place, settled and open findings,
+    mutually-referencing clusters) and 22 entities with no incoming reference, so
+    `backlinks` has a hit and a miss without inventing either. It holds no
+    retracted record, so none is claimed. It is promoted as one normalised entity
+    array plus a provenance note, declared into a scratch store by the tests;
+    `.smut` internals are not committed (DEC-018).
 11. **Documentation and tests** — README query examples extended to the new
     surface; the store format document unchanged unless a decision changes it;
     focused automated tests for predicates, traversal, determinism, truncation,

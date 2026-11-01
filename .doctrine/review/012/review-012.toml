@@ -1,0 +1,24 @@
+id    = 12
+slug  = "design-review-of-sl-002"
+title = "design review of SL-002"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Final pass over revision 46 (watermark 1cf9209e). Delta is the RV-011 F-1 repair: §2 and the §13.1 fixture row now name what the store holds (a superseded finding, settled and open findings, no retracted record), §9.2 names the store conflation as the drift the distinction corrects, and the scope objective matches. Re-read all fifteen sections against the brief, DEC-012 to DEC-019 and the code references; no open item remains on any ledger."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-002"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
