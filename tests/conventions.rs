@@ -10,6 +10,12 @@
 //! the command must *not* do: open a store, and lose an amendment silently on
 //! re-install.
 //!
+//! The last section answers where a set comes from: the project's
+//! `.config/smut`, then the config home, then the binary, with the first layer
+//! holding a name the set in force. Those rows spawn the binary in a working
+//! directory of the fixture's choosing under a `$HOME` and `$XDG_CONFIG_HOME`
+//! the scratch makes, so none of them depends on the machine's own sets.
+//!
 //! The body is derived here from the bytes of the file the binary embeds, so a
 //! second copy of the prose cannot drift from the one that ships (VA-1), and the
 //! frontmatter the ship carries is metadata only: nothing the command prints may
@@ -129,6 +135,145 @@ impl Scratch {
     fn store(&self) -> PathBuf {
         self.path.join(".smut")
     }
+
+    /// Runs `smut` with `cwd` as its working directory, and `stdin` if a
+    /// fixture supplies one.
+    ///
+    /// Both layer roots are set explicitly and neither is removed: `HOME` and
+    /// `XDG_CONFIG_HOME` unset would not mean "no user layer", because
+    /// `std::env::home_dir()` falls back to the passwd entry and the binary
+    /// would then read the developer's own real home.
+    ///
+    /// This is the one spawn path: [`run`] below delegates here with the
+    /// scratch root, so a fixture that needs another working directory varies
+    /// that argument and nothing else.
+    fn run_in(&self, cwd: &Path, arguments: &[&str], stdin: Option<&str>) -> Ran {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
+            .current_dir(cwd)
+            .env("HOME", &self.home)
+            .env("XDG_CONFIG_HOME", &self.config_home)
+            .args(arguments)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("the binary starts");
+
+        if let Some(text) = stdin {
+            child
+                .stdin
+                .as_mut()
+                .expect("piped stdin")
+                .write_all(text.as_bytes())
+                .expect("stdin accepts the fixture");
+        }
+
+        let output = child.wait_with_output().expect("the binary exits");
+
+        Ran {
+            code: output.status.code().expect("a normal exit"),
+            stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
+            stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
+        }
+    }
+
+    /// Runs `smut` in `cwd` with no stdin fixture at all.
+    fn smut_in(&self, cwd: &Path, arguments: &[&str]) -> Ran {
+        self.run_in(cwd, arguments, None)
+    }
+
+    /// A directory under the scratch root, created.
+    fn dir(&self, name: &str) -> PathBuf {
+        let path = self.path.join(name);
+        fs::create_dir_all(&path).expect("a fixture directory");
+
+        path
+    }
+
+    /// A directory under the scratch root holding `.git` as a **directory**:
+    /// an ordinary clone.
+    fn repository(&self, name: &str) -> PathBuf {
+        let path = self.dir(name);
+        fs::create_dir_all(path.join(".git")).expect("a repository's .git directory");
+
+        path
+    }
+
+    /// A directory under the scratch root holding `.git` as a **regular file**
+    /// carrying a `gitdir:` line: a worktree or submodule checkout.
+    fn worktree(&self, name: &str) -> PathBuf {
+        let path = self.dir(name);
+        fs::write(path.join(".git"), "gitdir: ../.git/worktrees/fixture\n")
+            .expect("a worktree's .git file");
+
+        path
+    }
+
+    /// A directory nested inside `parent`, created.
+    fn sub(&self, parent: &Path, name: &str) -> PathBuf {
+        let path = parent.join(name);
+        fs::create_dir_all(&path).expect("a nested fixture directory");
+
+        path
+    }
+
+    /// The project layer of `repository`, created:
+    /// `<repository>/.config/smut/conventions`.
+    fn project_sets(&self, repository: &Path) -> PathBuf {
+        let path = repository.join(".config").join("smut").join("conventions");
+        fs::create_dir_all(&path).expect("a project layer directory");
+
+        path
+    }
+
+    /// The layer this scratch's `$XDG_CONFIG_HOME` names, created:
+    /// `<config-home>/smut/conventions`.
+    fn user_sets(&self) -> PathBuf {
+        let path = self.config_home.join("smut").join("conventions");
+        fs::create_dir_all(&path).expect("a user layer directory");
+
+        path
+    }
+
+    /// The layer a home read as a config home would name, created:
+    /// `<home>/.config/smut/conventions`.
+    fn home_sets(&self) -> PathBuf {
+        let path = self.home.join(".config").join("smut").join("conventions");
+        fs::create_dir_all(&path).expect("a home's config layer directory");
+
+        path
+    }
+
+    /// Writes `<directory>/<name>.md` holding exactly `contents`, and answers
+    /// its path.
+    fn set(&self, directory: &Path, name: &str, contents: &str) -> PathBuf {
+        let path = directory.join(format!("{name}.md"));
+        fs::write(&path, contents).expect("a set file");
+
+        path
+    }
+
+    /// Asserts that `start` and every ancestor up to the filesystem root holds
+    /// no `.git` entry.
+    ///
+    /// The `$TMPDIR` these scratch directories are made in must not itself be
+    /// inside a checkout: if it were, the walk-up would find that repository for
+    /// its own reason and the fixture would redden with a cause no assertion
+    /// here is about. The message says so, because that failure is otherwise
+    /// indistinguishable from a walk that is one directory too eager.
+    fn assert_no_repository_above(&self, start: &Path) {
+        for ancestor in start.ancestors() {
+            let git = ancestor.join(".git");
+
+            assert!(
+                fs::symlink_metadata(&git).is_err(),
+                "no `.git` entry above {}: found {}. A $TMPDIR inside a checkout would redden \
+                 this fixture for the checkout's own reason rather than the test's",
+                start.display(),
+                git.display()
+            );
+        }
+    }
 }
 
 impl Drop for Scratch {
@@ -151,41 +296,14 @@ impl Ran {
     }
 }
 
-/// Runs `smut` in `scratch` with `arguments`, and `stdin` if a fixture supplies
-/// one.
+/// Runs `smut` in `scratch`'s root with `arguments`, and `stdin` if a fixture
+/// supplies one.
 ///
-/// Both layer roots are set explicitly and neither is removed: `HOME` and
-/// `XDG_CONFIG_HOME` unset would not mean "no user layer", because
-/// `std::env::home_dir()` falls back to the passwd entry and the binary would
-/// then read the developer's own real home.
+/// The environment a run sees is [`Scratch::run_in`]'s, which is the only
+/// place it is spelled: this is that call with the scratch root as the working
+/// directory.
 fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .env("HOME", &scratch.home)
-        .env("XDG_CONFIG_HOME", &scratch.config_home)
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    if let Some(text) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(text.as_bytes())
-            .expect("stdin accepts the fixture");
-    }
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
+    scratch.run_in(scratch.path(), arguments, stdin)
 }
 
 /// Runs `smut` with no stdin fixture at all.
@@ -728,5 +846,327 @@ fn compact_omits_the_previous_body_the_re_install_replaced() {
         !reinstalled.stdout.contains("Draft."),
         "the replaced body does not appear anywhere under --compact: {}",
         reinstalled.stdout
+    );
+}
+
+// ── C4: where a set comes from — three layers, and the walk that finds them ──
+
+/// A bare set file (no frontmatter), so its body is the whole of it.
+const MINE: &str = "\
+# Mine
+
+mine advice: only the config home holds this one.
+";
+
+/// The project's copy of the shipped name, with a summary of its own: the
+/// listing's third field for the row in force is this and not the user's.
+const PROJECT_HYGIENE: &str = "\
+---
+summary: the checkout's own structure rules
+---
+# Project hygiene
+
+project advice: the checkout's copy is the one in force.
+";
+
+/// What [`PROJECT_HYGIENE`] prints: its body, below the frontmatter, plus the
+/// one newline the binary writes.
+const PROJECT_HYGIENE_BODY: &str = "\
+# Project hygiene
+
+project advice: the checkout's copy is the one in force.
+";
+
+/// The user's copy of the same name, shadowed by the project's.
+const USER_HYGIENE: &str = "\
+# User hygiene
+
+user advice: this copy sits behind the checkout's.
+";
+
+/// A set in a home's `.config/smut`, which is no layer while
+/// `$XDG_CONFIG_HOME` points elsewhere.
+const HOME_HYGIENE: &str = "\
+---
+summary: a home's copy that is never a layer
+---
+# Home hygiene
+
+home advice: the home is not a layer of this listing.
+";
+
+/// The leaf's own project set, which no walk may climb above.
+const OWN: &str = "\
+# Own
+
+own advice: the leaf's own copy.
+";
+
+/// The leaf's parent's project set, reachable only by a walk that climbs too
+/// far.
+const PARENT: &str = "\
+# Parent
+
+parent advice: an ancestor's copy, which the walk must not find.
+";
+
+// Reddens if a farther layer wins the name — the prose would be the user's or
+// the shipped body, not the checkout's — if the listing prints a summary where a
+// nearer file shadows the name, or if a layer contributes no row.
+#[test]
+fn the_project_set_beats_the_user_set_beats_the_binary() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    let project = scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_HYGIENE,
+    );
+    let user = scratch.set(&scratch.user_sets(), "hygiene", USER_HYGIENE);
+    let inside = scratch.sub(&repository, "sub");
+
+    let printed = scratch.smut_in(&inside, &["conventions", "hygiene"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "");
+    assert_eq!(
+        printed.stdout, PROJECT_HYGIENE_BODY,
+        "the nearest layer's body, below its frontmatter, plus exactly one newline"
+    );
+
+    let listed = scratch.smut_in(&inside, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+
+    let rows: Vec<Vec<&str>> = listed
+        .stdout
+        .lines()
+        .map(|row| row.split("  ").collect())
+        .collect();
+    assert_eq!(
+        rows.len(),
+        3,
+        "one row per file, and three files hold `hygiene`: {}",
+        listed.stdout
+    );
+    for row in &rows {
+        assert_eq!(
+            row.len(),
+            4,
+            "a row is four fields, two spaces apart: {row:?}"
+        );
+    }
+    assert_eq!(
+        rows.iter().map(|row| (row[0], row[1])).collect::<Vec<_>>(),
+        [
+            ("hygiene", "project"),
+            ("hygiene", "user"),
+            ("hygiene", "binary"),
+        ],
+        "layer-major, in precedence order: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[0][2], "the checkout's own structure rules",
+        "the row in force prints its own summary: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[1][2], "shadowed",
+        "a user row behind a nearer file says only that it is shadowed: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[2][2], "shadowed",
+        "the shipped row is shadowed too, and prints no summary of its own: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[0][3],
+        project.to_str().expect("a UTF-8 fixture path"),
+        "the project row names the project layer's own file: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[1][3],
+        user.to_str().expect("a UTF-8 fixture path"),
+        "the user row names the config home's file: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        rows[2][3], "conventions/hygiene.md",
+        "the shipped row names the path its bytes are embedded under: {}",
+        listed.stdout
+    );
+}
+
+// Reddens if the user layer is not read: `mine` is in no other layer, so the
+// prose is an unknown-set refusal and the listing is the shipped row alone.
+#[test]
+fn a_set_that_exists_only_in_the_config_home_resolves() {
+    let scratch = Scratch::new();
+    let mine = scratch.set(&scratch.user_sets(), "mine", MINE);
+    let work = scratch.dir("work");
+
+    let printed = scratch.smut_in(&work, &["conventions", "mine"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "");
+    // The file has no frontmatter, so its body is the whole of it: a reader that
+    // printed nothing, or that found another layer's copy instead, reddens here.
+    assert_eq!(
+        printed.stdout, MINE,
+        "the config home's set, printed as prose"
+    );
+
+    let listed = scratch.smut_in(&work, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    // The third field is `-` because the fixture declares no summary: a set that
+    // declares none is still in force and still has a row.
+    assert_eq!(
+        listed.stdout,
+        format!(
+            "mine  user  -  {}\nhygiene  binary  {}  conventions/hygiene.md\n",
+            mine.display(),
+            summary()
+        ),
+        "the config home's file is a `user` row, ahead of the shipped one"
+    );
+}
+
+// Reddens if the project root is the current directory rather than the nearest
+// repository: from `<repo>/sub/dir` no layer holds `mine` and the prose is a
+// refusal at exit 2.
+#[test]
+fn the_walk_up_finds_the_repositorys_set() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    scratch.set(&scratch.project_sets(&repository), "mine", MINE);
+    let inside = scratch.sub(&scratch.sub(&repository, "sub"), "dir");
+
+    let printed = scratch.smut_in(&inside, &["conventions", "mine"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "");
+    assert_eq!(
+        printed.stdout, MINE,
+        "the set three directories up, found by the walk from sub/dir"
+    );
+}
+
+// Reddens if only a `.git` directory counts as a repository: the worktree's
+// `.git` file is passed over, the walk leaves the tree, and `mine` is unknown.
+#[test]
+fn a_worktree_is_a_repository() {
+    let scratch = Scratch::new();
+    let tree = scratch.worktree("tree");
+    let mine = scratch.set(&scratch.project_sets(&tree), "mine", MINE);
+    let inside = scratch.sub(&tree, "src");
+
+    let printed = scratch.smut_in(&inside, &["conventions", "mine"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "");
+    assert_eq!(
+        printed.stdout, MINE,
+        "the worktree's own set, found through a `.git` regular file"
+    );
+
+    let listed = scratch.smut_in(&inside, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    assert_eq!(
+        listed.stdout,
+        format!(
+            "mine  project  -  {}\nhygiene  binary  {}  conventions/hygiene.md\n",
+            mine.display(),
+            summary()
+        ),
+        "a `.git` file is a repository, so the row's layer is `project`"
+    );
+}
+
+// Reddens if the walk climbs past the repository, or if the home is read as a
+// layer through a fallback from `$XDG_CONFIG_HOME`: the home's `hygiene` would
+// then be adopted as a nearer layer and shadow the shipped row.
+#[test]
+fn the_walk_stops_at_the_repository() {
+    let scratch = Scratch::new();
+    scratch.set(&scratch.home_sets(), "hygiene", HOME_HYGIENE);
+    // A checkout inside the home, deliberately: the walk starts inside one, so
+    // nothing above it is searched. `assert_no_repository_above` is not called
+    // here — there is one, and the test is about stopping at it.
+    let repository = scratch.sub(&scratch.home, "work");
+    fs::create_dir_all(repository.join(".git")).expect("a repository's .git directory");
+    let inside = scratch.sub(&repository, "sub");
+
+    let listed = scratch.smut_in(&inside, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+
+    let rows: Vec<Vec<&str>> = listed
+        .stdout
+        .lines()
+        .map(|row| row.split("  ").collect())
+        .collect();
+    let home_config = scratch.home.join(".config");
+    for row in &rows {
+        assert_eq!(
+            row.len(),
+            4,
+            "a row is four fields, two spaces apart: {row:?}"
+        );
+        assert!(
+            !Path::new(row[3]).starts_with(&home_config),
+            "no row comes from {}: the home's `.config` is not a project layer and \
+             `$XDG_CONFIG_HOME` points elsewhere, so it is not the user layer either: {}",
+            home_config.display(),
+            listed.stdout
+        );
+    }
+
+    let hygiene = rows
+        .iter()
+        .find(|row| row[0] == "hygiene")
+        .unwrap_or_else(|| panic!("the shipped set is listed: {}", listed.stdout));
+    assert_eq!(
+        hygiene[1], "binary",
+        "the shipped set is still in force, from the binary layer: {}",
+        listed.stdout
+    );
+    assert_eq!(
+        hygiene[2],
+        summary(),
+        "its third field is its own summary and not `shadowed`, so no nearer layer \
+         was adopted: {}",
+        listed.stdout
+    );
+}
+
+// Reddens if the walk continues above the start directory or climbs to a
+// `.config` it finds there: the parent's `parent.md` would then be listed and
+// addressable instead of refused.
+#[test]
+fn no_repository_means_the_cwd_and_no_walk_up() {
+    let scratch = Scratch::new();
+    let leaf = scratch.dir("leaf");
+    // Asserted first: a `$TMPDIR` inside a checkout would make the outcome here
+    // depend on the machine rather than on the walk.
+    scratch.assert_no_repository_above(&leaf);
+    let own = scratch.set(&scratch.project_sets(&leaf), "own", OWN);
+    scratch.set(&scratch.project_sets(scratch.path()), "parent", PARENT);
+
+    let listed = scratch.smut_in(&leaf, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    assert_eq!(
+        listed.stdout,
+        format!(
+            "own  project  -  {}\nhygiene  binary  {}  conventions/hygiene.md\n",
+            own.display(),
+            summary()
+        ),
+        "the leaf's own file is the whole project layer, and the parent's is not listed"
+    );
+
+    let refused = scratch.smut_in(&leaf, &["conventions", "parent"]);
+    assert_eq!(refused.code, 2, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "", "a refusal prints no prose");
+    assert!(
+        refused.stderr.contains("parent"),
+        "the refusal names what was asked for: {:?}",
+        refused.stderr
     );
 }
