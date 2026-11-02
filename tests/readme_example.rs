@@ -12,6 +12,11 @@
 //! green and unexecuted. A fence that means to be `console` and is not is a
 //! failure here rather than a block silently skipped.
 //!
+//! A command may also wrap: while a quote is open, the following console lines
+//! are still that command, exactly as a shell reads them. The declaration that
+//! writes one small graph is wrapped that way, so the alternative is a harness
+//! that cannot run a valid example.
+//!
 //! **What "matches" means for JSON.** A recorded output that parses as JSON is
 //! compared as a parsed value, not as bytes: `render`'s Markdown and the JSON
 //! envelopes are both compared structurally, so a reordering that changes no
@@ -83,6 +88,8 @@ fn transcripts(readme: &str) -> Vec<Transcript> {
     let mut heading = String::new();
     // The open fence's info string, while one is open.
     let mut fence: Option<String> = None;
+    // A command whose quote is still open, while it wraps across console lines.
+    let mut continuation: Option<String> = None;
 
     for line in readme.lines() {
         let trimmed = line.trim();
@@ -90,6 +97,12 @@ fn transcripts(readme: &str) -> Vec<Transcript> {
         // Inside a fence: the closing line, or a line of the console block.
         if let Some(open) = fence.take() {
             if trimmed.starts_with("```") {
+                assert!(
+                    continuation.is_none(),
+                    "a wrapped command closes its quote inside its block: {}",
+                    continuation.as_deref().unwrap_or_default()
+                );
+
                 continue;
             }
 
@@ -101,13 +114,28 @@ fn transcripts(readme: &str) -> Vec<Transcript> {
                     .expect("a console block opens a transcript")
                     .steps;
 
-                match line.strip_prefix("$ ") {
-                    Some(command) => steps.push(step(command)),
-                    None => steps
-                        .last_mut()
-                        .expect("a console block opens with a command")
-                        .output
-                        .push_str(&format!("{line}\n")),
+                // A command may wrap while a quote is open. A shell accepts a
+                // quote that spans newlines, so the harness must too: otherwise
+                // `smut declare '` reads as a command with unbalanced quotes and
+                // its JSON is recorded as the output it is not.
+                if let Some(pending) = continuation.take() {
+                    let command = format!("{pending}\n{line}");
+
+                    if quotes_balanced(&command) {
+                        steps.push(step(&command));
+                    } else {
+                        continuation = Some(command);
+                    }
+                } else {
+                    match line.strip_prefix("$ ") {
+                        Some(command) if quotes_balanced(command) => steps.push(step(command)),
+                        Some(command) => continuation = Some(command.to_owned()),
+                        None => steps
+                            .last_mut()
+                            .expect("a console block opens with a command")
+                            .output
+                            .push_str(&format!("{line}\n")),
+                    }
                 }
             }
 
@@ -203,7 +231,16 @@ fn transcript(heading: &str) -> Vec<Step> {
     found.pop().expect("the section was found")
 }
 
-/// Split a shell-ish command line on whitespace, honouring 'single quotes'.
+/// Whether every single quote a command opens is closed again.
+fn quotes_balanced(command: &str) -> bool {
+    command.matches('\'').count().is_multiple_of(2)
+}
+
+/// A shell-ish command line, split into the arguments the binary receives.
+///
+/// The line may span newlines while a quote is open, so this walks characters,
+/// not lines: whitespace outside a quote separates arguments and anything while
+/// quoted is content.
 fn arguments(command: &str) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
@@ -268,6 +305,41 @@ fn run(scratch: &Scratch, args: &[String]) -> Ran {
         stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
         stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
     }
+}
+
+/// A quoted operand may wrap across lines. `README.md` declares one graph that
+/// way — a shell accepts a quote that spans newlines, so the harness must too:
+/// the continuation lines belong to the command, never to its recorded output.
+#[test]
+fn a_quoted_command_may_wrap_across_lines() {
+    let sample = r#"## Wrapped
+
+```console
+$ smut declare '
+ {"smut_id":"a"}
+'
+{"ids":["a"]}
+```
+"#;
+
+    let transcripts = transcripts(sample);
+    assert_eq!(transcripts.len(), 1, "one section, one transcript");
+    assert_eq!(
+        transcripts[0].steps.len(),
+        1,
+        "a wrapped command is one step, not a command plus output"
+    );
+
+    let step = &transcripts[0].steps[0];
+    assert_eq!(
+        step.args,
+        ["declare", "\n {\"smut_id\":\"a\"}\n"],
+        "the whole quoted operand reaches the binary as one argument"
+    );
+    assert_eq!(
+        step.output, "{\"ids\":[\"a\"]}",
+        "only the line after the closing quote is output"
+    );
 }
 
 #[test]
