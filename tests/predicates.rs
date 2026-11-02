@@ -12,9 +12,11 @@
 //! behaviour and the message text a user sees, because the refusal variants are
 //! the implementation's to choose.
 //!
-//! The final two cases run the binary, because the two properties they fix —
-//! "the whole request is validated before the store is opened" (EX-6) and "a
-//! valid `where` returns the filtered objects" — are process-level promises.
+//! Three cases run the binary — `a_malformed_predicate_…`, `a_misplaced_operator_…`
+//! and `a_where_query_…` — because the properties they fix are process-level
+//! promises no in-crate call can see: "the whole request is validated before the
+//! store is opened" (EX-6), the refusal's exact stderr line, and "a valid `where`
+//! returns the filtered objects".
 
 use std::fs;
 use std::io::Write;
