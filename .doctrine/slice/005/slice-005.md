@@ -20,13 +20,21 @@ the 0.2.0 rc trial's frictions 1 and 2, including the operator's own misreading;
 the three-store usability exercise, which ranked *silent wrong-or-empty answers*
 first among eight findings and produced two more instances of the class (RFC-001).
 
-**Why this slice first.** It is the only ranked work that touches nothing inside
-SL-004's declared surface. SL-004 selects `src/learn.rs`, `src/conventions.rs`,
-`src/cli.rs`, `src/store/**`, `src/entity.rs`, `src/declare.rs` and `tests/**` for the
-`id` → `smut_id` sweep; the delivery work (IMP-008/011/012) and the conventions loader
-(IMP-013) both live inside that set, so they queue behind it. `src/predicate.rs` and
-`src/error.rs` are outside it. Cutting this first takes decided, cheap, disjoint work
-while the identity break is in flight.
+**Why this slice first.** It is the only ranked work that does not touch the *bulk* of
+SL-004's surface. SL-004 selects `src/learn.rs`, `src/conventions.rs`, `src/cli.rs`,
+`src/store/**`, `src/entity.rs`, `src/declare.rs` and `tests/**` for the `id` →
+`smut_id` sweep; the delivery work (IMP-008/011/012) and the conventions loader
+(IMP-013) both live inside that set, so they queue behind it. `src/predicate.rs` is
+outside it entirely.
+
+**One shared file, found after the slice was cut.** SL-004's *selectors* understate its
+surface: PHASE-02/EX-9 respells two identity messages in `src/error.rs`
+(`Reject::InvalidId`, `StoreError::IdDisagreement`), and that file is neither a
+selector nor a row in SL-004's design-target table. This slice adds a `Reject`
+variant, its `Display` arm and tests to exactly that file. Neither change is large and
+neither is a conflict at scope time, so the rule is ordering rather than avoidance:
+land the refusal phase before SL-004's PHASE-02, or take a small rebase. Design work
+here can proceed regardless.
 
 ## Scope & Objectives
 
@@ -83,6 +91,11 @@ while the identity break is in flight.
 - **Runtime-composed predicates change behaviour**: a caller templating `$eq`/`$ne`
   now gets exit 2 where it got `[]`. Accepted with the decision; worth a sentence in
   the refusal's own test, not a compatibility path.
+- **`src/error.rs` is shared with SL-004.** Its PHASE-02/EX-9 respells two identity
+  messages in that file; this slice adds a variant, a `Display` arm and tests to the
+  same module. Ordering, not avoidance: refusal phase before SL-004's PHASE-02, or a
+  rebase. The overlap was invisible from the selectors, which is the lesson recorded in
+  RFC-001.
 - **A form may not survive design.** If a form turns out unsound (structural equality
   on some value shape), drop it rather than widen the check — the subset is a floor
   for the decision, not a quota.
