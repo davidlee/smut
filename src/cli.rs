@@ -39,9 +39,10 @@ pub enum Invocation {
     Version(String),
     /// The embedded guide, answered without a store.
     Learn,
-    /// The embedded conventions sets, answered without a store: the listing, one
-    /// set's prose, or one set's declaration. The ask is resolved before it is
-    /// carried, so the answer is pure text (§9.1).
+    /// The conventions sets, answered without a store: the listing, one set's
+    /// prose, or one set's declaration. The ask is the question — the name the
+    /// caller typed — answered against the layers, so nothing here has read a
+    /// filesystem (§9.1).
     Conventions(conventions::Ask),
     /// A command that runs the pipeline against the store.
     Request(Request),
@@ -282,7 +283,9 @@ enum Sub {
     },
     /// Print the embedded guide.
     Learn,
-    /// Print the embedded conventions: the listing, one set, or its declaration.
+    /// Print the conventions sets: the listing, one set's prose, or its
+    /// declaration. A set comes from the project, then the user config home,
+    /// then the binary.
     Conventions {
         /// The set to print; omit it for the listing.
         name: Option<String>,
@@ -592,6 +595,32 @@ mod tests {
             "conventions",
         ] {
             assert!(text.contains(named), "{text}");
+        }
+    }
+
+    #[test]
+    fn the_conventions_help_does_not_claim_the_set_is_embedded() {
+        let help = usage();
+
+        let line = help
+            .lines()
+            .find(|line| line.trim_start().starts_with("conventions"))
+            .unwrap_or_else(|| panic!("the help names the conventions subcommand:\n{help}"));
+
+        assert!(
+            !line.contains("embedded"),
+            "a conventions set is no longer compiled in:\n{line}"
+        );
+        assert!(
+            line.contains("the listing, one set's prose, or its declaration"),
+            "the help names what `conventions` prints:\n{line}"
+        );
+
+        for source in ["the project", "the user config home", "the binary"] {
+            assert!(
+                line.contains(source),
+                "the help says a set comes from {source}:\n{line}"
+            );
         }
     }
 
