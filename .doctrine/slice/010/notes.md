@@ -127,7 +127,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 completed
-· bb6a9d2
+· bb6a9d2 · PHASE-02 completed · d20a84f
 
 ### Produced
 
@@ -159,6 +159,15 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   determinism/bytes, and the `Reddens`-comment guard. Evidence: `notes.md` §
   Implementation run; runtime sheet `state/slice/010/phases/phase-04.md` § Outcome.
   Delta recorded with `doctrine slice record-delta`.
+- **PHASE-02** (`372b312` + `d20a84f`) — the verb: `Sub::Q` in `src/cli.rs` with a
+  bare `tokens: Vec<String>` (no `#[arg]`, usage `smut q [OPTIONS] [TOKENS]...`), the
+  twelve flags, and one arm compiling → `spec::parse` → `Request::Query`; twelve
+  tests in `tests/cli_contract.rs` (byte identity for the two traversing recipes,
+  selected-set agreement for the filtering pair, token order around flags, the
+  numeric sentences, clap's own refusals, `--`, and the no-store pairing). Evidence:
+  `notes.md` § Implementation run; runtime sheet
+  `state/slice/010/phases/phase-02.md`. Delta recorded (`ea8dacb..d20a84f`);
+  `verify-vt` PASS for VT-1…VT-3.
 
 ### Learned
 
@@ -202,6 +211,15 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   `spec::parse` accepts the denotation, so `--depth abc` is compared with `object()`
   directly — a test helper that asserts a precondition will reject the rows that exist to
   break it.
+- **DEC-037's attribute class splits across two criteria, and each catches a different
+  half.** `value_name` is invisible to byte identity and reddened only the usage-line
+  test; `trailing_var_arg`/`allow_hyphen_values` redden byte identity and token order
+  while leaving the usage line intact. A reader who thinks one of those tests is
+  redundant should mutate the attribute, not the test.
+- **A twin comparison needs its non-emptiness asserted separately.** `q` and `query` on
+  the same request produce the same bytes even when both select nothing, so every
+  byte-identity test here also asserts the expected ids — the difference between
+  proving one engine and proving two empty envelopes.
 
 ### What the hostile pass taught (RV-031)
 
@@ -256,9 +274,9 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-- Slice is `started`; **PHASE-01 and PHASE-04 are `completed`** (2026-11-03). Next:
-  `/phase-plan` for PHASE-02 — its numeric rows (EX-5/VT-3) must name a direction, per
-  PHASE-04 finding F1 — then PHASE-03. The array's order, not the ids'.
+- Slice is `started`; **PHASE-01, PHASE-04 and PHASE-02 are `completed`** (2026-11-03).
+  Next: `/phase-plan` for PHASE-03 — the guide, both spellings, both executed — which
+  PHASE-02 unblocked by making `smut q` run end to end.
 
 ## Implementation run
 
@@ -404,6 +422,77 @@ verify-vt 10` reports PHASE-04 VT-3 and VT-4 PASS.
   steps (variants, compiler), plus one planning-free test brief; no model or
   provider was changed.
 
+### PHASE-02 — the verb (completed 2026-11-03)
+
+Two commits on the two owned paths: `372b312` (the contract suite, authored red first)
+and `d20a84f` (the verb). `doctrine slice record-delta 10 PHASE-02 --start ea8dacb
+--end d20a84f` recorded the span, and `doctrine slice verify-vt 10` reports PHASE-02
+VT-1, VT-2 and VT-3 **PASS**. Lifecycle: `in_progress` at `ea8dacb` (the sheet's
+stamp), `completed` after the delta.
+
+- **Gate.** `just check` exit 0: build; clippy `--all-targets -D warnings` in both
+  feature configurations, no warnings; `fmt --check` clean; `cargo test` 439 lib
+  tests default / 452 with `--features fault-injection`; `tests/cli_contract.rs`
+  62/62 in *both* configurations (50 pre-existing + 12 new), `tests/dsl.rs` 19/19,
+  `tests/compatibility.rs` green and untouched. Baseline at `ea8dacb` was 50
+  cli_contract tests, so the delta is exactly the new section. No known failures,
+  nothing skipped, no guard touched.
+- **What landed.** `src/cli.rs`: `Sub::Q` placed beside `Sub::Query`, carrying
+  `tokens: Vec<String>` with **no** `#[arg]` at all — the usage line is
+  `Usage: smut q [OPTIONS] [TOKENS]...` — the twelve flags as `Option<String>`/
+  `bool` with no `short`, no `value_name` and no `value_parser` (so no numeric
+  refusal is clap's), and the `//` comment naming `trailing_var_arg`,
+  `allow_hyphen_values`, `last`, `value_terminator` and design §4's table as the
+  reason each silent failure is unreachable. One arm: build `Line`/`Flags` →
+  `dsl::compile` → `spec::parse` → `Invocation::Request(Request::Query(..))`. No
+  `operand`, no stdin read, no `Store` (the only `Store` in the tree is still
+  `main.rs:105`, after `parse` returns). `tests/cli_contract.rs`: a new section of
+  twelve tests with section-local helpers (`store_of_a_session_and_two_questions`,
+  `q_words`, `same_answer`, `selected_ids`) and one import of the six
+  `EXAMPLE_*`/`EXAMPLE_*_Q` constants; nothing pre-existing edited.
+- **The twelve tests, by what they keep true.** `the_two_call_recipe_reads_the_same_both_ways`
+  (byte identity for `EXAMPLE_TRAVERSE_Q`/`EXAMPLE_FOLLOW_Q`, the filtering pair on
+  the selected set only — EX-7/F-6), `q_creates_no_store_and_a_declare_beside_it_does`
+  (EX-8), `tokens_keep_their_order_around_flags` (`c --ids a b`, leading, trailing,
+  `--from`), `a_token_after_a_value_flag_is_that_flags_value`, `operators_and_commas_reach_the_compiler_verbatim`
+  (`~`, `!`, `,`), `ids_and_select_cannot_both_be_asked_for`,
+  `depth_without_a_direction_is_refused_while_the_specification_accepts_it`,
+  `a_same_value_contradiction_speaks_the_specifications_sentence` (equality with the
+  `query` twin's stderr), `the_specifications_own_messages_reach_the_human`,
+  `q_takes_its_bare_positional_so_the_usage_line_says_tokens`,
+  `claps_own_refusals_are_unchanged_and_named`, `a_double_dash_reaches_a_hyphen_leading_root`.
+- **Red observed before green:** `test result: FAILED. 50 passed; 12 failed`, every
+  failure's reason `smut: unknown command: q` — no compile error, no wrong
+  expectation. Green afterwards: 62/62.
+- **Decisions** (full text in the runtime sheet § Decisions): D1 two commits rather
+  than one, so the contract lands red ahead of the verb; D2 the recorded delta spans
+  `ea8dacb..d20a84f` because the tool's default start (`372b312`) would have dropped
+  the pre-flight commit inside the sheet stamp's span; D3 the numeric rows carry
+  `--follow any` per the seat's F1 ruling, with the directionless `--depth abc`
+  asserted separately against `MissingDirection` so both sentences stay pinned.
+- **Findings.**
+  - **F1 — the attribute class that only moves help text has exactly one detector.**
+    Adding `#[arg(value_name = "TOKEN")]` to the positional reddens
+    `q_takes_its_bare_positional_so_the_usage_line_says_tokens` **and nothing else**;
+    `trailing_var_arg` reddens three tests (both byte-identity recipes and the order
+    test), `allow_hyphen_values` four (those plus the clap-refusal test, because
+    `-weird-id` becomes legal). EX-1 and EX-7 therefore catch different halves of
+    DEC-037 and neither is redundant.
+  - **F2 — a twin comparison is only as good as its non-emptiness.** Each
+    `same_answer` call is paired with an assertion on the returned ids
+    (`q-query`, `q-other`, `["c","a","b"]`), because two empty envelopes are byte
+    identical; the `--follow session` test in particular would otherwise pass for a
+    `q` that selected nothing.
+  - **F3 — clap's wording already matches design §3.** The three clap refusals are
+    asserted as whole lines (`error: unexpected argument '--follo' found`,
+    `error: the argument '--follow <FOLLOW>' cannot be used multiple times`,
+    `error: unexpected argument '-w' found`) with no substitution needed, so §3's
+    table is pinned in the suite rather than discovered in a transcript.
+- **Notable worker misses / measured shape.** Two native `worker` runs — one red test
+  author (twelve tests, no rebrief) and one green implementation — no model or
+  provider change, no rework of either output beyond the orchestrator's own mutation
+  checks (four mutations applied, red observed, all reverted).
+
 ## Autonomy log
 
 Seat-level envelope decisions, one line each: phase · decision · reason ·
@@ -425,3 +514,22 @@ Seat-level envelope decisions, one line each: phase · decision · reason ·
 - **PHASE-04 · nothing else left the envelope.** No backlog deferral, no
   escalation, no design drift taken; owned paths only, `.quotient/` and `_envrc`
   untouched.
+- **PHASE-02 · the seat's F1 precondition applied, decided.** Every numeric row in
+  `the_specifications_own_messages_reach_the_human` carries `--follow any`, and the
+  directionless `--depth abc` is asserted separately against the front-end's
+  `needs a direction` sentence. Reason: EX-5/VT-3 name the specification's sentence
+  and EX-7's strictness rule decides the queue; keeping both assertions pins both
+  sentences and leaves no reading of either criterion false.
+- **PHASE-02 · two commits instead of one, decided.** `372b312` lands the contract
+  suite red and `d20a84f` lands the verb, following `/execute`'s red/green order and
+  SL-008's `test(...)`-before-`feat(...)` precedent. Reason: the red evidence is
+  then in history rather than only in the notes, and the delta is recorded across
+  both commits so nothing is dropped.
+- **PHASE-02 · the delta range recorded as `ea8dacb..d20a84f`, decided.**
+  `record-delta`'s default start (`372b312`) refused as a narrower boundary than the
+  phase sheet's stamp, and a narrower boundary under-reports silently. Reason: the
+  stamp is a real commit (`ea8dacb`) and `372b312^` is exactly it, so the span covers
+  the phase and nothing else.
+- **PHASE-02 · nothing else left the envelope.** No escalation, no backlog deferral,
+  no design drift, no source edit outside `src/cli.rs` and `tests/cli_contract.rs`;
+  `src/dsl.rs` untouched, `.quotient/` and `_envrc` untouched.
