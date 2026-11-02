@@ -64,15 +64,17 @@ remaining 1.0 work retain their separate ownership.
 
 `src/entity.rs::ENTITY_ID` keeps its name and becomes `"smut_id"`. It remains
 the code definition used by identity parsing, normalization, reference scanning,
-projection, ordering where identity is addressed, persistence and canonical
+projection, identity addressed as an `Id` value, persistence and canonical
 serialization. A literal wire-contract assertion pins its value (DEC-020).
 The change adds no identity module or alias.
 
 The existing `reference_id`, `extract` and `scan_refs` signatures remain.
 `reference_id` continues to distinguish absence from invalid identity; changing
 the key does not soften invalid structural identity into embedded data.
-`src/declare.rs` uses the constant when emitting a change receipt's subject.
-`src/conventions.rs` uses it for the fixed-id declaration returned as JSON.
+`src/declare.rs` must emit a change receipt's subject from the constant, and
+`src/conventions.rs` must do the same for the fixed-id declaration returned as
+JSON. Both spell the key as raw literals today (`src/declare.rs:110`,
+`src/conventions.rs:126`), so the rename reaches them rather than passing them by.
 
 ### Declaration interpretation
 
@@ -193,13 +195,14 @@ numeric array components: for example
 `$["payload"]["tags"][2]["smut_id"]`. Encode object-key text with JSON string
 escaping, so dots, brackets, quotes, slashes, control characters and empty keys
 cannot be confused with separators. This is a diagnostic notation only, not
-new query syntax.
+new query syntax. DEC-021 requires only "an unambiguous field/index path"; this
+notation satisfies it, and DEC-021 needs no amendment.
 
 Traverse object keys lexically and arrays in positional order, returning the
 first invalid structural identity. Within one entity the result is deterministic;
 the existing index iteration determines which entity is loaded first.
 The error names the indexed basename and the identity member's path, not merely
-its containing object. A proposed exact reason is:
+its containing object. The corruption reason is exactly:
 
 ```text
 identity at $["payload"]["tags"][2]["smut_id"] must be a nonempty string
@@ -213,6 +216,10 @@ smut: Ab3.json is not a valid store entry: identity at $["payload"]["tags"][2]["
 ```
 
 Invalid request identity remains exit 2; malformed stored identity is exit 1.
+Every diagnostic that names identity names `smut_id`: the invalid-identity
+refusal, the entity-file index disagreement, `describe()`'s absent-identity
+description and the `scan_refs` assertion.
+`docs/store-format.md` quotes the resulting strings (STD-001).
 No success envelope is emitted on failure. Keep the internal `scan_refs`
 assertion for an impossible malformed validated input; update its spelling.
 
@@ -230,6 +237,21 @@ smut: the store index has format_version 1, and this build reads only 2
 The corresponding manifest refusal also names found and expected versions and
 exits 1. A committed version-1 manifest must fail parsing before any staged put
 or removal is replayed.
+
+The version gate is the whole defence, and this slice discharges the obligation
+by example rather than adding
+machinery: **a stricter stored-validity rule lands with a version bump, or
+proves it cannot refuse an in-flight manifest** (STD-002). Recovery never parses
+a payload — staged validation checks shape only — so no loader rule changes what
+recovery accepts; the version gate is the only thing that stops an earlier
+build's committed manifest from being replayed, and within one version a payload
+a stricter loader refuses is still published. No test can observe a tightening
+that forgets the bump.
+
+The store layout reserves nothing for conventions: sets live under
+`.config/smut/conventions/` in the project, user or binary layer (DEC-026,
+DEC-028) and never inside `.smut/`, so a
+version-2 format document must not imply a home the layout does not have.
 
 This sequence shows the retained recovery-before-load boundary:
 
@@ -270,8 +292,11 @@ change (STD-001).
 ### Design targets
 
 The table is the code-impact contract; design-target selectors mirror its paths.
-A listed consumer that already reads `ENTITY_ID` needs no production rewrite
-solely to replace the spelling. Its embedded fixtures, comments and behavioral
+A listed consumer that already reads `ENTITY_ID` needs no change to its identity
+logic; diagnostic text changes are mandated by section 3. The change-receipt
+subject in `src/declare.rs` and the conventions seed in `src/conventions.rs` are
+the only raw literals that construct the wire envelope. Embedded fixtures, comments and
+behavioral
 pins still require inspection. Preserve unrelated behavior rather than treating
 the list as permission to refactor.
 
@@ -280,14 +305,16 @@ the list as permission to refactor.
 | `src/entity.rs` | Set `ENTITY_ID` to `smut_id`; retain predicate/extraction/scanning interfaces; update identity-related comments, diagnostics and tests; pin the literal wire contract |
 | `src/declare.rs` | Emit the change-receipt subject using `ENTITY_ID`; preserve normalization, conflict algebra, generation and response containers; update examples/tests |
 | `src/conventions.rs` | Emit the fixed-id convention declaration using `ENTITY_ID`; update its tests/comments without changing seed ids or content |
-| `src/store/**` | Set index and manifest format versions to 2; add the private recursive loaded-identity validator; retain root checks and recovery ordering; update format-bearing tests |
-| `src/walk.rs`, `src/select.rs`, `src/order.rs` | Verify shared identity consumers and update structural examples/fixtures; keep algorithms and internal ids-as-values unchanged |
-| `src/render_markdown.rs` | Inspect identity/reference examples and pins; retain rendering behavior and identity display as a value |
+| `src/store/**` | Set index and manifest format versions to 2; add the private recursive loaded-identity validator; respell `describe()`'s absent-identity text; retain root checks and recovery ordering; update format-bearing tests |
+| `src/walk.rs`, `src/select.rs` | Verify shared identity consumers and update structural examples/fixtures; keep algorithms and internal ids-as-values unchanged |
+| `src/order.rs` | Verify no identity key enters ordering (ordering is over internal `Id` values, not JSON members) and update its inline fixtures |
+| `src/render_markdown.rs` | Retain the mechanism: identity display remains keyed on `ENTITY_ID`, so an ordinary `id` renders as an ordinary attribute and `smut_id` is the suppressed identity. Pin the new output; update identity/reference examples |
 | `src/cli.rs` | Update structural examples/tests; retain grammar, flags and generation policy |
-| `src/learn.rs` | Update declaring/reference/query/traversal prose, two-call recipe and executed examples; keep prose pins, without interpolating the guide from the constant |
+| `src/error.rs` | The identity-naming diagnostics that live here: the invalid-identity refusal and the entity-file index disagreement. SL-005 also edits this module, so its refusal phase lands before this work or this work takes a rebase |
+| `src/learn.rs` | Update declaring/reference/query/traversal prose, two-call recipe and executed examples; keep prose pins, without interpolating the guide from the constant. Identity spelling, examples, the reserved-at-depth warning, the old-store refusal with no migration, and the old-spelling-query consequence only: no heading renames, no reordering, no new sections, and each new identity rule gets exactly one home section (a later slice makes sections addressable) |
 | `tests/**` | Update structural input/expected-output keys; add the identity, corruption and version refusal cases; retain regression coverage and the single interview fixture |
 | `docs/store-format.md` | Document version 2 in index and manifest, structural identity, canonical bytes, nested-identity refusal and diagnostic examples |
-| `README.md` | Update declarations, response examples and sharp edges while preserving the operator's active draft |
+| `README.md` | The surrounding prose is out of this slice's write scope: the operator rewrites it for 0.2 and it lands separately (CHR-001); do not sweep or stage it. Its single exact-fenced console block is in scope and part of the gate — `tests/readme_example.rs` executes it — so it must carry `smut_id` by the time the phase gate runs, whether CHR-001 lands it first or this slice edits that block |
 | `smut-implementation-brief.org` | Update normative identity rules, relevant response/example keys and the format-version example; retain unfinished 1.0 requirements |
 | `.doctrine/knowledge/decision/002/record-002.*`, `005/record-005.*`, `007/record-007.*`, `010/record-010.*`, `012/record-012.*`, `016/record-016.*` under the same decision directory | Reconcile only the affected facet/prose passages as described below |
 
@@ -302,19 +329,26 @@ names need not become `smut_id`: they describe values/types, not JSON members.
 The normative implementation brief describes the intended product, including
 unfinished Mermaid and 1.0 work. Updating identity examples does not claim those
 features shipped. The store-format document records the actual on-disk contract
-under STD-001; the brief's version example must agree with it. README and
-`learn` describe the shipped surface, not pending features.
+under STD-001; the brief's version example must agree with it. `learn` describes
+the shipped surface, not pending features; the README's prose is the operator's
+0.2 rewrite and lands outside this slice (CHR-001), while its single executed
+block is this slice's to keep green.
 
 The guide must explicitly teach that `smut_id` is structural, ordinary `id`
 is data, and identity predicates/projections use the new key. State that old
-stores are refused and retain the existing value boundaries, notably `DROP`.
+stores are refused, without naming a release or format figure, and state that
+there is no migration; retain the existing value boundaries, notably `DROP`.
+A query naming a field no entity carries is taught, never refused (DEC-027):
+after this rename an old-spelling `id` is such a field wherever no entity
+carries it as data, and the guide says so.
 The two-call recipe keeps its completeness guard and backlink direction; only
 identity-field spelling changes.
 
-The operator is actively editing README. Before its implementation edit, inspect
-both staged and working-tree changes, coordinate the affected passages, and
-preserve that work. No blanket replacement, overwrite, checkout/reset or broad
-commit is appropriate. Changes to fixture provenance explain the key adaptation
+The operator is rewriting README's prose for 0.2 and landing it separately. This
+slice must not sweep, stage or revert that prose, and no blanket replacement,
+overwrite, checkout/reset or broad commit is appropriate; the single executed
+block is the exception and moves with the binary.
+Changes to fixture provenance explain the key adaptation
 without changing the original source-snapshot facts or its privacy ruling.
 
 ### Accepted decision amendments
@@ -356,6 +390,8 @@ branch.
 | Field operations distinguish identity and data | Query by `smut_id` and by ordinary `id` against mixed data; project identity alone and identity plus `id`; preserve ordinary-field ordering and top-level patch semantics |
 | Serialization is structural | Stored and projected entities and receipts put `smut_id` first even beside lexically earlier ordinary keys; embedded nonentity objects remain lexical |
 | Receipts and conventions use the new key | Pin `changes[].smut_id`, entity-shaped `previous`, compact behavior and the JSON conventions declaration; container-named values retain their names |
+| Identity suppression is a mechanism, not a value | An entity carrying both `smut_id` and an ordinary `id` renders the ordinary `id` as an attribute under `--show-fields` while `smut_id` stays suppressed; record the before/after bytes |
+| Identity diagnostics name the key | The invalid-identity refusal, the entity-file index disagreement, `describe()`'s absent-identity text and the `scan_refs` assertion each spell `smut_id`; `docs/store-format.md` quotes them verbatim |
 | Nested stored malformation is refused | Extend `tests/store_corruption.rs` and CLI coverage: malformed `smut_id` under objects and arrays is exit 1, with the basename and exact diagnostic path, for both `get` and traversal |
 | Loader validates every loaded object | Put corruption under a field not requested by `follow`; traversal must still refuse instead of reaching `scan_refs`' assertion |
 | Path notation is unambiguous | Object keys with dots, brackets, quotes, empty strings and escaped characters yield distinct JSON-quoted path components; include an array position |
@@ -399,14 +435,17 @@ guide examples against the adapted array.
 
 ### Residual search and documentation review
 
-Search code, tests, fixture metadata, the normative brief, README, `learn`,
+Search code, tests, fixture metadata, the normative brief, `learn`,
 store-format prose and the six amended decisions for old identity-field uses.
 Classify residual `id` occurrences as ordinary payload data, public-id value or
 internal vocabulary, historical quotation/version-refusal fixture, or missed
 structural use. Only the last category is a failure of the sweep. A raw
 occurrence count or blanket ban is not a correctness gate.
 
-Execute the README transcript and guide examples using their existing tests.
+Execute the guide examples using their existing tests. `tests/readme_example.rs`
+executes the README's single exact-fenced console block, so that block gates
+`just check` and must carry `smut_id` before the gate is run; the rest of the
+README is the operator's 0.2 rewrite and lands separately (CHR-001).
 Inspect prose pins so they assert the new rule rather than merely deleting old
 sentences. Review the brief as a normative document, including still-unfulfilled
 1.0 scope, and review `docs/store-format.md` against code and worked diagnostics
@@ -433,7 +472,10 @@ The main compatibility risk is silent meaning change for a caller still sending
 the old field: ordinary `id` is valid data, so rejecting it would contradict
 the feature. Documentation, new behavior cases and executed examples make the
 new contract explicit; no compatibility interpretation is added. Old on-disk
-stores are different: their version supplies an unambiguous refusal boundary.
+stores are different: their version supplies an unambiguous refusal boundary
+once the version moves. While the stricter loader runs at format 1, this tree is
+neither tagged nor published, is run only against scratch stores, and does not
+open the operator's live store until the bump (PHASE-01/EX-5, PHASE-02/EN-4).
 The operator accepts the lack of legacy compatibility (ADR-001, DEC-022).
 
 The new validation pass visits each loaded entity before any normal command
@@ -445,7 +487,9 @@ representation as needed; do not repeatedly serialize or clone entire entity
 subtrees to compute them.
 
 The store still reserves `smut_id` at every depth. A payload that intentionally
-uses that spelling is interpreted structurally. The `DROP` patch sentinel,
+uses that spelling is interpreted structurally, so such a payload cannot be
+stored verbatim, and the guide must say so: `smut_id` frees `id`, not every
+identity-shaped field. The `DROP` patch sentinel,
 predicate operator syntax, missing-versus-null distinction and opaque-id rules
 retain their existing boundaries. This design does not promise literal storage
 of every possible JSON payload without conventions.
@@ -455,9 +499,11 @@ behavior. Preserve its prose and data while adapting its structural identity
 keys. Inverse fixture comparison, behavior tests and residual review cover
 different failure modes; none replaces the others.
 
-README remains the operator's live draft and requires coordination at execution.
-No implementation or commit may discard or silently absorb their unrelated
-changes. The design can be approved independently of that later editing step.
+README's prose is the operator's 0.2 rewrite and lands outside this slice
+(CHR-001). No implementation or commit may sweep, stage or revert that prose.
+Its single executed block is in scope and gates the build, so it moves with the
+binary; the design can be approved independently of the operator's wider
+editing.
 
 The six decisions need coherent facet and prose amendments, and the normative
 brief must remain current while its 1.0 requirements remain unfinished.

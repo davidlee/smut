@@ -82,8 +82,8 @@ not depend on proving that no external consumer exists.
 6. **The human surface and the fixtures follow.** `docs/store-format.md` (version,
    key, the id-first serialisation, and the diagnostic message strings that say
    `holds id "b"`), `smut learn`'s Declaring/References/Querying/Traversal text and
-   its recipe example, the README (operator's in-flight edit — coordinate), the
-   whole test suite (974 literal `"id"` occurrences across 27 files), and
+   its recipe example, the whole test suite (974 literal `"id"` occurrences across
+   27 files), and
    `tests/fixtures/interview/entities.json` (223 occurrences), which is a real
    store's declaration list and therefore doubles as the format-break evidence.
    Keep `smut-implementation-brief.org` normative and update its identity mentions,
@@ -91,7 +91,12 @@ not depend on proving that no external consumer exists.
    extract specs in this slice (DEC-023). `docs/store-format.md` remains the single
    on-disk format record and must move with the change under STD-001. `ENTITY_ID`
    remains the single key definition, with a wire-contract assertion and the
-   per-surface pins specified by DEC-020.
+   per-surface pins specified by DEC-020. The README's surrounding prose is not
+   part of this slice's write scope: the operator is rewriting it for 0.2 and it
+   lands separately before `cargo publish` (CHR-001), and no phase sweeps or
+   stages it. Its single exact-fenced console block *is* in scope and gates
+   `just check`, because `tests/readme_example.rs` executes it, so it must carry
+   `smut_id` before the phase gate runs.
 
 ## Non-Goals
 
@@ -120,13 +125,15 @@ not depend on proving that no external consumer exists.
 | `src/declare.rs` | references, hoisting, `changes[]` subject key, `previous` |
 | `src/conventions.rs` | fixed-id JSON declaration emits the structural identity key; seed id and content stay unchanged |
 | `src/store/*` | `FORMAT_VERSION` 1 → 2; entity-file validation (`IdDisagreement` reads the new key); the loader's nested-identity validation (IMP-005) |
-| `src/walk.rs`, `src/select.rs`, `src/order.rs` | identity key in selection, edges, sort tiebreak (internal ids, mostly unchanged) |
-| `src/render_markdown.rs` | identity display unchanged; any reference formatting that names the key |
+| `src/walk.rs`, `src/select.rs` | identity key in selection and edges; algorithms and internal ids unchanged |
+| `src/order.rs` | no identity key enters ordering (ordering is over internal `Id` values); update its inline fixtures |
+| `src/render_markdown.rs` | identity suppression stays keyed on the constant, so an ordinary `id` now renders as an attribute and `smut_id` is suppressed; pin the new output |
 | `src/cli.rs` | nothing beyond the key: the grammar does not change |
+| `src/error.rs` | the identity-naming diagnostics: `Reject::InvalidId`, `StoreError::IdDisagreement` (added at review, Seat C-1 — this row was missing); `describe()`'s absent-identity text is respelled in `src/store/mod.rs`, the `scan_refs` assertion in `src/entity.rs` |
 | `src/learn.rs` | Declaring, References, Querying, Traversal, the two-call recipe, the command block |
 | `docs/store-format.md` | format version, the key, id-first serialisation, diagnostic examples |
 | `smut-implementation-brief.org` | normative identity rules, response examples and format-version example updated in place |
-| `README.md` | every declaration and response example (operator's live edit — coordinate before sweeping) |
+| `README.md` | the surrounding prose is out of scope — the operator rewrites it for 0.2 and it lands separately (CHR-001); do not sweep or stage it. Its single exact-fenced console block is in scope and gates `just check` (`tests/readme_example.rs` executes it), so it must carry `smut_id` before the gate runs, by CHR-001 or by this slice |
 | `tests/**`, `tests/fixtures/interview/entities.json` | the sweep, plus the fixture store rewritten as evidence |
 
 ## Risks & assumptions
@@ -150,9 +157,11 @@ not depend on proving that no external consumer exists.
   test or just a documented sharp edge.
 - **Compatibility policy:** external consumers may exist; maintaining their old
   store format is explicitly outside this slice under ADR-001 and DEC-022.
-- **Risk:** the README is under active edit by the operator. Sweeping it while it is
-  being written produces a conflicted draft; sequencing has to be agreed before the
-  docs phase runs.
+- **Boundary:** the README's surrounding prose is the operator's 0.2 rewrite and
+  lands outside this slice (CHR-001); no phase sweeps or stages it. Its single
+  executed block is in scope and gates `just check`, so it must carry `smut_id`
+  before the gate runs. The
+  slice's own human surface is `smut learn` and `docs/store-format.md`.
 - **Risk:** IMP-007 (render short flags) is explicitly optional and must not ride
   along; it touches `src/cli.rs`, which this slice is otherwise leaving alone.
 
@@ -174,7 +183,8 @@ not depend on proving that no external consumer exists.
   `follow` traversal refuse corruption with exit 1, file and path, without a panic;
   fixture equivalence plus existing fixture/example/regression suites establish
   that graph content and unrelated behavior are preserved (DEC-024).
-- Human-checked: `smut learn` reads true end to end, the README examples match the
+- Human-checked: `smut learn` reads true end to end and its guide examples match the
   binary's output verbatim, the normative brief states the new identity/version
   rules while retaining unfinished 1.0 requirements, and the six DEC amendments
-  and `docs/store-format.md` state the agreed rules.
+  and `docs/store-format.md` state the agreed rules. The README is the operator's
+  0.2 rewrite and lands outside this slice (CHR-001); it is not human-checked here.

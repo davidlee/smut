@@ -16,10 +16,14 @@ STD-001 and DEC-020 through DEC-025 supply the accepted constraints.
 
 Establish the loader invariant first, against the current `ENTITY_ID`, so the new
 recursive algorithm and its diagnostic-path tests are isolated from the larger
-spelling sweep. The helper's use of `reference_id` makes this independent of the
-key's value. The corruption document must change with that check under STD-001.
-This intermediate commit retains the old key/version; it is not a separate
-release or a reinterpretation of the final design.
+spelling sweep. The helper's *code* is key-agnostic, but its verdict is not:
+`reference_id` rejects a nested `{"id":null}` before the rename and accepts it as
+ordinary data after it, so this phase's tests and expectations are key-dependent
+and PHASE-02 respells them. The corruption document therefore lands with PHASE-02
+rather than here — a format document that still declares version 1 must not state
+a rule the released version-1 reader never enforced. This intermediate commit
+retains the old key and version; it is not a release, not a supported reader of
+any existing version-1 store, and not a reinterpretation of the final design.
 
 Then move structural identity, both version constants, every current data/example
 surface and the committed fixture together. This is deliberately a wider phase:
@@ -65,10 +69,13 @@ Inspect actual versioned index/manifest bytes as well as their constants.
 
 ## Notes
 
-The operator's README has staged and unstaged edits. Coordinate the actual
-passages immediately before the rename phase, preserve both layers and never
-use a broad commit that absorbs unrelated work. Plan/design commits explicitly
-name the Doctrine paths and exclude README.
+The operator's README prose is being rewritten for the 0.2 release and lands outside
+this slice, before `cargo publish` (CHR-001). No phase sweeps or stages it. Its single
+exact-fenced console block is in scope and gates `just check` (`tests/readme_example.rs`
+executes it), so it carries `smut_id` before the gate runs; preserve both of the
+operator's layers and never use
+a broad commit that absorbs unrelated work. Plan/design commits explicitly name the
+Doctrine paths and exclude README.
 
 The loader pass is linear over already-parsed values. Use one mutable path buffer
 or equivalent bounded traversal state rather than repeatedly cloning ancestor

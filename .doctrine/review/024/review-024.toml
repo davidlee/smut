@@ -1,0 +1,329 @@
+id    = 24
+slug  = "sl-004-design-re-open-pre-implementation-review-d1d10-c-1c-3c-4c-6"
+title = "SL-004 design re-open — pre-implementation review (D1–D10, C-1/C-3/C-4/C-6)"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "review"
+responder = "design"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Pass examined the locked design (rev 39) against three independent pre-implementation reviews: Seat A's 129-obligation design-to-plan ledger, Seat B's sequencing/assumption audit of the implementation surface, and Seat C's adjacent-decision review (DEC-026…029, RFC-001). Every finding was re-verified against the code before it was raised (src/declare.rs:110 and src/conventions.rs:126 raw literals, src/render_markdown.rs:186/211 suppression keyed on the constant, src/error.rs:282/389 diagnostics, src/store/mod.rs:505, src/entity.rs:93, docs/store-format.md:208-210 recovery-before-validation, src/learn.rs:3-13 charter, the selector list, and the absence of src/error.rs from §4). Thirteen findings: two blockers (identity-naming diagnostics unowned under STD-001; recovery may publish what the loader then refuses), seven majors (§2/§4 falsified production-literal claims plus the order.rs row; the unsatisfiable render row; the untaught smut_id-at-depth reservation; the README obligations the operator moved out of scope; the missing src/error.rs row; the guide's version-pinning collision; the DEC-027 citation the silent old-spelling query needs), three minors (the learn.rs no-restructure boundary; the conventions layout note; the bracket-vs-DEC-021 notation supersession) and one nit (whether the version refusal names the absent migration). Plan, selector and slice-body repairs for the surfaces this pass owns are already applied; the ledger exists so the design run can be reopened over a documented pass rather than a revision."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-004"
+
+[[finding]]
+id = "F-1"
+status = "answered"
+severity = "blocker"
+title = "Identity-naming diagnostics are left to the implementer while STD-001 makes their text contractual"
+detail = """
+Design §3 introduces the new reason but says "A proposed exact reason is:", so the contract keeps a hedge exactly where the format document is binding. Five shipped strings name identity and none is decided: src/error.rs:282 (Reject::InvalidId, "invalid entity id: {found}, and an id must be a nonempty string"), src/error.rs:389 (StoreError::IdDisagreement, "the entity file {entry} holds id {found}, and the index maps it to {key}"), src/store/mod.rs:505 (describe()'s absent-identity text, "no `id`"), the scan_refs assertion panic at src/entity.rs:93, and the index version refusal. docs/store-format.md:252 quotes the IdDisagreement string verbatim, and STD-001 makes worked diagnostics part of the format's record, so PHASE-02/VA-3's "doc agrees with code" can certify both while both are stale.
+
+Minimal wording: replace "A proposed exact reason is:" with "The corruption reason is exactly `identity at <path> must be a nonempty string`. Every diagnostic that names identity names `smut_id`: the invalid-identity refusal, the entity-file index disagreement, the absent-identity description and the `scan_refs` assertion. `docs/store-format.md` quotes the resulting strings."
+
+Consequence of assent: PHASE-02/EX-9 becomes a design obligation rather than a plan reading of §3."""
+disposition = "fix-now"
+response = """Operator assented to D2 ("uh huh") on 2026-11-02, in the same reply that commissioned this ledger. Fixed by amending §3 to state the corruption reason exactly and to name every identity-naming diagnostic (`Reject::InvalidId`, `StoreError::IdDisagreement`, `describe()`'s absent-identity text, the `scan_refs` assertion, the index refusal wording), with `docs/store-format.md` quoting the resulting strings. PHASE-02/EX-9 then becomes a design obligation rather than a plan reading of §3."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Operator assented to D2 ("uh huh") on 2026-11-02, in the same reply that commissioned this ledger. Fixed by amending §3 to state the corruption reason exactly and to name every identity-naming diagnostic (`Reject::InvalidId`, `StoreError::IdDisagreement`, `describe()`'s absent-identity text, the `scan_refs` assertion, the index refusal wording), with `docs/store-format.md` quoting the resulting strings. PHASE-02/EX-9 then becomes a design obligation rather than a plan reading of §3."""
+
+[[finding]]
+id = "F-2"
+status = "answered"
+severity = "blocker"
+title = "Recovery replays before validation, so it can publish exactly the bytes the loader then refuses — with no repair path"
+detail = """
+Design §3 orders recovery strictly before store validation (docs/store-format.md:208-210 records it), and DEC-021/the slice's own rule make malformed stored identity corruption with no repair path and no migration. Composed: a committed manifest whose staged put carries malformed structural identity is replayed by recovery, the store is rewritten, and the load that follows refuses the store it just wrote. The store is then permanently unloadable, and by design there is no verb to fix it.
+
+Reachability is narrow — a version-2 manifest is normally written only by this build — but the failure is total and the refusal promise and the no-repair promise compose into loss rather than a diagnostic. This is not a plan repair: the design must choose one of
+
+(a) validate staged put payloads before replay (recovery then refuses before publishing, and the source is bounded: the same predicate the loader uses, applied to replayed payloads), or
+(b) state explicitly in §3 and in docs/store-format.md that recovery may publish bytes the loader will subsequently refuse, and that the store is then unrecoverable.
+
+Recommendation: (a). It keeps the two promises composable and costs one predicate call per replayed put on a path that already parses the payload. (b) is honest but leaves a documented way to destroy a store with no recovery story.
+
+Raised as a blocker because it is the only finding here whose resolution changes behaviour rather than wording; it stays open until the operator rules."""
+disposition = "tolerated"
+response = """
+Operator ruled: tolerated, 2026-11-02, with the invariant enshrined in governance rather than left as an unenforced rule.
+
+Adjudicated on measured likelihood rather than the seat's "permanent loss" framing, which overstates it. What closes most of the class: malformed identity is refused at the request boundary (Reject::InvalidId, src/entity.rs:43/530/745 and src/declare.rs:916), so a validating build cannot stage it; a mid-staging crash lands in the `prepare` state, which recover() discards rather than replays (src/store/journal.rs:493-6); and a cross-version manifest is refused by version before replay (this slice's EX-7). A publish-then-refuse therefore requires a writer bug or a hand edit inside `journal.commit/` during the commit window.
+
+Correction recorded against D7 as originally stated: neither option bricks the store permanently. store/mod.rs:295-6 runs recover() before load(), so a pre-replay refusal also leaves every command refusing; the difference is only which artefact is repaired and whether the pre-crash content survives. Documentation alone was therefore sufficient for the hand-edit leg — "don't edit the journal" is worthless advice, the format's corruption contract already owns hand edits, and the ordering plus its rationale is already in docs/store-format.md:208-210.
+
+Carried as an invariant with a home, not as machinery: **a stricter stored-validity rule lands with a version bump, or proves it cannot refuse an in-flight manifest.** That invariant is what EX-7/VT-6 already relies on silently.
+
+Its home is now STD-002 — "Recovery replays a committed manifest before the loader validates it — every stored-validity rule that tightens lands with a version bump, or proves it cannot refuse an in-flight manifest" — minted at operator direction on the ground that the defence is process, and unenshrined process is not a defence. The title names the trigger so it rides boot context and is surfaced for every slice; the statement carries the two obligations and the pre-replay review table; the rationale records why recovery must run first, that the window widens monotonically with the loader's rule count, and that no test can observe the violation. RSK-001 (the unenforced-invariant gap) is resolved `promoted`. The residual writer-bug leg is left to the write-set tests rather than to a design decision.
+
+Design consequence for this slice: §3 gains the invariant sentence as a statement, not a new rule — SL-004 discharges it by example, version 1 → 2 with the old-manifest refusal pinned pre-replay."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "tolerated"
+response = """
+Operator ruled: tolerated, 2026-11-02. Adjudicated on measured likelihood rather than the seat's "permanent loss" framing, which overstates it.
+
+What closes most of the class: malformed identity is refused at the request boundary (Reject::InvalidId, src/entity.rs:43/530/745 and src/declare.rs:916), so a validating build cannot stage it; a mid-staging crash lands in the `prepare` state, which recover() discards rather than replays (src/store/journal.rs:493-6); and a cross-version manifest is refused by version before replay (this slice's EX-7). A publish-then-refuse therefore requires a writer bug or a hand edit inside `journal.commit/` during the commit window.
+
+Correction recorded against D7 as originally stated: neither option bricks the store permanently. store/mod.rs:295-6 runs recover() before load(), so a pre-replay refusal also leaves every command refusing; the difference is only which artefact is repaired and whether the pre-crash content survives. Documentation alone was therefore sufficient — "don't edit the journal" is worthless advice, the format's corruption contract already owns hand edits, and the ordering plus its rationale is already in docs/store-format.md:208-210.
+
+Carried instead as an invariant, not machinery: a stricter stored-validity rule lands with a version bump, or must prove it cannot refuse an in-flight manifest. That invariant is what EX-7/VT-6 already relies on silently; naming it in §3 and in the format record is the repair. The residual writer-bug leg is left to the write-set tests rather than to a design decision. The unenforced-invariant gap is filed as a backlog risk."""
+
+[[finding.turn]]
+act = "amend"
+role = "responder"
+note = "Operator directed that the process defence be enshrined as a standard whose title names the trigger, so it rides boot context and slice mechanics check it for every slice — rather than resting on an unenforced invariant plus a risk entry."
+disposition = "tolerated"
+response = """
+Operator ruled: tolerated, 2026-11-02, with the invariant enshrined in governance rather than left as an unenforced rule.
+
+Adjudicated on measured likelihood rather than the seat's "permanent loss" framing, which overstates it. What closes most of the class: malformed identity is refused at the request boundary (Reject::InvalidId, src/entity.rs:43/530/745 and src/declare.rs:916), so a validating build cannot stage it; a mid-staging crash lands in the `prepare` state, which recover() discards rather than replays (src/store/journal.rs:493-6); and a cross-version manifest is refused by version before replay (this slice's EX-7). A publish-then-refuse therefore requires a writer bug or a hand edit inside `journal.commit/` during the commit window.
+
+Correction recorded against D7 as originally stated: neither option bricks the store permanently. store/mod.rs:295-6 runs recover() before load(), so a pre-replay refusal also leaves every command refusing; the difference is only which artefact is repaired and whether the pre-crash content survives. Documentation alone was therefore sufficient for the hand-edit leg — "don't edit the journal" is worthless advice, the format's corruption contract already owns hand edits, and the ordering plus its rationale is already in docs/store-format.md:208-210.
+
+Carried as an invariant with a home, not as machinery: **a stricter stored-validity rule lands with a version bump, or proves it cannot refuse an in-flight manifest.** That invariant is what EX-7/VT-6 already relies on silently.
+
+Its home is now STD-002 — "Recovery replays a committed manifest before the loader validates it — every stored-validity rule that tightens lands with a version bump, or proves it cannot refuse an in-flight manifest" — minted at operator direction on the ground that the defence is process, and unenshrined process is not a defence. The title names the trigger so it rides boot context and is surfaced for every slice; the statement carries the two obligations and the pre-replay review table; the rationale records why recovery must run first, that the window widens monotonically with the loader's rule count, and that no test can observe the violation. RSK-001 (the unenforced-invariant gap) is resolved `promoted`. The residual writer-bug leg is left to the write-set tests rather than to a design decision.
+
+Design consequence for this slice: §3 gains the invariant sentence as a statement, not a new rule — SL-004 discharges it by example, version 1 → 2 with the old-manifest refusal pinned pre-replay."""
+
+[[finding]]
+id = "F-3"
+status = "open"
+severity = "major"
+title = "§2 and §4 state as fact that two production literals already use ENTITY_ID; the code contradicts both, and they are the remaining wire surface"
+detail = """
+Design §2 asserts in the present tense that src/declare.rs and src/conventions.rs use the constant when emitting, and §4's table concludes "a listed consumer that already reads `ENTITY_ID` needs no production rewrite solely to replace the spelling". Measured: src/declare.rs:110 writes entry.insert("id".to_owned(), ...) and src/conventions.rs:126 writes ("id", id_of(set)); `rg -n ENTITY_ID src/conventions.rs src/declare.rs` matches nothing. So the two files that spell the wire key as raw literals are the ones the design says need no change — the whole remaining production surface.
+
+Same class: §4's src/order.rs row claims the sort tiebreak carries the key, but ordering is over Id values and `rg -n ENTITY_ID src/order.rs` finds nothing, so the row overstates the work.
+
+Minimal wording: §2 "uses the constant when emitting" / "uses it for" becomes "must emit ... from the constant"; §4's sentence becomes "A listed consumer that already reads `ENTITY_ID` needs no change beyond inspection, except the change-receipt subject in `src/declare.rs` and the conventions seed in `src/conventions.rs`, which spell the key as literals today"; the order.rs row becomes "verify no identity key enters ordering".
+
+Consequence: PHASE-02/EX-1 and VA-2 already require the routing and the "wire spelling only at ENTITY_ID" check; assent makes them design obligations rather than plan readings."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-4"
+status = "open"
+severity = "major"
+title = """§4 says "retain rendering behavior", but the renderer's suppression set is the constant — a data id changes the visible output"""
+detail = """
+Design §4's src/render_markdown.rs row says "retain rendering behavior and identity display as a value". That is unsatisfiable as written: the renderer's suppression set IS the identity constant — src/render_markdown.rs:186 forces ENTITY_ID into the selection, and :211 filters `*field != ENTITY_ID` out of the attribute lines. So "the key moves" and "behaviour is retained" cannot both hold for a data field named `id`: today a probe with {"id":"a","smut_id":"x","body":"hello"} prints `- **smut_id:** x`, and after the swap an ordinary data `id` renders as an attribute while `smut_id` is suppressed. The design decides neither outcome, so the visible output changes without a decision.
+
+Minimal wording, appended to that row: "Retain the mechanism: identity display remains keyed on `ENTITY_ID`, so an ordinary `id` renders as an ordinary attribute and `smut_id` is the suppressed identity. Pin the new output."
+
+Consequence: PHASE-02/EX-10 and VT-8 (tests/render.rs) already pin the mechanism and the before/after bytes; assent makes the render change a design decision rather than a plan inference."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-5"
+status = "open"
+severity = "major"
+title = "smut_id stays reserved at every depth, but no section assigns the sentence that teaches it — ISS-002 survives re-spelled"
+detail = """
+Design §6 states as a boundary that the format "still reserves `smut_id` at every depth". Nothing else in the design assigns the duty of telling anyone. ISS-002's failure mode therefore survives re-spelled and undocumented: a caller who read the 0.1 story ("a payload's own `id` cannot be stored") will reasonably conclude a field named `smut_id` is now free, store it, and lose its identity semantics exactly as before. The rename frees `id`; it does not free identity-shaped fields.
+
+Minimal wording, appended to that §6 paragraph: "The guide must say that a payload field named `smut_id` is still interpreted structurally, so such a payload cannot be stored verbatim; `smut_id` frees `id`, not every identity-shaped field."
+
+Note the collision this must be written against: design §4's documentation contract also requires learn to say a store written by an older build is refused, while src/learn.rs:3-13 is chartered "never version-pinning". Both belong in the same guide sentence or two."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-6"
+status = "open"
+severity = "major"
+title = "Three sections still bind the slice to README.md, which is now the operator's 0.2 rewrite outside this slice"
+detail = """
+Three design obligations still bind this slice to README.md, which the operator has moved out of scope: they are rewriting it for the 0.2 release and will land it before `cargo publish` (tracked as CHR-001). The obligations are §4's code-impact row ("Update declarations, response examples and sharp edges while preserving the operator's active draft"), §4's documentation contract ("README and `learn` describe the shipped surface"), and §5's "execute the README transcript" evidence requirement.
+
+Left as written the design gates the slice on a surface the plan no longer owns, and an implementer following the design faithfully would sweep a file being rewritten in parallel.
+
+Minimal wording: replace the §4 row with "README.md is out of this slice's write scope: the operator rewrites it for 0.2 and it lands separately (CHR-001). This slice must not edit, sweep or stage it and is not gated on its content."; in the documentation contract change "README and `learn` describe the shipped surface" to "`learn` describes the shipped surface; the README is the operator's rewrite and lands outside this slice"; in §5 keep "execute the ... guide examples using their existing tests" and drop the README transcript from the slice's evidence, noting the suite still runs it. §4's "README remains the operator's live draft" and §6's preservation paragraph stay as written — they are the boundary.
+
+The plan already reflects this (PHASE-02/EN-3, EX-5, EX-10, VA-2; PHASE-03/EX-4, VA-4); this finding is the design catching up."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-7"
+status = "open"
+severity = "major"
+title = "§4's code-impact contract omits src/error.rs, the file PHASE-02/EX-9 edits — and the one SL-005 also edits"
+detail = """
+§4 introduces its table as "the code-impact contract", but src/error.rs is absent from it, and PHASE-02/EX-9 respells two messages that live there: Reject::InvalidId (src/error.rs:282) and StoreError::IdDisagreement (:389), plus describe()'s absent-identity text. The file was also absent from this slice's selectors, so the gap was invisible to the review-prime path and was found only by reading the plan against the code.
+
+The omission has a second, non-local consequence: SL-005 (refusals — IMP-010 + ISS-004 under DEC-027) adds a Reject variant, its Display arm and its tests to exactly that module. Neither slice could see the other.
+
+Fix: add the table row — "| `src/error.rs` | The identity-naming diagnostics: the invalid-identity refusal, the entity-file index disagreement, the absent-identity description, and the index version refusal |" — and record the ordering rule: SL-005's refusal phase lands before PHASE-02, or this work takes a rebase.
+
+Already applied on the surfaces this review owns: selector `src/error.rs` added to slice-004.toml, the affected-surface row added to the slice body, and PHASE-02/EN-5 appended. What remains is the design row."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-8"
+status = "open"
+severity = "major"
+title = "The guide must say old stores are refused, while learn.rs is chartered never to pin a version — the design picks neither"
+detail = """
+Two design obligations collide and the design picks neither. §4's documentation contract requires the guide to state that a store written by an older build is refused. src/learn.rs:3-13 charters the guide module as "Descriptive and version-scoped, never version-pinning ... a version figure would be PHASE-07's to change". An implementer must therefore either pin a version figure (violating the module's charter) or state the refusal without one (leaving the design silent on the wording it asked for).
+
+Minimal wording, appended to the §4 refusal sentence: "stated without a release or format figure."
+
+The plan already requires the versionless phrasing (PHASE-02/EX-5: "the guide states that a store written by an older build is refused without pinning a release figure"); assent makes that the design's choice rather than the plan's invention. Note F-5's teaching duty and the index refusal wording (F-1) land in the same sentences, so all three should be written together."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-9"
+status = "answered"
+severity = "major"
+title = "The silent old-spelling query is decided by DEC-027 but the design never says so — it needs a citation, not an adjudication"
+detail = """
+The design never answers the question its own slice body hands to it. slice-004.md's risks say a caller left on `id` fails every predicate operator except `$exists`, so a stale `where:{"id":...}` returns an empty result at exit 0 rather than an error — "the design should decide whether that is a test or just a documented sharp edge". No section decides it. The class is nevertheless settled by DEC-027: a `where` naming a field no scanned root carries is TAUGHT, never refused, because refusing punishes filtering-as-probe and the check is only sound store-wide. After the rename `id` is exactly such a field.
+
+So this needs a citation and a sentence, not an adjudication. Minimal wording: in §4 or §6, "A query naming a field no entity carries is taught, never refused (DEC-027): after this rename an old-spelling `id` is such a field, and the guide says so." The exhausted sentence, already adopted for PHASE-02/EX-8: "a field no entity carries fails every operator exactly as a missing field on one entity does."
+
+Operator has assented to D1 ("seems reasonable"); this is the record of what was assented to, reframed per Seat C so the design cites DEC-027 rather than re-deciding it."""
+disposition = "fix-now"
+response = 'Operator assented to D1 ("seems reasonable") on 2026-11-02. Adjudicated as Seat C-2 reframed it: no new decision is taken, DEC-027 already settled the class, so the design gains a sentence in §4/§6 citing DEC-027 and the guide carries the drafted sentence ("a field no entity carries fails every operator exactly as a missing field on one entity does"), which PHASE-02/EX-8 now requires verbatim.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Operator assented to D1 ("seems reasonable") on 2026-11-02. Adjudicated as Seat C-2 reframed it: no new decision is taken, DEC-027 already settled the class, so the design gains a sentence in §4/§6 citing DEC-027 and the guide carries the drafted sentence ("a field no entity carries fails every operator exactly as a missing field on one entity does"), which PHASE-02/EX-8 now requires verbatim.'
+
+[[finding]]
+id = "F-10"
+status = "open"
+severity = "minor"
+title = "§4's learn.rs row has no no-restructure boundary, and three findings on this review each want to add a sentence to the guide"
+detail = """
+§4's src/learn.rs row lists the surfaces to touch (Declaring, References, Querying, Traversal, the two-call recipe, the command block) but no boundary, and this slice now adds two or three new identity sentences. A later slice makes the guide's sections addressable (`smut learn <section>`, IMP-008) and pins prose by substring, so an unannounced restructure here becomes that slice's problem.
+
+Minimal wording, appended to the row: "Identity spelling, examples and the new refusal consequence only: no heading renames, no reordering, no new sections. Each new identity rule gets exactly one home section."
+
+Prevents a real drift mode: three findings on this review (F-1 index refusal wording, F-5 smut_id-at-depth teaching, F-8 versionless refusal) all want to add a sentence to the same guide, and without this boundary they could each grow a section."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-11"
+status = "open"
+severity = "minor"
+title = "The version-2 document should say the store layout reserves nothing for conventions (DEC-026/028)"
+detail = """
+DEC-026/028 keep conventions sets in `<project>/.config/smut/conventions/`, outside `.smut/`, and a set is one markdown file. The design's §3 and the docs/store-format.md row describe the store's layout and version without noting that the layout reserves nothing for conventions, so a reader of a version-2 format document can reasonably infer that the version bump implies a conventions home inside the store. It does not.
+
+Minimal wording, appended to §3's version paragraph or the docs row: "The store layout reserves nothing for conventions: sets live in `<project>/.config/smut/conventions/` (DEC-026/028), so a version-2 document does not imply a home it does not have."
+
+No behaviour change; this is a boundary statement about what the format document is allowed to imply."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-12"
+status = "open"
+severity = "minor"
+title = "The bracket path silently supersedes DEC-021's dotted example, and DEC-021 is not in the amendment set"
+detail = """
+DEC-021 records the corruption failure shape as "an unambiguous field/index path" and illustrates it with the dotted form `payload.tags[2].smut_id`. Design §3 introduces the bracket form `$["payload"]["tags"][2]["smut_id"]` without saying it supersedes that example. DEC-021 is not in the amendment set (§4 lists DEC-002/005/007/010/012/016), so the design is the only lawful home for the note — otherwise the recorded decision and the shipped diagnostic disagree and reconciliation has no instruction to follow.
+
+Minimal wording, appended to §3's notation paragraph: "This supersedes the dotted example in DEC-021's failure shape; the bracket form is chosen because it escapes key text."
+
+Cheap and closes a reconciliation gap before it is opened: PHASE-03/EX-1's six-record amendment map has no slot for DEC-021."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding]]
+id = "F-13"
+status = "answered"
+severity = "nit"
+title = "Optional: name the absence of a migration in the version refusal (operator's call)"
+detail = """
+The version refusal is the first thing a 0.1 store's owner meets after the upgrade, and DEC-022 decided there is no migration ("we're not writing a migration script, let alone legacy handler. blow up loudly"). The design's §3 refusal text says what it read and what it reads, and deliberately gives no migration advice. Whether to say the absence out loud is the operator's call, not a defect.
+
+Option: append ", and no migration is provided" to the refusal text. Argument for: the owner's first question is "can I convert it?" and silence reads as "maybe". Argument against: it invites a support conversation the design deliberately refuses, and the loud-failure posture is already unambiguous.
+
+Either disposition is acceptable; if declined, drop it and record nothing. Raised as a nit so the decision is visible rather than an oversight, and because the same string is now pinned by F-1."""
+disposition = "fix-now"
+response = """
+Operator ruled 2026-11-02: put it in `learn`, with maximum concision. The version refusal keeps its current wording — no appended clause — so the contractual diagnostic stays two clauses, stays quoted by STD-001 in docs/store-format.md, and stays as PHASE-02/EX-9 pins it. Both refusal strings (index and manifest) are therefore untouched.
+
+The fact lands in the guide's opening store paragraph, beside "Declaring is the only thing that creates it; a read or a delete against a store that is not there exits 1 and creates nothing":
+
+  Older stores are refused; there is no migration.
+
+Eight words, one sentence, the guide's own register (declarative, no figures), and compatible with F-8's constraint since it pins no release or format figure. One home instead of two contractual strings.
+
+Plan carriers updated: PHASE-02/EX-5 now requires the single clause (older stores refused + no migration, no release or format figure) rather than the refusal-only phrasing; PHASE-02/VT-7 pins it, with the keyword set swapping "nonempty string" for "migration"."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Operator ruled 2026-11-02: put it in `learn`, with maximum concision. The version refusal keeps its current wording — no appended clause — so the contractual diagnostic stays two clauses, stays quoted by STD-001 in docs/store-format.md, and stays as PHASE-02/EX-9 pins it. Both refusal strings (index and manifest) are therefore untouched.
+
+The fact lands in the guide's opening store paragraph, beside "Declaring is the only thing that creates it; a read or a delete against a store that is not there exits 1 and creates nothing":
+
+  Older stores are refused; there is no migration.
+
+Eight words, one sentence, the guide's own register (declarative, no figures), and compatible with F-8's constraint since it pins no release or format figure. One home instead of two contractual strings.
+
+Plan carriers updated: PHASE-02/EX-5 now requires the single clause (older stores refused + no migration, no release or format figure) rather than the refusal-only phrasing; PHASE-02/VT-7 pins it, with the keyword set swapping "nonempty string" for "migration"."""
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

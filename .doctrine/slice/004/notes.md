@@ -196,3 +196,138 @@ step is /phase-plan for PHASE-01 when implementation is requested.
   commit with an explicit pathspec (`git commit ... -- .doctrine`).
 - Minting a standard is the chosen mechanism for a prose surface that no test can
   hold: its title rides every agent's boot context (STD-001 is the first).
+
+## Pre-implementation review
+
+Two independent reviews (Seat A: obligation ledger; Seat B: sequencing and surface) ran
+against the locked design and this plan before any implementation. Durable disposition
+here; the full old→new text of every criterion change lives in `plan.toml` itself and
+in `research/raw/review-integration.md`, with the two source reviews kept beside it as
+`research/raw/review-design-obligations.md` and `research/raw/review-plan-sequencing.md`.
+The three reports are review evidence for `/audit`; they are not authority.
+
+### Findings repaired in `plan.toml`
+
+- **Stale identity-naming diagnostics** (A-F2/A-F5, B-F-8 deduped). `src/error.rs:282`
+  (`invalid entity id …`), `src/error.rs:389` (`holds id {found}`), `src/store/mod.rs:505`
+  (`no \`id\``) and the `scan_refs` panic at `src/entity.rs:93` are production strings that
+  nothing decided; `docs/store-format.md:252` quotes the second verbatim and STD-001 makes
+  it contractual. PHASE-02/EX-9 now names all four and pins the exact reason and index
+  refusal wording. Design still silent → escalated (D2).
+- **VTs that pass on source presence** (A-F6, B-F-4). PHASE-01/VT-1 now requires the phase's
+  *literal* key spelling in the injected malformed identity, so the semantic target is
+  visible and cannot flip silently when the key moves; PHASE-02/VT-3 replaces the vacuous
+  "ordinary-id cases stay covered" with literal-key paired cases. New PHASE-01/VA-3 requires
+  the inline `mod tests` to drive `validate_identity_tree` over a parsed value.
+- **Falsified code facts** (A-F8 ~ B-F-3). `src/declare.rs:110` and `src/conventions.rs:126`
+  spell the wire key as raw literals, so design §2's present-tense "uses it" and §4's "needs
+  no production rewrite" are false. PHASE-02/EX-1 now names both and forbids any production
+  literal outside `ENTITY_ID`; PHASE-02/VA-2 gains the `rg` check that enforces it.
+- **Silent `where` on the old spelling** (A-F1). `smut query '{"from":["a"],"where":{"id":"nope"}}'`
+  → `{"objects":[],…}`, exit 0, reproduced on the current binary. PHASE-02/EX-8 adds the
+  behaviour case and the one guide sentence design §6-1 already demanded ("documentation,
+  new behavior cases"); the design's own wording is escalated (D1).
+- **Undecided render output** (A-F4). `src/render_markdown.rs:186,211` key the suppression set
+  on `ENTITY_ID`, so an ordinary `id` becomes visible and `smut_id` becomes suppressed.
+  PHASE-02/EX-10 pins the new output and records before/after bytes; PHASE-02/VT-8 gives it a
+  test home in `tests/render.rs`.
+- **`learn` prose pins had no criterion** (A-F3). DEC-020 names them as the guide's only
+  guard; PHASE-02/VT-7 (`src/learn.rs`) now pins the four teaching sentences plus the
+  old-spelling query consequence. The version-pinning collision (`src/learn.rs:3-13`) is
+  handled in PHASE-02/EX-5 as a versionless refusal sentence and escalated (D5).
+- **`previous`/`--compact` and container names** (A-F11, A-F15). PHASE-02/VT-2 now names the
+  entity-shaped `previous`, `--compact`, and `frontier`/`depths`/`edges`/`dangling`.
+- **`DROP` as ordinary data** (A-F7). PHASE-02/EX-2 names the sentinel on an ordinary `id`;
+  PHASE-02/VT-2 carries the case.
+- **PHASE-01's entrance list** (A-F9). PHASE-01/EN-1 now binds design §4 and §6's
+  linear-work/path-allocation constraints, and PHASE-02/EN-1 reads §6 too.
+- **Format-document ownership inside a version that did not move** (B-F-1, repaired — see
+  below). PHASE-01/EX-4 no longer writes `docs/store-format.md` while it declares version 1.
+- **Operator live store** (B-F-2). PHASE-02/EN-4 requires the measured re-declare path
+  (`interview.local/.smut`'s 66 ids are identical to the committed fixture) and the
+  operator's acknowledgement before either constant moves.
+- **Fixture coupling named wrongly** (B-F-5). `rg -l 'entities\.json|FIXTURE' tests/` →
+  `tests/fixture.rs` only; `tests/traversal.rs`/`tests/selection.rs` build synthetic stores.
+  PHASE-02/EX-4 now requires every fixture-reading assertion (`CLUSTERS`, count-sensitive
+  expectations) to be re-derived. The slice's Risk sentence is wrong in this respect and
+  should be corrected at the next slice-body edit.
+- **Version literals outside the constants** (B-F-8). `tests/store_corruption.rs:17,121,130,145,185`
+  and `tests/traversal.rs:367` carry `format_version` by hand, and `:130` uses `2` as the
+  *unknown* value. PHASE-02/EX-3 and VT-3 now name both traps.
+- **Sweep undercount and PROVENANCE** (B-F-9, A-F18). Repo-wide `"id"` is 984 (974 excludes
+  `smut-implementation-brief.org`'s 10); PHASE-02/VA-2 starts from the repo-wide count and
+  names the brief and `tests/fixtures/interview/PROVENANCE.md`.
+- **README: narrowed boundary** (B-F-6, operator-surface, then RV-025 F-1). The operator
+  is rewriting README.md's prose for 0.2 and it lands separately before `cargo publish`
+  (`CHR-001`). No phase sweeps or stages that prose. The premise that the README could be
+  wholly out of scope was wrong: `tests/readme_example.rs:78` matches only ```` ```console ````,
+  exactly one such fence exists (README.md:95), and its steps are executed and compared, so
+  that block is part of `just check` and must carry `smut_id` before the gate runs. The
+  three ```` ``` console ```` blocks (with a space, README.md:19/30/52) are never executed —
+  so `cargo test` is green over examples no harness reads, and the operator's rewrite must
+  use the exact fence if it wants them verified. PHASE-02/EN-3, EX-5, VA-2, PHASE-03/EX-4
+  and VA-4 state the narrow boundary; the slice body, `plan.md` and the design say the same.
+  The slice's own human surface is `smut learn` + the format document; PHASE-02/VT-7 keeps
+  the guide's pins load-bearing.
+- **DEC-005 signature drift** (B-F-10). DEC-005 quotes `Result<Option<&str>, Error>`; the code
+  returns `Reject` (`src/entity.rs:31`). PHASE-03/EX-1 now requires the correction.
+- **VT-6 ordering** (A-F20). A comment in `plan.toml` marks VT-6/VT-7/VT-8 as append-only so a
+  future reader does not "fix" the order.
+
+### Sequencing decisions
+
+- **PHASE-01 must not rewrite version 1's contract** (B-F-1, reproduced: a v1 store with
+  nested `{"id":null}` serves `get` at exit 0 and panics at `src/entity.rs:93` on `follow`;
+  after PHASE-01 both exit 1 while the version still reads 1). Repair: the corruption
+  document moves to PHASE-02 with the version (PHASE-01/EX-4), and PHASE-01/EX-5 declares the
+  intermediate tree a non-release that is never run against an existing v1 store. Rejected:
+  merging PHASE-01 into PHASE-02 (renumbers nothing but destroys the isolation the split
+  exists for and needs operator assent to change phase boundaries); gating the check on
+  `FORMAT_VERSION == 2` (dead code and an untestable PHASE-01).
+- **PHASE-01 → PHASE-02 rework is now enumerated.** PHASE-01 writes the helper (key-agnostic,
+  0 rework), the `scan_refs` panic text, the `tests/store_corruption.rs` fixtures built on
+  `INDEX`/`ENTITY` literals, the `tests/cli_contract.rs` malformed-identity cases, and the
+  pending doc text; PHASE-02 respells all of them. PHASE-01/VT-1's literal-key requirement and
+  PHASE-02/EX-3/VT-3's version-literal requirement make the respell a reviewed act rather
+  than a search-and-replace whose target silently changes meaning.
+
+### Escalated to the design (not edited; awaiting operator assent)
+
+See `research/raw/review-integration.md` §d for wording. Summary: the silent-`where` consequence
+(D1), identity-naming diagnostics (D2), rendered output for a data `id` (D3), the three
+falsified code-fact claims plus the `src/order.rs` row (D4), the `learn` version-pinning
+collision (D5), the undocumented `smut_id`-at-depth reservation (D6), recovery-publishes-what-
+the-loader-refuses (D7), the unannounced bracket-path notation superseding DEC-021's dotted
+example (D8), and the design's README obligations (§4's README row and "README and learn
+describe the shipped surface", §5's "execute the README transcript") which the operator has
+moved out of this slice's scope (D10). `design.md` is locked; none of these were written to it.
+
+### Seat C — the adjacent usability decisions (DEC-026…029, RFC-001)
+
+Evidence: `research/raw/review-usability-decisions.md` (commit `e788826`). Verified here: `src/error.rs`
+is absent from §4's code-impact table *and* from this slice's selectors, while PHASE-02/EX-9 respells two
+messages that live there (`Reject::InvalidId` at `src/error.rs:282`, `StoreError::IdDisagreement` at
+`:389`). Seat C's verdict stands after re-check: the identity break and the conventions mechanism do not
+interfere; the gap is that one edited file was outside the code-impact contract.
+
+- **C-1 — applied, and escalated in part.** Selector `src/error.rs` added to `slice-004.toml`; the
+  affected-surface row added to this slice; PHASE-02/EN-5 appended (SL-005's refusal phase lands before
+  PHASE-02 or this takes a rebase — SL-005 adds a `Reject` variant and tests to the same file). The §4
+  table row itself is design text: raised as a review finding, not edited.
+- **C-2 — applied.** D1 un-escalated: DEC-027 decided that a field no entity carries is taught, never
+  refused. PHASE-02/EX-8 now uses the drafted sentence ("a field no entity carries fails every operator
+  exactly as a missing field on one entity does") with a DEC-027 citation instead of paraphrasing
+  "states that consequence". The design citation itself (§4/§6) is raised as a finding.
+- **C-3 — design wording.** §4's `src/learn.rs` row gains a no-restructure boundary: identity spelling,
+  examples and the new refusal consequence only — no heading renames, no reordering, no new sections,
+  one home section per new identity rule, because a later slice makes sections addressable (IMP-008).
+- **C-4 — design wording.** The version-2 document must not imply a home the store layout does not have:
+  DEC-026/028 keep conventions sets in `<project>/.config/smut/conventions/`, outside `.smut/`.
+- **C-5 — applied.** The `/tmp` reference above now points at `research/raw/review-integration.md`.
+- **C-6 — operator's call, not applied.** Appending ", and no migration is provided" to the version
+  refusal. It is the first thing a 0.1 store's owner meets and DEC-022 decided there is none.
+- **Not re-litigated**, per Seat C and the operator: DEC-027's teach-not-diagnose answer, DEC-026/028
+  layering and the conventions name, and the no-`roots` envelope decision. Checked consistent: the
+  conventions seed key renames while its value and field list do not; the envelope keeps
+  `depths`/`edges`/`frontier`; DEC-027 reads no store, so it and `where` do not move each other's
+  compatibility property.

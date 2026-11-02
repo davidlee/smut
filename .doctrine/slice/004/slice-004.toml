@@ -8,7 +8,7 @@ tags = []
 
 [relationships]
 needs = []                      # slice→work hard prerequisite
-after = []                      # slice→work soft sequence: { to, rank }
+after = [{ to = "SL-005", rank = 0 }]                      # slice→work soft sequence: { to, rank }
 
 [[selector]]
 selector = "src/entity.rs"
@@ -71,9 +71,14 @@ intent = "design-target"
 note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
+selector = "src/error.rs"
+intent = "design-target"
+note = "SL-004 design section 4 (added at review, Seat C-1): the identity-naming diagnostics EX-9 respells live here; SL-005 also edits this file, so ordering matters"
+
+[[selector]]
 selector = "README.md"
 intent = "design-target"
-note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+note = "SL-004 design section 4: tracked because tests/readme_example.rs executes the README's single exact-fenced console block, which is in scope and gates just check. The surrounding prose is the operator's 0.2 rewrite (CHR-001) and is neither swept nor staged"
 
 [[selector]]
 selector = "smut-implementation-brief.org"

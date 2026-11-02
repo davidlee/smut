@@ -1,0 +1,673 @@
+id    = 25
+slug  = "design-review-of-sl-004"
+title = "design review of SL-004"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """Two adversarial passes over the amendment set. Pass one falsified the claim that the nine amendments were prose-only (16 edits, revs 40→41) and raised 14 findings: a blocker (the de-scoped README is executed by tests/readme_example.rs and so gates `just check`), six majors (a supersession of a DEC-021 example that does not exist; the recovery acceptance-set relation stated backwards; the index version refusal mislabelled as identity-naming; the learn row's closed scope forbidding duties the same pass created, with F-9's promised DEC-027 sentence absent; "no change beyond inspection" still false for src/store/mod.rs and src/entity.rs; §6 grounding STD-002 compliance in a plan criterion while dropping its operative clauses), six minors and a nit. All fixed, rev 42, plus STD-002's rationale corrected for the same reversed relation. Pass two verified 13 of 14 discharged outright with evidence read from source, confirmed the blocker discharged in the design and PHASE-02, and raised five new findings: the narrowed README boundary missing five artefacts including the binding PHASE-03/VA-4 (major), the DEC-027 sentence and VT-7 unqualified where an ordinary id can be carried, §5 owning no evidence row for the four identity-naming diagnostics, "the only raw literals" false for src/learn.rs with EX-1 inheriting the false universal, and the STD-002 paragraph's overstated noun. All five fixed, rev 43. Pass two's per-section verdicts were sec-2 ATTEST, sec-3 ATTEST, sec-4 ATTEST with two one-clause corrections, sec-5 ATTEST with the diagnostics row outstanding, sec-6 ATTEST — and exactly those corrections were then applied, no more, so the attestation basis is the reviewer's conditional verdict rather than a third pass. Nineteen findings total: seven answered-and-verified (both blockers, five majors, plus the drift and universal minors that carried binding criteria), the rest answered and none contested. No design-level question remains; what is left is the run's own gate, which requires the operator's acts."""
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Re-concluded after routing the eight severe findings (RF-1 blocker; F-2, F-3, F-4, F-5, F-6, F-7, F-15 majors) as the design lock gate requires: five routed to `control` where a criterion or pin now holds the fix (F-1 and F-15 through PHASE-02/EN-3 and PHASE-03/VA-4, the two criteria that run the gate; F-4 and F-6 through EX-9/VT-3; F-5 through VT-7 and EX-5), and three to `refresh` where the defect was text asserting something false about a record or a mechanism (F-2 against DEC-021, F-3 against validate_staged and STD-002, F-7 against the design's own authority order). The pass now covers rev 43 content: nineteen findings, all answered, none contested, both blockers and six of seven majors verified against source or the record they name. The two prior adversarial reports sit at research/raw/review-design-amendment-review.md and review-design-review-2.md, and the section attestations were recorded in the human lane at rev 44 on the operator's assent."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-004"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "blocker"
+title = """"README is not gated" is false: just check runs the README's executed block, which still records id envelopes"""
+detail = """
+The design now says the README is "not gated" (three places: §4's table row, §5's amended sentence, §6) while §5 also requires `just check` green. Those cannot both hold. `justfile` defines `check: build lint fmt test` and `test: cargo test` over all targets, which runs `tests/readme_example.rs`. Its `worked_example()` matches exactly one fence — `line.trim() == "```console"` at :78 — and `the_readme_worked_example_runs_and_prints_what_it_records` (:204) executes every command and compares the recorded JSON. README.md:95 is that fence, and the block records `[{"id":"smut",...}]`, `"changes":[{"id":"smut",...}],"ids":["smut"]`, an `get`/`query`/`render` envelope and a `previous` — all of which move when ENTITY_ID becomes `smut_id`. There is no `#[ignore]` or feature gate in the file. So the README's executed block gates the slice, and it is order-independent: whichever side moves first, the test is red until both move. Plan criteria require the same red gate (PHASE-02/EX-6, VA-2, PHASE-03/EX-3).
+
+This reverses part of F-6's disposition. F-6 de-scoped the README on the operator's 0.2 rewrite and CHR-001; that is right for the prose being rewritten, and wrong for the one block a test executes. The minimal correction narrows the de-scoping rather than reverting it: the README's single exact-fenced block is in scope and must carry `smut_id` by the time PHASE-02's gate runs — by CHR-001 landing it or by this slice editing that block, whichever comes first; the surrounding prose stays the operator's and is never swept. That keeps the gate satisfiable without touching their draft.
+
+Needs an operator decision because it changes scope; raised as a blocker so the ledger holds it until then."""
+disposition = "fix-now"
+response = "Fixed and verified. The control is the gate itself: PHASE-02/EN-3 requires the executed block to carry smut_id before the gate run (by CHR-001 or by the phase editing only that block), and VA-2 confirms it, so a phase cannot close with the block and the binary out of step. CHR-001 holds the prose rewrite and records the fence requirement."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Operator ruled "narrow it, proceed" on 2026-11-02: the surrounding prose stays theirs, the single executed block is in scope. Applied in all four design places and in PHASE-02/{EN-3,EX-5,VA-2}; the residual drift to five other artefacts is F-15. Facts re-verified independently: README.md:95 is the only exact-fenced console block, tests/readme_example.rs:78 matches only that spelling and :204 executes and compares its steps, the block is still id-spelled, and `cargo test --test readme_example` is green today (5 passed) — proving both sides currently agree and that either moving alone turns it red.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against the operator's narrow ruling and the code: README.md:95 is the single exact-fenced block, tests/readme_example.rs:78 matches only that spelling and :204 executes it, the block is still id-spelled, and the second review pass measured `cargo test --test readme_example` green (5 passed) — both sides currently agree and either moving alone turns it red. All four design places and PHASE-02/{EN-3,EX-5,VA-2} state the narrow boundary."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Fixed and verified. The control is the gate itself: PHASE-02/EN-3 requires the executed block to carry smut_id before the gate run (by CHR-001 or by the phase editing only that block), and VA-2 confirms it, so a phase cannot close with the block and the binary out of step. CHR-001 holds the prose rewrite and records the fence requirement."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified after routing: the control is PHASE-02/EN-3 + VA-2, and the operator's narrow ruling is recorded in all four design places plus five artefacts (F-15)."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "The bracket notation is said to supersede a DEC-021 example that does not exist"
+detail = '''
+The amendment added: "It supersedes the dotted example recorded in DEC-021's failure shape; the bracket form is chosen because it escapes key text. DEC-021 carries no amendment in this slice, so the supersession is stated here."
+
+DEC-021 contains no such example. Its choice says only "naming the entity file and an unambiguous field/index path", and `rg -rn 'dotted|payload\.tags' .doctrine/knowledge/` returns nothing. The dotted form `payload.tags[2].smut_id` exists only in tier-5 evidence — `research/raw/review-integration.md:358` and `notes.md:54` — where a reviewer paraphrased the decision. F-12 was raised on that paraphrase, so the finding's premise was wrong and the design now claims authority to supersede decision text that does not exist.
+
+Revert the edit. If a note is wanted, state the truth: DEC-021 requires only "an unambiguous field/index path"; the bracket notation satisfies it, and DEC-021 needs no amendment.'''
+disposition = "fix-now"
+response = 'The false supersession was reverted and the replacement text refreshed to what DEC-021 actually says ("an unambiguous field/index path"), which this notation satisfies without amending the decision. Nothing to demonstrate or gate — the defect was text asserting a fact about a record, and the record was re-read.'
+route = "refresh"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '''Reverted. The design now says only "DEC-021 requires only \"an unambiguous field/index path\"; this notation satisfies it, and DEC-021 needs no amendment." The dotted example exists only in tier-5 evidence (a reviewer's paraphrase), so F-12's premise was wrong and the amendment claimed a supersession of nothing. Verified by `doctrine show DEC-021` and `rg 'dotted|payload\.tags' .doctrine/knowledge/` (no matches).'''
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Verified: the supersession sentence is gone and the replacement is true — doctrine show DEC-021 records only "an unambiguous field/index path", and the dotted form exists only in tier-5 evidence.'
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = 'The false supersession was reverted and the replacement text refreshed to what DEC-021 actually says ("an unambiguous field/index path"), which this notation satisfies without amending the decision. Nothing to demonstrate or gate — the defect was text asserting a fact about a record, and the record was re-read.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: DEC-021 re-read, the supersession reverted, replacement true."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "major"
+title = "The new recovery sentence states the acceptance-set relation backwards; STD-002's rationale carries the same error"
+detail = """
+The amendment reads: "Recovery runs before validation, so recovery's acceptance set never grows with the loader's, and no test can observe a tightening that forgets the bump."
+
+That states the mechanism backwards. `validate_staged` (src/store/journal.rs:611-660) checks presence, regular-file, symlink and listed-set shape and never parses a payload; `replay_commit` publishes the staged bytes immediately after `manifest.validate()` and `validate_staged` (:569-600). So no loader rule changes what recovery accepts — recovery's acceptance set is not merely "not growing with" the loader's, it is unconditionally larger, and it is the version gate that stops an earlier build's committed manifest from being replayed at all.
+
+The sentence imported STD-002's rationale without its conclusion, so it reads as a safety claim about publish-then-refuse when the actual position is that within one version a payload a stricter loader refuses is still published, and STD-002 records that residual.
+
+Replace with: "Recovery never parses a payload — `validate_staged` checks shape only — so no loader rule changes what recovery accepts; the version gate is the only thing that stops an earlier build's committed manifest from being replayed. Within one version a payload a stricter loader refuses is still published, which is the residual STD-002 records."
+
+The same wrong-direction phrasing is in STD-002's Rationale ("Recovery's acceptance set never grows with the loader's") and should be corrected there in the same pass, since the design now quotes it."""
+disposition = "fix-now"
+response = "Both the design sentence and STD-002's rationale were refreshed to describe recovery accurately. No gate is needed because the corrected claim is about mechanism, and STD-002's own review trigger (any change to the pre-replay contract in validate_staged) is what keeps it current."
+route = "refresh"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Rewritten: "Recovery never parses a payload — staged validation checks shape only — so no loader rule changes what recovery accepts; the version gate is the only thing that stops an earlier build's committed manifest from being replayed, and within one version a payload a stricter loader refuses is still published." STD-002's rationale carried the same reversed relation and was corrected in the same pass ("its acceptance set stays strictly larger than the loader's, always"). Matches src/store/journal.rs:569-600 and :611-660. Residual wording of the paragraph's opening noun is F-19."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against src/store/journal.rs:569-600 (publish immediately after manifest.validate + validate_staged) and :611-660 (shape checks only, no payload parse); STD-002's rationale now states the same relation."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = "Both the design sentence and STD-002's rationale were refreshed to describe recovery accurately. No gate is needed because the corrected claim is about mechanism, and STD-002's own review trigger (any change to the pre-replay contract in validate_staged) is what keeps it current."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: design and STD-002 both describe validate_staged and replay_commit accurately."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "The index version refusal is listed as an identity-naming diagnostic, but it names format_version — and EX-9 pins its wording untouched"
+detail = """
+The amendment lists, among "every diagnostic that names identity", "the index version refusal below". That message names no identity: StoreError::UnknownFormatVersion renders "the store index has format_version {found}, and this build reads only {expected}" (src/error.rs:371-375). F-1's minimal wording never included it, and the operator's F-13 ruling plus PHASE-02/EX-9 both keep that string untouched, quoted verbatim in the criterion.
+
+As written the design obliges an implementer to make a format_version message name smut_id, which contradicts a contractual string the plan pins and would fail EX-9 as written.
+
+Delete ", and the index version refusal below". The sentence then matches F-1's list, F-13's ruling and EX-9 exactly."""
+disposition = "fix-now"
+response = "Fixed, with EX-9 as the control: it pins the index refusal wording verbatim and names exactly the four diagnostics that must carry smut_id, so an implementer cannot make a format_version message name the key without failing the criterion. VA-3 reviews the document's agreement with code."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Deleted. The list is now exactly four — the invalid-identity refusal, the entity-file index disagreement, describe()'s absent-identity description and the scan_refs assertion — matching F-1's minimal wording, the operator's F-13 ruling and PHASE-02/EX-9's pinned string. The index refusal names format_version (src/error.rs:371-375) and stays untouched."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the list is four items, matching EX-9 and the pinned index-refusal string; src/error.rs:371-375 names format_version only."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Fixed, with EX-9 as the control: it pins the index refusal wording verbatim and names exactly the four diagnostics that must carry smut_id, so an implementer cannot make a format_version message name the key without failing the criterion. VA-3 reviews the document's agreement with code."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: four-item list; EX-9 pins the index refusal untouched and names exactly those four."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "major"
+title = """The learn row's closed "only" scope forbids the depth-reservation warning and the old-spelling consequence — and F-9's promised DEC-027 sentence was never written"""
+detail = """
+The amended learn.rs row closes its scope to "Identity spelling, examples and the new refusal consequence only". Two duties that other amendments create fall outside that list, so the boundary forbids what the same pass requires:
+
+- §6 now requires "the guide must say" that a payload using smut_id cannot be stored verbatim — a reserved-name warning, not a spelling, an example, or a refusal consequence.
+- PHASE-02/VT-7 pins guide prose that "a query on the old spelling returns nothing rather than an error" — with which F-9's own response promised a design sentence citing DEC-027, and `rg -n 'DEC-027' design.md` finds no match. So the sentence F-9 was disposed `fix-now` on is absent, while the plan already pins it.
+
+Widen the row's closed scope to "identity spelling, examples, the reserved-at-depth warning, the old-store refusal with no migration, and the old-spelling-query consequence only", and write F-9's promised sentence into §4 or §6: "A query naming a field no entity carries is taught, never refused (DEC-027): after this rename an old-spelling `id` is such a field."
+
+Discharging F-9 by asserting its sentence in the ledger while not writing it is the worse half of this finding: the ledger would claim a design obligation that does not exist."""
+disposition = "fix-now"
+response = "Fixed, controlled by PHASE-02/VT-7, which pins every guide sentence the widened row now scopes — smut_id structural, ordinary id data, the reserved-at-depth warning, the old-store refusal with no migration, and the qualified old-spelling consequence — plus EX-5's no-restructure boundary. The DEC-027 sentence is in §4 as promised."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Both halves fixed. The learn row's closed scope now covers identity spelling, examples, the reserved-at-depth warning, the old-store refusal with no migration, and the old-spelling-query consequence. F-9's promised sentence is now in §4: "A query naming a field no entity carries is taught, never refused (DEC-027): after this rename an old-spelling `id` is such a field wherever no entity carries it as data, and the guide says so." Coverage re-checked: all six VT-7 pins fall inside the widened boundary. The qualification is F-16."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the DEC-027 sentence exists in §4, cites the decision, and all six VT-7 pins fall inside the widened learn-row scope."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Fixed, controlled by PHASE-02/VT-7, which pins every guide sentence the widened row now scopes — smut_id structural, ordinary id data, the reserved-at-depth warning, the old-store refusal with no migration, and the qualified old-spelling consequence — plus EX-5's no-restructure boundary. The DEC-027 sentence is in §4 as promised."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: the DEC-027 sentence is present and qualified (F-16), and VT-7 pins every duty inside the widened learn-row scope."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "major"
+title = '"Needs no change beyond inspection" is still false for src/store/mod.rs and src/entity.rs, whose diagnostic text this design mandates'
+detail = """
+The rewritten sentence still claims: "A listed consumer that already reads ENTITY_ID needs no change beyond inspection, except the change-receipt subject in src/declare.rs and the conventions seed in src/conventions.rs".
+
+Two other listed consumers need source changes, and neither is one of the two named exceptions: src/store/mod.rs reads ENTITY_ID and its describe() returns "no `id`" (:503-506), and src/entity.rs reads ENTITY_ID and its scan_refs panic says "an `id` that is not a nonempty string" (:93-94). Both edits are mandated by the same section's own identity-naming requirement, so the exception list is incomplete and the sentence is false for two files in its own table.
+
+Better formulation — replace with: "A listed consumer that already reads ENTITY_ID needs no change to its identity logic; diagnostic text changes are mandated by section 3. The change-receipt subject in src/declare.rs and the conventions seed in src/conventions.rs are the only key spellings left as raw literals.""""
+disposition = "fix-now"
+response = """Fixed, controlled by EX-9 and VT-3: the four diagnostics the design now assigns to their own rows are exactly what the criterion pins, and VA-2's "wire spelling appears in production code only at ENTITY_ID" check covers the routing."""
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Replaced with "needs no change to its identity *logic*; diagnostic text changes are mandated by section 3", and the diagnostic homes redistributed: describe()'s absent-identity text to the src/store/** row (it lives at src/store/mod.rs:503-506), the scan_refs assertion to src/entity.rs, the two error.rs messages staying in the error.rs row. The universal about raw literals was still false for src/learn.rs — that is F-18, now scoped."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: diagnostic text is now in the rows that own it (store/** for describe(), entity.rs for the assertion, error.rs for the two messages), and the universal was scoped by F-18."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = """Fixed, controlled by EX-9 and VT-3: the four diagnostics the design now assigns to their own rows are exactly what the criterion pins, and VA-2's "wire spelling appears in production code only at ENTITY_ID" check covers the routing."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: diagnostic homes correct (store/**, entity.rs, error.rs) and the raw-literal universal scoped by F-18."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "major"
+title = "§6 grounds STD-002 compliance in a plan criterion and drops its operative clauses — the design leaning on its own downstream"
+detail = """
+§6 now reads: "their version supplies an unambiguous refusal boundary once the version moves, and a tree mid-slice is not a release candidate for any version (PHASE-01/EX-5)."
+
+The criterion it cites is narrower and stronger than the paraphrase: "No tree of **this phase** is a release candidate **or a supported reader of any version-1 store**: it is not tagged or published, it is run only against scratch stores, and the stricter loader enters service only with PHASE-02's version bump." The design (a) generalises "this phase" to every mid-slice tree, and (b) drops the two clauses that actually discharge STD-002's hazard — not being a supported reader of a version-1 store, and running only against scratch stores rather than a live one.
+
+Net effect: the design's STD-002 compliance rests on text it does not own, and on the weaker half of that text. A design must not ground an obligation in a plan criterion, since the plan is downstream of the design.
+
+State the fact in the design instead, keeping EX-5 as a cross-reference rather than the ground: "While the stricter loader runs at format 1, this tree is neither tagged nor published, is run only against scratch stores, and does not open the operator's live store until PHASE-02's version bump (PHASE-01/EX-5, PHASE-02/EN-4).""""
+disposition = "fix-now"
+response = "Refreshed: §6 now states the mid-slice release fact in the design's own voice with PHASE-01/EX-5 and PHASE-02/EN-4 as cross-references. The authority order is restored by construction — nothing in the design depends on a criterion for its truth, and the criteria check the design."
+route = "refresh"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """§6 now states the fact in its own voice: "While the stricter loader runs at format 1, this tree is neither tagged nor published, is run only against scratch stores, and does not open the operator's live store until the bump (PHASE-01/EX-5, PHASE-02/EN-4)" — cross-references, not grounds. This was the finding that showed the design leaning on its own downstream; the design is now the ground and the plan the check."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: §6 states the release/live-store fact in its own voice with two cross-references; PHASE-01/EX-5 and PHASE-02/EN-4 now check it rather than ground it."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = "Refreshed: §6 now states the mid-slice release fact in the design's own voice with PHASE-01/EX-5 and PHASE-02/EN-4 as cross-references. The authority order is restored by construction — nothing in the design depends on a criterion for its truth, and the criteria check the design."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Re-verified: §6 states the fact itself; PHASE-01/EX-5 and PHASE-02/EN-4 are cross-references."
+
+[[finding]]
+id = "F-8"
+status = "answered"
+severity = "minor"
+title = "The error.rs row mislocates describe()'s absent-identity text, which lives in src/store/mod.rs"
+detail = """
+The new src/error.rs row assigns it "the invalid-identity refusal, the entity-file index disagreement, the absent-identity description and the index version refusal". The absent-identity description lives in src/store/mod.rs:503 (fn describe), not in src/error.rs. As written the row sends an implementer to the wrong file for one of its four duties.
+
+Fix: keep the invalid-identity refusal (src/error.rs:282) and the entity-file index disagreement (:389) in the error.rs row; move the absent-identity description to the src/store/** row, or name `src/store/mod.rs` in the row text. Separately verify the row's claim about where the scan_refs assertion lives (src/entity.rs:93) — it is not in this row either, and §3 requires it respelled."""
+disposition = "fix-now"
+response = """Moved: the error.rs row now names only the invalid-identity refusal and the entity-file index disagreement; describe()'s absent-identity text sits in the src/store/** row ("respell `describe()`'s absent-identity text"), and slice-004.md names both homes explicitly."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Moved: the error.rs row now names only the invalid-identity refusal and the entity-file index disagreement; describe()'s absent-identity text sits in the src/store/** row ("respell `describe()`'s absent-identity text"), and slice-004.md names both homes explicitly."""
+
+[[finding]]
+id = "F-9"
+status = "answered"
+severity = "minor"
+title = "The rewritten order.rs row dropped the inline-fixture duty the original carried"
+detail = """
+The old row read "Verify shared identity consumers and update structural examples/fixtures". The amended order.rs row kept only the verification half — "Verify no identity key enters ordering: ordering is over internal Id values, not JSON members" — and dropped the fixture duty, although src/order.rs:182 and :205-250 contain inline fixtures that read entity["id"].
+
+Restore the fixture duty so the row keeps both halves: "Verify no identity key enters ordering (ordering is over internal Id values, not JSON members) and update its inline fixtures.""""
+disposition = "fix-now"
+response = 'Restored: "Verify no identity key enters ordering (ordering is over internal `Id` values, not JSON members) and update its inline fixtures". The fixture duty is real — src/order.rs:182 and :205-250 contain inline fixtures reading entity["id"].'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Restored: "Verify no identity key enters ordering (ordering is over internal `Id` values, not JSON members) and update its inline fixtures". The fixture duty is real — src/order.rs:182 and :205-250 contain inline fixtures reading entity["id"].'
+
+[[finding]]
+id = "F-10"
+status = "answered"
+severity = "minor"
+title = "§5's evidence table has no row for the render-suppression mechanism the new §4 row requires"
+detail = """
+The render row now requires "Pin the new output" — an obligation §6 says the plan must carry through §5's evidence table — but §5's table has no row for the suppression mechanism. It is carried today only because a review appended PHASE-02/VT-8 to the plan, which is the tail wagging the dog: the design's own verification section should own it.
+
+Add a §5 row: "| Identity suppression is a mechanism, not a value | An entity carrying both smut_id and an ordinary id renders the ordinary id as an attribute under --show-fields while smut_id stays suppressed; the before/after bytes are recorded |"."""
+disposition = "fix-now"
+response = '§5 gained "Identity suppression is a mechanism, not a value | An entity carrying both `smut_id` and an ordinary `id` renders the ordinary `id` as an attribute under `--show-fields` while `smut_id` stays suppressed; record the before/after bytes". The remaining §5 gaps were the diagnostics row and ordering by an ordinary id — F-17, now added.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§5 gained "Identity suppression is a mechanism, not a value | An entity carrying both `smut_id` and an ordinary `id` renders the ordinary `id` as an attribute under `--show-fields` while `smut_id` stays suppressed; record the before/after bytes". The remaining §5 gaps were the diagnostics row and ordering by an ordinary id — F-17, now added.'
+
+[[finding]]
+id = "F-11"
+status = "answered"
+severity = "minor"
+title = "The README selector still charters the file as a design target, and the SL-005 ordering has no slice-level edge"
+detail = """
+Two parity defects around the slice's own metadata:
+
+1. `[[selector]] selector = "README.md"` (.doctrine/slice/004/slice-004.toml:79-82) still carries the note charting "identity spelling … design section 4", which contradicts the amended §4 row de-scoping the README. A selector that charters a file the design excludes will pull README into every prime and staleness check for no purpose, and instructs whoever reads it that the file is a design target.
+2. The SL-005-before-this-work ordering, now stated as a design obligation in the §4 error.rs row, has no edge on the slice: `[relationships]` in slice-004.toml is empty. PHASE-02/EN-5 records it as an entrance criterion, which is right, but the slice-level edge is what surfaces in `doctrine status` and in dependency views.
+
+Fix: rewrite the README selector note to state it is tracked but out of write scope (the one executed block aside, per the blocker on this ledger); and add the ordering edge (needs/after) between SL-004 and SL-005 so the constraint is visible outside the plan text."""
+disposition = "fix-now"
+response = "Selector note rewritten: tracked because tests/readme_example.rs executes the single exact-fenced block which gates `just check`, with the surrounding prose neither swept nor staged. Ordering edge added as `after: SL-005` (soft, rank 0) and visible in `doctrine slice show SL-004`. Soft is the correct weight because the design permits the alternative path — SL-005 lands first *or* this work takes a rebase — which a hard `needs` would forbid."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Selector note rewritten: tracked because tests/readme_example.rs executes the single exact-fenced block which gates `just check`, with the surrounding prose neither swept nor staged. Ordering edge added as `after: SL-005` (soft, rank 0) and visible in `doctrine slice show SL-004`. Soft is the correct weight because the design permits the alternative path — SL-005 lands first *or* this work takes a rebase — which a hard `needs` would forbid."
+
+[[finding]]
+id = "F-12"
+status = "answered"
+severity = "minor"
+title = "slice-004.md's affected-surface rows still assert the order.rs tiebreak, unchanged render display, and an incomplete diagnostic list"
+detail = """
+The slice body's affected-surface table was not brought into line with the amended §4, so the two records now disagree about the same files: :127 still claims the sort tiebreak carries the identity key ("identity key in selection, edges, sort tiebreak"), which F-3 established is false because ordering is over internal Id values; :128 still says render "identity display unchanged", which the amended §4 row contradicts by deciding that an ordinary id now renders; and :130 lists fewer than the four identity-naming diagnostics the design now names.
+
+A slice body and its design describing the same surface differently is the drift class this repository keeps rediscovering. Update the three rows."""
+disposition = "fix-now"
+response = "The three rows are corrected: ordering carries no identity key (ordering is over internal Id values) with its inline-fixture duty restored; rendering now states the suppression mechanism and the visible consequence; the diagnostics row names all four homes. The same file's prose sections carried the README falsehood separately — F-15, also fixed."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The three rows are corrected: ordering carries no identity key (ordering is over internal Id values) with its inline-fixture duty restored; rendering now states the suppression mechanism and the visible consequence; the diagnostics row names all four homes. The same file's prose sections carried the README falsehood separately — F-15, also fixed."
+
+[[finding]]
+id = "F-13"
+status = "answered"
+severity = "minor"
+title = """§2 still claims ENTITY_ID is used for "ordering where identity is addressed", which §4's corrected row denies"""
+detail = """
+§2 still lists among ENTITY_ID's remaining consumers: "identity parsing, normalization, reference scanning, projection, ordering where identity is addressed, persistence and canonical serialization". F-3 established that ordering carries no identity key — `rg -n ENTITY_ID src/order.rs` finds nothing, and ordering is over internal Id values — and §4's corrected row now says exactly that. The same claim therefore survives in §2 and contradicts §4.
+
+Trim to: "identity parsing, normalization, reference scanning, projection, identity addressed as an Id value, persistence and canonical serialization"."""
+disposition = "fix-now"
+response = 'Trimmed to "projection, identity addressed as an `Id` value, persistence and canonical serialization". `rg -n ENTITY_ID src/order.rs` has no matches, so §2 and §4 now agree that ordering carries no identity key.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Trimmed to "projection, identity addressed as an `Id` value, persistence and canonical serialization". `rg -n ENTITY_ID src/order.rs` has no matches, so §2 and §4 now agree that ordering carries no identity key.'
+
+[[finding]]
+id = "F-14"
+status = "answered"
+severity = "nit"
+title = "DEC-026 has three layers; the new conventions sentence names only the project one"
+detail = """
+The added conventions sentence says "a set lives in `<project>/.config/smut/conventions/` (DEC-026, DEC-028), outside `.smut/`". DEC-026 defines three layers — project, user and binary — so naming only the project path understates it. The point the sentence exists to make ("the store layout reserves nothing for conventions, so a version-2 document must not imply a home it does not have") is nevertheless correct, and DEC-026's own consequence records "no file appears inside .smut/".
+
+Either widen to "a set lives under `.config/smut/conventions/` in the project, user or binary layer (DEC-026), never inside `.smut/`", or drop the path and keep the consequence. The second is shorter and carries the same obligation."""
+disposition = "fix-now"
+response = """Widened to DEC-026's three layers: "sets live under `.config/smut/conventions/` in the project, user or binary layer (DEC-026, DEC-028) and never inside `.smut/`". The obligation it exists to carry — a version-2 document must not imply a home the layout does not have — is intact."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Widened to DEC-026's three layers: "sets live under `.config/smut/conventions/` in the project, user or binary layer (DEC-026, DEC-028) and never inside `.smut/`". The obligation it exists to carry — a version-2 document must not imply a home the layout does not have — is intact."""
+
+[[finding]]
+id = "F-15"
+status = "verified"
+severity = "major"
+title = 'The narrowed README boundary missed five artefacts, including the binding PHASE-03/VA-4 "not gated" claim'
+detail = """
+The narrowed README boundary reached design.md (four places), the selector note, slice-004.md's affected-surface row and PHASE-02/{EN-3,EX-5,VA-2} — but not five other artefacts, two of them binding criteria:
+
+1. plan.toml PHASE-03/VA-4: "this phase is not gated on its content" — false, since the same phase's VA-3 runs `just check`, which runs tests/readme_example.rs, which executes the block.
+2. plan.toml PHASE-03/EX-4: "or any README.md edit is introduced" — contradicts PHASE-02/EN-3's authorised fallback ("the phase edits only that block").
+3. slice-004.md §Scope: "No phase edits, sweeps or stages it, and none is gated on its content."
+4. slice-004.md Risks: "no phase is gated on its content."
+5. plan.md Notes: "no phase is gated on its content."
+6. notes.md's F-6 entry claimed PHASE-02/EN-3, EX-5, VA-2, PHASE-03/EX-4 and VA-4 all "say so" — three of the five now say the opposite, so the note was a false account of the ledger.
+
+Effect: the slice body and one binding PHASE-03 criterion contradicted the design and the same plan's PHASE-02 about one file — the drift class F-12 exists to kill, one turn after F-12 was discharged.
+
+Fixed in all six: PHASE-03/{EX-4,VA-4} now state the narrow boundary, slice-004.md's Scope and Risks do the same, plan.md's Notes match, and notes.md's entry records the narrowing and why the original premise was wrong (with the fence detail: README.md:95 is the only exact-fenced block; :19/:30/:52 are spaced and never executed)."""
+disposition = "fix-now"
+response = 'Fixed, controlled by PHASE-03/VA-4 itself: the criterion that carried the false "not gated" claim now carries the narrow rule, so the phase that runs `just check` is the phase that must confirm the executed block is green. PHASE-03/EX-4 exempts exactly the authorised block, and the slice body and plan.md were brought into line so no artefact states the boundary differently.'
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Fixed in all six: PHASE-03/VA-4 now says the surrounding prose is outside the review while its single executed block must carry smut_id by the gate run; PHASE-03/EX-4 exempts "PHASE-02's authorised executed block" from its no-README-edit prohibition; slice-004.md's §Scope and Risks boundary bullets state the narrow rule; plan.md's Notes match; and notes.md's F-6 entry now records the narrowing, why the original premise was wrong, and the fence detail (README.md:95 is the only exact-fenced block; :19/:30/:52 carry a space and are never executed). rg over the live artefacts finds no surviving "not gated" claim — the only remaining instances are inside the tier-5 review reports, which are historical evidence and stay as written."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Verified by search: no live artefact carries a "not gated" claim any longer; PHASE-03/{EX-4,VA-4}, slice-004.md Scope and Risks, and plan.md Notes all state the narrow boundary, and the only remaining instances are inside the tier-5 review reports.'
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Design lock gate requires a route on severe findings; reopening to re-dispose with one."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = 'Fixed, controlled by PHASE-03/VA-4 itself: the criterion that carried the false "not gated" claim now carries the narrow rule, so the phase that runs `just check` is the phase that must confirm the executed block is green. PHASE-03/EX-4 exempts exactly the authorised block, and the slice body and plan.md were brought into line so no artefact states the boundary differently.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Re-verified by search across the live artefacts: no "not gated" claim survives outside the tier-5 review reports; PHASE-03/VA-4 now carries the narrow rule.'
+
+[[finding]]
+id = "F-16"
+status = "answered"
+severity = "minor"
+title = "The DEC-027 sentence and VT-7's pinned consequence are unqualified where §2 and EX-8 say an ordinary id can be carried"
+detail = """
+The DEC-027 sentence added for F-5 overreaches in a way §2 denies. It says "after this rename an old-spelling `id` is such a field" — a field no entity carries — but §2 says the opposite in general ("`id` now addresses caller data and may legitimately match a predicate"), and PHASE-02/EX-8 itself says "a where on ordinary `id` selects only entities carrying `id` as data". For a store holding {"smut_id":"note","id":7} a query on `id` is not an absent field.
+
+PHASE-02/VT-7 then pinned the guide to assert flatly that "a query on the old spelling returns nothing rather than an error", which the guide cannot assert unqualified.
+
+Fixed: the design sentence now reads "an old-spelling `id` is such a field wherever no entity carries it as data", and VT-7 pins "returns nothing wherever no entity carries id as data, rather than an error"."""
+disposition = "fix-now"
+response = 'Qualified in both places: the design sentence now reads "an old-spelling `id` is such a field wherever no entity carries it as data", and VT-7 pins "returns nothing wherever no entity carries id as data, rather than an error". A store holding {"smut_id":"note","id":7} is no longer at odds with the sentence, and the guide can assert what the pin requires.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Qualified in both places: the design sentence now reads "an old-spelling `id` is such a field wherever no entity carries it as data", and VT-7 pins "returns nothing wherever no entity carries id as data, rather than an error". A store holding {"smut_id":"note","id":7} is no longer at odds with the sentence, and the guide can assert what the pin requires.'
+
+[[finding]]
+id = "F-17"
+status = "answered"
+severity = "minor"
+title = "§5 owns no evidence row for the four identity-naming diagnostics its own §3 and §4 oblige"
+detail = """
+§3 and §4 oblige the slice to respell four identity-naming diagnostics, but §5's evidence table has no row for them (its "Error classes retain their boundary" row is about exit classes only), and none for ordering by an ordinary `id` — which the amended order.rs row asserts behaviourally. This is F-10's class one turn later: EX-9/VT-3 carry it in the plan, but §6 says the plan must carry §5's obligations, so §5 should hold it.
+
+Fixed: §5 gains "Identity diagnostics name the key | The invalid-identity refusal, the entity-file index disagreement, `describe()`'s absent-identity text and the `scan_refs` assertion each spell `smut_id`; `docs/store-format.md` quotes them verbatim"."""
+disposition = "fix-now"
+response = """§5 gained "Identity diagnostics name the key | The invalid-identity refusal, the entity-file index disagreement, `describe()`'s absent-identity text and the `scan_refs` assertion each spell `smut_id`; `docs/store-format.md` quotes them verbatim". With F-10's suppression row this closes the §4-to-§5 coverage chain the design's own §6 requires of the plan."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """§5 gained "Identity diagnostics name the key | The invalid-identity refusal, the entity-file index disagreement, `describe()`'s absent-identity text and the `scan_refs` assertion each spell `smut_id`; `docs/store-format.md` quotes them verbatim". With F-10's suppression row this closes the §4-to-§5 coverage chain the design's own §6 requires of the plan."""
+
+[[finding]]
+id = "F-18"
+status = "verified"
+severity = "minor"
+title = '"The only raw key literals" is false for src/learn.rs, and PHASE-02/EX-1 inherits the false universal'
+detail = """
+"The change-receipt subject in `src/declare.rs` and the conventions seed in `src/conventions.rs` are the only key spellings left as raw literals" is false by one file, and the same claim sits in PHASE-02/EX-1 ("no production literal spells the wire key outside ENTITY_ID itself"). `src/learn.rs` is production code and spells the key literally today: the GUIDE body (`{"id":"q-query",...}`), EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW and EXAMPLE_FILTER. After the rewrite those become `smut_id` literals — and the learn.rs row requires they stay literal ("without interpolating the guide from the constant"). So EX-1 was unsatisfiable as written.
+
+Fixed by scoping both: the design now says "the only raw literals that construct the wire envelope", and EX-1 says "no production literal that constructs the wire envelope spells the key outside ENTITY_ID itself — the change-receipt subject and the conventions seed are raw literals today and are routed through the constant, while the guide's prose is the deliberate exception because it states the spelling rather than emitting it.""""
+disposition = "fix-now"
+response = """Scoped in both artefacts: the design says "the only raw literals that construct the wire envelope", and EX-1 now reads "no production literal that constructs the wire envelope spells the key outside ENTITY_ID itself — the change-receipt subject and the conventions seed are raw literals today and are routed through the constant, while the guide's prose is the deliberate exception because it states the spelling rather than emitting it". EX-1 is satisfiable again, and the F-3 routing duty is preserved rather than dropped in the rewording."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Scoped in both artefacts: the design says "the only raw literals that construct the wire envelope", and EX-1 now reads "no production literal that constructs the wire envelope spells the key outside ENTITY_ID itself — the change-receipt subject and the conventions seed are raw literals today and are routed through the constant, while the guide's prose is the deliberate exception because it states the spelling rather than emitting it". EX-1 is satisfiable again, and the F-3 routing duty is preserved rather than dropped in the rewording."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: EX-1 now scopes the universal to literals that construct the wire envelope while keeping the routing duty, which matches the learn row's requirement that the guide's prose stays literal."
+
+[[finding]]
+id = "F-19"
+status = "answered"
+severity = "nit"
+title = 'The STD-002 paragraph still says "that ordering is the whole defence", which its own next clause refutes'
+detail = """
+§3 opened the STD-002 paragraph with "That ordering is the whole defence against publishing a payload the loader then refuses". STD-002's own form is "The version gate is the whole defence" — against replaying a previously committed manifest. The design's unqualified noun is refuted by its own next clause ("within one version a payload a stricter loader refuses is still published").
+
+Fixed: the sentence now opens "The version gate is the whole defence", matching STD-002's noun rather than overstating it."""
+disposition = "fix-now"
+response = """Now opens "The version gate is the whole defence", matching STD-002's own noun rather than overstating it; the following clauses carry the within-one-version residual."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Now opens "The version gate is the whole defence", matching STD-002's own noun rather than overstating it; the following clauses carry the within-one-version residual."""
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
