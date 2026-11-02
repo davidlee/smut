@@ -6,12 +6,19 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · planning · 507acb6
+fresh-as-of: 2026-11-02 · design locked (rev 47) + planned + reviewed · 01764f6
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
 - RV-023 — design self-review and verification limits
 - SL-004 — implementation plan and phase boundaries
+- RV-024 — pre-implementation pass (13 findings: design→plan capture, sequencing, adjacent decisions)
+- RV-025 — amendment pass (19 findings over design revs 40-43; both blockers and every major verified)
+- SL-004 — design re-locked at rev 47 after two adversarial passes; plan repaired append-only
+- STD-002 — version discipline for stored-validity rules
+- CHR-001 — operator's 0.2 README rewrite
+- RSK-001 — unenforced-invariant gap (promoted into STD-002)
+- SL-004 — three review reports under `research/raw/`
 
 ### Learned
 - DEC-020 — identity constant and per-surface pins
@@ -20,10 +27,16 @@ fresh-as-of: 2026-11-02 · planning · 507acb6
 - DEC-023 — normative brief updated in place
 - DEC-024 — fixture equivalence and semantic residual review
 - DEC-025 — targeted amendments of six identity-bearing decisions
+- DEC-027 — a field no entity carries is taught, never refused; the guide carries that consequence
+- STD-002 — recovery publishes before validation; the version gate is the whole defence
 
 ### Open
-- SL-004 — formal audit and the six-decision reconciliation handoff
-- SL-004 — coordinate the operator's live README during execution
+- SL-004 — implementation not started; PHASE-01 is the next lifecycle step
+- SL-004 — PHASE-02/EN-4: the operator's live store needs an agreed re-declare path before the version bump
+- SL-004 — SL-005 ordering (`after: SL-005`): its refusal phase lands first or this work takes a rebase; both edit `src/error.rs`
+- SL-004 — formal audit and the six-decision reconciliation handoff (PHASE-03)
+- RV-025 — 8 minor + 2 nit answered, none contested; not verified, no route required
+- Doctrine — design status reports `review_pass RV-025 STALE` on a locked run whose content matches its watermark and whose cache is current (projection quirk, not a gate)
 
 ## Working mode (operator)
 
@@ -196,6 +209,11 @@ step is /phase-plan for PHASE-01 when implementation is requested.
   commit with an explicit pathspec (`git commit ... -- .doctrine`).
 - Minting a standard is the chosen mechanism for a prose surface that no test can
   hold: its title rides every agent's boot context (STD-001 is the first).
+
+## Implementation run
+<!-- rollup per phase as it lands: what shipped, evidence pointer, deviations. Per-phase detail belongs in the phase sheet and plan.toml; this is the durable spine the orchestrator keeps current. -->
+
+Not started. PHASE-01 is next; `doctrine slice phase SL-004 PHASE-01 --status in_progress` opens it.
 
 ## Pre-implementation review
 
