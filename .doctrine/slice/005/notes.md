@@ -42,15 +42,14 @@ fresh-as-of: 2026-11-02 · plan drafted and hardened (2 phases; run dr-01a19a1e 
 - Nothing open inside the design. Three silences are deliberate and named in §7
   (`$contains` unbounded; anything outside demanded position; `$or` contents never
   analysed — pinned, so breaking it is a decision).
-- **Plan hardening routed nine repairs to the locked material, not to the plan.** They
-  await `/feedback` (and, for the two decision records, the operator's act): design
-  §1's diagram label; §2/§6's "called once at the end of `parse`" against §1's own
-  recursion premise; §5's single fixed-order adjacency against §2's every-spelling
-  claim; DEC-030's body printing a concrete operand against its facet's `<operand>`;
-  DEC-030 `proposed` where DEC-027 is `accepted`; §6's "four pins" against §5's three;
-  §5's binary row silent on the `smut: ` prefix; §3's second sentence naming one
-  operator; "required-position" vs "demanded"; DEC-027's `$not`-parity shorthand. The
-  plan implements the correct behaviour (demand walk, `<operand>`) in every case.
+- **Plan hardening disposed on `/feedback`.** DEC-030 is `accepted` and its body's
+  misplaced-operator example now prints `<operand>` as its facet always said; DEC-027's
+  position rule is corrected in both tiers (the `$not`-parity shorthand was too narrow —
+  an `$or` that must not hold hands its children `false`, so a `$not` beneath it restores
+  demand). The locked design's own six false sentences are parked on **CHR-003** for the
+  audit/reconcile seam, because editing materialised `design.md` would desync the run's
+  fingerprints for prose that changes no behaviour. The plan implements the correct
+  behaviour in every case.
 - Carried into the plan: `tests/fixture.rs:457` composes `{"id":{"$in": reached}}`
   from a computed list; an empty derivation now refuses. Check it at implementation.
 - Ordering: SL-005 lands before SL-004's PHASE-02 (both touch `src/error.rs`); SL-004's

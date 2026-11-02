@@ -21,7 +21,7 @@ message surface.
 The same `Display` arm was reached from the predicate level and from inside a condition
 object, so a single sentence could not be true of both.
 
-    smut: predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": "x"}}
+    smut: predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": <operand>}}
     smut: unknown predicate operator: $foo
 
 - **`MisplacedPredicateOperator { operator }`** — the predicate level, when the name is

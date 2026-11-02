@@ -169,23 +169,27 @@ checked against the tree. The changes below are the adjudicated result.
   read `accepted`, or the operator's recorded assent to be in the evidence, and names
   its `choice` facet rather than its stale body example as the byte source.
 
-**Routed to `/feedback`, not fixed here.** Each is a defect in the locked design or in a
-decision it transcribes; repairing one in the plan would hide it.
+**Disposed, not carried.** Each was a defect in the locked design or in a decision it
+transcribes. Two were decision records rather than design prose, so they were repaired
+in place; the rest are the locked design's own sentences, parked on `CHR-003` for the
+audit/reconcile seam — editing the materialised `design.md` would desync the run's
+fingerprints for prose that changes no behaviour, and the plan implements the correct
+behaviour in every case.
 
-- §1's diagram label, "each `Field` is judged only when reached through `And`", is
-  false for a bare root field — the same error DEC-027 corrected.
-- §2 and §6's "called once at the end of `parse`" is refuted by §1's own premise:
-  `parse` re-enters itself through `parse_all` and `parse_not`.
-- §5's `the_sentence_is_chosen_by_the_fixed_order` discriminates one adjacency, while
-  §2 claims the message is the same for every spelling of a predicate.
-- DEC-030's body prints `{"$ne": "x"}` against its own facet's `<operand>`, and its
-  status reads `proposed` where DEC-027 reads `accepted`.
-- §6 says "including the four pins"; §5 defines three.
-- §5's binary row does not say whether the pinned stderr line carries the `smut: `
-  prefix.
-- §3's second sentence names one operator where DEC-030's own criterion asks for the
-  two operators or the empty list the sentence is about.
-- "required-position" in §1 against "demanded" in §2-§6 and in this plan's VT-1: one
-  word should win.
-- DEC-027's `$not`-parity shorthand predicts non-refusal for a contradiction on a path
-  where an `$or` sits under a `$not`, which the walk soundly refuses.
+- **DEC-030 settled and its body corrected.** It read `proposed` while the design run had
+  adopted it; it now reads `accepted`, and its body's misplaced-operator example prints
+  `<operand>` as its own facet always said.
+- **DEC-027's position rule corrected in both tiers.** "Any even number of `$not`s
+  provided no `$or` interrupts the path" was too narrow: an `$or` that must *not* hold
+  hands its children `false`, so a `$not` beneath it restores demand and the field is
+  judged — and that refusal is sound. The choice now states demand propagation and names
+  both `$or` directions; the body's "`$or` contents are not analysed at all" is narrowed
+  to a must-hold `$or`, and the provenance records both directions of the shorthand's
+  error.
+- **Six `design.md` sentences → `CHR-003`.** §1's diagram label ("judged only when
+  reached through `And`" is false for a bare root field, the same error DEC-027
+  corrected); §2/§6's "called once at the end of `parse`" against §1's own recursion
+  premise; §5's binary row silent on the `smut: ` prefix; §6's "four pins" against §5's
+  three; §7's "`$or` contents are not analysed" over-claim; §3's second sentence naming
+  one operator where DEC-030 asks for two. Terminology ("required-position" vs
+  "demanded") is recorded there too.

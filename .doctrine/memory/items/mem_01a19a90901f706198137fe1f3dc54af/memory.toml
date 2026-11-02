@@ -1,0 +1,46 @@
+memory_uid = "mem_01a19a90901f706198137fe1f3dc54af"
+memory_key = "mem.fact.smut.recursive-parse-post-check"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A post-parse check belongs in a wrapper over a recursive parser, not at the end of it"
+summary = "src/predicate.rs::parse recurses via parse_all/parse_not, so an AST walk installed at its end runs once per clause operand"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = ["src/predicate.rs"]
+globs = []
+commands = []
+tags = ["predicates", "parsing"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "0abc9ee3b25753725138226ad5979e1805aafa88"
+ref_name = "refs/heads/main"
+checkout_state_id = "dd5720c293b3cc6454982fc2307358dbe999a321830c27b71723eb0511bf07e0"
+base_commit = "936184c833043c04380ede90408322c4bc741028"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "medium"
+
+[ranking]
+severity = "none"
+weight = 0
+
+[[source]]
+kind = "slice"
+ref = "SL-005"
+

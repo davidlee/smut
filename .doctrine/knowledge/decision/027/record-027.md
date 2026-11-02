@@ -24,8 +24,8 @@ made only where the predicate **demands** the field:
 - `Or` determines its children only when the `Or` is itself demanded *false*;
 - a `Field` is judged iff it arrives demanded.
 
-So a contradiction is refused at the root, under `$and`, and under any even number of
-`$not`s **provided no `$or` interrupts the path**. It is not refused inside an `$or` that
+So a contradiction is refused wherever demand reaches the field — at the root, under
+`$and`, and through `$not`s that flip it. It is not refused inside an `$or` that
 must hold, nor under an odd number of `$not`s, because the query still has an answer
 there. Measured on 0.2.0: `{"$not":{"status":{"$eq":"open","$ne":"open"}}}` returns the
 whole store, and `{"$or":[{…contradiction…},{"type":"question"}]}` returns rows. Refusing
@@ -34,11 +34,13 @@ either would reject a correct query.
 Parity alone is *not* the rule, and this is worth stating because the shorthand invites
 the error: `{"$or":[{"$not":{"$not":{"f":{"$eq":1,"$ne":1}}}},{"g":2}]}` wraps the
 contradiction in two `$not`s and is still satisfied by any `g: 2` entity, because the
-`$or` was never analysed. `$or` contents are not analysed at all — which also means a
-one-element `$or` around a contradiction is accepted, even though a one-element `$or`
-means what its disjunct means. Closing that one shape would imply the rest of `$or` is
-analysed; it is not, and `{"$or":[]}` staying legal (false, selecting nothing) is part of
-the same decision.
+demanded `$or` stops the walk. A must-hold `$or` hands its children nothing, which also
+means a one-element `$or` around a contradiction is accepted, even though a one-element
+`$or` means what its disjunct means. Closing that one shape would imply the rest of `$or`
+is analysed; it is not, and `{"$or":[]}` staying legal (false, selecting nothing) is part
+of the same decision. An `$or` that must *not* hold is the other case: it hands its
+children `false`, so a further `$not` beneath it restores demand and the field is
+judged.
 
 Because a condition object carries each operator at most once (a repeated key is refused
 in any object, at any depth, as `src/input.rs` reads it; DEC-001 rule 1 makes that exit
@@ -105,7 +107,8 @@ honest; stretching one rationale over both is not.
 
 - **The guide must scope the guarantee**, naming the silences that remain:
   `$contains` with neither `$eq` nor `$in` beside it; anything outside demanded
-  position; and the fact that `$or` contents are never analysed.
+  position; and the fact that a must-hold `$or` stops the walk, so its contents are
+  not analysed there.
 - **Runtime-composed predicates move from exit 0 to exit 2.** A caller templating
   `$eq`/`$ne` from variables can synthesise a contradiction deliberately, and a
   computed `$in` list that happens to be empty now refuses. `from: []` remains the
@@ -126,4 +129,5 @@ called `$contains` undecidable whenever `$eq` was absent, although `$in` also bo
 value; a position-blind per-field check that would have refused contradictions inside
 `$or` and under a single `$not`; a "crossed `And` only" rule that missed the
 double-negated shape; and a parity shorthand that is false wherever an `$or` interrupts
-the negations. Demand propagation is what all five reduce to.
+the negations — and too narrow where an `$or` that must not hold sits above a `$not`,
+which restores demand. Demand propagation is what all five reduce to.
