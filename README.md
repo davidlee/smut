@@ -17,11 +17,21 @@ There's no server. `smut` is private, though it can be shared.
 cargo install smut
 ```
 
+That'll get you one self-contained binary. Now just tell your agent to:
+
+``` console
+smut learn
+```
+
+They'll love it.
+
 ## Take a peek
 
-An entity is a JSON object. Name it with `smut_id`; leave that out and `smut`
-draws an eight-char nanoid for you. `title` and `body` are ordinary
-fields that `render` treats as Markdown by convention, and every other field is
+An entity is a JSON object. Name an entity with `smut_id`;
+leave that out and `smut` draws an eight-char nanoid for you.
+
+`title` and `body` are ordinary fields that `render` treats
+as Markdown by convention, and every other field is
 data it prints only when asked:
 
 ```console
@@ -36,7 +46,7 @@ $ smut render '{"from":"principles"}'
 ```
 
 `declare` patches. It changes the fields it names and leaves the rest alone, so
-an entity can grow a field at a time:
+an entity can grow one field at a time:
 
 ```console
 $ smut declare '{"smut_id":"principles","score":5.6}'
@@ -85,46 +95,15 @@ reference the delete leaves behind. `smut learn` prints the rules.
 
 ## What it is
 
-`smut` is one binary and one directory. Everything — entities, their fields and
-the references between them — lives as JSON under `.smut/` beside the directory
-you run it in, and reads come back as JSON or as Markdown. There is no server, no
-daemon, no ancestor search, and no configuration file.
+`smut` is a single binary. Everything — entities, their fields and
+the references between them — lives as JSON under `.smut/` in the directory
+you run it in, and reads come back as JSON or as Markdown.
 
-Recording a linked thought should cost about as much as writing it down, and it
-should stay one batch — that is the design goal. An agent mid-conversation keeps
-its working structure in a store instead of in a prompt, renders it to Markdown
-whenever the structure is the point rather than the content, and finds the same
-answers after the conversation is gone.
+Smut aims very low - which makes it accessible, dirt cheap, and extremely unassuming.
 
-## Install
-
-```sh
-cargo build --release
-./target/release/smut --version   # smut 0.2.1
-```
-
-The binary is self-contained: `target/release/smut` is the whole program, and
-`smut learn` prints the embedded guide with nothing else installed.
-
-`cargo install smut` installs **0.1.1**, the release crates.io carries. This tree
-is 0.2.1 and is not published, so building it is the only way to get the surface
-below: the 0.1.1 on crates.io has none of the six query keys this tree adds to
-0.1.
-
-This is **smut 0.2.1**, and its query surface is ten keys: `from`, `where`,
-`follow`, `backlinks`, `depth`, `select`, `order`, `limit`, `budget` and
-`edges`. 0.1 had four of them — `from`, `select`, `order` and `limit`. 0.2.0
-added `where`, which filters the roots with a small predicate language, and the
-traversal keys `follow`, `backlinks`, `depth` and `budget`, which walk the graph
-from those roots, bounded by hops and by expansions, and report what the walk
-found. 0.2.1 adds `edges`, which asks for that report **without** the walk — the
-sixth key this tree adds, and the one that lets a query reach anything outside
-`smut` that draws arrows, because the edge set travels in the reply, already
-oriented and deduplicated. The
-envelope stays additive: five keys when nothing was traversed and a
-sixth, `traversal`, when something was, so a 0.1 query reads exactly as it did.
-Mermaid arrives in 1.0 only: where it would be, `smut` refuses by name instead
-of guessing. The commands below are the whole surface.
+An agent can build you a persistent object graph almost by accident.
+Render it to markdown when you want to. Swap in a fresh agent,
+or commit it for later, and everything's right there.
 
 ## Worked example
 
