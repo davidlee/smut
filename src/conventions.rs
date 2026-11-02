@@ -21,6 +21,13 @@
 //! `declare` reports the body it replaced under `previous`. The print says so,
 //! because the reader who meets the upsert is the one who already edited it
 //! (§9.3).
+//!
+//! A kind's sets are read from a ladder of three layers, nearest first: the
+//! project layer inside the checkout, the caller's own user layer, then the sets
+//! compiled into this binary ([`Layer`]). Precedence is that positional order and
+//! nothing else — [`load`] concatenates the layers nearest first, and
+//! [`set_in_force`] answers a name with the first entry carrying it, whether or
+//! not that entry loaded.
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -195,6 +202,23 @@ pub struct Entry {
 /// entry here, and nothing else in this module counts them.
 pub const SHIPPED: [(&str, &str); 1] = [("hygiene", include_str!("conventions/hygiene.md"))];
 
+/// The kind [`SHIPPED`] ships sets for. Every other function here takes the kind
+/// as a parameter; this names the one kind the binary layer is keyed by.
+const SHIPPED_KIND: &str = "conventions";
+
+/// The sets the binary layer holds for `kind`: [`SHIPPED`] for the kind that
+/// ships them, and nothing at all for a kind nothing ships.
+///
+/// The binary layer is asked per kind rather than appended to every load, so a
+/// second kind's lookup never meets the shipped conventions set and cannot
+/// resolve one inside itself.
+fn shipped(kind: &str) -> &'static [(&'static str, &'static str)] {
+    match kind {
+        SHIPPED_KIND => &SHIPPED,
+        _ => &[],
+    }
+}
+
 /// Read one set's bytes. Pure: the origin supplies the name and its layer, and
 /// nothing is read or resolved here, so the same bytes are the same set wherever
 /// they came from.
@@ -343,11 +367,13 @@ fn not_key_value(number: usize) -> Cause {
     }
 }
 
-/// The sets compiled in, read by [`parse`] like any file, with the crate's
-/// version applied afterwards: the version is the build's, so the file never
-/// declares it and the seed cannot be stale against the binary that printed it.
-fn binary_layer() -> Vec<Entry> {
-    SHIPPED
+/// The sets compiled in for `kind`, read by [`parse`] like any file, with the
+/// crate's version applied afterwards: the version is the build's, so the file
+/// never declares it and the seed cannot be stale against the binary that printed
+/// it. A kind nothing ships is not a failure: it carries no binary entries, so
+/// no shipped set can appear in its lookup.
+fn binary_layer(kind: &str) -> Vec<Entry> {
+    shipped(kind)
         .iter()
         .map(|(name, bytes)| {
             let origin = Origin {
@@ -377,9 +403,12 @@ fn binary_layer() -> Vec<Entry> {
 
 /// Read one kind's sets from every layer, nearest layer first.
 ///
-/// This is the only place in this module that reads a filesystem: [`parse`] is
-/// pure, and the binary layer reads the bytes the build embedded. `<kind>` is
-/// joined exactly once onto each root, which is why a root carries no kind of
+/// This module reaches a filesystem in three places, and this is the middle one:
+/// [`project_root`] above walks the ancestors looking for a `.git` entry, this
+/// function turns each root into that layer's one `<root>/<kind>` directory, and
+/// [`read_layer`] below reads the directory's entries. [`parse`] is pure, and the
+/// binary layer reads the bytes the build embedded. `<kind>` is joined exactly
+/// once onto each root, which is why a root carries no kind of
 /// its own and no caller can join it twice — a caller who handed in
 /// `<root>/conventions` as a root would make the layer `conventions/conventions`.
 ///
@@ -408,7 +437,7 @@ pub fn load(roots: &Roots, kind: &str) -> Result<Vec<Entry>, Error> {
         entries.extend(user);
     }
 
-    let mut binary = binary_layer();
+    let mut binary = binary_layer(kind);
     sort_layer(&mut binary);
     entries.extend(binary);
 
@@ -448,6 +477,19 @@ fn failed_row(layer: Layer, path: PathBuf, line: Option<usize>, reason: String) 
     }
 }
 
+/// A candidate the filesystem would not hand over: §3's "cannot be opened or
+/// read" row, carrying the operating system's own words after the path the layer
+/// spells.
+///
+/// Two failures below the candidate filter are this one row — the metadata a
+/// dangling symlink has none of, and the bytes a file that opens will not yield —
+/// so the sentence has one source and neither branch can drift from the other.
+fn unreadable_row(layer: Layer, path: PathBuf, source: &std::io::Error) -> Entry {
+    let reason = format!("{} could not be read: {source}", path.display());
+
+    failed_row(layer, path, None, reason)
+}
+
 /// Read one layer's `<root>/<kind>` directory into entries, in no order of its
 /// own: sorting is [`load`]'s step, and it sorts each layer before the layers
 /// concatenate.
@@ -472,8 +514,11 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
         Err(source) => {
             // `StoreError::FileSystem.step` is a `&'static str` and the kind is a
             // runtime parameter, so the sentence is built here rather than
-            // spelled as a literal that would be false for a second kind: one
-            // allocation, on the exit-1 path only, in a process about to exit.
+            // spelled as a literal that would be false for a second kind. The
+            // leak is bounded: one allocation per refused load, and a refusal
+            // ends the invocation, so the count is the number of failing loads
+            // this process performs. A third site needing this shape should take
+            // `Cow<'static, str>` rather than leak again.
             let step: &'static str =
                 Box::leak(format!("reading the {kind} layer").into_boxed_str());
 
@@ -488,6 +533,10 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
 
     let mut entries = Vec::new();
 
+    // An entry that vanishes mid-iteration makes `ReadDir::next` return an
+    // `Err`, which yields no `DirEntry` and therefore no path: it cannot become
+    // a row, and there is nothing a refusal could name. That is directory churn
+    // rather than a set that failed, so it is skipped deliberately.
     for entry in reading.flatten() {
         let path = entry.path();
 
@@ -512,8 +561,7 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
         let metadata = match std::fs::metadata(&path) {
             Ok(metadata) => metadata,
             Err(source) => {
-                let reason = format!("{} could not be read: {source}", path.display());
-                entries.push(failed_row(layer, path, None, reason));
+                entries.push(unreadable_row(layer, path, &source));
 
                 continue;
             }
@@ -544,8 +592,7 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
         let bytes = match std::fs::read(&path) {
             Ok(bytes) => bytes,
             Err(source) => {
-                let reason = format!("{} could not be read: {source}", path.display());
-                entries.push(failed_row(layer, path, None, reason));
+                entries.push(unreadable_row(layer, path, &source));
 
                 continue;
             }
@@ -678,7 +725,7 @@ pub fn answer(ask: Ask) -> String {
 
 /// The listing of the sets this binary ships: one line each, and nothing else.
 pub fn listing() -> String {
-    listing_of(&binary_layer())
+    listing_of(&binary_layer(SHIPPED_KIND))
 }
 
 /// One set's seed: an ordinary entity declaration. The fields are supplied with
@@ -721,7 +768,7 @@ fn id_of(set: &Set) -> String {
 /// entry that did not load is a runtime failure rather than an unknown name: the
 /// set exists, and the reader can say why it is not a set.
 fn set_named(found: &str) -> Result<Set, Error> {
-    let binary = binary_layer();
+    let binary = binary_layer(SHIPPED_KIND);
     let sets: Vec<String> = binary
         .iter()
         .filter_map(|entry| entry.name.clone())
@@ -763,7 +810,7 @@ mod tests {
     /// The one shipped set as the binary layer loads it: its bytes through
     /// [`parse`], plus the crate's version.
     fn shipped_hygiene() -> Set {
-        let binary = binary_layer();
+        let binary = binary_layer(SHIPPED_KIND);
         let Some(entry) = binary.into_iter().next() else {
             panic!("the binary layer ships one set");
         };
@@ -1281,7 +1328,7 @@ mod tests {
 
     #[test]
     fn the_shipped_set_is_the_same_reader_as_a_file() {
-        let binary = binary_layer();
+        let binary = binary_layer(SHIPPED_KIND);
         assert_eq!(binary.len(), SHIPPED.len(), "one entry per shipped pair");
 
         let shipped = &binary[0];
@@ -1898,6 +1945,13 @@ mod tests {
             project[0].origin.path, one,
             "the entry is under the `shapes` directory, so nothing joined `conventions`"
         );
+        assert!(
+            shapes_entries
+                .iter()
+                .all(|entry| entry.origin.layer != Layer::Binary),
+            "the binary layer is the kind's too, so a kind nothing ships carries no binary \
+             entry: {names:?}"
+        );
 
         let conventions = load(&roots, "conventions").expect("the conventions layer reads");
         let conventions_names: Vec<Option<&str>> = conventions
@@ -2226,6 +2280,44 @@ mod tests {
         );
     }
 
+    // Pins the tie-break `sort_layer` states for two undecodable names in one
+    // layer: their order is the raw filename's, not the order the directory
+    // listed them in. Every other fixture holds one unnameable file, so this arm
+    // is unreachable there and an `Ordering::Equal` mutant stays green.
+    #[cfg(unix)]
+    #[test]
+    fn two_undecodable_names_break_their_tie_on_the_raw_filename() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let earlier = project_layer.join(OsString::from_vec(b"aa\xfe.md".to_vec()));
+        let later = project_layer.join(OsString::from_vec(b"zz\xff.md".to_vec()));
+        // The byte-smaller name is written first, so a directory that lists
+        // newest-first lists the two in the opposite order to the one the
+        // tie-break must produce.
+        fs::write(&earlier, "advice.\n").expect("a file whose name is not UTF-8 text");
+        fs::write(&later, "advice.\n").expect("a file whose name is not UTF-8 text");
+
+        let roots = Roots::under(repo, None);
+        let entries = load(&roots, "conventions").expect("the layer reads");
+        let project: Vec<&Path> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .map(|entry| entry.origin.path.as_path())
+            .collect();
+
+        assert_eq!(
+            project,
+            vec![earlier.as_path(), later.as_path()],
+            "both names are undecodable, so the raw filename bytes are the only total key left, \
+             and `aa` + `0xfe` sorts before `zz` + `0xff` whatever order the directory listed \
+             them in: {project:?}"
+        );
+    }
+
     // Reddens if `read_layer` keeps skipping a filename that is not UTF-8, or if
     // it decides the row after reading the bytes: the content here is a set.
     #[cfg(unix)]
@@ -2345,6 +2437,10 @@ mod tests {
 
     // Reddens if a candidate whose bytes cannot be read is skipped instead of
     // reported: the layer then holds nothing and the caller is never told.
+    //
+    // The dangling symlink stops at `fs::metadata` rather than at `fs::read`, and
+    // both failures build their row through `unreadable_row`: the sentence this
+    // asserts has one source, so no second copy of it sits unreached.
     #[cfg(unix)]
     #[test]
     fn a_file_that_cannot_be_read_is_a_failed_row() {
