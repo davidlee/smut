@@ -60,8 +60,12 @@ Binding constraints inherited, none of which this slice may relax:
   the delivery channel, so a verb the guide does not teach does not exist.
 - **IDE-006's shell-safety constraint**, which is a design veto, not a style note:
   `*`, `?`, `[`, `]`, `$`, leading `!`, `(`, `)`, `|`, `&`, `;`, `<`, `>`, leading
-  `#`, leading `~`, backtick and backslash are all banned from bare tokens. The
-  wildcard is therefore spelled `any`, and `$exists` is `--has`/`--missing`.
+  `#`, leading `~`, backtick and backslash are all banned from the spellings the
+  grammar itself introduces — the operators, the wildcard, the existence tests, the
+  flags — and therefore from everything a caller types to mean structure. A root or
+  a value is the caller's own text: it may need the shell's quotes, and `--from=ID`
+  is where an id the grammar cannot carry goes. The wildcard is therefore spelled
+  `any`, and `$exists` is `--has`/`--missing`.
 
 ## Scope & Objectives
 
@@ -79,27 +83,35 @@ Binding constraints inherited, none of which this slice may relax:
    `--depth`, `--budget`, `--select`, `--order`, `--limit`, `--edges`; plus
    `--ids` (`select:["smut_id"]`, the two-call recipe's exact shape), `--has` /
    `--missing` (`$exists`), and `--from=ID` as the root escape for an id carrying
-   `=`, `~` or a leading `-`.
+   `=`, `~`, a leading `-`, or a leading `{`.
 4. **Refuse ambiguity; never guess.** A token carrying two operators
-   (`status~a=b`), a JSON-looking positional (`q '{"where":…}'`), an unknown flag,
+   (`status~a=b`), a token beginning `{` (`q '{"where":…}'`), an unknown flag,
    a value whose comma list means something the spec cannot express
-   (`status!=a,b`), and `--limit all`. Each refusal names the fix *and* the
+   (`status!=a,b`), `--limit all`, a comma list with an empty member, `any` inside
+   a list, an `--order` direction that is not `asc` or `desc`, and `--has` beside
+   `--missing` on one field. Each refusal names the fix *and* the
    sibling — the JSON-positional refusal ("`q` takes `field=value`; use
    `smut query` for a JSON spec") is the whole migration story — and each is
    written under **DEC-030**: one line, no epigram, and it names no flag or field
    the caller did not type.
-   **Repeated conditions on one field are not a DSL refusal** (research F1). The
-   one shape JSON cannot spell — two `=` on the same field — is provably
-   unsatisfiable and is refused as a contradiction in DEC-027/DEC-030's existing
-   voice. Every other repeat (`status=open status!=resolved`) compiles, and
-   `predicate::parse` judges it by demand and decidability, as it already does for
-   JSON callers.
+   **One condition per operator per field**, because the emitted condition object
+   has one key per operator. An exact repeat collapses. Two `=` with different
+   values are provably unsatisfiable and are refused as a contradiction in
+   DEC-027/DEC-030's existing voice. A second `!=` or `~` is satisfiable and
+   spellable in JSON with `$and`, but not in the object this front-end emits, so it
+   is refused in the caller's own tokens rather than in the contradiction voice.
+   Everything else (`status=open status!=resolved`) compiles, and
+   `predicate::parse` judges it by demand and decidability as it already does for
+   JSON callers — including answering it, which is what that pair does.
 5. **The human surface may be stricter, in strictness only.** `--depth` or
    `--budget` with no direction is refused, though `spec::parse` accepts and
    ignores it: a human typed it and meant it. The same JSON stays valid — that
    asymmetry is a property to test, not a wart to hide.
-6. **Shell-safety is a grammar constraint, tested.** No token the grammar admits
-   needs a quote; the banned characters are absent by construction rather than
+6. **Shell-safety is a grammar constraint on what the grammar invents, tested.**
+   No spelling the surface introduces — an operator, a wildcard, an existence test,
+   a flag — uses a character the shell acts on, and the guide's recipes are typed
+   without a quote. The caller's own roots and values stay the shell's business.
+   The banned characters are absent from the grammar's vocabulary rather than
    escaped at the edge.
 7. **Same engine, same output.** `q` produces the existing `Request::Query` and
    runs the existing pipeline, so the envelope, exit codes, store rules and
@@ -149,10 +161,10 @@ Binding constraints inherited, none of which this slice may relax:
 | `src/lib.rs` | one `pub mod dsl;` |
 | `src/cli.rs` | `Sub::Q` and its clap shape; the `Request::Query` reuse; the identity of the argv slice it hands the compiler |
 | `src/main.rs` | the dispatch arm, if `q` reaches the pipeline by any path other than `Invocation::Request(Request::Query)` |
-| `src/error.rs` | the DSL's `Reject` variants: two operators in one token, a duplicate field, a JSON operand, an unknown flag naming its nearest, `--limit all`, a comma list the operator cannot carry |
+| `src/error.rs` | the DSL's six new `Reject` variants: a malformed or ambiguous token, a JSON operand, a missing direction, a direction outside `asc`/`desc`, an unreachable limit, a conflicting selection. The two-`=` and `--has`/`--missing` cases reuse `ContradictoryFieldConditions` |
 | `src/learn.rs` | the hot-path recipes as DSL lines; `query` as the complete surface; the value-typing and `$contains` warts |
 | `src/spec.rs` | nothing semantic, and its public surface does not change: the compiler emits an object and calls the existing `parse` (DEC-038) |
-| `src/predicate.rs` | **no change** — repeated conditions compile and are judged here as they always were (DEC-039); the DSL's small operator-name table lives in `dsl.rs` and is the third site IMP-016 will have to reconcile |
+| `src/predicate.rs` | **no change** — the variant and pinned sentence are inherited; two detections are now the front-end's, and every other repeated condition is still judged here (DEC-039); the DSL's small operator-name table lives in `dsl.rs` and is the third site IMP-016 will have to reconcile |
 | `tests/dsl.rs` *(new)* | the compiler's own suite: the worked-examples table as DSL→`Spec` equalities, token hazards, every refusal, and the strictness asymmetry |
 | `tests/cli_contract.rs` | the verb end-to-end: byte-identical envelope against `query`, exit codes, `--` reaching a hyphen-leading id, flags interleaved with conditions, no store created |
 | `tests/compatibility.rs` | untouched — it is the guard that proves the machine surface did not move |
@@ -182,13 +194,7 @@ name this one rather than discover it at closure.
   two semantics and no signal in the answer is a silent-wrongness class the DSL
   must not deepen by implying "contains" means one thing. `learn` says it, and a
   test pins both behaviours.
-- **R5 — answered by the research round (F1), not by taste.** DEC-027 already
-  refuses a provably-unsatisfiable field condition list, and DEC-030 has fixed its
-  wording. So the DSL refuses exactly the one shape JSON cannot spell (two `=` on
-  one field, itself unsatisfiable) and compiles every other repeat for the existing
-  mechanism to judge. IDE-006's rule 3 said something stronger, and its suggested
-  cure ("write `status=open,resolved`") is only right when both conditions are `=`
-  — which is why the stronger rule retired rather than being reworded.
+- **R5 — answered by the research round (F1), and sharpened by the design's hostile pass.** DEC-027 already refuses a provably-unsatisfiable field condition list and DEC-030 has fixed its wording, so the DSL reuses that family for two differing `=` on one field rather than starting a second one. A second `!=` or `~` is a different case — satisfiable, and spellable in JSON with `$and`, but not in the one-key-per-operator object this front-end emits — so it is refused in the caller's tokens. IDE-006's rule 3 wanted every repeat refused; what survives is: every repeat the emit shape cannot carry is refused, and nothing else is.
 - **R10 — a DSL operator table would be the third copy of the five operators.**
   `parse_condition` and `parse_predicate` already share the list by hand (IMP-016).
   Derive the DSL's table from one `Operator` enum or record the third copy
@@ -218,7 +224,7 @@ name this one rather than discover it at closure.
 | OQ6 what the guide teaches | DEC-040 | `q` for the hot path, `query` kept and marked complete, both warts stated |
 | R1 can clap carry it | DEC-037 | yes: a bare `Vec<String>` with **no** positional attributes; the silent alternatives are named |
 | R2 how "no new semantics" is enforced | DEC-038 | the DSL emits the specification and calls `spec::parse`, so equivalence is structural |
-| R5 whose voice a repeated condition speaks | DEC-039 | only two `=` on one field is refused, in DEC-027/DEC-030's family; every other repeat compiles to be judged |
+| R5 whose voice a repeated condition speaks | DEC-039 | two differing `=` are refused in DEC-027/DEC-030's family; a second `!=`/`~`, which the emit shape cannot carry, is refused in the caller's tokens; everything else compiles to be judged |
 | R10 the third operator copy | DEC-038 | recorded deliberately: the table lives in one place in `dsl.rs`, and pulling IMP-016 forward is a plan-stage question |
 
 ## Verification and closure intent
@@ -239,16 +245,20 @@ design assertions should cite it rather than re-deriving them.*
   reddens it (`mem.fact.smut.vacuous-negative-assertions`), and no refusal invents a
   field or a flag the caller did not type (DEC-030).
 - **The contradiction is inherited, not reimplemented:** `smut q status=open
-  status=resolved` is refused as two `=` on one field (unsatisfiable, and
-  inexpressible in JSON), while `smut q status=open status!=resolved` compiles and
-  is refused by `predicate::parse` in DEC-030's pinned sentence — the same line a
-  JSON caller gets.
+  status=resolved` is refused as two `=` on one field, in the variant and the
+  sentence DEC-027/DEC-030 already own — the front-end supplies the description.
+  `smut q status=open status!=resolved` compiles and is *answered*, because it is
+  satisfiable; `status=open status!=open` is the pair that reaches
+  `predicate::parse`'s pinned sentence, and it is the same line a JSON caller gets.
 - **Strictness asymmetry, proved both ways:** `smut q --depth 2` is refused while
   `smut query '{"depth":2}'` still succeeds — so `q` is stricter *and* the machine
   surface did not narrow.
-- **Shell-safety by construction:** the grammar's token classifier refuses every
-  banned character if one arrives; the guide carries one demonstration that
-  `foo~bar status!=baz any` reaches the binary intact.
+- **Shell-safety by construction, of the spellings the grammar invents:** no
+  operator, wildcard or existence test the surface introduces uses a character the
+  shell acts on; the guide's recipes need no quote, and one demonstration shows
+  `foo~bar status!=baz any` reaching the binary intact. The caller's own text is the
+  shell's business — a root or a value carrying `[`, `\` or a space still needs the
+  shell's quotes, and `--from=ID` is where an id beginning `{` goes.
 - **DEC-004 holds:** `q` validates before a store exists and creates nothing,
   asserted by pairing it with a store-creating command in the same directory —
   never by a bare absence check no input could falsify.
