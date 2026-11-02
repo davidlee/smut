@@ -58,11 +58,12 @@ pub struct Roots {
 impl Roots {
     /// The two layer roots for an already-resolved repository and user root.
     ///
-    /// This is the only place in the crate that spells `.config/smut`, because
-    /// the pairing is what must not drift: `project_root` and `user_root`
-    /// return the directories a caller searched, and only the project layer
-    /// gains a `.config` segment on the way in. Nothing is read here, so a
-    /// layer that does not exist is the loader's business, not the root's.
+    /// This joins the project layer's segment, because the pairing is what must
+    /// not drift: `project_root` and `user_root` return the directories a
+    /// caller searched, and only the project layer gains a `.config` segment on
+    /// the way in — `user_root` returns the user layer whole. Nothing is read
+    /// here, so a layer that does not exist is the loader's business, not the
+    /// root's.
     pub fn under(project_root: PathBuf, user_root: Option<PathBuf>) -> Roots {
         Roots {
             project: project_root.join(".config/smut"),
@@ -763,9 +764,9 @@ pub fn resolve(name: Option<&str>, format: Option<&str>) -> Result<Ask, Reject> 
 /// The bytes this invocation prints: text for a listing and for prose, one JSON
 /// declaration for a seed.
 ///
-/// This is the one place a set is looked up and the one place the layers are
-/// read, so the question [`resolve`] built is answered exactly once over exactly
-/// one [`load`]: the listing renders every entry, and a named set is
+/// This is the one place a set is looked up and the one place [`load`] is
+/// called, so the question [`resolve`] built is answered exactly once over
+/// exactly one read: the listing renders every entry, and a named set is
 /// [`set_named`]'s answer or its refusal.
 pub fn answer(roots: &Roots, kind: &str, ask: Ask) -> Result<String, Error> {
     let entries = load(roots, kind)?;
@@ -1864,11 +1865,6 @@ mod tests {
             rendered, "Mine  project  -  /scratch/sets/Mine.md\n",
             "four columns two spaces apart, the dash for an absent summary, one newline"
         );
-        assert_eq!(
-            rendered.matches('\n').count(),
-            1,
-            "one set is one line: {rendered}"
-        );
     }
 
     // The dash is the *in-force* state, not merely "declares no summary": the
@@ -2056,11 +2052,6 @@ mod tests {
             Some(format!("did not load: {reason}").as_str()),
             "the failure states its reason, not only its demotion: {rendered}"
         );
-        assert_ne!(
-            row.split("  ").nth(2),
-            Some("shadowed"),
-            "the reason wins over the demotion: {rendered}"
-        );
         assert_eq!(
             row,
             format!(
@@ -2106,6 +2097,35 @@ mod tests {
             rendered.lines().nth(1),
             Some(format!("hygiene  binary  {summary}  conventions/hygiene.md").as_str()),
             "the binary's own path is the leaf the bytes are embedded under: {rendered}"
+        );
+    }
+
+    // Reddens if the renderer rewrites an origin's path: a renderer that
+    // canonicalised, or prefixed the cwd, makes this relative root look absolute.
+    // The whole row is compared, because a prefixed path still *ends* in the
+    // relative one.
+    #[test]
+    fn a_relative_origin_renders_a_relative_row() {
+        let entry = Entry {
+            name: Some("Mine".to_owned()),
+            origin: Origin {
+                layer: Layer::User,
+                path: PathBuf::from("config/smut/conventions/Mine.md"),
+            },
+            outcome: Outcome::Loaded(Set {
+                name: "Mine".to_owned(),
+                title: "Mine".to_owned(),
+                summary: None,
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+
+        let rendered = listing(&[entry]);
+
+        assert_eq!(
+            rendered, "Mine  user  -  config/smut/conventions/Mine.md\n",
+            "a relative origin renders its own relative path, unre-written: {rendered}"
         );
     }
 

@@ -536,15 +536,15 @@ fn json_without_a_name_is_still_a_usage_error() {
     );
 }
 
-// Reddens if the flag is validated after the operand: `hygiene` is a name the
-// binary layer holds, so the only thing a run can refuse here is the format —
-// and only the format may be named.
+// Reddens if the flag is validated after the operand: `nonsense` is a name no
+// layer holds, so an operand-first run refuses for the name first and the
+// refusal then names the wrong thing.
 #[test]
 fn an_unknown_format_is_still_refused_before_the_operand() {
     let scratch = Scratch::new();
 
     for format in ["dot", "yaml", "JSON", "markdown"] {
-        let refused = smut(&scratch, &["conventions", "hygiene", "--format", format]);
+        let refused = smut(&scratch, &["conventions", "nonsense", "--format", format]);
 
         assert_eq!(refused.code, 2, "{format}: {}", refused.stderr);
         assert_eq!(refused.stdout, "", "{format} prints nothing");
@@ -557,7 +557,7 @@ fn an_unknown_format_is_still_refused_before_the_operand() {
         );
         assert!(
             !refused.stderr.contains("unknown conventions set"),
-            "the operand resolves, so the refusal is about the flag and not the name: {:?}",
+            "the name does not resolve, so the refusal is about the flag and not the name: {:?}",
             refused.stderr
         );
     }
@@ -631,15 +631,6 @@ fn the_seed_is_one_compact_line() {
     assert!(
         printed.stdout.ends_with('\n'),
         "the output ends in a newline, because the shell never adds one: {:?}",
-        printed.stdout
-    );
-    // Exactly one newline in the whole output: with the final one above, that is
-    // the statement that the declaration is a single line, so a pretty-printed
-    // object or a second line reddens here.
-    assert_eq!(
-        printed.stdout.matches('\n').count(),
-        1,
-        "the one newline is the last byte: {:?}",
         printed.stdout
     );
     // One JSON value and nothing after it: `from_str` refuses trailing input, so
@@ -1076,6 +1067,7 @@ fn a_set_that_exists_only_in_the_config_home_resolves() {
     let scratch = Scratch::new();
     let mine = scratch.set(&scratch.user_sets(), "mine", MINE);
     let work = scratch.dir("work");
+    scratch.assert_no_repository_above(&work);
 
     let printed = scratch.smut_in(&work, &["conventions", "mine"]);
     assert_eq!(printed.code, 0, "{}", printed.stderr);

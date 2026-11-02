@@ -113,9 +113,9 @@ fn execute(
 /// `XDG_CONFIG_HOME` when the process has one, else the home
 /// `std::env::home_dir()` reports. Everything below takes the result as a
 /// parameter, so no function deeper in the call chain reads a developer's
-/// `~/.config/smut` and the in-process tests pass their own (DEC-032). Neither
-/// root is spelled with `.config/smut` here: `Roots::under` is the one place that
-/// segment is joined.
+/// `~/.config/smut` and the in-process tests pass their own (DEC-032). No root is
+/// spelled here: [`Roots::under`] joins the project layer's segment, and
+/// [`user_root`] returns the user layer whole.
 ///
 /// A current directory the operating system will not report falls back to `.`
 /// for the search and the project layer: the walk and the layer read then start
