@@ -264,6 +264,20 @@ meeting the version refusal at exit 1 with no migration, dual reader or repair p
 (DEC-022). Recorded in `.doctrine/state/slice/004/phases/phase-02.md` § Decisions as
 the phase-visible copy; this is the durable record. **EN-4 is satisfied; EN-3 is not.**
 
+### Operator act — PHASE-02/EN-3 recorded (2026-11-02)
+
+The operator chose **option 1**: PHASE-02 edits `README.md:119-146` itself — the one
+executed ```` ```console ```` fence — and nothing else in the file. The surrounding
+prose stays CHR-001's (their 0.2 rewrite, already landed) and this slice never sweeps,
+stages or reverts it. Measured basis: exactly one executed fence closes at `:146`
+from `:119` (27 lines, 10 raw `"id"` occurrences); the four ```` ``` console ````
+fences at `:19/35/51/76` carry a space and are never executed; `tests/readme_example.rs`
+compares structurally, so commands and recorded envelopes both move
+(`changes[].smut_id`, `objects[].smut_id`; `ids` stays `ids`). The transcript is
+generated evidence, so it is regenerated against the binary that prints it rather
+than hand-edited, and the tree stays green until PHASE-02's own red/green cycle.
+**EN-3 is satisfied; both PHASE-02 operator gates are now closed.**
+
 Not started. PHASE-01 is next; `doctrine slice phase SL-004 PHASE-01 --status in_progress` opens it.
 
 ## Pre-implementation review
