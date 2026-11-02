@@ -1,10 +1,16 @@
-//! The README's worked example, executed (PHASE-01 EX-11, extended by PHASE-07
+//! The README's transcripts, executed (PHASE-01 EX-11, extended by PHASE-07
 //! VT-2; an earlier header named a PHASE-08 that was never planned).
 //!
-//! `README.md` carries exactly one `console` block: the worked example. This
-//! test reads that block out of the README, runs every command in it, in order,
-//! in a scratch store, and compares what the binary printed with the transcript
-//! beside it. Editing the README's transcript without re-running it fails here.
+//! Every `console` block in `README.md` is a transcript, and every one is run.
+//! A `## ` section's blocks are one continuous transcript, executed in document
+//! order in a scratch store of that section's own, so a section can put prose
+//! between its steps and still declare, then read back, what it declared.
+//! Editing a recorded output without re-running the example fails here.
+//!
+//! A fence must say exactly `console`. CHR-001 found the README wearing
+//! ` ``` console ` — with a space — which no harness matched, so the examples sat
+//! green and unexecuted. A fence that means to be `console` and is not is a
+//! failure here rather than a block silently skipped.
 //!
 //! **What "matches" means for JSON.** A recorded output that parses as JSON is
 //! compared as a parsed value, not as bytes: `render`'s Markdown and the JSON
@@ -65,72 +71,136 @@ struct Step {
     output: String,
 }
 
-/// The worked example: the README's one `console` block, as steps.
-fn worked_example() -> Vec<Step> {
-    let mut blocks: Vec<Vec<&str>> = Vec::new();
-    let mut inside = false;
+/// One `## ` section's console blocks, in document order, as steps.
+struct Transcript {
+    heading: String,
+    steps: Vec<Step>,
+}
 
-    for line in README.lines() {
-        if line.trim_start().starts_with("```") {
-            if inside {
-                inside = false;
-            } else {
-                inside = line.trim() == "```console";
-                if inside {
-                    blocks.push(Vec::new());
+/// The README's transcripts: one per `## ` section that carries a `console` block.
+fn transcripts(readme: &str) -> Vec<Transcript> {
+    let mut transcripts: Vec<Transcript> = Vec::new();
+    let mut heading = String::new();
+    // The open fence's info string, while one is open.
+    let mut fence: Option<String> = None;
+
+    for line in readme.lines() {
+        let trimmed = line.trim();
+
+        // Inside a fence: the closing line, or a line of the console block.
+        if let Some(open) = fence.take() {
+            if trimmed.starts_with("```") {
+                continue;
+            }
+
+            fence = Some(open.clone());
+
+            if open == "console" {
+                let steps = &mut transcripts
+                    .last_mut()
+                    .expect("a console block opens a transcript")
+                    .steps;
+
+                match line.strip_prefix("$ ") {
+                    Some(command) => steps.push(step(command)),
+                    None => steps
+                        .last_mut()
+                        .expect("a console block opens with a command")
+                        .output
+                        .push_str(&format!("{line}\n")),
                 }
             }
 
             continue;
         }
-        if let Some(block) = blocks.last_mut()
-            && inside
-        {
-            block.push(line);
+
+        // Opening a fence. A block that means `console` and is not is invisible
+        // to this file, which is exactly the defect CHR-001 records, so it fails.
+        if trimmed.starts_with("```") {
+            // As written after the backticks, untrimmed: ` ```console ` is the one
+            // fence this file executes, and ` ``` console ` is the mistake it refuses.
+            let info = trimmed.trim_start_matches('`');
+
+            assert!(
+                !info.trim_start().starts_with("console") || info == "console",
+                "the harness matches the fence exactly ` ```console `, so this block never \
+                 runs: {trimmed}"
+            );
+
+            if info.trim() == "console" {
+                // A section's blocks are one transcript: prose may sit between
+                // them, and the store carries over so a later block can read
+                // what an earlier one declared.
+                let continues_section = transcripts
+                    .last()
+                    .is_some_and(|transcript| transcript.heading == heading);
+
+                if !continues_section {
+                    transcripts.push(Transcript {
+                        heading: heading.clone(),
+                        steps: Vec::new(),
+                    });
+                }
+            }
+
+            fence = Some(info.to_owned());
+
+            continue;
+        }
+
+        if let Some(text) = trimmed.strip_prefix("## ") {
+            heading = text.trim().to_owned();
         }
     }
 
+    for transcript in &mut transcripts {
+        assert!(
+            !transcript.steps.is_empty(),
+            "`## {}` carries a console block with commands",
+            transcript.heading
+        );
+
+        for step in &mut transcript.steps {
+            step.output = step.output.trim_end_matches('\n').to_owned();
+        }
+    }
+
+    transcripts
+}
+
+/// One `$ `-prefixed command line, and the output the README records for it.
+fn step(command: &str) -> Step {
+    let mut args = arguments(command);
+
     assert_eq!(
-        blocks.len(),
+        args.first().map(String::as_str),
+        Some("smut"),
+        "the transcript invokes the binary by name: {command}"
+    );
+    args.remove(0);
+
+    Step {
+        command: command.to_owned(),
+        args,
+        output: String::new(),
+    }
+}
+
+/// The transcript under one `## ` heading — the exercised section's only one.
+fn transcript(heading: &str) -> Vec<Step> {
+    let mut found: Vec<Vec<Step>> = transcripts(README)
+        .into_iter()
+        .filter(|transcript| transcript.heading == heading)
+        .map(|transcript| transcript.steps)
+        .collect();
+
+    assert_eq!(
+        found.len(),
         1,
-        "the README carries exactly one console block, and it is the worked example"
+        "the README carries console commands under exactly one `## {heading}` heading"
     );
 
-    let mut steps: Vec<Step> = Vec::new();
-
-    for line in &blocks[0] {
-        let Some(command) = line.strip_prefix("$ ") else {
-            steps
-                .last_mut()
-                .expect("the block opens with a command")
-                .output
-                .push_str(&format!("{line}\n"));
-
-            continue;
-        };
-        let mut args = arguments(command);
-
-        assert_eq!(
-            args.first().map(String::as_str),
-            Some("smut"),
-            "the transcript invokes the binary by name: {command}"
-        );
-        args.remove(0);
-
-        steps.push(Step {
-            command: command.to_owned(),
-            args,
-            output: String::new(),
-        });
-    }
-
-    for step in &mut steps {
-        step.output = step.output.trim_end_matches('\n').to_owned();
-    }
-
-    assert!(!steps.is_empty(), "the worked example has commands");
-
-    steps
+    found.pop().expect("the section was found")
 }
 
 /// Split a shell-ish command line on whitespace, honouring 'single quotes'.
@@ -201,50 +271,55 @@ fn run(scratch: &Scratch, args: &[String]) -> Ran {
 }
 
 #[test]
-fn the_readme_worked_example_runs_and_prints_what_it_records() {
-    let scratch = Scratch::new();
+fn every_readme_transcript_runs_and_prints_what_it_records() {
+    for transcript in transcripts(README) {
+        // A section is one continuous transcript in a store of its own: it may
+        // declare in one block and read back in the next, and no section sees
+        // another's entities.
+        let scratch = Scratch::new();
 
-    for step in worked_example() {
-        let ran = run(&scratch, &step.args);
-        let shown = &step.output;
+        for step in &transcript.steps {
+            let ran = run(&scratch, &step.args);
+            let shown = &step.output;
 
-        if shown.starts_with("smut: ") {
-            assert_ne!(ran.code, 0, "`{}` is shown failing", step.command);
-            assert_eq!(ran.stdout, "", "`{}` shows no envelope", step.command);
-            assert_eq!(
-                ran.stderr.trim_end(),
-                shown,
-                "`{}` prints the diagnostic the README records",
-                step.command
-            );
-
-            continue;
-        }
-
-        assert_eq!(ran.code, 0, "`{}`: {}", step.command, ran.stderr);
-        assert_eq!(ran.stderr, "", "`{}` is quiet on stderr", step.command);
-
-        match serde_json::from_str::<Value>(shown) {
-            Ok(recorded) => {
-                let actual: Value = serde_json::from_str(&ran.stdout).unwrap_or_else(|error| {
-                    panic!(
-                        "`{}` prints one JSON value ({error}): {:?}",
-                        step.command, ran.stdout
-                    )
-                });
-
+            if shown.starts_with("smut: ") {
+                assert_ne!(ran.code, 0, "`{}` is shown failing", step.command);
+                assert_eq!(ran.stdout, "", "`{}` shows no envelope", step.command);
                 assert_eq!(
-                    actual, recorded,
-                    "`{}` prints the envelope the README records",
+                    ran.stderr.trim_end(),
+                    shown,
+                    "`{}` prints the diagnostic the README records",
                     step.command
                 );
+
+                continue;
             }
-            Err(_) => assert_eq!(
-                ran.stdout,
-                format!("{shown}\n"),
-                "`{}` prints exactly the text the README records",
-                step.command
-            ),
+
+            assert_eq!(ran.code, 0, "`{}`: {}", step.command, ran.stderr);
+            assert_eq!(ran.stderr, "", "`{}` is quiet on stderr", step.command);
+
+            match serde_json::from_str::<Value>(shown) {
+                Ok(recorded) => {
+                    let actual: Value = serde_json::from_str(&ran.stdout).unwrap_or_else(|error| {
+                        panic!(
+                            "`{}` prints one JSON value ({error}): {:?}",
+                            step.command, ran.stdout
+                        )
+                    });
+
+                    assert_eq!(
+                        actual, recorded,
+                        "`{}` prints the envelope the README records",
+                        step.command
+                    );
+                }
+                Err(_) => assert_eq!(
+                    ran.stdout,
+                    format!("{shown}\n"),
+                    "`{}` prints exactly the text the README records",
+                    step.command
+                ),
+            }
         }
     }
 }
@@ -256,7 +331,7 @@ fn the_readme_worked_example_runs_and_prints_what_it_records() {
 /// makes.
 #[test]
 fn the_worked_example_ends_with_a_0_2_traversal() {
-    let steps = worked_example();
+    let steps = transcript("Worked example");
     let last = steps.last().expect("the example has commands");
 
     assert!(
@@ -301,7 +376,7 @@ fn the_worked_example_ends_with_a_0_2_traversal() {
 /// executed faithfully.
 #[test]
 fn the_console_block_carries_the_whole_0_2_example() {
-    let steps = worked_example();
+    let steps = transcript("Worked example");
     let matching = |predicate: &dyn Fn(&Step) -> bool| -> usize {
         steps.iter().filter(|step| predicate(step)).count()
     };
@@ -434,4 +509,63 @@ fn every_readme_link_is_absolute_or_an_anchor() {
         checked >= 3,
         "the README still carries its links: {checked}"
     );
+}
+
+/// CHR-001's defect, pinned. The README once wore ` ``` console ` — with a space
+/// — and the harness of the day matched nothing, so its examples sat green and
+/// unexecuted. A fence that means `console` and is not exactly that is refused
+/// here rather than skipped, because a block nobody runs is worse than no block:
+/// it occupies the evidence slot.
+#[test]
+#[should_panic(expected = "the harness matches the fence exactly")]
+fn a_console_fence_that_is_not_exactly_console_is_refused() {
+    transcripts("## Take a peek\n\n``` console\n$ smut learn\n```\n");
+}
+
+/// The look the `Take a peek` section needs: prose between the blocks, one store
+/// across them, and an output line that begins `## ` — a rendered heading — is
+/// not read as the next section's heading.
+#[test]
+fn a_sections_console_blocks_are_one_transcript() {
+    let readme = "\
+## Take a peek
+
+```console
+$ smut declare '{\"smut_id\":\"principles\"}'
+{\"ids\":[\"principles\"]}
+$ smut render '{\"from\":\"principles\"}'
+## principles
+
+- one
+```
+
+Prose that names no heading.
+
+```console
+$ smut get principles
+{\"objects\":[]}
+```
+
+## Next section
+
+```console
+$ smut learn
+the guide
+```
+";
+
+    let transcripts = transcripts(readme);
+
+    assert_eq!(transcripts.len(), 2, "one transcript per section");
+    assert_eq!(transcripts[0].heading, "Take a peek");
+    assert_eq!(
+        transcripts[0].steps.len(),
+        3,
+        "both blocks of the section are one transcript, in document order"
+    );
+    assert_eq!(
+        transcripts[0].steps[1].output, "## principles\n\n- one",
+        "a rendered heading stays output, not a section"
+    );
+    assert_eq!(transcripts[1].heading, "Next section");
 }
