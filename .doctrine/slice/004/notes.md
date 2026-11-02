@@ -213,6 +213,30 @@ step is /phase-plan for PHASE-01 when implementation is requested.
 ## Implementation run
 <!-- rollup per phase as it lands: what shipped, evidence pointer, deviations. Per-phase detail belongs in the phase sheet and plan.toml; this is the durable spine the orchestrator keeps current. -->
 
+### Preflight — 2026-11-02 (super-orchestrator seat)
+
+- **Lifecycle.** SL-004 `ready`; `doctrine slice phases SL-004` reports all three
+  sheets materialised and each phase `planned`. HEAD at preflight `1264f8b`
+  (harvest commit; the handover's `01764f6` is one behind).
+- **Baseline gate is green in this jail.** `just check` (build → both clippy
+  configs at `-D warnings` → `cargo fmt --check` → `cargo test` default, then
+  `--features fault-injection`) exits 0: 338/351 unit, 44, 34, 15, 14, 12, 10,
+  8, 5, 4 per suite; 0 failures, 0 ignored. No known baseline failure, no
+  jail-only failure observed. Toolchain: cargo/rustc 1.100.0-beta.7,
+  just 1.58.0, ripgrep 15.2.0; `target/` warm (5.1G) so gates are incremental.
+- **Other writers.** Uncommitted and operator-owned — never staged by this run:
+  `README.md` (M), `.doctrine/knowledge/decision/027/*` (M),
+  `.doctrine/slice/005/slice-005.md` (M), `.doctrine/slice/005/notes.md` (??),
+  `.doctrine/slice/005/research/` (??),
+  `.doctrine/knowledge/decision/030-*` (??). Commits use explicit pathspecs only.
+- **Delegation.** `sub-orchestrator` (nesting enabled; may spawn
+  worker/delegate/scout/planner/researcher/reviewer) plus `worker`, `reviewer`,
+  `scout`, `evidence-auditor` are installed. Main worktree, no worktrees, no
+  Quotient. Operator's model configuration inherited unchanged.
+- **Operator gates held at the seat, not delegated** (handover §Procedure):
+  PHASE-02/EN-4 (`interview.local/.smut` re-declare path) and PHASE-02/EN-3
+  (CHR-001 README executed block). Neither is charted until the operator rules.
+
 Not started. PHASE-01 is next; `doctrine slice phase SL-004 PHASE-01 --status in_progress` opens it.
 
 ## Pre-implementation review
@@ -349,3 +373,16 @@ interfere; the gap is that one edited file was outside the code-impact contract.
   conventions seed key renames while its value and field list do not; the envelope keeps
   `depths`/`edges`/`frontier`; DEC-027 reads no store, so it and `where` do not move each other's
   compatibility property.
+
+## Autonomy log
+
+<!-- seat and sub-orchestrator envelope decisions: phase · decision · reason · decided/deferred/escalated -->
+
+- **PHASE-01 · charter only, PHASE-02 held.** Decided. The handover's two operator
+  gates (PHASE-02/EN-4 live-store re-declare, PHASE-02/EN-3 CHR-001 executed block)
+  are the operator's, so the seat charters PHASE-01 alone and asks before charting
+  past it. Reason: both gates bind PHASE-02 entrance criteria; charting ahead would
+  either breach them or have a child invent operator assent.
+- **Preflight · baseline gate accepted as green.** Decided. `just check` ran to
+  exit 0 in this jail with 0 failures across both feature configurations, so any
+  later red is a regression, not a baseline condition.
