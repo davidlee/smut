@@ -1,288 +1,96 @@
 # IMP-013: Conventions are compiled in: a project or a user cannot add, override or trade a set
 
-Today the whole mechanism is a `const`: `SETS: [&Set; 1]` in `src/conventions.rs`,
-one embedded `HYGIENE` set, and `seed()` emitting it as a declaration under the
-fixed id `conventions-hygiene`. Nothing about it is reachable from outside the
-binary. A user cannot add a set, override the shipped one, or hand a set to another
-project.
+**Design settled — this is now an implementation brief.** The mechanism is DEC-026
+(where sets live, how they resolve) and DEC-028 (what a set file is and what the
+loader does with it). One call remains before code: the name.
 
-That matters more than it looks, because conventions are the only mechanism smut
-has for making a *store* queryable later. The three-store exercise behind RFC-001
-measured 0 of 3 independently briefed authors following the one rule that decides
-whether `where` works at all (IMP-011: give every entity `type`). Advice compiled
-into a binary reaches an author only if they run the command and choose to read it.
-Advice that ships *with the project*, in the directory the project already owns,
-arrives with the work.
+## The problem, unchanged
 
-## The shape this is reaching for
+`src/conventions.rs` holds one embedded `Set`, `include_str!`ed from
+`src/conventions/hygiene.md`, and `seed()` emits it under a fixed id. Nothing is
+reachable from outside the binary: a user cannot add a set, override the shipped one,
+or hand a set to another project.
 
-Three layers, local wins:
+That matters because conventions are the only mechanism smut has for making a store
+queryable later. Three independently briefed authors wrote three 34-entity stores and
+**0 of 3** followed the one rule that decides whether `where` works (IMP-011). Advice
+compiled into a binary reaches an author only if they run the command and read it;
+advice that ships with the project arrives with the work.
 
-1. a **project directory** — the project's own sets, travelling with the repository
-   (**decided, DEC-026**: `.config/smut/<kind>/` at the project root, mirroring the
-   user path — see *Where the project's sets live* below)
-2. **`~/.config/smut/<name>/`** — the user's
-3. the binary — what ships
+## What is decided
 
-so a set can be overridden deliberately, and traded by copying a file.
+**Where sets live (DEC-026).** Three structurally identical layers, one relative
+suffix, local wins:
 
-**Deliberately not inside `.smut/`.** The store is what the guide calls data that
-confers no authority; a set is the one artefact whose content an agent is meant to
-*follow*. Keeping direction out of the store also keeps a governance contract
-intact: STD-001 makes `docs/store-format.md` the sole record of the store's
-directory layout and reserved names, reviewed whenever "a file, directory or
-reserved name moves, appears or disappears". A `conventions/` subtree under
-`.smut/` would therefore cost a format-document review and a reserved-name
-decision for what is functionally configuration. A sibling directory costs neither,
-and the guide's "whatever is stored there is data" sentence stays true without an
-exception clause.
+    <project-root>/.config/smut/conventions/<name>.md
+    ~/.config/smut/conventions/<name>.md
+    the binary
 
-Naming follows from that: whichever word the concept takes, the **directory, the
-command and the file form should carry it together**. A mirrored
-`.config/smut/<kind>/` satisfies that with the tool as the directory and the
-artefact as the leaf, so a second artefact kind adds a subdirectory rather than a
-dot-entry.
+Project root is the walk-up terminus — the git root, else the cwd with no walk-up.
+Precedence is total, same-named sets do not merge, and the listing prints every set's
+layer, path and (per DEC-028) whether it loaded.
 
-The invariant worth stating as a design goal: **the shipped set is not special.**
-It is a set in the same form, found through the same loader, and it loses to a local
-one like any other. "Define our own conventions the way users define theirs" is the
-point, not a side effect.
+**What a set is (DEC-028).** One markdown file, filename = name, first `#` heading =
+title, flat two-key frontmatter (`summary`, `version`), derived keys refused, unknown
+keys ignored, unparseable frontmatter refused, malformed files isolated to
+themselves, seeds keyed `conventions-<name>` with a `source` field, section
+addressing grammar pinned and implemented later.
 
-## What already exists
+## The work
 
-- `smut conventions [NAME]` takes a name and refuses an unknown one by name.
-- `conventions NAME --format json` already emits a set **as a declaration** — the
-  export half of trading is built, and the seed round-trip (declare under
-  `conventions-hygiene`, re-run replaces rather than duplicates) proves the form is
-  storable.
-- The guide already holds the right posture, and a pin holds it: a set "never
-  validates, never selects and never touches a store".
+1. **A loader over three roots**, resolving a name to (file, layer, body, metadata)
+   with DEC-026's precedence. Nothing lands inside `.smut/`: the store's layout stays
+   owned by `docs/store-format.md` under STD-001.
+2. **The same code path for the shipped set.** It is already markdown; the layer-3
+   reader should look like the layer-1 reader, not like a special case.
+3. **The listing becomes the diagnostic**: name, summary, layer, path, and a
+   one-line reason when a file did not load. This replaces a static list and is where
+   a mis-placed file is discovered.
+4. **The unknown-name refusal lists resolved names and origins** — the same
+   information, refusals included.
+5. **Seeds carry `source`** and an author-owned `version` for file sets; the fixed id
+   and DEC-017's upsert-and-report-`previous` semantics stay.
+6. **`Ask` becomes owned.** It holds `&'static Set` today; `resolve` gains file I/O
+   and `answer` stays pure. The type split survives, the lifetime does not.
+7. **Loader generic over declaration kind**, so a future artefact kind reuses the
+   ladder rather than re-deriving it (see § If typed schemas arrive).
 
-So this is a loader plus a naming rule, not a new concept.
+## What is still open
 
-## Questions the design has to answer
-
-1. **Precedence and shadowing.** Local-wins is the obvious rule; the question is
-   what a shadowed set does. Silent shadowing plus a listing that shows origin is
-   the cheapest honest answer; a refusal ("`hygiene` is shipped and also present in
-   this project — say which") is the loudest. Either way the *listing* must show
-   which layer each name came from, because a reader has to be able to tell where a
-   rule they are following came from.
-2. **Identity.** The fixed `conventions-hygiene` id is what makes re-installing an
-   update rather than a duplicate. With layers, two same-named sets collide on one
-   id; the scheme has to become per-layer, or per-(layer, name), and the seed's
-   replacement semantics have to survive it.
-3. **Trust and authority.** A set under `.smut/conventions/` is advice a project
-   wrote — the same standing as anything else stored there, which the guide already
-   calls data and not instruction. But it is the one file whose content an agent is
-   expected to *follow*, so the standing should be stated rather than inherited: a
-   project set is advice the operator chose to have read, never a schema, never
-   authority over the store's contents. Whether a user-scope set under XDG carries
-   more weight than a project one — it is the user's own statement — should be
-   decided, not left to whoever writes the loader first.
-4. **Malformed text.** Sets become files. A malformed one must not break the verb
-   for the other layers: refuse by name and origin, keep the rest working. On-disk
-   form is open — the embedded set is prose today and `--format json` emits a
-   declaration, so the declaration is the obvious candidate, but prose is what a
-   human edits.
-5. **The name — one decision across three surfaces.** The directory, the command
-   and the file form should carry the same word, so this settles more than a verb.
-   Candidates so far: keep `conventions`; `read`, `magazine`, `trope`, `recipe`.
-   Two are disqualified by collision rather than by taste:
-   - **`recipe`** — "the two-call recipe" is the guide's own name for a *query
-     procedure*: twelve mentions in `src/learn.rs`, a section heading of its own,
-     and the conventions set points at it. Two meanings of "recipe" in one surface
-     is the vocabulary collapse `hygiene` items 5 and 7 warn about, committed by the
-     tool itself.
-   - **`read`** — collides with the store-reading verbs (`get`, `query`, `render`).
-   A content noun (`conventions`, or `practice`/`style` if the plural noun among
-   actions grates) stays honest; a verb-noun like `magazine`/`trope` does not
-   survive a stranger reading `--help`. The cheapest moment to decide is before any
-   user has a directory named after it; after that a rename is a migration.
-
-### Where the project's sets live — decided (DEC-026)
-
-`$PROJECT_ROOT/.config/smut/conventions/`, mirroring `~/.config/smut/conventions/`,
-with the project root as the walk-up terminus (the git root) so cwd never enters
-the lookup. **Decided by the operator on 2026-11-02; the reasoning, the priced
-alternatives and the four conditions live in DEC-026**, and this section keeps only
-what the item still needs: why the *sharing* argument carried it, and what it costs
-the loader.
-
-Structural equivalence is the point rather than an accident — a project set and a
-user set are the same artefact found earlier, so "trade a set" and "override the
-built-in" become one operation at different scopes, and a second artefact kind adds
-a subdirectory rather than a dot-entry. The accepted cost is that `.config` in a
-repository already means "this directory is a home directory"; its cure is origin
-printing and a set header naming its own file, which the loader must therefore
-carry from the first commit rather than add later.
-
-**Why the sharing argument carried it.** A project set and a user set are the same
-artefact found earlier, so "trade a set" and "override the built-in" become one
-operation at different scopes — and a second artefact kind adds a subdirectory
-rather than a dot-entry in someone's repository. The priced alternatives
-(`.smut-config/`, one `.smut.toml`, a subtree inside `.smut/`) are in DEC-026.
-
-**What it costs the loader.** `.config` in a repository already means "this
-directory is a home directory", and a reader meeting it in a fresh checkout may
-assume it is meant to be linked home. The cure is documentation-shaped and has to
-ship with the loader rather than after it: origin printing, plus a header on a
-loaded set naming its own file.
-
-**Conditions the loader inherits.**
-
-- **Anchored at the project root, not the cwd.** One terminus (the git root) and one
-  suffix; never also read `<cwd>/.config` part-way down the tree, or the rule
-  fragments into per-directory cases.
-- **Origin is always printed.** `conventions` with no argument lists sets with the
-  layer and file each came from; this is the mitigation, not an extra.
-- **Precedence stays total.** Project beats user beats binary, always, with no
-  merge between same-named sets; if shadowing is reported, it is reported as
-  shadowing.
-- **An environment override exists** (`SMUT_CONFIG` or the XDG variable) so a
-  monorepo or dotfiles user can point at one config deliberately rather than
-  fighting the default.
-
-## If typed schemas arrive
-
-This is the one open question that bears on the name, so it is worth stating what
-the vocabulary has to survive: **advice versus enforcement.** smut today is defined
-by the absence — DEC-017's "never validated, never auto-selected, never read back" —
-and a typed schema is the opposite posture. If both ever exist, the words have to
-mark which one bites.
-
-- **`conventions` is the best-hedged name**, because it *is* the word for "agreed
-  practice, not enforced" (the whole conventions-over-configuration family).
-  "Conventions vs schemas" reads correctly on sight.
-- **`recipe`, `trope`, `magazine` are indifferent to the axis** — they neither
-  collide nor help, which means `smut recipe` beside `smut schema` would leave a
-  reader unable to infer which one can refuse their declaration. That is worse than
-  a collision.
-- `practice`/`style` hedge almost as well as `conventions`, and no better.
-
-So the naming decision can be made robust to either future without predicting it,
-by decoupling three surfaces that currently look like one decision:
-
-| surface | cost to change later | what it should be named for |
-| --- | --- | --- |
-| the verb | cheap — one arm, docs, a pin | the artefact (a content noun) |
-| the file form | middle — sets are already exportable declarations | the artefact |
-| the **directory on disk** | expensive — users create files in it | **the tool**, not the artefact |
-
-Concretely: `~/.config/smut/conventions/` for user scope, and one *project* config
-directory with per-kind subdirectories — `<dir>/conventions/` now, `<dir>/schemas/`
-if that day comes. One dotfile decision, no migration when a second artefact
-arrives, and `.smut` stays the store (STD-001 untouched) while `.smut-config` (or
-whatever it is called) stays configuration. The uglier alternative — a sibling per
-artefact (`.smut-conventions/`, later `.smut-schemas/`) — also survives; it just
-multiplies directories.
-
-The corresponding mechanical rule: **the loader is generic over declaration kind.**
-Sets are already printed as declarations, so a schema artefact could load through
-the same ladder with a different kind. Costs nothing now; it is the whole hedge.
-
-### Why user-defined conventions are worth building even if schemas are coming
-
-They are the cheapest schema-*discovery* mechanism available. Real user sets show
-which constraints people actually write, on real domains, before any enforcement
-model is committed to — evidence a schema designed up front does not have. That is
-the strongest claim this item can make on its own behalf: "conventions now" is not
-a detour from "schemas later", it is the research for it.
-
-### What must not happen
-
-Conventions must not quietly acquire teeth. If a schema artefact arrives it is a
-*second* thing with its own verb, its own precedence (probably highest, since it
-enforces) and its own validation; the sets keep never validating. The moment a
-conventions file can refuse a declaration, the store's oldest sentence — "whatever
-is stored there is data" — becomes false.
-
-**Revisit trigger:** reopen this if entity validation is ever proposed, or if a year
-of user sets shows the advice is not being adopted.
-
-## Two discovery questions the layering opens
-
-**How far up to look.** The store's rule is pinned and contrary: "The store is
-`.smut/` beside the current directory, and is never searched for in a parent"
-(`src/learn.rs:32`, `docs/store-format.md:30`). Project-scoped sets want the
-opposite — walk up to the repository root, so one set governs every subdirectory and
-every agent working under it. The asymmetry is defensible (a notebook is local; a
-policy is project-wide) but it has to be stated, because an agent then holds two
-discovery rules for one tool. The shape worth considering: **nearest ancestor wins,
-bounded by the git root**, so a subproject can override the repository rather than
-accumulating rules it cannot escape — with a listing that shows origin then being
-mandatory. Two things to weigh while choosing: a parent-level set governs far more
-agents than a per-cwd file (the trust question above, with a wider blast radius),
-and a fallback is needed for when there is no `.git` at all.
-
-**Where the advice is installed, versus where it is recorded.** Today the pipe into
-`declare` is the whole mechanism (DEC-017) and the store owns a copy. With project
-files as the *source* of direction, a seeded entity stops being an installation
-mechanism and becomes a record — "the advice this notebook was given" — which is a
-different artefact and arguably worth keeping for exactly that reason. Decide it
-deliberately rather than let the two idioms drift into one.
-
-## Relation to what is already decided
-
-DEC-017 (accepted) settled the 0.2 mechanism in exactly the opposite direction: one
-embedded set, printed; `--format json` emits one entity with a fixed id so a
-re-install upserts; "adding a later set is a file plus a match arm"; and "the binary
-never reads it back". Layered loading moves three of those consequences while
-leaving the principles intact:
-
-| DEC-017 consequence | under a loader |
-| --- | --- |
-| a new set costs a file plus a match arm | a new set costs a file; the match arm is the thing being designed away |
-| fixed id, one per set | must become per-layer or per-(layer, name), and the upsert semantics must survive it |
-| the binary never reads a set back | still true of the *store's* copy — a seeded entity stays inert. It becomes false only for **source files** under the conventions path, which are a different artefact. Keep the distinction explicit or the two will be conflated |
-
-What DEC-017 does *not* move: printed, never validated, never auto-selected, never
-read back from the store, the store may amend its own copy but the seeded body is
-replaced on re-install. Those are the properties that make a set advice rather than
-a schema, and they are the reason this item can be permissive too.
-
-So this is not a contradiction of DEC-017 so much as a later mechanism decision
-that needs to record itself: expect a new DEC (or an amendment naming the
-consequences above) when the loader is designed.
+- **The name.** Recommendation: **keep `conventions`** — it is the word that marks
+  advice-not-enforcement, which is the axis a schema future tests, and it costs zero
+  churn (`learn`'s section and its pin, this file's siblings, the
+  `conventions-<name>` id prefix, `type: "convention"`, the leaf directory). `recipe`
+  is disqualified by collision with the guide's "two-call recipe" (twelve mentions and
+  a section heading); `practice` reads as a verb phrase; `advice` hedges equally well
+  and is a rename for no gain. **Not yet recorded as a decision — one word from the
+  operator closes it.** Reopen only if schemas arrive and the vocabulary needs a
+  finer distinction.
+- **The `--with-conventions` flag** (IMP-008) is downstream and must not be pinned
+  before this lands: a flag naming a set means something different once resolution
+  has layers.
 
 ## Neighbours
 
-- **IMP-004** (the `epistemic-records` second set) may be absorbed by this: if a
-  project can ship a domain set, that set becomes the shipped *example* rather than
-  a special case. This item decides which; IMP-004 should not be built first.
-- **IMP-008** (delivery through the `learn` surface) is downstream: with layers, a
-  footer or flag should point at a *resolved* set rather than a hardcoded name, so
-  the loader's shape decides the flag's shape.
-- **IMP-011** (the discriminator) is the finding this mechanism exists to cure at
-  organisation scale: a project that ships its own conventions can require `type` of
-  its own agents in a way a binary never can.
+**IMP-011** is the finding this mechanism exists to cure at organisation scale: a
+project that ships its own conventions can require `type` of its own agents in a way
+a binary never can. **IMP-008** consumes the section grammar this decision pins, and
+owns the flag. **IMP-004** (the deferred `epistemic-records` set) may become the
+shipped *example* of a domain set rather than a special case — this item decides
+which, and IMP-004 must not be built first.
 
-## Status
+## If typed schemas arrive
 
-Not `design-deferred` any more: the layering, precedence and structural-equivalence
-questions are settled (DEC-026), and no other item blocks this one. What remains is
-a short design pass, not a conversation:
-
-1. **The name** — verb and leaf directory together; the only genuine blocker.
-2. **Seed identity across layers**, and what re-installing means when a same-named
-   set exists at two scopes.
-3. **Malformed sets** — refuse by name and origin, keep the other layers working.
-4. **The no-`.git` fallback** for the walk-up terminus.
-
-One sequencing constraint survives from DEC-017's analysis: IMP-008's flag must not
-be pinned before this lands, because a flag naming a set means something different
-once resolution has layers.
+Today's posture is the opposite (DEC-017: never validated, never read back), so a
+schema would be a second enforcement-bearing artefact, not an extension. The naming
+recommendation above assumes the vocabulary has to keep marking that difference; the
+loader's genericity over declaration kind is the hedge, and it costs nothing now.
+Conventions must never acquire teeth — a set that can refuse a declaration makes the
+store's oldest sentence, "whatever is stored there is data", false.
 
 ## Provenance
 
-Operator inclination of 2026-11-02 — three messages: sets should be tradeable and
-overridable ("trivially easy"); the project's sets should live in a sibling
-directory rather than inside `.smut/`, project-scoped by walking to the nearest git
-root; and `recipe` as a possible verb. Then the mirrored-path question, and "sold"
-on structural equivalence. The shape is recorded as **DEC-026**; this item keeps the
-reasoning that the decision did not need to carry and the work the decision did not
-settle. The question that governs the naming hedge — whether the future holds
-user-definable typed schemas for entities — is the operator's, and is the reason §
-If typed schemas arrive exists rather than a decision. The reading of
-`src/conventions.rs`, the DEC-017 comparison, the STD-001 argument and the `recipe`
-collision count are this repo's.
+Operator inclinations of 2026-11-02 (tradeable sets; a project directory outside
+`.smut/`; the mirrored config home; `recipe` floated then withdrawn), settled as
+DEC-026 and DEC-028. The measurements, the STD-001 argument, the `recipe` collision
+and the code reading are this repo's. Usability evidence: RFC-001.

@@ -1,0 +1,51 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 28
+slug = "a-conventions-set-is-one-markdown-file-filename-names-it-headings-address-it-frontmatter-carries"
+title = "A conventions set is one markdown file: filename names it, headings address it, frontmatter carries only metadata"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["config", "conventions", "format"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "DEC-026 fixed where conventions sets live (a mirrored config home, three structurally identical layers) and left the loader unspecified: the on-disk form, seed identity across layers, malformed-file handling and the walk-up terminus. Reading src/conventions.rs showed the shipped set is already markdown via include_str! and that the resolution types assume &'static. The operator then asked whether subsections should be addressable and what frontmatter should do with unknown keys."
+choice = "One markdown file per set: the filename is the name, the first level-1 heading is the title (falling back to the filename), and the rest is the body. Optional frontmatter carries only meta: summary and version, delimited by --- with flat key: value lines and no nesting, lists or multi-line values. Frontmatter is never printed as prose, never addressable and never seeded into a body. Keys are classified three ways: known (summary, version) are used; derived (title, name, id, type) are refused by name with a message saying where each fact comes from; unknown keys are ignored deliberately. An unparseable frontmatter line is refused. Sections are addressable by a pinned grammar (normalised match, ambiguity refused, --format json with a section refused, level-1 heading is the whole set, output runs to the next heading of the same or higher level, unknown section lists what exists), implemented later and shared as grammar rather than function with learn. Seeds keep the id conventions-<name> and gain a source field naming the file relative to its layer root; version is author-declared for file sets and the crate version for shipped ones. A malformed file never breaks the other layers: it lists with its path and reason and refuses by name when asked for. The walk-up terminus is the git root when there is one, otherwise the current directory with no walk-up."
+alternatives = ["the on-disk form being a JSON declaration as --format json emits it", " TOML with the prose in multi-line strings", " exact-case heading matching instead of a normalised one", " refusing unknown frontmatter keys", " layer-qualified seed ids such as conventions-project-hygiene", " walking up to the filesystem root when there is no repository", " deriving the summary from the first paragraph instead of frontmatter"]
+rationale = "Markdown is what the shipped set already is, so the loader has one path and the promise that the shipped set is not special becomes literally true in the code. It also shrinks malformed to four I/O-shaped reasons, because a prose file cannot be structurally wrong. Flat two-key frontmatter keeps the typo surface small while letting traded files survive version skew, which is why unknown keys are ignored; the derived-key refusal exists because silently ignoring title would print a document contradicting what its author declared — the silent-wrongness class the usability work ranked first. Keeping id conventions-<name> rather than qualifying it by layer preserves DEC-017 upsert semantics and honours that DEC-017 already makes replacement visible through previous, so the store record is the advice in force and the file remains the durable source. Bounding the walk-up at the git root is not cosmetic: home is an ancestor of nearly every checkout, so an unbounded walk would adopt the user layer as project policy."
+consequences = ["Ask can no longer hold &'static Set and resolve gains file I/O while answer stays pure; the unknown-name refusal becomes the main diagnostic for a mis-placed file and must list origins; a frontmatter key can never quietly become load-bearing later because todays files already carry it; the section grammar must be implemented once for learn and again for sets", " kept consistent by the shared grammar rather than shared code; summary and version become the only authored metadata", " so a set with no frontmatter is valid and lists by name only"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "fills in the loader that DEC-026 left open"
+target = "DEC-026"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "generalises the embedded-set mechanism to files; keeps the id and upsert semantics"
+target = "DEC-017"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the file form and loader rules behind RFC-001 open question 6"
+target = "RFC-001"
+
+[[relation]]
+label = "spawns"
+target = "IMP-013"
