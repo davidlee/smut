@@ -1,0 +1,36 @@
+id = 5
+slug = "refusals-that-name-the-right-thing-a-contradiction-refused-and-a-misplaced-operator-explained"
+title = "Refusals that name the right thing — a contradiction refused and a misplaced operator explained"
+status = "proposed"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[relationships]
+needs = []                      # slice→work hard prerequisite
+after = []                      # slice→work soft sequence: { to, rank }
+
+[[relation]]
+label = "references"
+role = "originates_from"
+target = "IMP-010"
+
+[[relation]]
+label = "references"
+role = "originates_from"
+target = "ISS-004"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the decision this slice implements: the subset, the rationale, and the scope of the refusal"
+target = "DEC-027"
+
+# STRUCTURAL relations are uniform `[[relation]]` rows, never a typed
+# `[relationships]` axis. Slices carry no typed STRUCTURAL
+# relation axes — the `[relationships]` table above holds only the dep/seq payload
+# (`needs`/`after`). Author a structural edge with the `doctrine link` verb
+# — it validates the (source, label) pair and resolves the target:
+#   doctrine link SL-NNN specs SPEC-NNN
+#   doctrine link SL-NNN governed_by ADR-NNN
+# `doctrine inspect SL-NNN` renders the inbound + outbound edges.
