@@ -257,12 +257,13 @@ checkout reddens a no-repository fixture (a local fixture fix, not a criterion
 change). A model that cannot hold PHASE-04's list splits at the stated seam — it does
 not drop rows.
 
-## Design questions owed to /feedback
+## Design questions, adjudicated
 
-Found by both audits, left deliberately unresolved here: none is repaired by widening
-a phase or by inventing design intent. Each is answered in the plan by the reading the
-design's own rules make least wrong, and that reading is named in the criterion that
-carries it so it is visible rather than smuggled in.
+Found by the two hardening audits and taken through `/feedback` against the design text on
+2026-11-02. Each is answered in the plan by the reading the design's own rules make least
+wrong, and that reading is named in the criterion that carries it, so it is visible rather
+than smuggled in. The dispositions are at the end of this section: an item upheld as a
+defect is owed to reconcile, an item resolved by the design's own text is not a defect.
 
 1. **§2 never assigns the `.config/smut` segment.** `project_root` returns the
    repository, `user_root` returns `<config-home>/smut`, §6's `load` joins only
@@ -301,8 +302,49 @@ carries it so it is visible rather than smuggled in.
    is absolute exactly when the root is (PHASE-04/EX-2).
 10. **§4's prose says "one clause per resolved name"; its example renders one per
     file.** Reading: the example (PHASE-04/EX-3, as written).
-11. **§2's walk-up fallback cites DEC-028 where DEC-032 is meant** — a citation slip
-    in the design, not a plan defect; the plan cites both where each is required.
+11. **§2's walk-up fallback cites DEC-028, and that citation is correct** — DEC-028 carries
+    the section *The walk-up terminus* verbatim. Nothing to change.
+
+### Dispositions
+
+Against the design text, not the auditors' framing. `U` = upheld as a design defect or a
+real ambiguity; `R` = rejected, with the evidence; `P` = the design was right and **this
+plan** was the defect.
+
+- **1 — `.config/smut` unassigned: P.** §2 line 64 says the two roots *are* the `…/smut`
+  directories, §5's example path shows `<repo>/.config/smut/conventions/`, and DEC-026 fixes
+  the suffix — the design assigns it; no phase of this plan pinned it. The plan gap is fixed
+  (PHASE-01/EX-3); no design change is owed.
+- **2 — §5's binary row against its own rule: U.** DEC-031 rule 4 repeats the rule, so the
+  example row is the slip. Owed to reconcile: the row must read `shadowed`.
+- **3 — `parse` and the name: U (silence only).** §1 defines the name, §3 requires a
+  non-UTF-8 filename to be turned away before any read, and §6 pins `parse(bytes, origin)`
+  with no name parameter — the signature admits exactly one reading, which the plan takes.
+  No design change is required; the silence is worth one sentence in a later revision.
+- **4 — an unreadable layer directory has no `Origin`: U (under-determined, not false).** §5
+  puts it at exit 1 and §6 says `load` returns a `Result` for it, but the only new variant
+  carries `Origin` and `Cause`. The plan reuses `StoreError::FileSystem` with a layer-worded
+  step, which keeps §6's promise that no diagnostic about a set claims a store.
+- **5 — `seed(set)` has no `kind`: R.** §5 fixes `source` as the literal
+  `conventions/<name>.md`, identical at every layer, and §6's signature with no kind confirms
+  it. The `<kind>/<name>.md` this plan carried was the plan's error, already corrected.
+- **6 — a symlinked `.git`: U (tolerated).** §2's rule for *any other kind* of `.git` entry
+  is explicit, and the plan implements it as written. It diverges from git, which resolves a
+  symlinked `.git`; the exposure is exotic and the alternative invents a rule the design does
+  not state. Recorded, not repaired.
+- **7 — the mode-000 fixture cannot fail as root: U.** A test-design defect, not a behaviour
+  one; the plan's portable row carries the class instead (PHASE-03/EN-3).
+- **8 — a known key with no value: U (ambiguity).** `summary:` would print an empty third
+  field that no reader can distinguish from a mis-rendered row. The plan reads it as
+  malformed, which is the strict reading of §3's `key: value`; the operator may prefer
+  "absent", which would move the criterion to PHASE-02/EX-2's known-key branch.
+- **9 — the fourth field's absoluteness: U (nit).** With a relative `$XDG_CONFIG_HOME` the
+  field is as absolute as its root. The plan reads it as the root's join; no design change.
+- **10 — §4's "one clause per resolved name" against its own per-file example: U (nit).**
+  The example is the operative rendering (§1 makes the file the unit of listing). Folded
+  into item 2's reconcile obligation.
+- **11 — §2's DEC-028 citation: R.** DEC-028 owns the walk-up terminus in its own section;
+  the citation is exact, and the finding was confabulated.
 
 ## Carried, not re-litigated
 

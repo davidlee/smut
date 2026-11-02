@@ -255,3 +255,35 @@ layer *directory* has no `Origin` for §6's one new variant; `seed(set)` has no 
 Rejected with evidence (7): `From<Reject> for Error` already makes the `?` compile;
 `&[&Set; 1]` coerces; shadowed-unaddressability and `Entry.name: Option<String>` are settled;
 no other suite runs `conventions`; one cosmetic test rename.
+
+## /feedback on the audit's design questions (2026-11-02)
+
+Eleven items came out of the hardening audits; each was re-read against the design text
+rather than the auditors' framing. Full dispositions are in `plan.md` § Design questions,
+adjudicated. Net: **7 upheld, 3 rejected, 1 was this plan's own defect.**
+
+- **A fourth reconcile obligation.** `design.md` §5's worked listing prints the binary
+  `hygiene` row's *summary* while project and user both hold `hygiene`, which its own
+  third-field rule — repeated as DEC-031 rule 4 — makes `shadowed`. §4's "one clause per
+  resolved name" is likewise contradicted by its own per-file example (`hygiene (project);
+  hygiene (user)`). Both are rendering statements in the locked design, so they are corrected
+  at reconcile, in place, with the other three: **the example row must read `shadowed`, and
+  §4's sentence should say per file.**
+- **Rejected, with evidence.** §2's walk-up fallback cites DEC-028 *correctly* — DEC-028
+  carries a section *The walk-up terminus* saying exactly that (the finding was
+  confabulated). `seed(set)` having no `kind` is not a design gap: §5 fixes `source` as the
+  literal `conventions/<name>.md`, identical at every layer, and the `<kind>/<name>.md` in
+  this plan was the plan's error, corrected before this pass.
+- **This plan's defect, not the design's.** The `.config/smut` segment: §2 line 64 says the
+  two roots *are* the `…/smut` directories, §5's example path shows
+  `<repo>/.config/smut/conventions/`, and DEC-026 fixes the suffix. The design assigns it;
+  no phase of this plan pinned it. Two independent lanes called it a design blocker, which
+  is the shape of error that a green suite would never have caught.
+- **Recorded, not repaired.** `parse` deriving the name from `origin.path` (§6's signature
+  admits no other reading); an unreadable layer directory riding `StoreError::FileSystem`
+  (§6's one new variant cannot carry a file-less failure); a symlinked `.git` not being a
+  repository to §2 although git resolves it (§2's rule is explicit; exposure exotic); the
+  fourth field's absoluteness under a relative `$XDG_CONFIG_HOME`.
+- **One judgement call the operator may overrule.** A known key with no value (`summary:`)
+  is read as malformed rather than absent. Absent is the friendlier reading; it would move
+  one branch of PHASE-02/EX-2, nothing else.
