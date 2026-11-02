@@ -34,22 +34,48 @@ question asked for two, exit 0, no warning, and the answer reads as complete.
 This was the one wrong answer the exercise produced, and the tool supplied the
 workaround that made it.
 
+## What was decided, and how it changes the cure
+
+Operator direction, 2026-11-02:
+
+- **`type` is the word.** The recommendation stands; the failure was delivery.
+  (Two of three authors wrote `kind` — that is evidence the advice is unheard, not
+  that it is wrong.)
+- **Delivery runs through the `learn` surface**, three levers: a strong"follow on
+  with conventions" recommendation in the guide's existing `Conventions` section
+  at the foot; a flag so an `AGENTS.md` can instruct it once — `smut learn
+  --with-conventions hygiene`; and section retrieval (`smut learn labels`, etc.).
+- **Conventions are not injected into responses as a rule.** The one edge case
+  worth keeping open: a stderr warning when a *declaration* carries `kind` but no
+  `type`.
+
+Those levers are specified in IMP-008, which therefore holds two jobs now —
+delivery (this item's cure) and legibility (its own complaint) — and the delivery
+job outranks the legibility one.
+
 ## What a cure has to be
 
-- **Delivery, not text.** The sentence is already right. The question is whether
-  an author meets it *before* writing: a `declare` reply that says it once for a
-  store whose entities carry no discriminator, or a `learn` §Declaring clause
-  beside the reference convention — the paragraph an author does read. Either is
-  a behaviour change and needs the pointer pinned like any other surface.
-- **`type` and `title` keep their names.** Two of three authors reached for
-  `kind`, which is the vocabulary divergence `hygiene` item 5 warns about,
-  observed rather than hypothesised. If `kind` is the word authors reach for,
-  the recommendation is either wrong or unheard; decide which before rewriting it.
+- **Delivery, not text.** The sentence is already right; `learn` already carries a
+  `Conventions` section (`src/learn.rs:218`) and a pin asserting it names the
+  command and what it is not (`the_guide_points_at_smut_conventions_once`). What
+  changes is strength and reach: a recommendation rather than a description, plus
+  a flag and section names an `AGENTS.md` can encode. See IMP-008 for the shape
+  and for the pin consequences of changing the guide's default print.
+- **`type` and `title` keep their names** — decided above. The vocabulary
+  divergence stays a warning (`hygiene` item 5), not a second spelling.
 - **One slot, two axes.** The water store needed a class (`pipe`, `valve`) and a
   physical kind (`junction`, `reservoir`) at once, overloaded `kind`, and thereby
   broke both. The convention says nothing about a second classification axis. One
   line — `type` is the class; anything else is a field with its own name — would
   have prevented it.
+- **The stderr edge case is a contract decision, not a tweak.** A success-path
+  warning would break a widespread pin: `stderr.is_empty()` is asserted on
+  success in nine places, including the shared `assert_one_json_line` harness
+  (`tests/compatibility.rs:85`) that most contract tests route through. The
+  warning itself is cheap and sound — the declaration is in hand at `declare`
+  time, so "`kind` present, `type` absent" needs no scan — but whether a
+  successful command may ever write to stderr is a contract question, and the
+  answer belongs with IMP-012's boundary work rather than smuggled in here.
 - **Not a `$prefix` operator.** Substring filtering is a workaround for the
   missing discriminator. Adding a prefix test makes the workaround more
   comfortable and leaves the cause; if ids are the only handle, removing the need
@@ -68,4 +94,5 @@ the shipped one.
 
 Usability exercise RFC-001 § evidence: three stores, 34 entities each,
 independently authored, 18 questions. Not a defect report — every behaviour above
-is design-conformant.
+is design-conformant. Operator decisions of 2026-11-02 recorded in RFC-001
+§ Outcome.

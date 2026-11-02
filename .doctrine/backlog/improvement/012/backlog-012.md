@@ -41,6 +41,11 @@ Constraints:
 - **Do not imply a refusal exists where it cannot.** Absence-of-edge is not
   detectable from a predicate: the predicate is true as written. Saying "smut
   will tell you" would be worse than the silence it replaces.
+- **Present tense, no promises either way.** Whether the stops are permanent or a
+  roadmap is undecided and deliberately so (operator, 2026-11-02: "future roadmap
+  is informed by usage reports"). Write what the surface cannot do *today*, with
+  no "never" and no "coming soon" — the paragraph then survives a widening
+  without contradicting itself, and only the tense changes if one arrives.
 - **Keep it short.** The guide is 13.5 KB already, and its length is the reason
   agents stop re-reading it (IMP-008). This item is content, IMP-008 is doors; the
   paragraph must survive a section split without becoming its own section.
@@ -58,4 +63,5 @@ diagnostic channel that would soften two of the four cases.
 ## Provenance
 
 Usability exercise RFC-001: 18 questions across three independently authored
-stores; every claim above was measured on the built binary, 0.2.0.
+stores; every claim above was measured on the built binary, 0.2.0. The tense rule
+records the operator's answer to RFC-001 § Outcome Q3.
