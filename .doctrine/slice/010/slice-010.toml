@@ -1,0 +1,75 @@
+id = 10
+slug = "humane-query-surface"
+title = "A humane query surface — argv is the DSL: the grammar compiles to the ten-key spec and adds no semantics"
+status = "design"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["cli", "ergonomics", "parse", "surface"]
+
+[relationships]
+needs = []                      # slice→work hard prerequisite
+after = [{ to = "SL-008", rank = 0 }]                      # slice→work soft sequence: { to, rank }
+
+[[selector]]
+selector = "src/dsl.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/lib.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/cli.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/main.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/error.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/learn.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "src/spec.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "tests/dsl.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "tests/cli_contract.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "tests/compatibility.rs"
+intent = "scope-relevant"
+note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[relation]]
+label = "references"
+role = "originates_from"
+target = "IDE-006"
+
+# STRUCTURAL relations are uniform `[[relation]]` rows, never a typed
+# `[relationships]` axis. Slices carry no typed STRUCTURAL
+# relation axes — the `[relationships]` table above holds only the dep/seq payload
+# (`needs`/`after`). Author a structural edge with the `doctrine link` verb
+# — it validates the (source, label) pair and resolves the target:
+#   doctrine link SL-NNN specs SPEC-NNN
+#   doctrine link SL-NNN governed_by ADR-NNN
+# `doctrine inspect SL-NNN` renders the inbound + outbound edges.
