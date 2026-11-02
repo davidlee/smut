@@ -94,27 +94,27 @@ answers after the conversation is gone.
 
 ```sh
 cargo build --release
-./target/release/smut --version   # smut 0.2.0
+./target/release/smut --version   # smut 0.2.1
 ```
 
 The binary is self-contained: `target/release/smut` is the whole program, and
 `smut learn` prints the embedded guide with nothing else installed.
 
 `cargo install smut` installs **0.1.1**, the release crates.io carries. This tree
-is 0.2.0 and is not published, so building it is the only way to get the surface
+is 0.2.1 and is not published, so building it is the only way to get the surface
 below: the 0.1.1 on crates.io has none of the six query keys this tree adds to
 0.1.
 
-This is **smut 0.2.0**, and its query surface is ten keys: `from`, `where`,
+This is **smut 0.2.1**, and its query surface is ten keys: `from`, `where`,
 `follow`, `backlinks`, `depth`, `select`, `order`, `limit`, `budget` and
-`edges`. 0.1 had
-four of them — `from`, `select`, `order` and `limit` — and 0.2 adds `where`,
-which filters the roots with a small predicate language, and the traversal keys
-`follow`, `backlinks`, `depth` and `budget`, which walk the graph
+`edges`. 0.1 had four of them — `from`, `select`, `order` and `limit`. 0.2.0
+added `where`, which filters the roots with a small predicate language, and the
+traversal keys `follow`, `backlinks`, `depth` and `budget`, which walk the graph
 from those roots, bounded by hops and by expansions, and report what the walk
-found. `edges` is the sixth addition and asks for that report **without** the
-walk, which is how a query reaches anything outside `smut` that draws arrows:
-the edge set travels in the reply, already oriented and deduplicated. The
+found. 0.2.1 adds `edges`, which asks for that report **without** the walk — the
+sixth key this tree adds, and the one that lets a query reach anything outside
+`smut` that draws arrows, because the edge set travels in the reply, already
+oriented and deduplicated. The
 envelope stays additive: five keys when nothing was traversed and a
 sixth, `traversal`, when something was, so a 0.1 query reads exactly as it did.
 Mermaid arrives in 1.0 only: where it would be, `smut` refuses by name instead

@@ -532,10 +532,12 @@ fn help_and_version_exit_zero_and_touch_no_store() {
     let version = smut(&scratch, &["--version"]);
     assert_eq!(version.code, 0, "{}", version.stderr);
     // DEC-019 re-cut, PHASE-07 EX-5: the literal was `smut 0.1.1`. The release
-    // number is this phase's to move, so the pin moves with it — and it stays a
+    // number is the releaser's to move, so the pin moves with it — and it stays a
     // literal, because this is the one place a bump that missed a file would be
     // caught (`src/main.rs` and `src/cli.rs` both read `CARGO_PKG_VERSION`).
-    assert_eq!(version.stdout, "smut 0.2.0\n");
+    // Moved to 0.2.1 when `edges` joined the surface (IMP-018): additive, optional,
+    // and no 0.1 caller sends it, so the bump is a patch.
+    assert_eq!(version.stdout, "smut 0.2.1\n");
 
     assert!(
         !scratch.has_store(),

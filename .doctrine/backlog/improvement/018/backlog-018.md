@@ -166,3 +166,5 @@ key made it unnecessary: the capability is now reachable by asking for it.
 
 DEC-012 was amended (third trigger, and the budget rule); DEC-019's 0.1 key-set
 pin did not move, because no 0.1 caller sends `edges`.
+
+**Release:** this lands as **0.2.1** — additive and optional, and no 0.1 caller sends `edges`, so the bump is a patch. `--version` and the README release paragraph moved with it.
