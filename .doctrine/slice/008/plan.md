@@ -138,10 +138,14 @@ mechanism to the implementation. Each is recorded with the criterion that carrie
   state. The rule is the normative text and the example row is the slip, so the
   shipped set is not exempt — the alternative would make the one row whose origin is
   not a file the only row that reports differently (PHASE-04/EX-2).
-- **A known key with no value is malformed.** §3 admits `key: value` and §5's third
-  field is a summary, so `summary:` alone would print an empty column that no reader
-  can distinguish from a mis-rendered row. Such a line is not `key: value` and fails
-  naming its line (PHASE-02/EX-2).
+- **A known key with no value declares nothing.** `summary:` alone is a `key:` with an
+  empty value, and §5 already has the vocabulary for "in force, declares no summary" —
+  the dash — so the field is absent rather than fatal: `summary` lists as `-` and
+  `version` is omitted from the seed (PHASE-02/EX-2). Reading it as malformed would make
+  a content-valid file unaskable, and because a broken nearer set still wins its name
+  (DEC-031) a stray colon would shadow a working user copy. The mistake worth catching
+  loudly survives either way: a value continued across lines is not flat, and its
+  continuation line fails naming the line.
 - **§7's preserved behaviours survive under new names.** §7 says they must stay green
   "without a rewrite", and none of them changes; but a keyword equal to a test name
   that already exists is satisfied before the phase starts, so each survivor is
@@ -294,9 +298,10 @@ defect is owed to reconcile, an item resolved by the design's own text is not a 
    Reading: the exists-but-not-a-directory row carries the class, mode 000 is a second
    row only where the platform can fail it, and a skip says so in its own message
    (PHASE-03/EN-3).
-8. **§3 admits `key: value` with an empty value**, and §5's third field would then be
-   the empty string, indistinguishable from a mis-rendered row. Reading: a known key
-   with no value is not `key: value` and fails naming its line (PHASE-02/EX-2).
+8. **§3 admits `key: value` with an empty value.** Decided by the operator: a known key
+   with no value declares nothing, so the field is absent (`summary` lists as `-`,
+   `version` is omitted from the seed) — PHASE-02/EX-2 — while a value continued across
+   lines still fails naming its line.
 9. **§5 says the fourth field is absolute for a file layer**, which cannot hold when
    `$XDG_CONFIG_HOME` is relative. Reading: the field is the layer root's join, so it
    is absolute exactly when the root is (PHASE-04/EX-2).
@@ -334,10 +339,11 @@ plan** was the defect.
   not state. Recorded, not repaired.
 - **7 — the mode-000 fixture cannot fail as root: U.** A test-design defect, not a behaviour
   one; the plan's portable row carries the class instead (PHASE-03/EN-3).
-- **8 — a known key with no value: U (ambiguity).** `summary:` would print an empty third
-  field that no reader can distinguish from a mis-rendered row. The plan reads it as
-  malformed, which is the strict reading of §3's `key: value`; the operator may prefer
-  "absent", which would move the criterion to PHASE-02/EX-2's known-key branch.
+- **8 — a known key with no value: settled, absent.** The operator chose the absent
+  reading over the malformed one: `summary:` alone declares nothing, so the field is
+  absent and the listing shows the dash (PHASE-02/EX-2). The empty column the malformed
+  reading guarded against does not exist under this one, and the multi-line mistake is
+  still caught by the continuation line.
 - **9 — the fourth field's absoluteness: U (nit).** With a relative `$XDG_CONFIG_HOME` the
   field is as absolute as its root. The plan reads it as the root's join; no design change.
 - **10 — §4's "one clause per resolved name" against its own per-file example: U (nit).**

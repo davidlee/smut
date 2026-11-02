@@ -284,6 +284,7 @@ adjudicated. Net: **7 upheld, 3 rejected, 1 was this plan's own defect.**
   (§6's one new variant cannot carry a file-less failure); a symlinked `.git` not being a
   repository to §2 although git resolves it (§2's rule is explicit; exposure exotic); the
   fourth field's absoluteness under a relative `$XDG_CONFIG_HOME`.
-- **One judgement call the operator may overrule.** A known key with no value (`summary:`)
-  is read as malformed rather than absent. Absent is the friendlier reading; it would move
-  one branch of PHASE-02/EX-2, nothing else.
+- **Settled by the operator: a known key with no value declares nothing.** `summary:`
+  alone is absent, not malformed — the listing shows `-` and the seed omits the version.
+  One branch of PHASE-02/EX-2, two pinned tests; a value continued across lines still
+  fails naming its line, which is the mistake worth catching.
