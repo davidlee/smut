@@ -140,3 +140,12 @@ A further pass would probe, in this order:
 None of that is worth a third pass before there is code to point it at: each item is
 first-implemented-then-checked, and the design's remaining risk is prose drift, which
 the plan's red-first tests catch.
+
+### Drift after lock (2026-11-02)
+
+SL-004 moved while this design was being reviewed: its **PHASE-01 is `completed`** at
+`da4c404`, and PHASE-02 is next. Design §6 and the scope's risk note say "SL-004's three
+phases are all still `planned`" — true when written, false now. The ordering constraint
+they state is therefore **live rather than theoretical**: SL-005's refusal phase should
+land before SL-004's PHASE-02, which respells two identity messages in the same
+`src/error.rs`. Enforce it in the plan; do not reopen the design for a dated sentence.
