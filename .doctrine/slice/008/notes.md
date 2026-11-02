@@ -139,10 +139,27 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 ## Harvest
 
 **fresh-as-of:** `SL-008` lifecycle `started`, `PHASE-01` `completed` (roots landed,
-gate green, VT-1/VT-2 PASS at head `c3385c2`), design run `dr-01a19b61` locked at
-revision 36. Next stage: `PHASE-02` (the reader), then 03–05; audit is not open.
+gate green, VT-1/VT-2 PASS at head `c3385c2`), `PHASE-02` **`in_progress`** (the reader
+landed green at `77444e8`, VT-1..VT-5 PASS, deliberately left open for its independent
+review), design run `dr-01a19b61` locked at revision 36. Next stage: the `PHASE-02` review,
+then `PHASE-03`; audit is not open.
 
 ### Produced
+
+- **`PHASE-02` implemented and green at `77444e8`** — `src/conventions.rs` rewritten around
+  `Layer`/`Origin`/`Cause`/`Set`/`Entry`/`Outcome` with the pure `parse(bytes, origin)`,
+  `SHIPPED` as a `(name, bytes)` table read by that same reader, `Ask` owning its set,
+  `StoreError::ArtefactNotLoaded` at exit 1, `hygiene.md` carrying its summary in
+  frontmatter and its own `Conventions:` heading, one guide sentence on the frontmatter
+  loss, and the shipped-surface assertions moved to the body below the fence.
+  Six owned files, 1033 insertions / 121 deletions, one path-limited commit.
+- **The recorded delta is `4015f6a..77444e8`** — exactly the phase's own patch. See
+  § Implementation run → PHASE-02 for why it was narrowed with `--force`.
+- **Five negative controls, each reddening exactly its intended test**, plus a sixth on the
+  spawned surface. They are the phase's real evidence that the reader's tests bite.
+- **A verifier correction of the worker's own green claim** — the gate caught a
+  `clippy::cmp_owned` in the new inventory test that the worker's clippy run had reported
+  clean (see § Learned).
 
 - **`plan.toml` + `plan.md`** — five phases (roots → reader → loader → surface → seed), 5
   phase sheets materialised, every VT row carrying a test name or symbol that can only
@@ -181,6 +198,33 @@ revision 36. Next stage: `PHASE-02` (the reader), then 03–05; audit is not ope
 
 ### Learned
 
+- **`record-delta --commit <S>` records exactly `[S^, S]`, and its guard fires when the
+  phase sheet's stamp predates a foreign commit.** PHASE-02's stamp was `43ca052`, a
+  `doc(sl-010)` commit (`4015f6a`, two `.doctrine/slice/010/` files, proven doc-only with
+  `git show --stat`) landed between the stamp and the phase's code, so the safe default
+  refused to narrow until `--force`. The narrow is the honest range: widening it to the
+  stamp would hand the reviewer a range containing another slice's commit and make the
+  review lie. Narrow only after proving the dropped commit carries none of this phase's
+  code, and say so in the handback.
+- **A mutation that does not compile is not a negative control.** The first version of the
+  "version applied inside `parse`" mutant inserted a duplicate struct field, so the result
+  was a compile error and the "no test failed" reading proved nothing; rewritten to replace
+  the existing field, it reddened `the_shipped_set_parses` and four neighbours. Check that a
+  mutant reddens a *test*, not the compiler.
+- **A worker's clippy claim needs the gate behind it.** The session-B handback reported
+  `cargo clippy --all-targets -- -D warnings` clean while the gate failed on
+  `clippy::cmp_owned` in the new inventory test — a comparison against a freshly built
+  `PathBuf`. One-line fix (`Path::new`); the lesson is that the gate, not the handback, is
+  the evidence.
+- **An exact-value assertion placed first makes every weaker assertion after it
+  unfalsifiable.** A strength-ordered listing test (exact row, then `starts_with`, then
+  `contains`) reads well and hollows out three assertions; the exact row belongs last, where
+  each weaker row still has an input that reddens it.
+- **The compile-forced coupling is exactly what EN-2 predicted.** `HYGIENE`'s retirement
+  broke `src/main.rs:179` and four unit tests; nothing else in the crate referenced the old
+  shape. A type replacement phase is one compile unit, so its "two sessions" are sessions of
+  reasoning, not two independently green commits.
+
 - **Origin printing and byte-identity cannot both hold.** DEC-026 promised a header naming the
   file; DEC-028 made a set's bytes load-bearing. Keeping the bytes and moving the origin to
   the listing was the whole hinge of the design.
@@ -203,6 +247,23 @@ revision 36. Next stage: `PHASE-02` (the reader), then 03–05; audit is not ope
   fixture that makes it falsifiable (`a_home_above_a_repository_is_not_the_project_root`).
 
 ### Open
+
+- **`PHASE-02` is `in_progress`, awaiting its independent code/correctness review** (standing
+  cadence). Green and committed; the seat concludes after the review lands and any
+  `fix-now` finding is corrected.
+- **`every_store_refusal()` omits `NoFreshBasename`** — pre-existing, and PHASE-02 added only
+  its own row. The list's length is now pinned at 13 with a comment naming the gap, so the pin
+  is honest rather than complete. Flagged, not fixed: repairing another phase's inventory is
+  outside this phase's "one variant plus its three inventories".
+- **`77444e8`'s commit message has a hole.** A backtick in the `-m` string ran command
+  substitution, so one line reads "and  is the pure reader over bytes". `--amend` is
+  forbidden on this shared index, so the blemish stands; the subject and every other line
+  are intact and this paragraph is the record.
+- **`doctrine slice research 008` still reports drift**, naming `plan.md` and `plan.toml`
+  only — the sections written after the last restamp. Chronological, not evidential: the
+  code-map hotspots it lists are precisely what PHASE-02 replaced, and PHASE-01's notes
+  already re-verified the map at `d224dc6`. No restamp performed (`research.md` is outside
+  the phase's six files); the seat may restamp.
 
 - **QUE-002** — the environment override (name, target, rank).
 - **IMP-008** — the section grammar and the `--with-conventions` flag; deliberately deferred,
@@ -436,7 +497,83 @@ extends it. Facts here were observed this session at head `de8cf3d`.
   started`, written by the CLI) and another writer's untracked `.doctrine/slice/010/research/`.
   The phase sheet under `.doctrine/state/` is gitignored.
 
+### PHASE-02 — observed at `77444e8`
+
+- **One commit, path-limited with a six-path pathspec:** `77444e8` `feat(sl-008)` over
+  `src/conventions.rs`, `src/conventions/hygiene.md`, `src/error.rs`, `src/learn.rs`,
+  `src/main.rs`, `tests/conventions.rs` — 1033 insertions, 121 deletions. The other writer's
+  staged `README.md` and their untracked `_envrc` were untouched; no `--amend`, `add -A` or
+  reset. HEAD moved once mid-phase (`4015f6a`, `doc(sl-010)`) and was absorbed without a
+  rebase. The message has one blemish — see § Harvest → Open.
+- **Red observed before green:** the test-author run added 17 unit tests against the
+  unimplemented API and the lib test target failed with 58 errors of exactly the expected
+  classes (missing `Layer`/`Origin`/`Cause`/`Set`/`Entry`/`Outcome`/`parse`/`SHIPPED`/
+  `binary_layer`/`listing_of`, the old `Set` fields, `StoreError::ArtefactNotLoaded`).
+- **Negative controls (six, each reddening exactly its intended test):** blank-line skip
+  removed → `a_blank_line_inside_the_fence_is_skipped`; `type`'s sentence replaced by
+  `name`'s → `the_four_derived_keys_are_refused_by_name`; the dash rendered empty →
+  `a_set_that_declares_no_summary_lists_with_a_dash`; the fence allowed anywhere →
+  `a_horizontal_rule_opens_no_frontmatter`; the crate version applied inside `parse` →
+  `the_shipped_set_parses` plus four neighbours; the prose printing a fence line →
+  `a_named_set_prints_the_body_verbatim` and the bins test `conventions_prints_the_shipped_set_without_a_store`.
+- **Gate at `77444e8`:** `just check` exit 0 — 408 lib tests on default features and 421 under
+  `--features fault-injection` (baseline 389/402, +19 each), both clippy configurations clean
+  under `-D warnings`, `fmt --check` clean. `cargo test --all-targets` green (EX-10's only
+  possible evidence: a retired `HYGIENE` cannot compile past an unrewritten `src/main.rs`
+  test, which is exactly what the pre-phase tree did).
+- **`doctrine slice verify-vt 008`:** PHASE-02 `VT-1..VT-5 PASS`; PHASE-01's two rows still
+  `PASS`; PHASE-03..05 `FAIL`/`UNATTRIBUTABLE` on their legitimately absent keywords.
+  Attribution needed the recorded delta first — before it, PHASE-02's rows read
+  `UNATTRIBUTABLE`.
+- **VA-2 — the module read for ambient reach.** No `std::env` read, no `std::fs` call except
+  PHASE-01's `symlink_metadata`, no `Command`, no `unwrap`/`expect`/`panic!`/`unreachable!` in
+  any new non-test code (the only environment is the `env!("CARGO_PKG_VERSION")` build-time
+  constant, in `binary_layer`); `parse` touches no filesystem at all. RV-029 F-1/F-2/F-6/F-8/
+  F-15/F-20 are each discharged by a named line or test — see the handback table, also
+  recorded in the phase sheet's § Findings.
+- **Verifier corrections after the workers' green (logged, not rebriefed):** the exact listing
+  row moved to the end of its test so the four weaker rows above it stay falsifiable; one
+  `clippy::cmp_owned` in the new inventory test fixed (`PathBuf::from` → `Path::new`), which
+  the gate caught and the worker's own clippy run had missed; the inventory-length assertion's
+  message reworded so it does not claim a completeness it does not have.
+- **Deferred/out-of-scope:** the five reconcile obligations were not touched and this phase
+  surfaced nothing new about them. `every_store_refusal()`'s pre-existing omission of
+  `NoFreshBasename` is flagged, not fixed.
+- **Left dirty for the seat:** `.doctrine/slice/008/slice-008.toml` (the `in_progress` flip)
+  and another writer's untracked `_envrc` / `.doctrine/slice/010/`.
+
 ## Autonomy log
+
+- **PHASE-02 — the phase was split by compile unit, not by the charter's editorial seam.**
+  The charter put `SHIPPED`, the binary-layer helper, `ArtefactNotLoaded` and `hygiene.md` in
+  session B, but B cannot compile without A (the new `Set` has no `HYGIENE`) and A cannot
+  compile without the refusal variant (its `resolve` needs it) or without a parseable shipped
+  file. Decided: A = `src/conventions.rs` + `src/conventions/hygiene.md` + `src/error.rs`;
+  B = `src/main.rs` + `src/learn.rs` + `tests/conventions.rs`. Two sessions of reasoning kept;
+  one compile unit, so one commit.
+- **PHASE-02 — `listing()` keeps its no-argument signature; the renderer is a private
+  `listing_of(&[Entry])`.** PHASE-04/EX-2 introduces `listing(entries)`; leaving the public
+  name free keeps that VT keyword (`fn listing(entries`) honest instead of already satisfied.
+  Decided.
+- **PHASE-02 — the recorded delta was narrowed past a foreign commit with `--force`.**
+  `record-delta --commit 77444e8` records exactly `4015f6a..77444e8`; the guard fired because
+  the phase-sheet stamp was `43ca052` and `doc(sl-010)`'s `4015f6a` sat between. Proven
+  doc-only (`git show --stat 4015f6a` → two `.doctrine/slice/010/` files), so sweeping it into
+  the review range would have made the review lie. Decided, evidence in § Harvest → Learned.
+- **PHASE-02 — three verifier edits after the workers' green** (assertion ordering, the
+  clippy `cmp_owned` fix, the inventory message). Decided: minute, mechanical, inside the
+  owned files, and each logged here rather than rebriefed.
+- **PHASE-02 — the workers' clippy claim was wrong and the gate caught it.** Recorded as a
+  process lesson rather than a finding: the gate, not a handback, is the evidence. Decided.
+- **PHASE-02 — `every_store_refusal()`'s missing `NoFreshBasename` row deferred.** Adding it
+  is not this phase's "one variant plus its three inventories", and the pinned count now
+  names the gap. Deferred to the reviewer / backlog.
+- **PHASE-02 — the research advisory's drift left alone.** It names `plan.md`/`plan.toml`
+  (post-restamp plan text), not a code surface; `research.md` is outside the phase's six
+  files. Deferred to the seat, which may restamp.
+- **PHASE-02 — the phase was left `in_progress` on purpose**, per standing review cadence:
+  green, committed, delta recorded, and the seat concludes after the independent review.
+  Decided (operator cadence, not this charter's choice).
 
 - **PHASE-01 — three mutations used as negative controls, each reddening exactly the intended
   test.** `fs::metadata` for `symlink_metadata` → the `.git`-symlink row; `Roots::under`
