@@ -159,11 +159,12 @@ pub enum Reject {
 /// The store could not be read or written: exit 1.
 #[derive(Debug)]
 pub enum StoreError {
-    /// A filesystem step failed, named by the protocol boundary it belongs to or
-    /// by the store operation that reached it.
+    /// A filesystem step failed, named by the protocol boundary it belongs to, by
+    /// the store operation that reached it, or by the layer a set is read from.
     FileSystem {
         /// The boundary the failing step belongs to, as registered in
-        /// [`crate::store::boundary`], or the store operation that failed.
+        /// [`crate::store::boundary`], the store operation that failed, or the layer
+        /// read that failed (`reading the conventions layer`).
         step: &'static str,
         /// The path the step was working on.
         path: PathBuf,
