@@ -1,0 +1,42 @@
+memory_uid = "mem_01a19bce0c187080a465340cfaf6f8bd"
+memory_key = "mem.workflow.shared-worktree.git-discipline"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A shared working tree: commit path-limited, never amend"
+summary = "Concurrent agent threads share one index: path-limited commits only, never amend or reset, and a stray modified file means another live thread"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["git", "workflow"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "20e6be015d0e95c4283ead913a46fd543b6a724d"
+ref_name = "refs/heads/main"
+checkout_state_id = "1e908647dd771c70862bc00c2b53b6bdff4bbe6ccd24dacae5b1216501c8cb68"
+base_commit = "d4f593f213f9f680cae3c0b2a8d8e686ad9a1074"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "none"
+weight = 0
+

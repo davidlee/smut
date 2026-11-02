@@ -1,0 +1,42 @@
+memory_uid = "mem_01a19bcdb9177f53bd0d7597098b312f"
+memory_key = "mem.doctrine.design-run.review-stage"
+schema_version = 1
+memory_type = "pattern"
+status = "active"
+title = "Review-stage mechanics beyond the base set — run findings vs the RV, inert blocking, attestation is not coverage"
+summary = "att- nodes satisfy section attestations; section-reviewed acts refuse; severe RV findings need a route; blocking is inert"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "design-run"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "20e6be015d0e95c4283ead913a46fd543b6a724d"
+ref_name = "refs/heads/main"
+checkout_state_id = "d19addf75249b5cf81ee4ff206594114c3535e87381997e971fe615f44e2e874"
+base_commit = "d4f593f213f9f680cae3c0b2a8d8e686ad9a1074"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "none"
+weight = 0
+
