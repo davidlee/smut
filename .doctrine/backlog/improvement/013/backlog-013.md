@@ -19,6 +19,8 @@ arrives with the work.
 Three layers, local wins:
 
 1. a **project directory** — the project's own sets, travelling with the repository
+   (recommended shape: `.config/smut/<kind>/` at the project root, mirroring the
+   user path — see *Where the project's sets live* below)
 2. **`~/.config/smut/<name>/`** — the user's
 3. the binary — what ships
 
@@ -36,8 +38,10 @@ and the guide's "whatever is stored there is data" sentence stays true without a
 exception clause.
 
 Naming follows from that: whichever word the concept takes, the **directory, the
-command and the file form should carry it together**. `.smut-recipes/` presumes the
-rename; `.smut-conventions/` does not.
+command and the file form should carry it together**. A mirrored
+`.config/smut/<kind>/` satisfies that with the tool as the directory and the
+artefact as the leaf, so a second artefact kind adds a subdirectory rather than a
+dot-entry.
 
 The invariant worth stating as a design goal: **the shipped set is not special.**
 It is a set in the same form, found through the same loader, and it loses to a local
@@ -95,6 +99,60 @@ So this is a loader plus a naming rule, not a new concept.
    actions grates) stays honest; a verb-noun like `magazine`/`trope` does not
    survive a stranger reading `--help`. The cheapest moment to decide is before any
    user has a directory named after it; after that a rename is a migration.
+
+### Where the project's sets live — the mirrored `.config` path
+
+Operator's question: is `$PROJECT_ROOT/.config/smut/conventions/` a silly idea,
+when `~/.config/smut/conventions/` is the user's? It is not silly, and it is rare
+for a specific reason worth naming rather than guessing at.
+
+**What it buys.** One rule covers both scopes: `<root>/.config/smut/<kind>/`. The
+lookup becomes the same relative suffix from two roots, the walk-up terminus is the
+project root, and no new dot-entry appears beside `.smut/` as artefacts accumulate
+(`conventions/`, later `schemas/`). It also reads as *configuration* rather than as
+tool internals, which is the whole data/direction separation — `.smut/` remains the
+store, untouched by STD-001.
+
+**Why it is rarely seen.** `.config` in a repository most strongly means "this
+directory is a home directory" — dotfiles repositories, container home mounts, the
+thing you symlink into `~/.config`. XDG itself defines the config home as
+user-scoped, so a project-local `.config` borrows a name whose established meaning
+is the opposite of project scope. The nearest precedents for a repo-local `.config`
+are a single known path (`.config/dotnet-tools.json`), not a tree of tool homes. So
+the objection is not "nobody does this because it is wrong"; it is "the name already
+means something else".
+
+**The cost, stated honestly.** A reader meeting `.config/smut/` in a fresh checkout
+may assume it is meant to be copied or linked into the home directory — the exact
+inverse of the intent. That misreading is cheap to defeat: the listing prints
+origin, and the header of a loaded set names the file it came from, so a mistake is
+visible the first time anyone runs the command. It is more expensive to defeat after
+users have created files under a different name.
+
+**Conditions, if taken.**
+
+- **Anchored at the project root, not the cwd.** One terminus (the git root) and one
+  suffix; never also read `<cwd>/.config` part-way down the tree, or the rule
+  fragments into per-directory cases.
+- **Origin is always printed.** `conventions` with no argument lists sets with the
+  layer and file each came from; this is the mitigation, not an extra.
+- **Precedence stays total.** Project beats user beats binary, always, with no
+  merge between same-named sets; if shadowing is reported, it is reported as
+  shadowing.
+- **An environment override exists** (`SMUT_CONFIG` or the XDG variable) so a
+  monorepo or dotfiles user can point at one config deliberately rather than
+  fighting the default.
+
+**The alternatives, for comparison.** `.smut-config/<kind>/` — unambiguous
+ownership, one extra dot-dir, no borrowed name. A single `.smut.toml` with a stanza
+per set — tidiest of all and the dominant Rust-tool shape, but it trades away
+file-copy trading, which is the point of user sets, and it puts prose bodies inside
+TOML strings. `.smut/<kind>/` — rejected above, on STD-001 and on the "stored
+content is data" sentence.
+
+**Recommendation:** take the mirrored path with the four conditions. The borrowed
+name is a documentation problem with a one-line cure; the alternative is a
+permanent second dot-dir to save that line.
 
 ## If typed schemas arrive
 
