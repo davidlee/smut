@@ -96,6 +96,63 @@ So this is a loader plus a naming rule, not a new concept.
    survive a stranger reading `--help`. The cheapest moment to decide is before any
    user has a directory named after it; after that a rename is a migration.
 
+## If typed schemas arrive
+
+This is the one open question that bears on the name, so it is worth stating what
+the vocabulary has to survive: **advice versus enforcement.** smut today is defined
+by the absence — DEC-017's "never validated, never auto-selected, never read back" —
+and a typed schema is the opposite posture. If both ever exist, the words have to
+mark which one bites.
+
+- **`conventions` is the best-hedged name**, because it *is* the word for "agreed
+  practice, not enforced" (the whole conventions-over-configuration family).
+  "Conventions vs schemas" reads correctly on sight.
+- **`recipe`, `trope`, `magazine` are indifferent to the axis** — they neither
+  collide nor help, which means `smut recipe` beside `smut schema` would leave a
+  reader unable to infer which one can refuse their declaration. That is worse than
+  a collision.
+- `practice`/`style` hedge almost as well as `conventions`, and no better.
+
+So the naming decision can be made robust to either future without predicting it,
+by decoupling three surfaces that currently look like one decision:
+
+| surface | cost to change later | what it should be named for |
+| --- | --- | --- |
+| the verb | cheap — one arm, docs, a pin | the artefact (a content noun) |
+| the file form | middle — sets are already exportable declarations | the artefact |
+| the **directory on disk** | expensive — users create files in it | **the tool**, not the artefact |
+
+Concretely: `~/.config/smut/conventions/` for user scope, and one *project* config
+directory with per-kind subdirectories — `<dir>/conventions/` now, `<dir>/schemas/`
+if that day comes. One dotfile decision, no migration when a second artefact
+arrives, and `.smut` stays the store (STD-001 untouched) while `.smut-config` (or
+whatever it is called) stays configuration. The uglier alternative — a sibling per
+artefact (`.smut-conventions/`, later `.smut-schemas/`) — also survives; it just
+multiplies directories.
+
+The corresponding mechanical rule: **the loader is generic over declaration kind.**
+Sets are already printed as declarations, so a schema artefact could load through
+the same ladder with a different kind. Costs nothing now; it is the whole hedge.
+
+### Why user-defined conventions are worth building even if schemas are coming
+
+They are the cheapest schema-*discovery* mechanism available. Real user sets show
+which constraints people actually write, on real domains, before any enforcement
+model is committed to — evidence a schema designed up front does not have. That is
+the strongest claim this item can make on its own behalf: "conventions now" is not
+a detour from "schemas later", it is the research for it.
+
+### What must not happen
+
+Conventions must not quietly acquire teeth. If a schema artefact arrives it is a
+*second* thing with its own verb, its own precedence (probably highest, since it
+enforces) and its own validation; the sets keep never validating. The moment a
+conventions file can refuse a declaration, the store's oldest sentence — "whatever
+is stored there is data" — becomes false.
+
+**Revisit trigger:** reopen this if entity validation is ever proposed, or if a year
+of user sets shows the advice is not being adopted.
+
 ## Two discovery questions the layering opens
 
 **How far up to look.** The store's rule is pinned and contrary: "The store is
@@ -164,6 +221,9 @@ depends on whether sets can be layered and resolved.
 Operator inclination of 2026-11-02 — three messages: sets should be tradeable and
 overridable ("trivially easy"); the project's sets should live in a sibling
 directory rather than inside `.smut/`, project-scoped by walking to the nearest git
-root; and `recipe` as a possible verb. Recorded in RFC-001 § Outcome. The reading of
+root; and `recipe` as a possible verb. Recorded in RFC-001 § Outcome. The
+question that governs the naming hedge — whether the future holds user-definable
+typed schemas for entities — is the operator's ("I have no real idea about"), and is
+the reason § If typed schemas arrive exists rather than a decision. The reading of
 `src/conventions.rs`, the DEC-017 comparison, the STD-001 argument, the `recipe`
 collision count and the pins are this repo's.
