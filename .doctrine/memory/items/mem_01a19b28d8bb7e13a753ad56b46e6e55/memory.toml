@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19b28d8bb7e13a753ad56b46e6e55"
+memory_key = "mem.fact.doctrine.kinowledge-facet-array-comma-splitting"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "retracted"
+title = "Facet array setters split on commas, so a sentence in `consequences` becomes fragments"
+summary = 'Retracted at creation: the key misspells "knowledge". Superseded by mem.fact.doctrine.knowledge-facet-array-comma-splitting.'
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "knowledge", "cli", "footgun"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "9e182749bd3244e39252e3ac9dc2a69359346876"
+ref_name = "refs/heads/main"
+checkout_state_id = "b93c55f93e1cf09773c78e95a731357e1247f03b305ae7dba23525abc3ab3ebf"
+base_commit = "587f712eb5b743cf0a8035d0042dfd529ab73cea"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+

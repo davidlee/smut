@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19b28ebaf70e3a11a98c913239304"
+memory_key = "mem.fact.doctrine.knowledge-facet-array-comma-splitting"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "Facet array setters split on commas, so a sentence in `consequences` becomes fragments"
+summary = "`knowledge edit decision --alternatives/--consequences` split on commas, silently fragmenting any element that contains one; keep those texts comma-free."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "knowledge", "cli", "footgun"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "9e182749bd3244e39252e3ac9dc2a69359346876"
+ref_name = "refs/heads/main"
+checkout_state_id = "6ed343a93902dcf3e77a0385a03dc05cfce66ab8feff04ff7de1282f214930e9"
+base_commit = "587f712eb5b743cf0a8035d0042dfd529ab73cea"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
