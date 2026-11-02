@@ -141,12 +141,15 @@ pub enum Reject {
         /// The format's name.
         format: String,
     },
-    /// `conventions` was given a set name no release ships. The names that do
-    /// exist travel with the refusal, so the caller can retry (§9.1).
+    /// `conventions` was given a set name no release ships. What exists travels
+    /// with the refusal, one rendered clause per resolved file, so the caller can
+    /// retry from the message alone (§9.1, SL-008 §4).
     UnknownConvention {
         /// The name asked for.
         found: String,
-        /// The names that exist, in listing order.
+        /// The sets that exist, in listing order, each already rendered as
+        /// `name (layer)`, or `name (layer, did not load: <reason>)` for a file
+        /// that did not load.
         sets: Vec<String>,
     },
     /// `conventions --format` takes `text` and `json` only (§9.1).
@@ -380,7 +383,7 @@ impl fmt::Display for Reject {
             Reject::UnknownConvention { found, sets } => write!(
                 formatter,
                 "unknown conventions set {found}; the sets are: {}",
-                sets.join(", ")
+                sets.join("; ")
             ),
             Reject::UnknownConventionFormat { format } => write!(
                 formatter,
@@ -697,7 +700,7 @@ mod tests {
             (
                 Reject::UnknownConvention {
                     found: "epistemic-records".to_owned(),
-                    sets: vec!["hygiene".to_owned()],
+                    sets: vec!["hygiene (binary)".to_owned()],
                 }
                 .into(),
                 INVALID_INPUT,
@@ -978,5 +981,25 @@ mod tests {
         };
         assert!(dot.to_string().contains("dot"), "{dot}");
         assert!(dot.to_string().contains("markdown"), "{dot}");
+    }
+
+    // Asserted whole: the clauses are the listing's information in the listing's
+    // order, and the join between them is what lets a caller retry from the
+    // message alone (SL-008 §4, RV-029 F-9).
+    #[test]
+    fn the_unknown_conventions_refusal_joins_rendered_clauses() {
+        let refusal = Error::Reject(Reject::UnknownConvention {
+            found: "nonsense".to_owned(),
+            sets: vec![
+                "hygiene (project)".to_owned(),
+                "mine (user, did not load: the file is not UTF-8 text)".to_owned(),
+            ],
+        });
+
+        assert_eq!(
+            refusal.to_string(),
+            "unknown conventions set nonsense; the sets are: hygiene (project); mine (user, did not load: the file is not UTF-8 text)"
+        );
+        assert_eq!(refusal.exit_code(), INVALID_INPUT);
     }
 }
