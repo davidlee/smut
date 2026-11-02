@@ -227,6 +227,41 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
 
 ## Implementation run
 
+### Run preflight — continuation (2026-11-03, PHASE-04 → PHASE-02 → PHASE-03)
+
+Seat-level facts for this run, reusing PHASE-01's and refreshing what could have
+moved since:
+
+- **Lifecycle.** SL-010 `started`, `phases: 1/4`; PHASE-01 `completed` at `1fb66de`,
+  PHASE-04/02/03 `planned`. Design locked at revision 35; plan approved; the three
+  remaining runtime sheets are materialised stubs and are `/phase-plan`'s first job.
+- **Gate.** `just check` green at `2e3eeb0` before any charter — `build`, `lint`
+  (`clippy --all-targets -D warnings`, default *and* `--all-features`), `fmt
+  --check`, and `cargo test` in both feature configurations. Exit 0, no warnings,
+  ~2 s warm, no network.
+- **Dirty paths.** `git status --porcelain` shows only `?? .quotient/` and `??
+  _envrc` — untracked, not ours, never restaged. `README.md`, `src/error.rs` and
+  `.doctrine/slice/008/` are clean (SL-008 landed at `d1f0700`).
+- **Toolchain in this jail.** `cargo 1.100.0-beta.7`, `rustc 1.100.0-beta.7`; `/tmp`
+  and `$HOME` writable; native `subagent` delegation available with a generic
+  `sub-orchestrator` role (nested children allowed).
+- **`doctrine slice verify-vt 10`** is red exactly where PHASE-04/02/03 are owed, and
+  its own words mislead in three places: PHASE-04 VT-3/VT-4 FAIL on absent keywords
+  in `tests/dsl.rs` (real work, not a missing file); PHASE-03 VT-2 FAILs only because
+  `src/learn.rs` is already in this slice's delta — its keyword lands with PHASE-03;
+  PHASE-02's three read UNATTRIBUTABLE until its delta is recorded. Attribution
+  follows a **recorded delta** (`doctrine slice record-delta 10 <PHASE> --commit
+  <sha>`), not a commit, so each phase records its own after it lands.
+- **PHASE-04's starting point.** `src/dsl.rs` (403 lines) has `Line`, the full
+  `Flags`, `compile`, `value`, `OPERATORS`, `Where`, `members()` and `names()`. Six
+  flag fields are unwired (`budget`, `select`, `order`, `limit`, `edges`, `from`),
+  `members()` is the single comma splitter and the list rule attaches there, and
+  `Reject` already holds two of the six `q` variants (`JsonOperand`,
+  `UnreadableToken`) — PHASE-04 owes the other four, the twelve flag keys, the list
+  and strictness rules, and every message test.
+- **Charter order** is the plan array: PHASE-04 → PHASE-02 → PHASE-03. Ids are
+  append-only; the split seam is not the sequence.
+
 ### PHASE-01 — the compiler's core (completed 2026-11-03)
 
 Environment facts, so the next phase does not rediscover them:
