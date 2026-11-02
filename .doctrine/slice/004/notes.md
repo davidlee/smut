@@ -396,6 +396,60 @@ not needed; no worker failure and no model substitution. Wall-clock cost was dom
 by the one `just check` (~all suites, 0 failures); test-target runs are sub-second
 against the warm `target/`.
 
+### Run close-out — 2026-11-02 (super-orchestrator seat)
+
+**Charter `a4a7422e` terminated at PHASE-01's boundary.** One phase chartered, one
+phase landed. PHASE-02/03 uncharted and untouched; audit not begun. Terminus is the
+operator's SL-005 ruling above, not fatigue: PHASE-02/EN-5 binds its entrance on
+SL-005's refusal phase in the shared `src/error.rs`.
+
+**Verified independently at the seat** (the handback was not taken on trust):
+
+- Three commits, each pathspec-scoped — `d7b6daa` (`src/store/mod.rs` +
+  `tests/store_corruption.rs` + `tests/cli_contract.rs`), `0b63376` (the same two
+test files), `81a2fc6` (`notes.md` only). No stray path, no unrelated dirty file.
+- `just check` re-run from the seat: **exit 0**, 0 failures, 0 warnings — 352 lib
+  (365 with `--features fault-injection`), 23 `store_corruption`, 40 `cli_contract`,
+  and every pre-existing suite at its baseline count.
+- `doctrine slice verify-vt 4`: PHASE-01 VT-1/VT-2/VT-3 all **PASS**.
+- Invariants held: `ENTITY_ID == "id"`, `FORMAT_VERSION == 1`,
+  `MANIFEST_FORMAT_VERSION == 1`, `Cargo.toml` 0.2.0, no tags. `git log` over the
+  range shows **no** change to `src/entity.rs`, `src/error.rs`, `docs/`, `Cargo.toml`
+  or `README.md` — EX-4 and EX-5 hold, `scan_refs` keeps its panic assertion as an
+  unreachable-after-load assertion.
+- Placement and shape read at the source, not the report: the call sits after the
+  root `IdDisagreement` check and before `entities.insert`; one predicate
+  (`crate::entity::reference_id`); every object value and array element descended,
+  including through an object that already scores a valid identity; path pushed and
+  truncated, so allocation is the one `String` plus the final reason.
+
+**The keyword checkpoint resolved cleanly.** `verify-vt` first reported VT-1 and VT-2
+FAIL on missing keywords, the phase was re-opened rather than left green-by-luck,
+and `0b63376` satisfied both by *naming* — a doc-comment sentence saying why the
+fixtures spell the key literally rather than through `ENTITY_ID`, plus two test
+renames that say what they refuse. Seat-checked: the fixtures themselves still spell
+`"id"` literally (line 303/323/343/366/388 of `tests/store_corruption.rs`), the plan
+is unedited, and no assertion was loosened. VT-1's intent — the semantic target
+visible in the diff, PHASE-02's respell a reviewed act — survives intact.
+
+**Conformance at the terminus.** `doctrine slice conformance 4`: conformant
+`src/store/mod.rs`, `tests/cli_contract.rs`, `tests/store_corruption.rs`. Undeclared
+carries `notes.md` and `slice-004.toml` only — the seat's own governance commits that
+fall inside the recorded registry range `fdd5f4d..0b63376`; nothing source-side is
+undeclared. Undelivered lists the 19 selector paths PHASE-02/03 will deliver, as
+expected mid-slice.
+
+**One translation to carry forward.** VT-1's "a malformed identity reached inside an
+ordinary id-valued object" cannot exist at format 1 — `id` *is* identity. The phase
+realised it as `a_valid_reference_shaped_object_does_not_stop_the_walk` over
+`{"payload":{"id":"opaque","meta":{"id":null}}}`: an object that already scores a
+valid identity, with the corruption one level below. PHASE-02's literal-key paired
+cases must restate that shape against `smut_id`, not merely respell it.
+
+**Cost.** Five native pi `worker` children, serial, main worktree, no worktrees, no
+Quotient, inherited model configuration; no worker failure, no model substitution.
+Wall time dominated by two `just check` runs.
+
 ## Pre-implementation review
 
 Two independent reviews (Seat A: obligation ledger; Seat B: sequencing and surface) ran
