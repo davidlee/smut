@@ -351,3 +351,18 @@ extends it. Facts here were observed this session at head `de8cf3d`.
   its charter (skill), so the seat does not pre-flip `PHASE-01`; each charter is briefed to
   flip its own phase to `in_progress` on entry and `completed` only once criteria, tests and
   the commit exist.
+
+## Autonomy log
+
+- **PHASE-01..05 — model envelope: inherit, all five. Operator ruling, not the seat's.**
+  Asked once, at charter 1 (`6daf8f6e`), because `super-orchestrator` forbids the seat from
+  switching a model on its own initiative and `subagents` carries no pins. Answered
+  `llm-gateway/deepseek-flash (inherit)`. Every charter therefore runs on the configured
+  default at thinking high — PHASE-02/03/04 included, though `plan.md` § Model requirement
+  rates those frontier-shaped and calls PHASE-03 "the phase that must not go to a weak
+  model". Decided: inherit. Standing, not per-charter: do not reopen it at charter 3.
+  The `plan.md` escalation triggers survive the ruling unchanged — a phase that cannot hold
+  its criterion list splits at its stated seam (P2's or P4's) or escalates, and appending a
+  phase is always available; dropping rows, weakening a bound or handing back a green gate
+  with a silent failure mode present is not. A frontier-shaped phase that reddens twice on
+  the inherited model is a `contact_supervisor` item, not a re-charter on another model.
