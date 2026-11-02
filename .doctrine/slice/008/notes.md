@@ -737,9 +737,11 @@ read.
   `-D warnings` (zero warnings in either), `fmt --check` clean, then the suite twice — **424 lib
   tests on default features and 437 under `--features fault-injection`** (baseline 408/421,
   +16 each from this phase). `pre-existing failures: none`; no jail-only failures.
-- **`doctrine slice verify-vt 008` exits 0 with `PHASE-03 VT-1 PASS`**; PHASE-01's two rows and
+- **`doctrine slice verify-vt 008` reports `PHASE-03 VT-1 PASS`**; PHASE-01's two rows and
   PHASE-02's five still `PASS`; PHASE-04's VT-1..VT-4 `FAIL` and its VT-5/VT-6 `UNATTRIBUTABLE`,
-  PHASE-05's two `FAIL` — all on symbols those phases have not written yet.
+  PHASE-05's two `FAIL` — all on symbols those phases have not written yet. The command exits 1
+  at this boundary for exactly that reason (PHASE-01's and PHASE-02's notes record the same)
+  and not because of anything PHASE-03 owns.
 - **EX-8 — the binary references neither function.**
   `grep -rn "conventions::load\|conventions::set_in_force\|set_in_force" src/main.rs src/cli.rs
   src/learn.rs tests/` → no matches (exit 1). The `load()` hits elsewhere in `tests/*.rs` are the
