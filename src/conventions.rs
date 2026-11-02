@@ -19,6 +19,8 @@
 //! because the reader who meets the upsert is the one who already edited it
 //! (§9.3).
 
+use std::path::{Path, PathBuf};
+
 use serde_json::{Map, Value};
 
 use crate::entity::ENTITY_ID;
@@ -30,6 +32,74 @@ const FORMAT_TEXT: &str = "text";
 
 /// The `--format` that prints a declaration instead of prose.
 const FORMAT_JSON: &str = "json";
+
+/// The two directories a layer's sets are read from — the `…/smut` directories
+/// and nothing deeper, so no root carries a declaration kind.
+#[derive(Debug)]
+pub struct Roots {
+    /// `<repository>/.config/smut`.
+    pub project: PathBuf,
+    /// `<config-home>/smut`, or `None` when the process has no home.
+    pub user: Option<PathBuf>,
+}
+
+impl Roots {
+    /// The two layer roots for an already-resolved repository and user root.
+    ///
+    /// This is the only place in the crate that spells `.config/smut`, because
+    /// the pairing is what must not drift: `project_root` and `user_root`
+    /// return the directories a caller searched, and only the project layer
+    /// gains a `.config` segment on the way in. Nothing is read here, so a
+    /// layer that does not exist is the loader's business, not the root's.
+    pub fn under(project_root: PathBuf, user_root: Option<PathBuf>) -> Roots {
+        Roots {
+            project: project_root.join(".config/smut"),
+            user: user_root,
+        }
+    }
+}
+
+/// The repository `start` sits in: the nearest ancestor holding a `.git` entry.
+///
+/// The walk includes `start` and inspects `.git` with `symlink_metadata`, so it
+/// describes the entry itself rather than what it points at: a `.git` symlink
+/// is neither a directory nor a regular file, and must not turn its directory
+/// into a checkout or end the walk there. A `.git` regular file does mark a
+/// repository, as a worktree does. The walk-up terminus matters when no
+/// ancestor matches — the start directory then stands in as the root so the
+/// project layer still has a place to sit, and it never walks above the
+/// filesystem root.
+///
+/// This returns the repository directory, never a layer directory: the layer is
+/// [`Roots::under`]'s one join away, and keeping the two apart is what lets a
+/// caller tell a checkout from the directory it stores its sets in.
+pub fn project_root(start: &Path) -> PathBuf {
+    for ancestor in start.ancestors() {
+        let is_repository = std::fs::symlink_metadata(ancestor.join(".git"))
+            .is_ok_and(|entry| entry.file_type().is_dir() || entry.file_type().is_file());
+
+        if is_repository {
+            return ancestor.to_path_buf();
+        }
+    }
+
+    start.to_path_buf()
+}
+
+/// The user layer's `smut` directory, from a config home or else a home.
+///
+/// Everything is a parameter: the binary is the only code that reads
+/// `XDG_CONFIG_HOME` and `HOME`, and it passes what it found, so this stays
+/// infallible and testable without an environment. An empty config home is no
+/// config home, because an empty path is what an unset variable looks like once
+/// it has been joined onto anything; and no home at all means the process has
+/// no user layer, which is `None` rather than an invented path.
+pub fn user_root(config_home: Option<&Path>, home: Option<&Path>) -> Option<PathBuf> {
+    match config_home {
+        Some(config_home) if !config_home.as_os_str().is_empty() => Some(config_home.join("smut")),
+        _ => home.map(|home| home.join(".config").join("smut")),
+    }
+}
 
 /// One shipped conventions set.
 #[derive(Debug)]
@@ -283,5 +353,274 @@ mod tests {
         assert_eq!(printed.lines().count(), 1, "{printed}");
         assert!(printed.ends_with('\n'), "{printed}");
         assert_eq!(printed.matches('\n').count(), 1, "{printed}");
+    }
+
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    /// A temporary directory tree for the layer-root fixtures.
+    struct Scratch {
+        path: PathBuf,
+    }
+
+    impl Scratch {
+        fn new() -> Self {
+            static NEXT: AtomicU64 = AtomicU64::new(0);
+
+            let path = std::env::temp_dir().join(format!(
+                "smut-conventions-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&path).expect("a scratch directory");
+
+            Self { path }
+        }
+
+        /// A directory under the scratch root.
+        fn directory(&self, name: &str) -> PathBuf {
+            let path = self.path.join(name);
+            fs::create_dir_all(&path).expect("a fixture directory");
+
+            path
+        }
+
+        /// A repository directory, before any `.git` entry exists in it.
+        fn repo(&self, name: &str) -> PathBuf {
+            self.directory(name)
+        }
+
+        /// A `.git` directory: an ordinary checkout.
+        fn git_directory(&self, repository: &Path) {
+            fs::create_dir_all(repository.join(".git")).expect("a .git directory");
+        }
+
+        /// A `.git` regular file carrying a `gitdir:` line, as a worktree has.
+        fn git_file(&self, repository: &Path) {
+            fs::create_dir_all(repository).expect("a repository directory");
+            fs::write(
+                repository.join(".git"),
+                "gitdir: ../.git/worktrees/fixture\n",
+            )
+            .expect("a gitdir file");
+        }
+
+        /// A directory nested inside `parent`.
+        fn child(&self, parent: &Path, name: &str) -> PathBuf {
+            let path = parent.join(name);
+            fs::create_dir_all(&path).expect("a nested directory");
+
+            path
+        }
+
+        /// The conventions directory a reader would use under `repository`.
+        fn layer(&self, repository: &Path) -> PathBuf {
+            let path = repository.join(".config").join("smut").join("conventions");
+            fs::create_dir_all(&path).expect("a layer directory");
+
+            path
+        }
+
+        /// Fails loudly when a walk-terminus fixture sits inside a checkout.
+        ///
+        /// A `$TMPDIR` under a repository would end the walk above the fixture,
+        /// so the fixture would redden for a reason that is not the one under
+        /// test; naming the offending ancestor keeps that legible.
+        fn assert_no_repository_above(&self) {
+            for ancestor in self.path.ancestors() {
+                if fs::symlink_metadata(ancestor.join(".git")).is_ok() {
+                    panic!(
+                        "{} holds a .git entry, so this scratch directory is inside a checkout \
+                         and no-repository fixtures cannot see the filesystem root",
+                        ancestor.display()
+                    );
+                }
+            }
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn the_project_root_is_the_nearest_repository() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        scratch.git_directory(&repo);
+        let layer = scratch.layer(&repo);
+
+        let src = scratch.child(&repo, "src");
+        let child = scratch.child(&src, "deep");
+
+        let found = project_root(&child);
+
+        assert_eq!(found, repo, "the nearest repository is the project root");
+        assert_ne!(
+            found,
+            layer,
+            "the layer directory is not the project root: {}",
+            found.display()
+        );
+        assert_eq!(
+            found.join(".config").join("smut").join("conventions"),
+            layer,
+            "the layer sits under the returned root rather than being it"
+        );
+    }
+
+    #[test]
+    fn the_walk_stops_at_the_nearest_repository() {
+        let scratch = Scratch::new();
+        let outer = scratch.repo("outer");
+        scratch.git_directory(&outer);
+
+        let vendored = scratch.child(&outer, "vendored");
+        let inner = scratch.child(&vendored, "inner");
+        scratch.git_directory(&inner);
+
+        let child = scratch.child(&inner, "src");
+
+        let found = project_root(&child);
+
+        assert_eq!(found, inner, "the nearest repository is the project root");
+        assert_ne!(
+            found, outer,
+            "the walk stops at the first repository and does not return the outer one"
+        );
+    }
+
+    #[test]
+    fn a_git_file_marks_a_repository() {
+        let scratch = Scratch::new();
+        let worktree = scratch.repo("worktree");
+        scratch.git_file(&worktree);
+
+        let child = scratch.child(&worktree, "src");
+
+        let found = project_root(&child);
+
+        assert_eq!(
+            found, worktree,
+            "a .git regular file marks a repository as much as a directory does"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_git_entry_that_is_neither_kind_does_not_stop_the_walk() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        scratch.git_directory(&repo);
+
+        let vendored = scratch.child(&repo, "vendored");
+        std::os::unix::fs::symlink(repo.join(".git"), vendored.join(".git"))
+            .expect("a .git symlink");
+
+        let child = scratch.child(&vendored, "src");
+
+        let found = project_root(&child);
+
+        assert_ne!(
+            found,
+            vendored,
+            "a .git symlink is neither a directory nor a regular file, so {} is not a repository",
+            vendored.display()
+        );
+        assert_eq!(
+            found, repo,
+            "the walk continues past the symlink to the repository above it"
+        );
+    }
+
+    #[test]
+    fn no_repository_above_leaves_the_start_directory_as_the_root() {
+        let scratch = Scratch::new();
+        scratch.assert_no_repository_above();
+
+        let child = scratch.child(&scratch.path, "src");
+
+        let found = project_root(&child);
+
+        assert_eq!(
+            found,
+            child,
+            "no repository anywhere above leaves the start directory itself as the root: {}",
+            found.display()
+        );
+    }
+
+    #[test]
+    fn the_user_root_is_the_config_home() {
+        let scratch = Scratch::new();
+        let config_home = scratch.directory("config");
+        let home = scratch.directory("home");
+
+        let found = user_root(Some(&config_home), Some(&home));
+
+        assert_eq!(found, Some(config_home.join("smut")));
+        assert_ne!(
+            found,
+            Some(config_home.join(".config").join("smut")),
+            "a given config home is not a home directory and gains no .config segment"
+        );
+    }
+
+    #[test]
+    fn an_empty_config_home_falls_through_to_home() {
+        let scratch = Scratch::new();
+        let home = scratch.directory("home");
+
+        let found = user_root(Some(Path::new("")), Some(&home));
+
+        assert_eq!(
+            found,
+            Some(home.join(".config").join("smut")),
+            "an empty config home is no config home, so the home directory answers"
+        );
+    }
+
+    #[test]
+    fn no_config_home_is_an_absent_layer() {
+        let scratch = Scratch::new();
+        let home = scratch.directory("home");
+
+        assert_eq!(
+            user_root(None, Some(&home)),
+            Some(home.join(".config").join("smut"))
+        );
+        assert_eq!(user_root(None, None), None, "no home is no user layer");
+    }
+
+    #[test]
+    fn the_layer_roots_are_the_two_smut_directories() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let user = scratch.directory("home").join(".config").join("smut");
+
+        let roots = Roots::under(repo.clone(), Some(user.clone()));
+
+        assert_eq!(
+            roots.project,
+            repo.join(".config").join("smut"),
+            "the project layer is exactly <repository>/.config/smut"
+        );
+        assert_eq!(
+            roots.user,
+            Some(user.clone()),
+            "the user root is stored unchanged"
+        );
+
+        let without_user = Roots::under(repo.clone(), None);
+
+        assert_eq!(
+            without_user.project,
+            repo.join(".config").join("smut"),
+            "an absent user layer does not change the project layer"
+        );
+        assert_eq!(without_user.user, None, "an absent user root stays absent");
     }
 }
