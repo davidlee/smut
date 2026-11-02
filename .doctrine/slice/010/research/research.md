@@ -148,6 +148,17 @@ the corpus coherent, and removes the half-wrong advice that IDE-006's own text h
 at ("`write status=open,resolved` for either" is only true when both conditions are
 `=`).
 
+> **Corrected at the design review (RV-031 F-2, 2026-11-02).** Two claims here do not
+> survive. JSON *can* spell a repeated `!=` or `~` — with `$and` over field predicates,
+> which `predicate::parse` accepts — and both repeats are satisfiable, so DEC-027's
+> decidability rule does not reach them and `cannot be satisfied` would be false of
+> them. What forces a refusal is the emit shape, not the specification: `q` writes one
+> condition object with one key per operator, so a second `!=` or `~` cannot be carried
+> at all. It is refused in the caller's tokens, for that reason. Two differing `=` are
+> still refused as a contradiction (unspellable in one condition object, and
+> unsatisfiable); an exact repeat collapses. `status=open status!=resolved` is
+> satisfiable and **answered**, not refused.
+
 **F2 — the guide's recipes are a three-artifact surface.** DEC-016 pins the recipe's
 spelling; `src/learn.rs` prints it as constants; `tests/fixture.rs` executes those
 constants with a `IDS` → JSON-array substitution. IDE-006's worked examples change the
@@ -196,6 +207,13 @@ contradiction family; compile everything else on one field and let `predicate::p
 judge. Removes a refusal, a message and a test; inherits a sounder one. Scope § objective
 4's "duplicate field" item must be restated, and R5 in the scope is answered rather than
 left open.
+
+> **Amended at the design review (RV-031 F-2, 2026-11-02).** The delta is one refusal
+> short. The emit shape carries one `=` and one `!=` and one `~` per field, so a second
+> `!=` or `~` and an empty member in any flag list are refused too — in the caller's
+> tokens, not in the contradiction family, because they are satisfiable and
+> `smut query` spells them. "Compile everything else on one field" survives for every
+> pair the object can hold, including `status=open status!=resolved`, which is answered.
 
 **D2 — the slice gains a coupled obligation (from F2).** DEC-016's amendment, the three
 `EXAMPLE_*` constants, and the fixture harness's token-list path. Affected surface gains

@@ -1,0 +1,113 @@
+# Implementation plan for SL-010 — the authored, durable phase plan.
+#
+# This is the single source of each phase's objective, criteria, verification,
+# and links. Runtime status lives separately under .doctrine/state/ (phase
+# tracking) — never record progress here. Hand-edit freely: the tool reads this
+# file but does not rewrite it.
+schema  = "doctrine.plan.overview"
+version = 1
+slice   = "SL-010"
+
+[specs]
+primary       = []
+collaborators = []
+
+[requirements]
+targets      = []
+dependencies = []
+
+# Three phases, in the order the design's own risk sits in: the compiler can be
+# proved alone (a pure function with a table for a contract), the verb can only be
+# proved end to end, and the guide can only be proved once there is a command to
+# type. Each phase carries the routed obligations of RV-031 findings it settles;
+# the finding ids are cited inline in the criteria text below.
+
+[[phase]]
+id        = "PHASE-01"
+name      = "The compiler — words to a specification, and six refusals"
+objective = "`src/dsl.rs` compiles one argv token line and its flags into the specification object design §2 defines, exhaustive over the surface in §1 and silent about the store: `Line`, `Flags`, `compile`, `value`, the operator table, and the six `Reject` variants the front-end raises. Every line of words the guide will print equals the JSON it denotes, asserted as `Spec` equality, and every refusal names what the caller typed."
+entrance_criteria = [
+  { id = "EN-1", text = "design.md read whole at revision 35; §1 (the surface), §2 (the compiler) and §3 (the refusals) are the specification for this phase — the tokens, the twelve flags, the character constraint, the merge rules and the six message rows." },
+  { id = "EN-2", text = "src/spec.rs read: `parse(&Value)` is the only ingress, the `parse_*` helpers are private, and the compiler therefore builds a JSON object and never a `Spec`. A widening of that surface is out of scope (DEC-038)." },
+  { id = "EN-3", text = "src/predicate.rs's `contradiction` and its seven descriptions read, and src/error.rs's `ContradictoryFieldConditions` `Display` arm read: this phase supplies a description, not a variant, for the two cases it inherits (RV-031 F-2, F-4)." },
+]
+exit_criteria     = [
+  { id = "EX-1", text = "`src/dsl.rs` exists with the `//!` header naming DEC-034…DEC-041, and `src/lib.rs` exports it. `Line`, `Flags`, `compile` and `value` carry the doc comments design §2 prints, including the JSON-string-literal exclusion and its double-unquoting reason." },
+  { id = "EX-2", text = "Token classification, in the design's stated order: a token whose first character is `{` is refused with the JSON-operand sentence (RV-031 F-1); else a token carrying no operator is a root; exactly one operator splits field from value; more than one is refused naming the token and both operators." },
+  { id = "EX-3", text = "Value typing: a JSON boolean, number or null becomes that literal; everything else stays its own text, including `007`, `+1`, `0x10`, `1_000`, `v1.2` and any token containing quote characters; `1.0` and `1e3` are numbers. `status=` is the empty string, accepted." },
+  { id = "EX-4", text = "Merge into a `BTreeMap`-ordered `where`: one condition per operator per field. An exact repeat collapses into the condition already there; two differing `=` are refused as `ContradictoryFieldConditions` with a description naming the operator and no operand literal; a second `!=` or `~` is refused in the caller's own tokens, because the emitted object cannot carry it (RV-031 F-2). `status=open status!=resolved` compiles and is answered (RV-031 F-3)." },
+  { id = "EX-5", text = "`--has` and `--missing` merge into the same `where` as token conditions, and on one field they are refused rather than overwritten, with `$exists is given both true and false` (RV-031 F-4)." },
+  { id = "EX-6", text = "One comma-list rule serves every list on the surface — `=`, `--select`, `--follow`, `--backlinks`, `--has`, `--missing`, `--order` — and an empty member is refused naming the list; `any` is accepted only as a whole value, and refused inside a list (RV-031 F-5)." },
+  { id = "EX-7", text = "`--order`'s direction is parsed here, and anything but `asc` or `desc` is refused; `--limit all` is refused naming `get`; `--ids` beside `--select` is refused naming both flags; `--depth` or `--budget` with no direction is refused naming the flag that was typed." },
+  { id = "EX-8", text = "`src/error.rs` gains the six variants design §6 enumerates — a malformed or ambiguous token, a JSON operand, a missing direction, a direction outside `asc`/`desc`, an unreachable limit, a conflicting selection — each with a `Display` arm and one whole-rendered-line message test. The two-`=` and `$exists` cases reuse `ContradictoryFieldConditions` (RV-031 F-11); nothing is a substring assertion." },
+  { id = "EX-9", text = "The numeric flags arrive as text and are handed to `spec::parse`, not parsed by clap or by the compiler: `--depth abc` and `--depth=-1` both reach `depth must be a nonnegative integer` (RV-031 F-7)." },
+  { id = "EX-10", text = "Refusal selection is deterministic: tokens are read in source order and flags in a fixed order, so a line with two defects reports the same one every time." },
+  { id = "EX-11", text = "The repo's gate is green: `cargo test`, the linter and the formatter, with no warnings." },
+]
+verification      = [
+  { id = "VT-1", expects = "the equivalence spine: each guide recipe compiled from words equals the `Spec` its JSON denotes, and value typing rows for `true`, `false`, `3`, `-2`, `null`, `007`, `v1.2`, `1.0` and a quoted-looking token", test_file = "tests/dsl.rs", keywords = ["a_line_of_words_equals_the_specification_it_denotes", "a_value_is_a_json_literal_only_when_it_is_one", "a_quoted_looking_token_keeps_its_quotes"], waived = false },
+  { id = "VT-2", expects = "the merge rules: identical repeats collapse, two differing `=` are a contradiction not an `$in`, the inherited sentence is spoken, a second `!=`/`~` is refused in the caller's tokens, and `null` and `--missing` are different requests", test_file = "tests/dsl.rs", keywords = ["two_equals_on_one_field_is_a_contradiction_not_an_in_list", "a_same_value_contradiction_speaks_the_specifications_sentence", "null_and_missing_are_different_requests"], waived = false },
+  { id = "VT-3", expects = "every refusal: one test per variant asserting the whole rendered line, refusing what was typed and inventing no field, plus determinism of the selected defect and the two JSON-detecting cases", test_file = "tests/dsl.rs", keywords = ["every_refusal_names_what_was_typed_and_never_a_field_it_invented", "the_same_two_defects_refuse_the_same_one_every_time"], waived = false },
+  { id = "VA-1", expects = "`src/dsl.rs` is a pure function over its argument line: no `Store`, no filesystem, no environment, no `std::env` — checked by reading the module, since the type signature alone does not prove it", waived = false },
+]
+specs             = []
+requirements      = []
+
+[[phase]]
+id        = "PHASE-02"
+name      = "The verb — one pipeline, one envelope, one refusal vocabulary"
+objective = "`smut q` is an eighth `Sub` variant whose bare positional carries no clap attribute, and whose arm compiles the line, parses the object and hands the `Spec` to the `Request::Query` the machine verb builds — before any store exists (DEC-004 step 1). Its stdout is byte-identical to `smut query` for the traversing and `--ids` recipes, its exit codes are the specification's, and nothing about `smut render` moves."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01 complete: `dsl::compile` exists, its six refusals are witnessed, and `cargo test --test dsl` is green." },
+  { id = "EN-2", text = "src/cli.rs read at the `Sub` enum, the `parse` entry point and the `Request::Query` arm, so the new variant lands beside its neighbours rather than in a new layer; `src/main.rs`'s dispatch read to confirm no arm is needed (DEC-004)." },
+  { id = "EN-3", text = "The clap shape read against the design's §4 table: no attribute on the positional, and the four silent alternatives (`trailing_var_arg`, `allow_hyphen_values`, `last`, `value_terminator`) named in a comment as refuted by DEC-037." },
+]
+exit_criteria     = [
+  { id = "EX-1", text = "`Sub::Q` carries `tokens: Vec<String>` with no `#[arg]` attribute, and twelve flags; the usage line reads `Usage: smut q [OPTIONS] [TOKENS]...`." },
+  { id = "EX-2", text = "The arm builds a `Line`, calls `dsl::compile`, calls `spec::parse`, and returns `Invocation::Request(Request::Query(..))`. No `Store` is opened, locked or recovered before the specification validates (DEC-004)." },
+  { id = "EX-3", text = "Tokens and flags interleave in any order and keep source order; `--` reaches a hyphen-leading id; `--from=ID` appends after the bare roots." },
+  { id = "EX-4", text = "Exit codes: every refusal exits 2; `status=open status!=resolved` exits 0 with the envelope its `query` twin produces; `status=open status!=open` exits 2 from `predicate::parse`, the same line a JSON caller gets (RV-031 F-3)." },
+  { id = "EX-5", text = "Numeric flags reach the specification's own messages end to end: `--depth abc`, `--depth=-1`, `--limit 0` and `--budget 0` each exit 2 with the specification's sentence (RV-031 F-7)." },
+  { id = "EX-6", text = "clap's three refusals are unchanged and a repeated flag is refused by name; an unknown subcommand still prints this binary's one sentence and no near names (RV-031 F-9)." },
+  { id = "EX-7", text = "Byte identity: `smut q <line>` and `smut query <json>` produce identical stdout for the traversing and `--ids` recipes; the filtering pair is asserted to agree on the selected set, and no test claims more (RV-031 F-6)." },
+  { id = "EX-8", text = "In a directory with no store `smut q` exits 1, and the test pairs it with a `declare` in the same directory so the assertion discriminates (DEC-004)." },
+  { id = "EX-9", text = "`smut render` is untouched: its operand shape and display flags do not move, and `src/render_markdown.rs` appears in no diff for this slice (RV-031 F-10)." },
+  { id = "EX-10", text = "`tests/compatibility.rs` is untouched and green; the 0.1 and 0.2 pins prove the machine surface did not move (DEC-011)." },
+  { id = "EX-11", text = "The repo's gate is green: `cargo test`, the linter and the formatter, with no warnings." },
+]
+verification      = [
+  { id = "VT-1", expects = "the two-call recipe reads the same both ways, and `q` creates no store while a `declare` beside it does", test_file = "tests/cli_contract.rs", keywords = ["the_two_call_recipe_reads_the_same_both_ways", "q_creates_no_store_and_a_declare_beside_it_does"], waived = false },
+  { id = "VT-2", expects = "tokens keep their order around flags, `--` reaches a hyphen id, ids and `--select` refuse each other, and depth without a direction is refused while the specification accepts it", test_file = "tests/cli_contract.rs", keywords = ["tokens_keep_their_order_around_flags", "ids_and_select_cannot_both_be_asked_for", "depth_without_a_direction_is_refused_while_the_specification_accepts_it"], waived = false },
+  { id = "VT-3", expects = "the exit-code pair that the design review corrected: one line answered at exit 0, its same-value sibling refused at exit 2", test_file = "tests/cli_contract.rs", keywords = ["a_satisfiable_repeat_is_answered_and_its_same_value_sibling_is_not", "--depth abc"], waived = false },
+  { id = "VA-1", expects = "read `git diff -- tests/compatibility.rs` and confirm it is empty, and that no `Store` is constructed on the `q` path before `spec::parse` returns", waived = false },
+]
+specs             = []
+requirements      = []
+
+[[phase]]
+id        = "PHASE-03"
+name      = "The guide — both spellings, both executed"
+objective = "`smut learn` teaches the short form before the specification chapter (DEC-010), prints the two-call recipe in both spellings with the JSON one line below, states the two warts and the field silence where they bite, keeps `query` described as the complete surface, and `tests/fixture.rs` runs the DSL recipes as token lists so a printed line that stops working fails the suite."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-02 complete: `smut q` runs end to end and its contract suite is green, so a printed DSL line is a command someone can type." },
+  { id = "EN-2", text = "src/learn.rs read whole — the `GUIDE` string, the three `EXAMPLE_*` constants and the sentence tests — and tests/fixture.rs read at `Declared::query` and the `IDS` substitution, because DEC-016 pins the recipe in three places and all three move together." },
+  { id = "EN-3", text = "DEC-016's pinned wording read, and the amendment it owes recorded in notes.md rather than paid here: the guide keeps both spellings executed until reconcile." },
+]
+exit_criteria     = [
+  { id = "EX-1", text = "A short-form section sits before the specification chapter: the one rule in a sentence, the five token shapes as a table, the twelve flags, the three character consequences (`any`, `--has`/`--missing`, no `:` infix), and the two boundary sentences naming what the short form cannot say and that `smut query` can." },
+  { id = "EX-2", text = "`EXAMPLE_TRAVERSE_Q`, `EXAMPLE_FOLLOW_Q` and `EXAMPLE_FILTER_Q` sit beside the JSON constants; the two-call recipe is printed in both spellings with the JSON one line below; the filter twin is `--ids`, and the sentence says roots are this surface's spelling of the `$in` filter and that the two agree on the selected set, not on order (RV-031 F-6)." },
+  { id = "EX-3", text = "The two warts are stated where they bite: a value that is a JSON scalar is that scalar, with `--ids`, `--from=ID` and `smut query` named beside it; `~` is substring on a string and member on an array, with no signal in the answer. The field-silence sentence is present." },
+  { id = "EX-4", text = "`tests/fixture.rs` gains a token-list runner beside the `&Value` path and the `IDS`-as-token-list substitution, and both spellings of the recipe are executed by it." },
+  { id = "EX-5", text = "The sentence tests move with the prose and are loosened nowhere: a rewording that changes meaning still fails, and no assertion is deleted to make a claim true." },
+  { id = "EX-6", text = "`query` is described as the complete surface and never as legacy or deprecated, and the specification chapter stays in full." },
+  { id = "EX-7", text = "No spelling the guide prints needs a quote for anything the grammar invents: the recipes are typed bare, and the demonstration that `foo~bar status!=baz any` reaches the binary intact stays (RV-031 F-8)." },
+  { id = "EX-8", text = "The repo's gate is green: `cargo test`, the linter and the formatter, with no warnings." },
+]
+verification      = [
+  { id = "VT-1", expects = "both spellings of the two-call recipe are executed by the fixture harness, the DSL one through the token-list runner and the `IDS` substitution", test_file = "tests/fixture.rs", keywords = ["EXAMPLE_FILTER_Q", "EXAMPLE_TRAVERSE_Q"], waived = false },
+  { id = "VT-2", expects = "the guide's own constants and the short-form section exist in the shipped prose, so the sentence tests have something to pin", test_file = "src/learn.rs", keywords = ["EXAMPLE_TRAVERSE_Q", "EXAMPLE_FILTER_Q", "The short form"], waived = false },
+  { id = "VA-1", expects = "diff src/learn.rs's sentence tests: no assertion deleted, no wording loosened, and each moved sentence still asserts the whole claim it did before", waived = false },
+  { id = "VH-1", expects = "the operator types the five recurring queries of IDE-006's table from the guide without a quote — the scope's closure gate, checkable only by a human at a terminal", waived = false },
+]
+specs             = []
+requirements      = []

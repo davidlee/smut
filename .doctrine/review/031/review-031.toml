@@ -1,0 +1,310 @@
+id    = 31
+slug  = "design-review-of-sl-010"
+title = "design review of SL-010"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Two adversarial pi passes over design revision 26 — one on the surface and the compiler, one on the refusals, the verb, the guide, the code impact and the verification — then a disposer that adjudicated every finding on evidence, an author that applied eleven revisions, and a verify-only pass over the revised text that confirmed each and named seven sentences the revisions had made false."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-010"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "blocker"
+title = "The JSON-operand refusal had no detecting branch"
+detail = "The classifier in the surface section tested only for =, != and ~, so a token carrying a JSON specification became a root id: it compiled to from[], the store answered exit 0 with objects empty and the token echoed in missing, and the refusal promised by the refusals section and asserted by a named verification case was unreachable. Fixed by a first-character rule: a token beginning { takes the refusal, with --from=ID as the escape and the diagram stating the precedence."
+disposition = "fix-now"
+route = "control"
+response = "Design sections 1 and 2 now carry the first-character rule, the diagram edge and the relabelled table row; section 7 asserts the refusal and the escape."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Design sections 1 and 2 now carry the first-character rule, the diagram edge and the relabelled table row; section 7 asserts the refusal and the escape."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the rule, the diagram precedence and the row label are consistent, and --from=ID reaches parse_roots unchanged."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "blocker"
+title = "Satisfiable repeats were refused in a voice that called them unsatisfiable"
+detail = "The compiler section extended the two-= contradiction to a second != and a second ~, calling their JSON spellings equally impossible. Both are satisfiable (a value that is neither, a title containing both) and both are spellable in JSON with $and arrays of predicate objects, which predicate::parse accepts. Rendered through ContradictoryFieldConditions the sentence would read 'field status cannot be satisfied' about a predicate some entity satisfies, outside DEC-027's decidability premise and DEC-039's scope. Fixed by the emit-shape rule: one condition per operator, exact repeats collapse, and a repeat the front-end cannot emit is refused in the caller's tokens."
+disposition = "fix-now"
+route = "control"
+response = "Design section 2 now states one condition per operator per field, the exact-repeat collapse, and the emit-shape reason a second != or ~ is refused in the caller's tokens rather than as a contradiction."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Design section 2 now states one condition per operator per field, the exact-repeat collapse, and the emit-shape reason a second != or ~ is refused in the caller's tokens rather than as a contradiction."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the sentence is gone, the rule is stated as the emit shape allows, and no satisfiable predicate is described as unsatisfiable."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "blocker"
+title = "status=open status!=resolved was described as refused and is answered"
+detail = "Two sections claimed the pair reaches predicate::parse's pinned contradiction sentence, and a verification row asserted exit 2. predicate::contradiction step 3 pins the field to the $eq value and evaluates the rest, so $ne resolved holds against open and the walk returns None: the command exits 0 with the entities. Fixed by correcting both claims, keeping status=open status!=open as the refused pair, and adding the exit-0 row; DEC-039's illustration joins the obligations owed at reconcile."
+disposition = "fix-now"
+route = "control"
+response = "Both claims corrected in sections 2 and 7; status=open status!=open is the refused pair, status=open status!=resolved has its exit-0 row, and DEC-039's illustration is banked as a sixth reconcile obligation."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Both claims corrected in sections 2 and 7; status=open status!=open is the refused pair, status=open status!=resolved has its exit-0 row, and DEC-039's illustration is banked as a sixth reconcile obligation."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against predicate::contradiction steps 3 and 4 and against the run's own record of the obligation."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "--has and --missing on one field overwrote each other silently"
+detail = "Both flags write the same (field, $exists) slot of the where map, so the later flag won and a contradictory question got a plausible answer. The silent last-wins class is what this slice exists to remove. Fixed by extending the one-condition-per-operator rule to $exists, with a sentence that is true of this case: $exists is given both true and false."
+disposition = "fix-now"
+route = "control"
+response = "Section 2 extends the one-condition rule to $exists and states the refusal; section 3's table carries the sentence."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 2 extends the one-condition rule to $exists and states the refusal; section 3's table carries the sentence."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the refusal is the one case in the family that is genuinely unsatisfiable."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "major"
+title = "Flag comma lists accepted empty members, and any inside a list drew a spec refusal"
+detail = """Only the = token's comma list was ruled. --select a,,b and --follow part-of, passed an empty field name through to a selection that addresses nothing, and --follow any,part-of emitted ["*","part-of"], drawing the specification's array-wildcard sentence naming a character the caller never typed. Fixed by one comma-list rule for every list, empty members refused, and any standing alone."""
+disposition = "fix-now"
+route = "control"
+response = "Section 3 carries three new rows for empty members, any inside a list, and an unknown direction; section 2 says the same applies to every list."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 3 carries three new rows for empty members, any inside a list, and an unknown direction; section 2 says the same applies to every list."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: every list on the surface is covered by the one rule, and any is refused in a list where the specification would name a wildcard."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "major"
+title = "The guide's second DSL recipe was a different request from the JSON beside it"
+detail = "The example filtered smut_id by $in and projected smut_id; the twin passed the ids as roots and projected title. Two different requests, so both the Spec equivalence table and the byte-identity claim would have held only by fixture accident. Fixed by --ids, plus a sentence stating that roots are this surface's spelling of the $in filter and that the two agree on the selected set, not on order."
+disposition = "fix-now"
+route = "control"
+response = "The twin is --ids; section 5 states that roots replace the $in filter and that the pair agrees on the selected set, and section 7's byte-identity claim is scoped to the traversing and --ids recipes."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "The twin is --ids; section 5 states that roots replace the $in filter and that the pair agrees on the selected set, and section 7's byte-identity claim is scoped to the traversing and --ids recipes."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against EXAMPLE_FILTER and the projection it pins."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "Numeric flags had no refusal row and no variant"
+detail = "--depth abc, --budget x and --limit 5x appeared in no table and were covered by none of the enumerated variants, so they would have landed unpinned while the specification's own messages stayed unreachable. Fixed by letting the numeric flags arrive as text and reach spec::parse, with --depth abc in the verification table, and by making the direction refusal the sixth variant."
+disposition = "fix-now"
+route = "control"
+response = "Section 2's doc comment and section 3's table now route numeric flags to spec::parse; section 7 gained the --depth abc row and section 6 the sixth variant."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 2's doc comment and section 3's table now route numeric flags to spec::parse; section 7 gained the --depth abc row and section 6 the sixth variant."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against spec.rs's numeric parsing: both --depth abc and --depth=-1 reach the same message."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "minor"
+title = "Shell-safety was claimed as an enforced property and was neither enforced nor complete"
+detail = "The surface claimed a bare token may contain only what the shell will not touch, and the scope claimed the classifier refuses every banned character; no branch does any character refusal, and the ban list omitted [, ], {, } and backslash. Fixed by scoping the claim to the spellings the grammar invents, naming the escapes for the caller's own text, and reconciling the scope to match."
+disposition = "fix-now"
+route = "control"
+response = "Section 1's constraint is scoped to invented spellings with the caller's text left to the shell; section 7's bullet says the same; the slice scope was reconciled to match."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 1's constraint is scoped to invented spellings with the caller's text left to the shell; section 7's bullet says the same; the slice scope was reconciled to match."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: the claim is now true of the invented spellings and false of nothing."
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "minor"
+title = "The clap refusals were described as all clap's, all one line"
+detail = "Three of the four are clap's render, which reaches stderr verbatim through InvalidUsage in as many lines as clap prints; the fourth, an unknown subcommand, is this binary's own mapping to a single sentence and never shows clap's near names. Fixed by stating the split and scoping the one-line rule to the sentences this front-end writes."
+disposition = "fix-now"
+route = "control"
+response = "Section 3 now separates clap's three renders from the subcommand mapping and scopes the one-line rule to this front-end's own sentences."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 3 now separates clap's three renders from the subcommand mapping and scopes the one-line rule to this front-end's own sentences."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against main.rs and cli.rs's subcommand mapping."
+
+[[finding]]
+id = "F-10"
+status = "verified"
+severity = "nit"
+title = "Code impact did not account for smut render"
+detail = "The scope defers render's shared grammar as a non-goal, but the unchanged table — whose purpose is the files a reader expects to move — had no row for it. Fixed by adding the row, and by correcting the count of unchanged surfaces."
+disposition = "fix-now"
+route = "control"
+response = "Section 6 gained the render_markdown row and its count of unchanged surfaces was corrected."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Section 6 gained the render_markdown row and its count of unchanged surfaces was corrected."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against the scope's non-goals."
+
+[[finding]]
+id = "F-11"
+status = "verified"
+severity = "minor"
+title = "The variant census said five while the direction refusal made six"
+detail = "The refusals section enumerated five new variants and the code-impact row repeated it, but the front-end's own direction verdict needs a sixth carrying the flag, since the shared missing-direction sentence named --depth to a caller who typed --budget. Fixed by counting six and naming the direction refusal in both places."
+disposition = "fix-now"
+route = "control"
+response = "Sections 3 and 6 count six variants and name the direction refusal among them."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Sections 3 and 6 count six variants and name the direction refusal among them."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified against the six refusals the front-end can raise."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
