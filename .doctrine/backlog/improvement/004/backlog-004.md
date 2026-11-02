@@ -100,3 +100,24 @@ becomes the *shipped example* of a domain set rather than a special case the bin
 owns. That does not retire the content questions in §A–§E; it changes who answers
 them and how the answer ships. IMP-013 decides which, and nothing here must precede
 it.
+
+## State, 2026-11-02 — the content design is done, in SL-006
+
+`SL-006` carries it out. Read `.doctrine/slice/006/epistemic-records.md` for the set
+text, `grammar.md` for the reasoning and the accounting against doctrine's facets, and
+`notes.md` for the adversarial pass on the taxonomy — the pass this item said was
+missing, since the previous four landed around it.
+
+What changed from the draft in §A above, in one paragraph: the vocabulary is
+**doctrine's**, not the store's. Seven kinds adopted by name (assumption, decision,
+question, constraint, evidence, hypothesis, concept) with their own per-kind statuses,
+field names, date stamps and closed vocabularies; three added because doctrine cannot
+express them (`finding` — a record before it has a kind; `option` — a mutually exclusive
+candidate, where doctrine has only a comma-separated string; `party` — an actor, since
+doctrine's who is free text everywhere); one status added (`dropped` — abandoned without
+a verdict); and the draft's `source` type, `refutation` type, `refutes` edge and `scope`
+enum all dropped, the first two on doctrine's own practice rather than on taste.
+
+What this item's preconditions still gate: `IMP-013` (the layer loader and the match
+arm), `SL-004` (`smut_id`, which the set's text names), and 0.2's publication. None of
+them blocked the design, which is why it was done first.

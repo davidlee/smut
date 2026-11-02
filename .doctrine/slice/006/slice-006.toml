@@ -1,0 +1,72 @@
+id = 6
+slug = "epistemic-records-set"
+title = "The epistemic-records set — the domain vocabulary and the questions it answers"
+status = "design"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["conventions", "design-only", "epistemic"]
+
+[relationships]
+needs = []                      # slice→work hard prerequisite
+after = []                      # slice→work soft sequence: { to, rank }
+
+[[selector]]
+selector = "src/conventions/**"
+intent = "scope-relevant"
+note = "the set's text and its loader; docs only if the format conversation reaches the store"
+
+[[selector]]
+selector = "src/conventions.rs"
+intent = "scope-relevant"
+note = "the set's text and its loader; docs only if the format conversation reaches the store"
+
+[[selector]]
+selector = "docs/store-format.md"
+intent = "scope-relevant"
+note = "the set's text and its loader; docs only if the format conversation reaches the store"
+
+[[relation]]
+label = "references"
+role = "originates_from"
+target = "IMP-004"
+
+[[relation]]
+label = "related"
+target = "IMP-011"
+
+[[relation]]
+label = "related"
+target = "DEC-017"
+
+[[relation]]
+label = "related"
+target = "DEC-028"
+
+[[relation]]
+label = "related"
+target = "DEC-016"
+
+[[relation]]
+label = "related"
+target = "DEC-029"
+
+[[relation]]
+label = "related"
+target = "QUE-001"
+
+[[relation]]
+label = "related"
+target = "IDE-004"
+
+[[relation]]
+label = "related"
+target = "IDE-005"
+
+# STRUCTURAL relations are uniform `[[relation]]` rows, never a typed
+# `[relationships]` axis. Slices carry no typed STRUCTURAL
+# relation axes — the `[relationships]` table above holds only the dep/seq payload
+# (`needs`/`after`). Author a structural edge with the `doctrine link` verb
+# — it validates the (source, label) pair and resolves the target:
+#   doctrine link SL-NNN specs SPEC-NNN
+#   doctrine link SL-NNN governed_by ADR-NNN
+# `doctrine inspect SL-NNN` renders the inbound + outbound edges.
