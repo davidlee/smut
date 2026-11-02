@@ -105,6 +105,14 @@ An agent can build you a persistent object graph almost by accident.
 Render it to markdown when you want to. Swap in a fresh agent,
 or commit it for later, and everything's right there.
 
+## Context warning
+
+The rest of this readme is pure slop, I'm afraid. I'd have deleted it,
+but you never know when an agent's going to write tests aserting your
+README worked examples compile.
+
+If you got this far, you know everything worth knowing, honestly.
+
 ## Worked example
 
 A scratch directory, a store, and the brief's end-to-end example. This is the
