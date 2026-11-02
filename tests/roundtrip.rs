@@ -6,8 +6,8 @@
 //! here goes through the library's real path — [`cli::parse`] and then
 //! [`Request::run`] — rather than a hand-built write set, and every reload is a
 //! *fresh* [`Store::load`], which validates the index, the mapped files and the
-//! agreement between each file's `id` and its index key. A `load()` that succeeds
-//! is part of the proof.
+//! agreement between each file's `smut_id` and its index key. A `load()` that
+//! succeeds is part of the proof.
 //!
 //! The file is deliberately small: this layer exists to catch a write-set
 //! translation that loses a field, a generated id or a removal, not to re-test the
@@ -116,7 +116,7 @@ fn roundtrip_reload_keeps_a_generated_id_and_every_declared_field() {
         &scratch,
         &[
             "declare",
-            r#"[{"id":"alpha","title":"Alpha","body":"First."},{"title":"Generated","kind":"note"}]"#,
+            r#"[{"smut_id":"alpha","title":"Alpha","body":"First."},{"title":"Generated","kind":"note"}]"#,
         ],
     );
 
@@ -137,11 +137,11 @@ fn roundtrip_reload_keeps_a_generated_id_and_every_declared_field() {
     assert_eq!(entities.len(), 2, "{entities:?}");
     assert_eq!(
         entities.get("alpha"),
-        Some(&json!({"id":"alpha","title":"Alpha","body":"First."}))
+        Some(&json!({"smut_id":"alpha","title":"Alpha","body":"First."}))
     );
     assert_eq!(
         entities.get(generated.as_str()),
-        Some(&json!({"id":generated,"title":"Generated","kind":"note"})),
+        Some(&json!({"smut_id":generated,"title":"Generated","kind":"note"})),
         "the generated id is stored under itself, with the field set it was declared with"
     );
 
@@ -165,7 +165,7 @@ fn roundtrip_reload_of_a_patch_and_a_drop_then_a_re_add() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"alpha","title":"Alpha","body":"First.","tags":["one"]}"#,
+            r#"{"smut_id":"alpha","title":"Alpha","body":"First.","tags":["one"]}"#,
         ],
     );
 
@@ -174,20 +174,20 @@ fn roundtrip_reload_of_a_patch_and_a_drop_then_a_re_add() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"alpha","body":"Revised.","tags":"DROP"}"#,
+            r#"{"smut_id":"alpha","body":"Revised.","tags":"DROP"}"#,
         ],
     );
     assert_eq!(statuses(&patched), ["updated"]);
     assert_eq!(
         patched["changes"][0]["previous"],
-        json!({"id":"alpha","title":"Alpha","body":"First.","tags":["one"]}),
+        json!({"smut_id":"alpha","title":"Alpha","body":"First.","tags":["one"]}),
         "previous is the whole pre-batch entity"
     );
 
     let after_drop = scratch.reload();
     assert_eq!(
         after_drop.entities().get("alpha"),
-        Some(&json!({"id":"alpha","title":"Alpha","body":"Revised."})),
+        Some(&json!({"smut_id":"alpha","title":"Alpha","body":"Revised."})),
         "the dropped field is gone, the fields not supplied are intact"
     );
 
@@ -195,14 +195,14 @@ fn roundtrip_reload_of_a_patch_and_a_drop_then_a_re_add() {
     // the id's ability to hold it again.
     let restored = run_json(
         &scratch,
-        &["declare", r#"{"id":"alpha","tags":["two","three"]}"#],
+        &["declare", r#"{"smut_id":"alpha","tags":["two","three"]}"#],
     );
     assert_eq!(statuses(&restored), ["updated"]);
 
     let after_re_add = scratch.reload();
     assert_eq!(
         after_re_add.entities().get("alpha"),
-        Some(&json!({"id":"alpha","title":"Alpha","body":"Revised.","tags":["two","three"]}))
+        Some(&json!({"smut_id":"alpha","title":"Alpha","body":"Revised.","tags":["two","three"]}))
     );
 }
 
@@ -216,11 +216,11 @@ fn roundtrip_reload_of_a_delete_leaves_the_incoming_reference_untouched() {
         &scratch,
         &[
             "declare",
-            r#"[{"id":"source","body":"A","points_at":{"id":"target","body":"B"}}]"#,
+            r#"[{"smut_id":"source","body":"A","points_at":{"smut_id":"target","body":"B"}}]"#,
         ],
     );
 
-    let reference = json!({"id":"source","body":"A","points_at":{"id":"target"}});
+    let reference = json!({"smut_id":"source","body":"A","points_at":{"smut_id":"target"}});
     assert_eq!(
         scratch.reload().entities().get("source"),
         Some(&reference),
@@ -248,10 +248,13 @@ fn roundtrip_reload_matches_what_the_responses_described() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"kept","title":"Kept","body":"Untouched."}"#,
+            r#"{"smut_id":"kept","title":"Kept","body":"Untouched."}"#,
         ],
     );
-    run_json(&scratch, &["declare", r#"{"id":"gone","title":"Gone"}"#]);
+    run_json(
+        &scratch,
+        &["declare", r#"{"smut_id":"gone","title":"Gone"}"#],
+    );
 
     // One batch that creates, amends and merely references: the third object is
     // an id-only reference, so it is named in `ids` and produces no change.
@@ -259,7 +262,7 @@ fn roundtrip_reload_matches_what_the_responses_described() {
         &scratch,
         &[
             "declare",
-            r#"[{"id":"fresh","title":"Fresh"},{"id":"kept","body":"Amended."},{"id":"gone"}]"#,
+            r#"[{"smut_id":"fresh","title":"Fresh"},{"smut_id":"kept","body":"Amended."},{"smut_id":"gone"}]"#,
         ],
     );
     assert_eq!(batch["ids"], json!(["fresh", "kept", "gone"]));
@@ -267,12 +270,12 @@ fn roundtrip_reload_matches_what_the_responses_described() {
 
     let snapshot = scratch.reload();
     let expected: Entities = BTreeMap::from([
-        (Id::new("fresh"), json!({"id":"fresh","title":"Fresh"})),
+        (Id::new("fresh"), json!({"smut_id":"fresh","title":"Fresh"})),
         (
             Id::new("kept"),
-            json!({"id":"kept","title":"Kept","body":"Amended."}),
+            json!({"smut_id":"kept","title":"Kept","body":"Amended."}),
         ),
-        (Id::new("gone"), json!({"id":"gone","title":"Gone"})),
+        (Id::new("gone"), json!({"smut_id":"gone","title":"Gone"})),
     ]);
 
     assert_eq!(
@@ -286,7 +289,7 @@ fn roundtrip_reload_matches_what_the_responses_described() {
     assert_eq!(snapshot.index().len(), snapshot.entities().len());
     for (id, basename) in snapshot.index().entries() {
         assert_eq!(
-            snapshot.entities()[id]["id"],
+            snapshot.entities()[id]["smut_id"],
             json!(id.as_str()),
             "{basename} holds another id"
         );

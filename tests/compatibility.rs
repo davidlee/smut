@@ -133,9 +133,9 @@ fn keys(value: &Value) -> BTreeSet<&str> {
 /// reference to it, and a body-only one.
 fn store_of_three(scratch: &Scratch) {
     for declaration in [
-        r#"{"id":"alpha","title":"Alpha","body":"First thought.","kind":"note"}"#,
-        r#"{"id":"beta","title":"Beta","body":"Second.","points_at":{"id":"alpha"}}"#,
-        r#"{"id":"gamma","body":"Third."}"#,
+        r#"{"smut_id":"alpha","title":"Alpha","body":"First thought.","kind":"note"}"#,
+        r#"{"smut_id":"beta","title":"Beta","body":"Second.","points_at":{"smut_id":"alpha"}}"#,
+        r#"{"smut_id":"gamma","body":"Third."}"#,
     ] {
         let declared = run(scratch, &["declare", declaration]);
 
@@ -150,9 +150,9 @@ fn default_query_pin() -> Value {
         "dangling": [],
         "missing": [],
         "objects": [
-            {"body": "First thought.", "id": "alpha", "kind": "note", "title": "Alpha"},
-            {"body": "Second.", "id": "beta", "points_at": {"id": "alpha"}, "title": "Beta"},
-            {"body": "Third.", "id": "gamma"},
+            {"body": "First thought.", "smut_id": "alpha", "kind": "note", "title": "Alpha"},
+            {"body": "Second.", "smut_id": "beta", "points_at": {"smut_id": "alpha"}, "title": "Beta"},
+            {"body": "Third.", "smut_id": "gamma"},
         ],
         "truncated": false,
         "truncation_reasons": [],
@@ -169,14 +169,14 @@ fn declare_pins_its_full_and_compact_envelopes() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"smut","title":"Smut","body":"Persist conversational structure."}"#,
+            r#"{"smut_id":"smut","title":"Smut","body":"Persist conversational structure."}"#,
         ],
     );
     created.assert_one_json_line("a full declare");
     assert_eq!(
         created.json(),
         json!({
-            "changes": [{"id": "smut", "previous": null, "status": "created"}],
+            "changes": [{"smut_id": "smut", "previous": null, "status": "created"}],
             "ids": ["smut"],
             "missing": [],
         })
@@ -187,14 +187,14 @@ fn declare_pins_its_full_and_compact_envelopes() {
     );
     assert_eq!(
         keys(&created.json()["changes"][0]),
-        BTreeSet::from(["id", "previous", "status"])
+        BTreeSet::from(["smut_id", "previous", "status"])
     );
 
     let amended = run(
         &scratch,
         &[
             "declare",
-            r#"{"id":"smut","body":"Persist structure."}"#,
+            r#"{"smut_id":"smut","body":"Persist structure."}"#,
             "--compact",
         ],
     );
@@ -202,14 +202,14 @@ fn declare_pins_its_full_and_compact_envelopes() {
     assert_eq!(
         amended.json(),
         json!({
-            "changes": [{"id": "smut", "status": "updated"}],
+            "changes": [{"smut_id": "smut", "status": "updated"}],
             "ids": ["smut"],
             "missing": [],
         })
     );
     assert_eq!(
         keys(&amended.json()["changes"][0]),
-        BTreeSet::from(["id", "status"]),
+        BTreeSet::from(["smut_id", "status"]),
         "--compact omits `previous` everywhere"
     );
 }
@@ -240,7 +240,7 @@ fn query_pins_the_default_limit_of_one_hundred() {
     let scratch = Scratch::new();
 
     let declarations: Vec<Value> = (1..=101)
-        .map(|n| json!({"id": format!("e{n:03}"), "body": format!("note {n}")}))
+        .map(|n| json!({"smut_id": format!("e{n:03}"), "body": format!("note {n}")}))
         .collect();
     let declared = run(
         &scratch,
@@ -259,11 +259,11 @@ fn query_pins_the_default_limit_of_one_hundred() {
         "no `limit` still caps the result at 100"
     );
     assert_eq!(
-        objects[0]["id"],
+        objects[0]["smut_id"],
         json!("e001"),
         "roots are in ID order, so the omission is the last id"
     );
-    assert_eq!(objects[99]["id"], json!("e100"));
+    assert_eq!(objects[99]["smut_id"], json!("e100"));
     assert_eq!(envelope["truncated"], json!(true));
     assert_eq!(envelope["truncation_reasons"], json!(["result_limit"]));
 }
@@ -302,8 +302,8 @@ fn get_pins_explicit_order_and_missing() {
             "dangling": [],
             "missing": ["ghost"],
             "objects": [
-                {"body": "Second.", "id": "beta", "points_at": {"id": "alpha"}, "title": "Beta"},
-                {"body": "First thought.", "id": "alpha", "kind": "note", "title": "Alpha"},
+                {"body": "Second.", "smut_id": "beta", "points_at": {"smut_id": "alpha"}, "title": "Beta"},
+                {"body": "First thought.", "smut_id": "alpha", "kind": "note", "title": "Alpha"},
             ],
             "truncated": false,
             "truncation_reasons": [],
@@ -362,7 +362,7 @@ fn where_accepted_adds_a_predicate_without_disturbing_the_pinned_query() {
     );
     assert_eq!(
         filtered.json()["objects"],
-        json!([{"body": "First thought.", "id": "alpha", "kind": "note", "title": "Alpha"}]),
+        json!([{"body": "First thought.", "smut_id": "alpha", "kind": "note", "title": "Alpha"}]),
         "the predicate selects the one note: {}",
         filtered.json()
     );
@@ -411,7 +411,7 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
         &scratch,
         &[
             "declare",
-            r#"[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]"#,
+            r#"[{"smut_id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"smut_id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]"#,
         ],
     );
     declared.assert_one_json_line("the brief's nested declaration");
@@ -425,8 +425,8 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
     assert_eq!(
         stored.json()["objects"],
         json!([
-            {"body": "Persist conversational structure.", "id": "smut", "questions": [{"id": "q-query"}], "title": "Smut"},
-            {"body": "Keep selection small.", "id": "q-query", "status": "open", "title": "Query design", "type": "question"},
+            {"body": "Persist conversational structure.", "smut_id": "smut", "questions": [{"smut_id": "q-query"}], "title": "Smut"},
+            {"body": "Keep selection small.", "smut_id": "q-query", "status": "open", "title": "Query design", "type": "question"},
         ])
     );
 
@@ -436,13 +436,13 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}"#,
+            r#"{"smut_id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}"#,
         ],
     )
     .assert_one_json_line("the brief's patch");
     run(
         &scratch,
-        &["declare", r#"{"id":"q-query","status":"DROP"}"#],
+        &["declare", r#"{"smut_id":"q-query","status":"DROP"}"#],
     )
     .assert_one_json_line("the brief's DROP");
 
@@ -452,7 +452,7 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
         after.json()["objects"],
         json!([{
             "body": "Use bounded traversal and simple predicates.",
-            "id": "q-query",
+            "smut_id": "q-query",
             "title": "Query design",
             "type": "question",
         }])
@@ -476,8 +476,8 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
         survivors.json()["objects"],
         json!([{
             "body": "Persist conversational structure.",
-            "id": "smut",
-            "questions": [{"id": "q-query"}],
+            "smut_id": "smut",
+            "questions": [{"smut_id": "q-query"}],
             "title": "Smut",
         }])
     );
@@ -539,13 +539,13 @@ fn a_traversal_query_adds_one_member_beside_the_pinned_0_1_envelope() {
         json!([
             {
                 "body": "Second.",
-                "id": "beta",
-                "points_at": {"id": "alpha"},
+                "smut_id": "beta",
+                "points_at": {"smut_id": "alpha"},
                 "title": "Beta",
             },
             {
                 "body": "First thought.",
-                "id": "alpha",
+                "smut_id": "alpha",
                 "kind": "note",
                 "title": "Alpha",
             },

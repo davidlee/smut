@@ -127,7 +127,7 @@ fn store_of_three(scratch: &Scratch) {
         scratch,
         &[
             "declare",
-            r#"{"id":"a","title":"Alpha","body":"First.","priority":3}"#,
+            r#"{"smut_id":"a","title":"Alpha","body":"First.","priority":3}"#,
         ],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
@@ -135,7 +135,10 @@ fn store_of_three(scratch: &Scratch) {
     for (id, title) in [("b", "Beta"), ("c", "Gamma")] {
         let declared = smut(
             scratch,
-            &["declare", &format!(r#"{{"id":"{id}","title":"{title}"}}"#)],
+            &[
+                "declare",
+                &format!(r#"{{"smut_id":"{id}","title":"{title}"}}"#),
+            ],
         );
         assert_eq!(declared.code, 0, "{}", declared.stderr);
     }
@@ -151,7 +154,7 @@ fn declare_writes_its_envelope_to_stdout_and_exits_zero() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"smut","title":"Smut","questions":[{"id":"q-query","type":"question"}]}"#,
+            r#"{"smut_id":"smut","title":"Smut","questions":[{"smut_id":"q-query","type":"question"}]}"#,
         ],
     );
 
@@ -160,7 +163,7 @@ fn declare_writes_its_envelope_to_stdout_and_exits_zero() {
 
     let envelope = ran.json();
     assert_eq!(envelope["ids"], json!(["smut"]));
-    assert_eq!(envelope["changes"][0]["id"], json!("smut"));
+    assert_eq!(envelope["changes"][0]["smut_id"], json!("smut"));
     assert_eq!(envelope["changes"][0]["status"], json!("created"));
     assert_eq!(envelope["changes"][0]["previous"], Value::Null);
     assert_eq!(envelope["missing"], json!([]));
@@ -179,7 +182,8 @@ fn declare_writes_its_envelope_to_stdout_and_exits_zero() {
 #[test]
 fn a_projected_entity_is_serialised_by_the_same_wrapper_as_a_stored_one() {
     // DEC-007: one shared wrapper, "used for stored entity files and for
-    // projected entities alike", so a response's entity roots name `id` first
+    // projected entities alike", so a response's entity roots name `smut_id`
+    // first
     // and their remaining keys lexically — the same bytes rule as the file.
     let scratch = Scratch::new();
     store_of_three(&scratch);
@@ -188,8 +192,9 @@ fn a_projected_entity_is_serialised_by_the_same_wrapper_as_a_stored_one() {
 
     assert_eq!(ran.code, 0, "{}", ran.stderr);
     assert!(
-        ran.stdout
-            .contains(r#""objects":[{"id":"a","body":"First.","priority":3,"title":"Alpha"}]"#),
+        ran.stdout.contains(
+            r#""objects":[{"smut_id":"a","body":"First.","priority":3,"title":"Alpha"}]"#
+        ),
         "{}",
         ran.stdout
     );
@@ -205,7 +210,11 @@ fn query_reads_its_specification_from_a_pipe_on_stdin_and_exits_zero() {
 
         assert_eq!(ran.code, 0, "{arguments:?}: {}", ran.stderr);
         let envelope = ran.json();
-        assert_eq!(envelope["objects"][0]["id"], json!("b"), "{arguments:?}");
+        assert_eq!(
+            envelope["objects"][0]["smut_id"],
+            json!("b"),
+            "{arguments:?}"
+        );
         assert_eq!(envelope["missing"], json!([]), "{arguments:?}");
     }
 }
@@ -217,14 +226,14 @@ fn declare_reads_its_declaration_from_a_pipe_on_stdin_and_exits_zero() {
     let ran = run(
         &scratch,
         &["declare"],
-        Some(r#"{"id":"piped","title":"Piped"}"#),
+        Some(r#"{"smut_id":"piped","title":"Piped"}"#),
     );
 
     assert_eq!(ran.code, 0, "{}", ran.stderr);
     assert_eq!(ran.json()["ids"], json!(["piped"]));
     // An operand present means stdin is never read, and `-` asks for it
     // explicitly even where a terminal is attached.
-    let explicit = run(&scratch, &["declare", "-"], Some(r#"{"id":"dashed"}"#));
+    let explicit = run(&scratch, &["declare", "-"], Some(r#"{"smut_id":"dashed"}"#));
     assert_eq!(explicit.code, 0, "{}", explicit.stderr);
     assert_eq!(explicit.json()["ids"], json!(["dashed"]));
 }
@@ -249,7 +258,7 @@ fn a_declaration_with_nothing_to_write_succeeds_without_creating_a_store() {
 fn an_id_only_reference_on_an_absent_store_is_missing_and_creates_nothing() {
     let scratch = Scratch::new();
 
-    let ran = smut(&scratch, &["declare", r#"{"id":"ghost"}"#]);
+    let ran = smut(&scratch, &["declare", r#"{"smut_id":"ghost"}"#]);
 
     assert_eq!(ran.code, 0, "{}", ran.stderr);
     assert_eq!(
@@ -312,7 +321,7 @@ fn render_against_an_absent_store_exits_one_and_creates_nothing() {
 fn trailing_json_input_exits_two_before_any_store_exists() {
     let scratch = Scratch::new();
 
-    let ran = smut(&scratch, &["declare", r#"{"id":"a"} {"id":"b"}"#]);
+    let ran = smut(&scratch, &["declare", r#"{"smut_id":"a"} {"smut_id":"b"}"#]);
 
     assert_eq!(ran.code, 2, "{}", ran.stderr);
     assert_eq!(ran.stdout, "");
@@ -329,7 +338,7 @@ fn a_duplicate_json_key_exits_two_before_any_store_exists() {
 
     let ran = smut(
         &scratch,
-        &["declare", r#"{"id":"a","title":"one","title":"two"}"#],
+        &["declare", r#"{"smut_id":"a","title":"one","title":"two"}"#],
     );
 
     assert_eq!(ran.code, 2, "{}", ran.stderr);
@@ -348,14 +357,14 @@ fn a_double_dash_reaches_an_opaque_id_that_begins_with_a_hyphen() {
 
     let declared = smut(
         &scratch,
-        &["declare", r#"{"id":"-weird-id","title":"Weird"}"#],
+        &["declare", r#"{"smut_id":"-weird-id","title":"Weird"}"#],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     let ran = smut(&scratch, &["get", "--", "-weird-id"]);
 
     assert_eq!(ran.code, 0, "{}", ran.stderr);
-    assert_eq!(ran.json()["objects"][0]["id"], json!("-weird-id"));
+    assert_eq!(ran.json()["objects"][0]["smut_id"], json!("-weird-id"));
 }
 
 #[test]
@@ -396,22 +405,22 @@ fn mermaid_is_refused_with_exit_two_naming_the_release_that_plans_it() {
 fn compact_omits_previous_everywhere_and_changes_nothing_else() {
     let scratch = Scratch::new();
 
-    let created = smut(&scratch, &["declare", r#"{"id":"a","body":"first"}"#]);
+    let created = smut(&scratch, &["declare", r#"{"smut_id":"a","body":"first"}"#]);
     assert_eq!(created.code, 0, "{}", created.stderr);
 
-    let full = smut(&scratch, &["declare", r#"{"id":"a","body":"second"}"#]);
+    let full = smut(&scratch, &["declare", r#"{"smut_id":"a","body":"second"}"#]);
     let full = full.json();
     assert_eq!(full["changes"][0]["status"], json!("updated"));
     assert_eq!(full["changes"][0]["previous"]["body"], json!("first"));
 
     let compact = smut(
         &scratch,
-        &["declare", r#"{"id":"a","body":"third"}"#, "--compact"],
+        &["declare", r#"{"smut_id":"a","body":"third"}"#, "--compact"],
     );
     let compact = compact.json();
     assert_eq!(compact["ids"], json!(["a"]));
     assert_eq!(compact["changes"][0]["status"], json!("updated"));
-    assert_eq!(compact["changes"][0]["id"], json!("a"));
+    assert_eq!(compact["changes"][0]["smut_id"], json!("a"));
     assert_eq!(compact["missing"], json!([]));
     assert!(compact["changes"][0].get("previous").is_none(), "{compact}");
 }
@@ -432,7 +441,7 @@ fn reported_missing_ids_and_truncation_are_success_with_exit_zero() {
     assert_eq!(missing.code, 0, "{}", missing.stderr);
     let envelope = missing.json();
     assert_eq!(envelope["missing"], json!(["nope"]));
-    assert_eq!(envelope["objects"][0]["id"], json!("a"));
+    assert_eq!(envelope["objects"][0]["smut_id"], json!("a"));
     assert_eq!(envelope["truncated"], json!(false));
 }
 
@@ -441,7 +450,10 @@ fn render_emits_text_on_stdout_with_exactly_one_trailing_newline() {
     let scratch = Scratch::new();
     let declared = smut(
         &scratch,
-        &["declare", r#"{"id":"a","title":"Alpha","body":"First."}"#],
+        &[
+            "declare",
+            r#"{"smut_id":"a","title":"Alpha","body":"First."}"#,
+        ],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
@@ -458,7 +470,10 @@ fn render_honours_the_heading_field_heading_level_show_ids_and_show_fields_flags
     let scratch = Scratch::new();
     let declared = smut(
         &scratch,
-        &["declare", r#"{"id":"a","name":"Alpha","status":"open"}"#],
+        &[
+            "declare",
+            r#"{"smut_id":"a","name":"Alpha","status":"open"}"#,
+        ],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
@@ -562,7 +577,7 @@ fn a_rejected_specification_exits_two_and_names_the_offending_operator() {
     );
     assert_eq!(
         accepted.json()["objects"],
-        json!([{"body": "First.", "id": "a", "priority": 3, "title": "Alpha"}]),
+        json!([{"body": "First.", "smut_id": "a", "priority": 3, "title": "Alpha"}]),
         "the predicate filters, it is not merely accepted: {}",
         accepted.json()
     );
@@ -610,7 +625,7 @@ fn delete_reports_deleted_and_missing_deduped_in_first_occurrence_order() {
             .len(),
         1
     );
-    assert_eq!(remaining.json()["objects"][0]["id"], json!("b"));
+    assert_eq!(remaining.json()["objects"][0]["smut_id"], json!("b"));
 }
 
 #[test]
@@ -620,7 +635,7 @@ fn delete_leaves_incoming_references_untouched() {
         &scratch,
         &[
             "declare",
-            r#"{"id":"parent","title":"Parent","children":[{"id":"child","title":"Child"}]}"#,
+            r#"{"smut_id":"parent","title":"Parent","children":[{"smut_id":"child","title":"Child"}]}"#,
         ],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
@@ -628,7 +643,7 @@ fn delete_leaves_incoming_references_untouched() {
     let before = smut(&scratch, &["get", "parent"]);
     assert_eq!(
         before.json()["objects"][0]["children"],
-        json!([{"id": "child"}])
+        json!([{"smut_id": "child"}])
     );
 
     let deleted = smut(&scratch, &["delete", "child"]);
@@ -639,7 +654,7 @@ fn delete_leaves_incoming_references_untouched() {
     assert_eq!(parent.code, 0, "{}", parent.stderr);
     assert_eq!(
         parent.json()["objects"][0]["children"],
-        json!([{"id": "child"}]),
+        json!([{"smut_id": "child"}]),
         "the delete does not cascade into the referencing entity"
     );
 
@@ -795,7 +810,7 @@ fn depth_zero_is_valid_and_selects_the_roots_alone() {
     assert_eq!(envelope["traversal"]["edges"], json!([]));
     assert_eq!(
         envelope["objects"],
-        json!([{"body": "First.", "id": "a", "priority": 3, "title": "Alpha"}]),
+        json!([{"body": "First.", "smut_id": "a", "priority": 3, "title": "Alpha"}]),
         "a roots-only walk returns the root alone: {envelope}"
     );
 }
@@ -935,10 +950,13 @@ fn an_accepted_budget_bounds_the_walk_and_an_exact_fit_is_not_truncated() {
     let scratch = Scratch::new();
     let declared = smut(
         &scratch,
-        &["declare", r#"{"id":"a","title":"A","next":{"id":"b"}}"#],
+        &[
+            "declare",
+            r#"{"smut_id":"a","title":"A","next":{"smut_id":"b"}}"#,
+        ],
     );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
-    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"B"}"#]);
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"b","title":"B"}"#]);
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     let ran = smut(
@@ -987,17 +1005,17 @@ fn corrupt_nested_identity(scratch: &Scratch, id: &str, raw: &str) -> String {
 #[test]
 fn get_refuses_malformed_stored_identity_with_its_path() {
     // The entity-node rule holds for stored entities as well as requested ones:
-    // an `id` present below the top level and not a nonempty string is
+    // a `smut_id` present below the top level and not a nonempty string is
     // corruption, never data, so the store refuses to load at all. A corrupt
     // store is not a user error, hence 1 rather than 2.
     let scratch = Scratch::new();
-    let declared = smut(&scratch, &["declare", r#"{"id":"a","title":"Alpha"}"#]);
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"Alpha"}"#]);
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     let basename = corrupt_nested_identity(
         &scratch,
         "a",
-        r#"{"id":"a","title":"Alpha","notes":{"payload":{"id":null}}}"#,
+        r#"{"smut_id":"a","title":"Alpha","notes":{"payload":{"smut_id":null}}}"#,
     );
 
     let ran = smut(&scratch, &["get", "a"]);
@@ -1024,7 +1042,7 @@ fn get_refuses_malformed_stored_identity_with_its_path() {
     );
     assert!(
         ran.stderr
-            .contains(r#"identity at $["notes"]["payload"]["id"] must be a nonempty string"#),
+            .contains(r#"identity at $["notes"]["payload"]["smut_id"] must be a nonempty string"#),
         "the refusal names the path of the offending id: {:?}",
         ran.stderr
     );
@@ -1036,15 +1054,18 @@ fn follow_refuses_malformed_stored_identity_outside_the_followed_field() {
     // traversal reaches still refuses the traversal: `links` is what `follow`
     // walks, and `notes` is what breaks the load.
     let scratch = Scratch::new();
-    let declared = smut(&scratch, &["declare", r#"{"id":"a","links":[{"id":"b"}]}"#]);
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"a","links":[{"smut_id":"b"}]}"#],
+    );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
-    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"Beta"}"#]);
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"b","title":"Beta"}"#]);
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     let basename = corrupt_nested_identity(
         &scratch,
         "a",
-        r#"{"id":"a","links":[{"id":"b"}],"notes":{"payload":{"id":null}}}"#,
+        r#"{"smut_id":"a","links":[{"smut_id":"b"}],"notes":{"payload":{"smut_id":null}}}"#,
     );
 
     let ran = smut(&scratch, &["query", r#"{"from":["a"],"follow":["links"]}"#]);
@@ -1066,7 +1087,7 @@ fn follow_refuses_malformed_stored_identity_outside_the_followed_field() {
     );
     assert!(
         ran.stderr
-            .contains(r#"identity at $["notes"]["payload"]["id"] must be a nonempty string"#),
+            .contains(r#"identity at $["notes"]["payload"]["smut_id"] must be a nonempty string"#),
         "the refusal names the path of the offending id: {:?}",
         ran.stderr
     );
@@ -1077,9 +1098,12 @@ fn follow_over_the_same_graph_uncorrupted_returns_both_entities() {
     // The control for the refusal above: this graph and this traversal are
     // healthy, so the refusal is the corruption and not the shape of the walk.
     let scratch = Scratch::new();
-    let declared = smut(&scratch, &["declare", r#"{"id":"a","links":[{"id":"b"}]}"#]);
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"a","links":[{"smut_id":"b"}]}"#],
+    );
     assert_eq!(declared.code, 0, "{}", declared.stderr);
-    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"Beta"}"#]);
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"b","title":"Beta"}"#]);
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     let ran = smut(&scratch, &["query", r#"{"from":["a"],"follow":["links"]}"#]);
@@ -1092,7 +1116,11 @@ fn follow_over_the_same_graph_uncorrupted_returns_both_entities() {
         .as_array()
         .expect("an array of entities")
         .iter()
-        .map(|entity| entity["id"].as_str().expect("every object carries an id"))
+        .map(|entity| {
+            entity["smut_id"]
+                .as_str()
+                .expect("every object carries an id")
+        })
         .collect();
     assert_eq!(
         ids,
@@ -1106,13 +1134,13 @@ fn render_refuses_the_same_corrupt_store() {
     // `render` is a traversal over the same load boundary, so it refuses too,
     // and prints no text rather than a partial document.
     let scratch = Scratch::new();
-    let declared = smut(&scratch, &["declare", r#"{"id":"a","title":"Alpha"}"#]);
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"Alpha"}"#]);
     assert_eq!(declared.code, 0, "{}", declared.stderr);
 
     corrupt_nested_identity(
         &scratch,
         "a",
-        r#"{"id":"a","title":"Alpha","notes":{"payload":{"id":null}}}"#,
+        r#"{"smut_id":"a","title":"Alpha","notes":{"payload":{"smut_id":null}}}"#,
     );
 
     let ran = smut(&scratch, &["render", "{}"]);
@@ -1136,8 +1164,14 @@ fn a_request_side_malformed_identity_stays_a_user_error() {
     let scratch = Scratch::new();
 
     for (declaration, found) in [
-        (r#"{"id":"req-bad","payload":{"id":null}}"#, "null"),
-        (r#"{"id":"req-bad","payload":{"id":[]}}"#, "an array"),
+        (
+            r#"{"smut_id":"req-bad","payload":{"smut_id":null}}"#,
+            "null",
+        ),
+        (
+            r#"{"smut_id":"req-bad","payload":{"smut_id":[]}}"#,
+            "an array",
+        ),
     ] {
         let ran = smut(&scratch, &["declare", declaration]);
 
@@ -1147,7 +1181,7 @@ fn a_request_side_malformed_identity_stays_a_user_error() {
             "{declaration}: a rejection prints no envelope"
         );
         assert!(
-            ran.stderr.contains("invalid entity id"),
+            ran.stderr.contains("invalid smut_id"),
             "{declaration}: the refusal names the identity rule: {}",
             ran.stderr
         );
@@ -1162,4 +1196,441 @@ fn a_request_side_malformed_identity_stays_a_user_error() {
             ran.stderr
         );
     }
+}
+
+// ── PHASE-02/VT-2: `smut_id` is structural and ordinary `id` is data ──────────
+// The rename frees `id` for caller data at every depth while the structural key
+// keeps controlling graph shape. These cases are the public round trips: root
+// generation, nesting, predicates, projections, receipts, the patch sentinel and
+// the unchanged response containers.
+
+#[test]
+fn a_root_ordinary_id_becomes_data_under_a_generated_identity() {
+    // §2: a nonempty declaration root without `smut_id` takes a generated
+    // identity, so an imported payload's own `id` is stored rather than read as
+    // the entity's name.
+    let scratch = Scratch::new();
+
+    let declared = smut(&scratch, &["declare", r#"{"id":"external","title":"T"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let envelope = declared.json();
+    let ids = envelope["ids"].as_array().expect("ids is an array");
+    assert_eq!(ids.len(), 1, "one declaration root: {envelope}");
+    let generated = ids[0].as_str().expect("identity is an opaque string");
+    assert_ne!(
+        generated, "external",
+        "an ordinary id does not name the entity: {envelope}"
+    );
+
+    let fetched = smut(&scratch, &["get", generated]);
+    assert_eq!(fetched.code, 0, "{}", fetched.stderr);
+    let envelope = fetched.json();
+    assert_eq!(
+        envelope["objects"],
+        json!([{"smut_id": generated, "id": "external", "title": "T"}]),
+        "identity addresses the entity and `id` is served as data: {envelope}"
+    );
+}
+
+#[test]
+fn ordinary_id_values_at_depth_round_trip_as_data() {
+    // §2 and design §5: a nested ordinary `id` of null, empty string, number,
+    // array or object names nothing, so it hoists no entity and leaves no
+    // `missing` entry.
+    let scratch = Scratch::new();
+    let payload = json!({
+        "nullable": {"id": null},
+        "empty": {"id": ""},
+        "number": {"id": 7},
+        "list": [{"id": "a"}, {"id": ["b", {"id": "c"}]}],
+        "object": {"id": {"kind": "object"}},
+    });
+    let declaration =
+        json!({"smut_id": "deep", "title": "Nested", "payload": payload.clone()}).to_string();
+
+    let declared = smut(&scratch, &["declare", declaration.as_str()]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let envelope = declared.json();
+    assert_eq!(envelope["ids"], json!(["deep"]), "{envelope}");
+    assert_eq!(
+        envelope["missing"],
+        json!([]),
+        "no ordinary `id` value was read as identity: {envelope}"
+    );
+    assert_eq!(
+        envelope["changes"].as_array().expect("an array").len(),
+        1,
+        "the nested `id` values hoisted nothing: {envelope}"
+    );
+
+    let fetched = smut(&scratch, &["get", "deep"]);
+    assert_eq!(fetched.code, 0, "{}", fetched.stderr);
+    let envelope = fetched.json();
+    assert_eq!(
+        envelope["objects"],
+        json!([{"smut_id": "deep", "title": "Nested", "payload": payload}]),
+        "the payload round-trips unchanged: {envelope}"
+    );
+
+    let everything = smut(&scratch, &["query", "{}"]);
+    assert_eq!(everything.code, 0, "{}", everything.stderr);
+    assert_eq!(
+        everything.json()["objects"]
+            .as_array()
+            .expect("an array")
+            .len(),
+        1,
+        "exactly one entity was created"
+    );
+}
+
+#[test]
+fn an_object_mixing_id_and_smut_id_hoists_identity_and_keeps_id_as_data() {
+    // §2's table: `smut_id` plus other fields is a declaration, hoisted and
+    // replaced by a key-only reference, and the ordinary `id` it also carries is
+    // one of the declared entity's fields.
+    let scratch = Scratch::new();
+
+    let declared = smut(
+        &scratch,
+        &[
+            "declare",
+            r#"{"smut_id":"parent","title":"Parent","external":{"smut_id":"imported","id":"caller-data"}}"#,
+        ],
+    );
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let envelope = declared.json();
+    assert_eq!(envelope["ids"], json!(["parent"]), "{envelope}");
+    assert_eq!(envelope["missing"], json!([]), "{envelope}");
+
+    let parent = smut(&scratch, &["get", "parent"]);
+    assert_eq!(parent.code, 0, "{}", parent.stderr);
+    assert_eq!(
+        parent.json()["objects"],
+        json!([{
+            "smut_id": "parent",
+            "external": {"smut_id": "imported"},
+            "title": "Parent",
+        }]),
+        "the occurrence is the key-only reference, not the embedded entity"
+    );
+
+    let imported = smut(&scratch, &["get", "imported"]);
+    assert_eq!(imported.code, 0, "{}", imported.stderr);
+    assert_eq!(
+        imported.json()["objects"],
+        json!([{"smut_id": "imported", "id": "caller-data"}]),
+        "the ordinary id is data on the entity the structural key names"
+    );
+}
+
+#[test]
+fn a_where_on_smut_id_selects_by_identity_and_on_id_selects_data() {
+    // §2: field names still address the actual top-level field, so `smut_id`
+    // addresses identity and ordinary `id` addresses caller data.
+    let scratch = Scratch::new();
+
+    for declaration in [
+        r#"{"smut_id":"a","title":"Alpha","id":"external-a"}"#,
+        r#"{"smut_id":"b","title":"Beta"}"#,
+        r#"{"smut_id":"c","title":"Gamma","id":"external-c"}"#,
+    ] {
+        let declared = smut(&scratch, &["declare", declaration]);
+
+        assert_eq!(declared.code, 0, "{declaration}: {}", declared.stderr);
+    }
+
+    let identity = smut(&scratch, &["query", r#"{"where":{"smut_id":"b"}}"#]);
+    assert_eq!(identity.code, 0, "{}", identity.stderr);
+    assert_eq!(
+        identity.json()["objects"],
+        json!([{"smut_id": "b", "title": "Beta"}]),
+        "identity selects its own entity: {}",
+        identity.json()
+    );
+
+    let data = smut(&scratch, &["query", r#"{"where":{"id":"external-a"}}"#]);
+    assert_eq!(data.code, 0, "{}", data.stderr);
+    assert_eq!(
+        data.json()["objects"],
+        json!([{"smut_id": "a", "id": "external-a", "title": "Alpha"}]),
+        "only the entity carrying that value as data is selected: {}",
+        data.json()
+    );
+
+    let cross = smut(&scratch, &["query", r#"{"where":{"id":"b"}}"#]);
+    assert_eq!(cross.code, 0, "{}", cross.stderr);
+    assert_eq!(
+        cross.json()["objects"],
+        json!([]),
+        "an identity value is not an ordinary `id` value: {}",
+        cross.json()
+    );
+}
+
+#[test]
+fn select_returns_identity_alone_or_identity_beside_the_ordinary_id() {
+    // §2: every projected entity retains `smut_id`, `select: []`-style identity
+    // is what a selection of the identity field yields, and ordinary `id` is
+    // projected like any other data field.
+    let scratch = Scratch::new();
+    let declared = smut(
+        &scratch,
+        &[
+            "declare",
+            r#"{"smut_id":"a","title":"Alpha","id":"external-a"}"#,
+        ],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let identity = smut(&scratch, &["query", r#"{"from":"a","select":["smut_id"]}"#]);
+    assert_eq!(identity.code, 0, "{}", identity.stderr);
+    assert_eq!(
+        identity.json()["objects"],
+        json!([{"smut_id": "a"}]),
+        "identity alone: {}",
+        identity.json()
+    );
+
+    let data = smut(&scratch, &["query", r#"{"from":"a","select":["id"]}"#]);
+    assert_eq!(data.code, 0, "{}", data.stderr);
+    assert_eq!(
+        data.json()["objects"],
+        json!([{"smut_id": "a", "id": "external-a"}]),
+        "the data field plus the retained identity: {}",
+        data.json()
+    );
+}
+
+#[test]
+fn order_by_an_ordinary_id_keeps_ordinary_field_semantics() {
+    // DEC-006: ordering reads the named top-level field, so an ordinary `id`
+    // sorts by its data value and an entity without one sorts last.
+    let scratch = Scratch::new();
+
+    for declaration in [
+        r#"{"smut_id":"alpha-entity","id":"zzz"}"#,
+        r#"{"smut_id":"beta-entity","title":"Beta"}"#,
+        r#"{"smut_id":"gamma-entity","id":"aaa"}"#,
+    ] {
+        let declared = smut(&scratch, &["declare", declaration]);
+
+        assert_eq!(declared.code, 0, "{declaration}: {}", declared.stderr);
+    }
+
+    let ran = smut(&scratch, &["query", r#"{"order":[{"field":"id"}]}"#]);
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let envelope = ran.json();
+    let order: Vec<&str> = envelope["objects"]
+        .as_array()
+        .expect("an array of entities")
+        .iter()
+        .map(|entity| {
+            entity["smut_id"]
+                .as_str()
+                .expect("every projected entity keeps its identity")
+        })
+        .collect();
+    assert_eq!(
+        order,
+        vec!["gamma-entity", "alpha-entity", "beta-entity"],
+        "data values ascend and absence sorts last: {envelope}"
+    );
+}
+
+#[test]
+fn a_where_on_the_old_spelling_is_an_empty_result_not_a_refusal() {
+    // DEC-027: a field no entity carries fails every operator exactly as a
+    // missing field on one entity does, so an old-spelling `id` query is an
+    // empty result at exit 0 — not an error, and not a refusal.
+    let scratch = Scratch::new();
+    let declared = smut(
+        &scratch,
+        &[
+            "declare",
+            r#"{"smut_id":"holder","title":"Holder","payload":{"id":"a","title":"Embedded"}}"#,
+        ],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let control = smut(&scratch, &["query", r#"{"where":{"smut_id":"holder"}}"#]);
+    assert_eq!(control.code, 0, "{}", control.stderr);
+    assert_eq!(
+        control.json()["objects"]
+            .as_array()
+            .expect("an array")
+            .len(),
+        1,
+        "the store holds the entity, so the empty result is about the field: {}",
+        control.json()
+    );
+
+    let ran = smut(&scratch, &["query", r#"{"where":{"id":"a"}}"#]);
+
+    assert_eq!(
+        ran.code, 0,
+        "an unheld field is not a refused request: {}",
+        ran.stderr
+    );
+    assert!(ran.stderr.is_empty(), "{}", ran.stderr);
+    let envelope = ran.json();
+    assert_eq!(
+        envelope["objects"],
+        json!([]),
+        "the nested ordinary id is data, not a top-level field: {envelope}"
+    );
+}
+
+#[test]
+fn a_change_receipt_names_its_subject_smut_id_with_a_full_previous_entity() {
+    // §2: only the subject field changes in the envelope. `previous` stays the
+    // whole pre-batch entity under the new key, `--compact` still omits it, and
+    // the container names are untouched.
+    let scratch = Scratch::new();
+
+    let created = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"r","title":"one","id":"data"}"#],
+    );
+    assert_eq!(created.code, 0, "{}", created.stderr);
+    let envelope = created.json();
+    let change = &envelope["changes"][0];
+    assert_eq!(change["smut_id"], json!("r"), "{envelope}");
+    assert_eq!(change["status"], json!("created"), "{envelope}");
+    assert_eq!(change["previous"], Value::Null, "{envelope}");
+    assert!(
+        change.get("id").is_none(),
+        "the subject field is `smut_id`, not `id`: {change}"
+    );
+    assert_eq!(envelope["ids"], json!(["r"]), "{envelope}");
+    assert_eq!(envelope["missing"], json!([]), "{envelope}");
+
+    let updated = smut(&scratch, &["declare", r#"{"smut_id":"r","title":"two"}"#]);
+    assert_eq!(updated.code, 0, "{}", updated.stderr);
+    let envelope = updated.json();
+    let change = &envelope["changes"][0];
+    assert_eq!(change["status"], json!("updated"), "{envelope}");
+    assert_eq!(
+        change["previous"],
+        json!({"smut_id": "r", "title": "one", "id": "data"}),
+        "`previous` is the whole pre-batch entity under `smut_id`: {envelope}"
+    );
+
+    let compact = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"r","title":"three"}"#, "--compact"],
+    );
+    assert_eq!(compact.code, 0, "{}", compact.stderr);
+    let envelope = compact.json();
+    assert_eq!(envelope["ids"], json!(["r"]), "{envelope}");
+    assert_eq!(envelope["missing"], json!([]), "{envelope}");
+    assert!(
+        envelope["changes"][0].get("previous").is_none(),
+        "`--compact` omits `previous`: {envelope}"
+    );
+
+    let deleted = smut(&scratch, &["delete", "r", "absent"]);
+    assert_eq!(deleted.code, 0, "{}", deleted.stderr);
+    assert_eq!(
+        deleted.json(),
+        json!({"deleted": ["r"], "missing": ["absent"]}),
+        "the delete containers keep their names"
+    );
+}
+
+#[test]
+fn drop_applies_to_an_ordinary_id_field() {
+    // DEC-002: the top-level `"DROP"` sentinel is patch algebra over ordinary
+    // fields, so it removes an ordinary `id` exactly as it removes any field.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"x","id":"v"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let before = smut(&scratch, &["get", "x"]);
+    assert_eq!(before.code, 0, "{}", before.stderr);
+    assert_eq!(
+        before.json()["objects"],
+        json!([{"smut_id": "x", "id": "v"}]),
+        "the ordinary id is data before the drop: {}",
+        before.json()
+    );
+
+    let dropped = smut(&scratch, &["declare", r#"{"smut_id":"x","id":"DROP"}"#]);
+    assert_eq!(dropped.code, 0, "{}", dropped.stderr);
+    assert_eq!(dropped.json()["changes"][0]["status"], json!("updated"));
+
+    let after = smut(&scratch, &["get", "x"]);
+    assert_eq!(after.code, 0, "{}", after.stderr);
+    assert_eq!(
+        after.json()["objects"],
+        json!([{"smut_id": "x"}]),
+        "the sentinel removed the data field and left the identity: {}",
+        after.json()
+    );
+}
+
+#[test]
+fn a_traversal_response_keeps_its_container_names() {
+    // §1 and §2: response containers keep their names, so a traversal still
+    // reports `frontier`, `depths`, `edges` with `source`/`target` and
+    // `dangling` with `source`/`target`.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"kept","title":"K"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let declared = smut(
+        &scratch,
+        &[
+            "declare",
+            r#"{"smut_id":"root","links":[{"smut_id":"kept"},{"smut_id":"gone"}]}"#,
+        ],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert_eq!(
+        declared.json()["missing"],
+        json!(["gone"]),
+        "the references are structural, so the absent one is unresolved: {}",
+        declared.json()
+    );
+
+    let ran = smut(
+        &scratch,
+        &["query", r#"{"from":"root","follow":["links"]}"#],
+    );
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    let envelope = ran.json();
+    let traversal = &envelope["traversal"];
+    assert_eq!(
+        traversal["frontier"],
+        json!(["kept"]),
+        "the discovered but unexpanded id: {envelope}"
+    );
+    assert_eq!(
+        traversal["depths"],
+        json!({"kept": 1, "root": 0}),
+        "{envelope}"
+    );
+    assert_eq!(
+        traversal["edges"],
+        json!([{"source": "root", "field": "links", "target": "kept"}]),
+        "edges keep `source` and `target`: {envelope}"
+    );
+    assert_eq!(
+        envelope["dangling"],
+        json!([{"source": "root", "field": "links", "target": "gone"}]),
+        "dangling entries keep `source` and `target`: {envelope}"
+    );
+
+    let mut returned: Vec<&str> = envelope["objects"]
+        .as_array()
+        .expect("an array of entities")
+        .iter()
+        .map(|entity| entity["smut_id"].as_str().expect("identity"))
+        .collect();
+    returned.sort_unstable();
+    assert_eq!(returned, vec!["kept", "root"], "{envelope}");
 }

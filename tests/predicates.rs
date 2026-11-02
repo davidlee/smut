@@ -34,7 +34,9 @@ fn store(entities: &[Value]) -> Entities {
     entities
         .iter()
         .map(|entity| {
-            let id = entity["id"].as_str().expect("every fixture names its id");
+            let id = entity["smut_id"]
+                .as_str()
+                .expect("every fixture names its id");
             (Id::new(id), entity.clone())
         })
         .collect()
@@ -70,7 +72,10 @@ fn missing_and_present_null_differ_exactly_where_the_table_says() {
     // is decided by *presence*, so a present `null` is present. Every other
     // operator needs the field present, which makes the two entities below a
     // two-row truth table for each operator.
-    let entities = [json!({"id": "null", "f": null}), json!({"id": "absent"})];
+    let entities = [
+        json!({"smut_id": "null", "f": null}),
+        json!({"smut_id": "absent"}),
+    ];
 
     let cases: [(&str, Value, &[&str]); 6] = [
         // Present and structurally equal to `null`: the `null` entity holds.
@@ -109,9 +114,9 @@ fn contains_matches_a_substring_or_an_array_member_and_nothing_else() {
     // `missing_and_present_null_differ_exactly_where_the_table_says`'s non-match
     // row.
     let entities = [
-        json!({"id": "text", "f": "keep selection small"}),
-        json!({"id": "list", "f": ["one", {"k": 2}]}),
-        json!({"id": "number", "f": 1}),
+        json!({"smut_id": "text", "f": "keep selection small"}),
+        json!({"smut_id": "list", "f": ["one", {"k": 2}]}),
+        json!({"smut_id": "number", "f": 1}),
     ];
 
     assert_eq!(
@@ -147,7 +152,7 @@ fn empty_and_is_true_and_empty_or_is_false() {
     // §6.3's identities: empty `$and` holds for every root, empty `$or` for
     // none. Two entities make "every root" a real selection rather than a
     // one-element accident.
-    let entities = [json!({"id": "a"}), json!({"id": "b"})];
+    let entities = [json!({"smut_id": "a"}), json!({"smut_id": "b"})];
 
     assert_eq!(
         selected_ids(
@@ -170,9 +175,9 @@ fn sibling_keys_and_nested_not_hold_conjunctively() {
     // the clause but not the field condition, and `b` matches the field
     // condition but not the clause, so only `a` survives either way.
     let entities = [
-        json!({"id": "a", "type": "question", "status": "open"}),
-        json!({"id": "b", "type": "question", "status": "blocked"}),
-        json!({"id": "c", "type": "decision", "status": "open"}),
+        json!({"smut_id": "a", "type": "question", "status": "open"}),
+        json!({"smut_id": "b", "type": "question", "status": "blocked"}),
+        json!({"smut_id": "c", "type": "decision", "status": "open"}),
     ];
     let roots = ["a", "b", "c"];
 
@@ -210,10 +215,10 @@ fn the_six_must_pass_examples_select_what_the_design_says() {
     // `body`, `b` has no `body` and a blocked status, and `c` is a decision, so
     // every example is separated from every other by at least one entity.
     let entities = [
-        json!({"id": "a", "type": "question", "status": "open", "body": "one"}),
-        json!({"id": "b", "type": "question", "status": "blocked"}),
-        json!({"id": "c", "type": "decision", "status": "open", "body": "two"}),
-        json!({"id": "d", "status": "open"}),
+        json!({"smut_id": "a", "type": "question", "status": "open", "body": "one"}),
+        json!({"smut_id": "b", "type": "question", "status": "blocked"}),
+        json!({"smut_id": "c", "type": "decision", "status": "open", "body": "two"}),
+        json!({"smut_id": "d", "status": "open"}),
     ];
     let all = ["a", "b", "c", "d"];
 
@@ -282,8 +287,8 @@ fn the_eq_escape_compares_a_literal_object_that_carries_dollar_keys() {
     // entities are present, so the selected one is a real comparison and the
     // other a real refusal-to-match.
     let entities = [
-        json!({"id": "x", "meta": {"$ref": "x"}}),
-        json!({"id": "y", "meta": {"$ref": "y"}}),
+        json!({"smut_id": "x", "meta": {"$ref": "x"}}),
+        json!({"smut_id": "y", "meta": {"$ref": "y"}}),
     ];
 
     let store = store(&entities);
@@ -358,8 +363,8 @@ fn an_unknown_operator_and_a_clause_inside_a_field_condition_are_refused() {
 fn where_filters_roots_before_the_walk_and_the_limit() {
     // Four claims, one store where they can each be separated.
     let entities = [
-        json!({"id": "a", "status": "keep", "next": {"id": "b"}}),
-        json!({"id": "b", "status": "drop"}),
+        json!({"smut_id": "a", "status": "keep", "next": {"smut_id": "b"}}),
+        json!({"smut_id": "b", "status": "drop"}),
     ];
 
     // (1) §7.1: `where` never filters what traversal discovers. `b` fails the
@@ -387,7 +392,7 @@ fn where_filters_roots_before_the_walk_and_the_limit() {
 
         assert_eq!(
             document["objects"],
-            json!([{"id": "a", "next": {"id": "b"}, "status": "keep"}]),
+            json!([{"smut_id": "a", "next": {"smut_id": "b"}, "status": "keep"}]),
             "the filtered root is omitted: {document}"
         );
         assert_eq!(
@@ -427,16 +432,20 @@ fn where_filters_roots_before_the_walk_and_the_limit() {
     // `c`, so the filter ran first — and exactly `limit` results is not an
     // omission.
     {
-        let store = store(&[json!({"id": "a"}), json!({"id": "b"}), json!({"id": "c"})]);
+        let store = store(&[
+            json!({"smut_id": "a"}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c"}),
+        ]);
         let specification =
-            parse(json!({"from": ["a", "b", "c"], "where": {"id": "c"}, "limit": 1}));
+            parse(json!({"from": ["a", "b", "c"], "where": {"smut_id": "c"}, "limit": 1}));
         let selection = select(&store, &specification).expect("nothing to sort");
         let document = envelope(&selection);
 
         assert_eq!(
             document["objects"],
-            json!([{"id": "c"}]),
-            "`where` runs before `limit`, and `id` is an ordinary field: {document}"
+            json!([{"smut_id": "c"}]),
+            "`where` runs before `limit`, and `smut_id` names the identity: {document}"
         );
         assert_eq!(
             document["truncated"],
@@ -734,9 +743,9 @@ fn a_where_query_through_the_cli_returns_the_filtered_objects() {
     let scratch = Scratch::new();
 
     for declaration in [
-        r#"{"id":"q","type":"question","status":"open"}"#,
-        r#"{"id":"d","type":"decision","status":"open"}"#,
-        r#"{"id":"q2","type":"question","status":"blocked"}"#,
+        r#"{"smut_id":"q","type":"question","status":"open"}"#,
+        r#"{"smut_id":"d","type":"decision","status":"open"}"#,
+        r#"{"smut_id":"q2","type":"question","status":"blocked"}"#,
     ] {
         smut(&scratch, &["declare", declaration]).assert_one_json_line("a fixture declaration");
     }
@@ -750,7 +759,7 @@ fn a_where_query_through_the_cli_returns_the_filtered_objects() {
     assert_eq!(
         queried.json(),
         json!({
-            "objects": [{"id": "q", "status": "open", "type": "question"}],
+            "objects": [{"smut_id": "q", "status": "open", "type": "question"}],
             "missing": [],
             "dangling": [],
             "truncated": false,

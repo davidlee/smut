@@ -272,8 +272,8 @@ fn race_attempt(attempt: usize) {
         "attempt {attempt}: the two declarations did not generate the same id"
     );
 
-    // Every stored id maps to a distinct file, and every file's `id` is its
-    // index key. (`load()` refused any disagreement on the way here.)
+    // Every stored id maps to a distinct file, and every file's `smut_id` is
+    // its index key. (`load()` refused any disagreement on the way here.)
     let mut files = Vec::new();
     for (id, basename) in snapshot.index().entries() {
         assert!(
@@ -285,7 +285,7 @@ fn race_attempt(attempt: usize) {
         let bytes = fs::read(scratch.directory().join(basename)).expect("a mapped file");
         let stored: Value = serde_json::from_slice(&bytes).expect("an entity file");
         assert_eq!(
-            stored["id"],
+            stored["smut_id"],
             json!(id.as_str()),
             "attempt {attempt}: {basename}"
         );
@@ -315,7 +315,7 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
         scratch.root(),
         &[
             "declare",
-            r#"[{"id":"killed-one","body":"one"},{"id":"killed-two","body":"two"}]"#,
+            r#"[{"smut_id":"killed-one","body":"one"},{"smut_id":"killed-two","body":"two"}]"#,
         ],
     );
     child.kill().expect("the child is killed");
@@ -357,7 +357,7 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
     // The store converged: the next declaration succeeds and publishes.
     let survivor = run_in(
         scratch.root(),
-        &["declare", r#"{"id":"survivor","body":"survives"}"#],
+        &["declare", r#"{"smut_id":"survivor","body":"survives"}"#],
     );
     assert_eq!(
         code(&survivor),
@@ -369,7 +369,7 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
         scratch.load().entities(),
         &Entities::from([(
             Id::new("survivor"),
-            json!({"id":"survivor","body":"survives"})
+            json!({"smut_id":"survivor","body":"survives"})
         )])
     );
 }
@@ -383,7 +383,7 @@ const BETA_FILE: &str = "Zq7.json";
 const GAMMA_FILE: &str = "Fresh.json";
 
 fn entity(id: &str, body: &str) -> Value {
-    json!({ "id": id, "body": body })
+    json!({ "smut_id": id, "body": body })
 }
 
 fn entity_bytes(value: &Value) -> Vec<u8> {
@@ -583,14 +583,14 @@ impl Command for StalePrecheck {
 
             // The child creates the store and commits the id this pass would
             // have been free to use — the precheck is now provably stale.
-            let declaration = format!(r#"{{"id":"{COLLIDING}","body":"the child's"}}"#);
+            let declaration = format!(r#"{{"smut_id":"{COLLIDING}","body":"the child's"}}"#);
             let output = run_in(&self.root, &["declare", &declaration]);
             assert_eq!(code(&output), 0, "{}", stderr(&output));
             assert_eq!(envelope(&output)["ids"], json!([COLLIDING]));
 
             return Ok(Computed {
                 write_set: WriteSet {
-                    put: vec![json!({ "id": COLLIDING, "body": "the parent's" })],
+                    put: vec![json!({ "smut_id": COLLIDING, "body": "the parent's" })],
                     remove: Vec::new(),
                 },
                 value: format!("precheck:{COLLIDING}"),
@@ -607,7 +607,7 @@ impl Command for StalePrecheck {
 
         Ok(Computed {
             write_set: WriteSet {
-                put: vec![json!({ "id": id, "body": "the parent's" })],
+                put: vec![json!({ "smut_id": id, "body": "the parent's" })],
                 remove: Vec::new(),
             },
             value: format!("authoritative:{id}"),
@@ -646,9 +646,12 @@ fn stale_empty_snapshot_precheck() {
         &Entities::from([
             (
                 Id::new(COLLIDING),
-                json!({ "id": COLLIDING, "body": "the child's" })
+                json!({ "smut_id": COLLIDING, "body": "the child's" })
             ),
-            (Id::new(FREE), json!({ "id": FREE, "body": "the parent's" })),
+            (
+                Id::new(FREE),
+                json!({ "smut_id": FREE, "body": "the parent's" })
+            ),
         ])
     );
     assert_eq!(

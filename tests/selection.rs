@@ -17,7 +17,9 @@ fn store(entities: &[Value]) -> Entities {
     entities
         .iter()
         .map(|entity| {
-            let id = entity["id"].as_str().expect("every fixture names its id");
+            let id = entity["smut_id"]
+                .as_str()
+                .expect("every fixture names its id");
             (Id::new(id), entity.clone())
         })
         .collect()
@@ -28,7 +30,7 @@ fn numbered(count: u32) -> Entities {
     (0..count)
         .map(|index| {
             let id = format!("id-{index:03}");
-            (Id::new(&id), json!({"id": id}))
+            (Id::new(&id), json!({"smut_id": id}))
         })
         .collect()
 }
@@ -54,9 +56,9 @@ fn keys(document: &Value) -> BTreeSet<&str> {
 #[test]
 fn roots_order_limit_and_the_envelope_are_one_pipeline() {
     let store = store(&[
-        json!({"id": "a", "title": "alpha", "priority": 2}),
-        json!({"id": "b", "title": "beta", "priority": 1}),
-        json!({"id": "c", "title": "gamma", "priority": 3}),
+        json!({"smut_id": "a", "title": "alpha", "priority": 2}),
+        json!({"smut_id": "b", "title": "beta", "priority": 1}),
+        json!({"smut_id": "c", "title": "gamma", "priority": 3}),
     ]);
     let specification = parse(json!({
         "from": ["c", "b", "gone"],
@@ -74,8 +76,8 @@ fn roots_order_limit_and_the_envelope_are_one_pipeline() {
         envelope(&selection),
         json!({
             "objects": [
-                {"id": "b", "title": "beta"},
-                {"id": "c", "title": "gamma"}
+                {"smut_id": "b", "title": "beta"},
+                {"smut_id": "c", "title": "gamma"}
             ],
             "missing": ["gone"],
             "dangling": [],
@@ -87,7 +89,7 @@ fn roots_order_limit_and_the_envelope_are_one_pipeline() {
 
 #[test]
 fn missing_roots_are_reported_without_consuming_the_limit() {
-    let store = store(&[json!({"id": "a"}), json!({"id": "b"})]);
+    let store = store(&[json!({"smut_id": "a"}), json!({"smut_id": "b"})]);
     let specification = parse(json!({"from": ["a", "gone", "b"], "limit": 1}));
 
     let selection = select(&store, &specification).expect("nothing to sort");
@@ -103,14 +105,14 @@ fn missing_roots_are_reported_without_consuming_the_limit() {
     );
 
     let document = envelope(&selection);
-    assert_eq!(document["objects"], json!([{"id": "a"}]));
+    assert_eq!(document["objects"], json!([{"smut_id": "a"}]));
     assert_eq!(document["missing"], json!(["gone"]));
     assert_eq!(document["truncated"], json!(true));
 }
 
 #[test]
 fn a_zero_entity_selection_still_carries_every_diagnostics_field() {
-    let store = store(&[json!({"id": "a"})]);
+    let store = store(&[json!({"smut_id": "a"})]);
     let specification = parse(json!({"from": []}));
 
     let selection = select(&store, &specification).expect("an empty root list is valid");
@@ -152,8 +154,8 @@ fn the_public_spec_edge_accepts_where_and_the_predicate_is_applied() {
     spec::parse(&json!({"where": {"type": "question"}})).expect("`where` is the key 0.2 accepts");
 
     let store = store(&[
-        json!({"id": "a", "type": "question", "status": "open"}),
-        json!({"id": "b", "type": "decision", "status": "open"}),
+        json!({"smut_id": "a", "type": "question", "status": "open"}),
+        json!({"smut_id": "b", "type": "decision", "status": "open"}),
     ]);
     let specification = parse(json!({"from": ["a", "b"], "where": {"type": "question"}}));
     let selection = select(&store, &specification).expect("a predicate is not a sort failure");
@@ -169,9 +171,9 @@ fn a_traversal_selection_carries_a_traversal_member_that_get_never_has() {
     // The root reaches a child which reaches a grandchild, so a depth-1 walk
     // discovers the child at the boundary and never meets the grandchild.
     let store = store(&[
-        json!({"id": "root", "next": {"id": "child"}}),
-        json!({"id": "child", "next": {"id": "grandchild"}}),
-        json!({"id": "grandchild"}),
+        json!({"smut_id": "root", "next": {"smut_id": "child"}}),
+        json!({"smut_id": "child", "next": {"smut_id": "grandchild"}}),
+        json!({"smut_id": "grandchild"}),
     ]);
     let specification = parse(json!({"from": "root", "follow": ["next"], "depth": 1}));
 
@@ -242,9 +244,9 @@ fn depths_and_edges_are_result_scoped_while_frontier_and_dangling_are_walk_scope
     // root, so `leaf` is discovered but not returned and the dangling source is
     // an id the caller never sees.
     let store = store(&[
-        json!({"id": "root", "next": {"id": "middle"}}),
-        json!({"id": "middle", "next": [{"id": "leaf"}, {"id": "gone"}]}),
-        json!({"id": "leaf"}),
+        json!({"smut_id": "root", "next": {"smut_id": "middle"}}),
+        json!({"smut_id": "middle", "next": [{"smut_id": "leaf"}, {"smut_id": "gone"}]}),
+        json!({"smut_id": "leaf"}),
     ]);
     let specification = parse(json!({
         "from": "root",
@@ -292,9 +294,9 @@ fn truncation_reasons_stays_unique_and_names_only_the_result_limit() {
     // not yet produce, so the re-cut keeps the reachable half rather than
     // deleting the test.
     let store = store(&[
-        json!({"id": "root", "next": [{"id": "one"}, {"id": "two"}]}),
-        json!({"id": "one"}),
-        json!({"id": "two"}),
+        json!({"smut_id": "root", "next": [{"smut_id": "one"}, {"smut_id": "two"}]}),
+        json!({"smut_id": "one"}),
+        json!({"smut_id": "two"}),
     ]);
     let specification = parse(json!({"from": "root", "follow": ["next"], "limit": 1}));
 
