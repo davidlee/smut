@@ -707,52 +707,76 @@ pub fn listing(entries: &[Entry]) -> String {
     listing
 }
 
-/// What one invocation asks for, settled before anything is printed.
+/// What one invocation asks for, before anything is read.
 ///
-/// The variant owns the resolved set, so the answer is infallible text: a
-/// rejected name never reaches this type (§9.1).
+/// The variants carry the name the caller typed and nothing else: [`resolve`]
+/// looks nothing up, so the question can be built without a filesystem and it is
+/// [`answer`] that settles it against the layers (§9.1, DEC-032).
 #[derive(Debug)]
 pub enum Ask {
     /// The listing: every set, one line each.
     List,
-    /// One set, as prose.
-    Prose(Set),
-    /// One set, as one declaration to pipe into `declare`.
-    Seed(Set),
+    /// One set, as prose, named but not yet found.
+    Prose {
+        /// The name the caller typed.
+        name: String,
+    },
+    /// One set, as one declaration to pipe into `declare`, named but not yet
+    /// found.
+    Seed {
+        /// The name the caller typed.
+        name: String,
+    },
 }
 
-/// Resolve `[NAME] [--format text|json]` into what to print.
+/// Resolve `[NAME] [--format text|json]` into the question to answer.
 ///
 /// The flag is validated before the name, as every flag in this grammar is
 /// (DEC-008), and `json` without a name is a usage error rather than a listing
 /// in disguise: the listing is a list, and a list is not a declaration (§9.1).
-pub fn resolve(name: Option<&str>, format: Option<&str>) -> Result<Ask, Error> {
+///
+/// No filesystem is read and no set is looked up here, so this stays pure and
+/// `cli::parse` stays pure with it: a name no layer holds is refused by
+/// [`answer`], which is where the layers are.
+pub fn resolve(name: Option<&str>, format: Option<&str>) -> Result<Ask, Reject> {
     match format {
         None | Some(FORMAT_TEXT) => Ok(match name {
             None => Ask::List,
-            Some(found) => Ask::Prose(set_named(found)?),
+            Some(found) => Ask::Prose {
+                name: found.to_owned(),
+            },
         }),
         Some(FORMAT_JSON) => match name {
-            Some(found) => Ok(Ask::Seed(set_named(found)?)),
+            Some(found) => Ok(Ask::Seed {
+                name: found.to_owned(),
+            }),
             None => Err(Reject::InvalidUsage {
                 message: needs_a_name(),
-            }
-            .into()),
+            }),
         },
         Some(other) => Err(Reject::UnknownConventionFormat {
             format: other.to_owned(),
-        }
-        .into()),
+        }),
     }
 }
 
 /// The bytes this invocation prints: text for a listing and for prose, one JSON
-/// declaration for a seed. Pure function of the [`Ask`]; nothing is read.
-pub fn answer(ask: Ask) -> String {
+/// declaration for a seed.
+///
+/// This is the one place a set is looked up and the one place the layers are
+/// read, so the question [`resolve`] built is answered exactly once over exactly
+/// one [`load`]: the listing renders every entry, and a named set is
+/// [`set_named`]'s answer or its refusal.
+pub fn answer(roots: &Roots, kind: &str, ask: Ask) -> Result<String, Error> {
+    let entries = load(roots, kind)?;
+
     match ask {
-        Ask::List => listing(&binary_layer(SHIPPED_KIND)),
-        Ask::Prose(set) => format!("{}\n", set.body),
-        Ask::Seed(set) => entity::serialise(&seed(&set), Form::Stdout),
+        Ask::List => Ok(listing(&entries)),
+        Ask::Prose { name } => Ok(format!("{}\n", set_named(&entries, &name)?.body)),
+        Ask::Seed { name } => Ok(entity::serialise(
+            &seed(&set_named(&entries, &name)?),
+            Form::Stdout,
+        )),
     }
 }
 
@@ -792,35 +816,60 @@ fn id_of(set: &Set) -> String {
 
 /// The set a caller named, or the refusal that says what exists instead.
 ///
-/// The binary layer is the one layer this phase reads. A name that matches an
-/// entry that did not load is a runtime failure rather than an unknown name: the
-/// set exists, and the reader can say why it is not a set.
-fn set_named(found: &str) -> Result<Set, Error> {
-    let binary = binary_layer(SHIPPED_KIND);
-    let sets: Vec<String> = binary
-        .iter()
-        .filter_map(|entry| entry.name.clone())
-        .collect();
-
-    let Some(entry) = binary
-        .into_iter()
-        .find(|entry| entry.name.as_deref() == Some(found))
-    else {
+/// The entry in force is [`set_in_force`]'s answer, so a nearer file wins its
+/// name whether or not it loaded: a winner that failed is
+/// [`StoreError::ArtefactNotLoaded`] — exit 1, naming the winner's path and its
+/// reason, and mentioning no store, because none was opened (DEC-004). Only a
+/// name no entry carries is [`Reject::UnknownConvention`] — exit 2 — and its
+/// [`clauses`] say which files do exist. A shadowed set is reachable by neither
+/// route: resolution stops at the winner and validity is not a tie-breaker, so a
+/// broken winner refuses rather than falling through to a working farther copy
+/// (DEC-031 rules 1–2).
+fn set_named(entries: &[Entry], found: &str) -> Result<Set, Error> {
+    let Some(entry) = set_in_force(entries, found) else {
         return Err(Reject::UnknownConvention {
             found: found.to_owned(),
-            sets,
+            sets: clauses(entries),
         }
         .into());
     };
 
-    match entry.outcome {
-        Outcome::Loaded(set) => Ok(set),
+    match &entry.outcome {
+        Outcome::Loaded(set) => Ok(set.clone()),
         Outcome::Failed(cause) => Err(StoreError::ArtefactNotLoaded {
-            origin: entry.origin,
-            cause,
+            origin: entry.origin.clone(),
+            cause: cause.clone(),
         }
         .into()),
     }
+}
+
+/// The refusal's list of sets: one clause per resolved file, in the listing's
+/// order.
+///
+/// A clause is `name (layer)` for a file that loaded or is shadowed, and
+/// `name (layer, did not load: <reason>)` for one that failed — the listing's
+/// own information in the listing's own order, so a caller can retry from the
+/// message alone (§4). An entry whose name is `None` contributes no clause: a
+/// refusal is a list of names to try, and the listing is where an undecodable
+/// file appears.
+fn clauses(entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let name = entry.name.as_deref()?;
+            let layer = entry.origin.layer;
+
+            let clause = match &entry.outcome {
+                Outcome::Loaded(_) => format!("{name} ({layer})"),
+                Outcome::Failed(cause) => {
+                    format!("{name} ({layer}, did not load: {})", cause.reason)
+                }
+            };
+
+            Some(clause)
+        })
+        .collect()
 }
 
 /// The usage diagnostic `--format json` with no name carries.
@@ -851,7 +900,10 @@ mod tests {
 
     #[test]
     fn the_listing_holds_one_line_per_shipped_set() {
-        let listing = listing(&binary_layer(SHIPPED_KIND));
+        let scratch = Scratch::new();
+        let roots = Roots::under(scratch.repo("checkout"), None);
+
+        let listing = answer(&roots, SHIPPED_KIND, Ask::List).expect("the listing prints");
         let summary = shipped_hygiene()
             .summary
             .expect("the shipped set declares a summary");
@@ -878,36 +930,131 @@ mod tests {
             Ask::List
         ));
 
-        let Ask::Prose(set) = resolve(Some("hygiene"), None).expect("hygiene") else {
-            panic!("a named set in text form is prose");
-        };
-        let shipped = shipped_hygiene();
+        // The name is carried, not looked up: `resolve` reads no filesystem, so a
+        // name no layer holds is still a question that has an answer waiting.
+        assert!(matches!(
+            resolve(Some("hygiene"), None).expect("a question"),
+            Ask::Prose { ref name } if name == "hygiene"
+        ));
+        assert!(matches!(
+            resolve(Some("nonsense"), None).expect("a question"),
+            Ask::Prose { ref name } if name == "nonsense"
+        ));
 
-        assert_eq!(set.name, "hygiene");
-        assert_eq!(set, shipped, "the resolved set is the shipped set");
+        let scratch = Scratch::new();
+        let roots = Roots::under(scratch.repo("checkout"), None);
+        let shipped = shipped_hygiene();
+        let ask = resolve(Some("hygiene"), None).expect("a question");
+        let printed = answer(&roots, SHIPPED_KIND, ask).expect("the shipped set prints");
+
         assert_eq!(
-            answer(Ask::Prose(set)),
+            printed,
             format!("{}\n", shipped.body),
             "the prose is the body plus the one newline the shell writes"
         );
     }
 
+    // Reddens if the refusal renders a bare name, drops the layer, drops the
+    // nearest layer's clause, reorders the layers, or omits the reason a failed
+    // file did not load.
     #[test]
-    fn an_unknown_name_is_refused_with_the_sets_that_exist() {
-        let Err(Error::Reject(Reject::UnknownConvention { found, sets })) =
-            resolve(Some("epistemic-records"), None)
-        else {
-            panic!("the deferred set is not shipped, so the name is refused");
+    fn the_refusal_lists_every_resolved_file_with_its_layer() {
+        let scratch = Scratch::new();
+        let repository = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repository);
+        scratch.write(
+            &project_layer,
+            "hygiene.md",
+            "# Hygiene\n\nproject advice.\n",
+        );
+
+        let user_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_root, "conventions");
+        // A file that is not text: it is a row, it did not load, and the reason
+        // names its own path — so the clause says which file and why.
+        let user_mine = user_layer.join("mine.md");
+        fs::write(&user_mine, b"\xff\xfe not UTF-8 text\n").expect("a file that is not text");
+
+        let roots = Roots::under(repository, Some(user_root));
+        let ask = resolve(Some("nonsense"), None).expect("a question");
+        let error = answer(&roots, SHIPPED_KIND, ask).expect_err("no layer holds `nonsense`");
+
+        let Error::Reject(Reject::UnknownConvention { found, sets }) = error else {
+            panic!("a name no entry carries is a rejection: {error:?}");
         };
 
-        assert_eq!(found, "epistemic-records");
-        assert_eq!(sets, vec!["hygiene".to_owned()]);
+        assert_eq!(found, "nonsense");
+        assert_eq!(
+            sets,
+            vec![
+                "hygiene (project)".to_owned(),
+                format!(
+                    "mine (user, did not load: the file is not UTF-8 text: {})",
+                    user_mine.display()
+                ),
+                "hygiene (binary)".to_owned(),
+            ],
+            "one clause per resolved file, in the listing's order — the project layer, then \
+             the user layer, then the binary — each naming its layer, and a failed file its \
+             own reason"
+        );
+    }
+
+    // Reddens if a broken winner falls through to a working farther copy, if the
+    // refusal drops the path or the reason, or if the shadowed copy stops being
+    // listed.
+    #[test]
+    fn a_broken_winner_refuses_at_exit_one_naming_its_path() {
+        let scratch = Scratch::new();
+        let repository = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repository);
+        // Frontmatter and nothing below it: a set that says nothing, so the
+        // project layer's copy wins the name and is broken.
+        let broken = scratch.write(
+            &project_layer,
+            "hygiene.md",
+            "---\nsummary: nothing yet\n---\n",
+        );
+
+        let user_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_root, "conventions");
+        let working = scratch.write(&user_layer, "hygiene.md", "# Hygiene\n\nuser advice.\n");
+
+        let roots = Roots::under(repository, Some(user_root));
+        let ask = resolve(Some("hygiene"), None).expect("a question");
+        let error = answer(&roots, SHIPPED_KIND, ask).expect_err("the winner did not load");
+
+        let Error::Store(StoreError::ArtefactNotLoaded { origin, cause }) = &error else {
+            panic!("a broken winner is a runtime failure, not an unknown name: {error:?}");
+        };
+        let reason = "a set that says nothing is a mistake, not advice";
+
+        assert_eq!(error.exit_code(), 1, "a file that did not load is exit 1");
+        assert_eq!(origin.path, broken, "the refusal names the file in force");
+        assert_eq!(
+            origin.layer,
+            Layer::Project,
+            "the winner is the project layer's copy, broken or not"
+        );
+        assert_eq!(cause.reason, reason);
+
+        let message = error.to_string();
+        assert!(
+            message.contains(&broken.display().to_string()),
+            "the refusal names the path: {message}"
+        );
+        assert!(message.contains(reason), "and its reason: {message}");
+
+        let listing = answer(&roots, SHIPPED_KIND, Ask::List).expect("the listing prints");
+        assert!(
+            listing.contains(&format!("hygiene  user  shadowed  {}\n", working.display())),
+            "the working user copy is listed as shadowed, not promoted: {listing}"
+        );
     }
 
     #[test]
     fn json_without_a_name_is_a_usage_error_naming_the_flag() {
-        let Err(Error::Reject(Reject::InvalidUsage { message })) = resolve(None, Some("json"))
-        else {
+        let Err(Reject::InvalidUsage { message }) = resolve(None, Some("json")) else {
             panic!("a listing is not a declaration");
         };
 
@@ -917,7 +1064,7 @@ mod tests {
 
     #[test]
     fn any_other_format_is_refused_before_the_name_is_read() {
-        let Err(Error::Reject(Reject::UnknownConventionFormat { format })) =
+        let Err(Reject::UnknownConventionFormat { format }) =
             resolve(Some("nonsense"), Some("dot"))
         else {
             panic!("the flag is validated before the operand");
@@ -950,7 +1097,17 @@ mod tests {
 
     #[test]
     fn the_seed_is_one_compact_line_ending_in_one_newline() {
-        let printed = answer(Ask::Seed(shipped_hygiene()));
+        let scratch = Scratch::new();
+        let roots = Roots::under(scratch.repo("checkout"), None);
+
+        let printed = answer(
+            &roots,
+            SHIPPED_KIND,
+            Ask::Seed {
+                name: "hygiene".to_owned(),
+            },
+        )
+        .expect("the seed prints");
 
         assert_eq!(printed.lines().count(), 1, "{printed}");
         assert!(printed.ends_with('\n'), "{printed}");

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use smut::cli::{self, Invocation};
-use smut::conventions;
+use smut::conventions::{self, Roots, project_root, user_root};
 use smut::error::{Error, Reject, STORE_FAILURE, SUCCESS, StoreError};
 use smut::learn;
 use smut::store::Store;
@@ -17,7 +17,8 @@ fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().skip(1).collect();
     let stdin_is_terminal = io::stdin().is_terminal();
     let mut stdin = io::stdin().lock();
-    let rendered = dispatch(&arguments, stdin_is_terminal, &mut stdin);
+    let roots = roots();
+    let rendered = dispatch(&arguments, stdin_is_terminal, &mut stdin, &roots);
 
     let mut stdout = io::stdout().lock();
     let mut stderr = io::stderr().lock();
@@ -62,8 +63,17 @@ struct Rendered {
 ///
 /// A failure never carries a partial success envelope: the rejection path fills
 /// `stderr` only, so "no success envelope on failure" is structural.
-fn dispatch(arguments: &[OsString], stdin_is_terminal: bool, stdin: &mut dyn Read) -> Rendered {
-    match execute(arguments, stdin_is_terminal, stdin) {
+///
+/// The roots arrive as a parameter and are never computed here: this is the
+/// function every in-process test calls, so roots found here would be found in
+/// the developer's real `$HOME` (RV-029 F-3, DEC-032).
+fn dispatch(
+    arguments: &[OsString],
+    stdin_is_terminal: bool,
+    stdin: &mut dyn Read,
+    roots: &Roots,
+) -> Rendered {
+    match execute(arguments, stdin_is_terminal, stdin, roots) {
         Ok(stdout) => Rendered {
             stdout,
             stderr: String::new(),
@@ -86,13 +96,44 @@ fn execute(
     arguments: &[OsString],
     stdin_is_terminal: bool,
     stdin: &mut dyn Read,
+    roots: &Roots,
 ) -> Result<String, Error> {
     match cli::parse(arguments, stdin_is_terminal, stdin)? {
         Invocation::Help(text) | Invocation::Version(text) => Ok(text),
         Invocation::Learn => Ok(learn::GUIDE.to_owned()),
-        Invocation::Conventions(ask) => Ok(conventions::answer(ask)),
+        Invocation::Conventions(ask) => conventions::answer(roots, "conventions", ask),
         Invocation::Request(request) => request.run(&Store::in_directory(current_directory()?)),
     }
+}
+
+/// The layer roots this invocation reads its sets from.
+///
+/// This is the only place the binary reads the environment for the layers: the
+/// project root is searched for from the current directory, and the user root is
+/// `XDG_CONFIG_HOME` when the process has one, else the home
+/// `std::env::home_dir()` reports. Everything below takes the result as a
+/// parameter, so no function deeper in the call chain reads a developer's
+/// `~/.config/smut` and the in-process tests pass their own (DEC-032). Neither
+/// root is spelled with `.config/smut` here: `Roots::under` is the one place that
+/// segment is joined.
+///
+/// A current directory the operating system will not report falls back to `.`
+/// for the search and the project layer: the walk and the layer read then start
+/// at the process's own directory instead of failing, and the one place the
+/// current directory is genuinely needed — the store root, which is `<cwd>`
+/// alone (DEC-004) — still refuses in `execute` with the filesystem's own reason.
+fn roots() -> Roots {
+    let start = current_directory().unwrap_or_else(|_| PathBuf::from("."));
+
+    Roots::under(
+        project_root(&start),
+        user_root(
+            std::env::var_os("XDG_CONFIG_HOME")
+                .map(PathBuf::from)
+                .as_deref(),
+            std::env::home_dir().as_deref(),
+        ),
+    )
 }
 
 /// The store lives beside the current directory, and is never searched for in a
@@ -125,7 +166,17 @@ mod tests {
         let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
         let mut stdin: &[u8] = b"";
 
-        dispatch(&arguments, false, &mut stdin)
+        dispatch(&arguments, false, &mut stdin, &no_layer_roots())
+    }
+
+    /// The roots every in-process test stands the binary in: a project layer under
+    /// the temporary directory that no fixture here creates, and no user layer.
+    ///
+    /// No in-process test may read `$HOME` or `$XDG_CONFIG_HOME`: roots computed
+    /// from the environment would make these assertions depend on the machine
+    /// running them, and would read a developer's own sets (DEC-032).
+    fn no_layer_roots() -> Roots {
+        Roots::under(std::env::temp_dir().join("smut-in-process-no-layer"), None)
     }
 
     #[test]
@@ -172,25 +223,6 @@ mod tests {
     }
 
     #[test]
-    fn conventions_prints_the_shipped_set_without_a_store() {
-        let rendered = dispatch_of(&["conventions", "hygiene"]);
-
-        assert_eq!(rendered.exit, 0, "{}", rendered.stderr);
-        // The prose is the file's body — everything below the frontmatter — plus
-        // the one newline the binary writes (DEC-031); the frontmatter is metadata
-        // and is never printed. The body is derived here from the bytes the crate
-        // ships, so a reader that reproduced the file's frontmatter, dropped the
-        // body or dropped the newline reddens on the assertion below.
-        let body = conventions::SHIPPED[0]
-            .1
-            .split_once("\n---\n")
-            .map(|(_, body)| body.trim_end_matches('\n'))
-            .expect("the shipped set opens with frontmatter");
-        assert_eq!(rendered.stdout, format!("{body}\n"));
-        assert!(rendered.stderr.is_empty(), "{}", rendered.stderr);
-    }
-
-    #[test]
     fn no_command_is_rejected_with_exit_two_and_nothing_on_stdout() {
         let rendered = dispatch_of(&[]);
 
@@ -217,7 +249,7 @@ mod tests {
         let arguments: Vec<OsString> = ["declare"].iter().map(OsString::from).collect();
         let mut stdin: &[u8] = b"{\"id\":\"a\"}";
 
-        let rendered = dispatch(&arguments, true, &mut stdin);
+        let rendered = dispatch(&arguments, true, &mut stdin, &no_layer_roots());
 
         assert_eq!(rendered.exit, 2);
         assert_eq!(rendered.stdout, "");

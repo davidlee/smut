@@ -86,8 +86,15 @@ fn summary() -> String {
 ///
 /// Copied from `tests/cli_contract.rs` by the plan's decision: 0.2 does not add
 /// a shared `tests/common`.
+///
+/// It also holds the two directories the spawned binary reads its layers from, so
+/// a run never reaches the developer's own sets.
 struct Scratch {
     path: PathBuf,
+    /// The fake `$HOME` this scratch's invocations see.
+    home: PathBuf,
+    /// The fake `$XDG_CONFIG_HOME` this scratch's invocations see.
+    config_home: PathBuf,
 }
 
 impl Scratch {
@@ -101,7 +108,18 @@ impl Scratch {
         ));
         fs::create_dir_all(&path).expect("a scratch directory");
 
-        Self { path }
+        // Children of the scratch path, so they are removed with it and neither
+        // can be an ancestor of the working directory the binary starts in.
+        let home = path.join("home");
+        fs::create_dir_all(&home).expect("a home directory");
+        let config_home = path.join("config-home");
+        fs::create_dir_all(&config_home).expect("a config home directory");
+
+        Self {
+            path,
+            home,
+            config_home,
+        }
     }
 
     fn path(&self) -> &Path {
@@ -135,9 +153,16 @@ impl Ran {
 
 /// Runs `smut` in `scratch` with `arguments`, and `stdin` if a fixture supplies
 /// one.
+///
+/// Both layer roots are set explicitly and neither is removed: `HOME` and
+/// `XDG_CONFIG_HOME` unset would not mean "no user layer", because
+/// `std::env::home_dir()` falls back to the passwd entry and the binary would
+/// then read the developer's own real home.
 fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
     let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
         .current_dir(scratch.path())
+        .env("HOME", &scratch.home)
+        .env("XDG_CONFIG_HOME", &scratch.config_home)
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
