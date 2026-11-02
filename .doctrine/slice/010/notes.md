@@ -126,7 +126,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · plan · 5318e39
+fresh-as-of: 2026-11-02 · ready · deef11e
 
 ### Produced
 
@@ -176,9 +176,20 @@ fresh-as-of: 2026-11-02 · plan · 5318e39
 
 ### Open
 
-- **The plan is under hardening.** Two audits (obligations; surface, sequencing, risk) run
-  against `plan.toml`, then an integrator revises the plan. Nothing about the design is
-  open.
+- **The plan is hardened.** Two audits (obligations; surface, sequencing, risk) ran against
+  `plan.toml`; an integrator settled every blocking and material finding. PHASE-01 split at the
+  words/flags seam into `PHASE-01` and an appended `PHASE-04` (execution order is array order, so
+  the id sequence is deliberately non-monotonic). Nothing about the design is open.
+- **Corrections owed to the locked design** (found by the hardening audits; pinned in `plan.md`'s
+  "Corrections owed to the design", unpaid here):
+  - Design §4's struct block prints `#[arg(value_name = "TOKEN")]` on the positional while its
+    prose, its observation table and DEC-037 all say the positional carries no attribute. The
+    prose is the decision; the block owes the deletion.
+  - Design §3 has no row for a comma list on `~` (`title~a,b`). The plan refuses it in the shape
+    `!=` already uses; §3 owes the row.
+  - Design §3's rows 1 and 15 both fire on §1's "more than one operator" branch with different
+    sentences and no discriminator. The plan discriminates by kind (two `=` reports the
+    field-name row; differing kinds report the both-operators row); §3 owes the sentence.
 - **Obligations owed at reconcile** (none may be paid mid-slice):
   - DEC-016 — amend to name the DSL spelling of the two-call recipe; the guide keeps both
     spellings executed until then.
@@ -191,5 +202,5 @@ fresh-as-of: 2026-11-02 · plan · 5318e39
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-- Slice status is `plan`; the move to `ready` follows the plan hardening and is recorded at
-  handoff to `/phase-plan`.
+- Slice status is `ready`; `/phase-plan` expands PHASE-01's runtime sheet just before
+  `/execute`, and the execution order is PHASE-01 → PHASE-04 → PHASE-02 → PHASE-03.
