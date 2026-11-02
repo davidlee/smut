@@ -17,6 +17,7 @@ use serde_json::Value;
 
 use crate::conventions;
 use crate::declare;
+use crate::dsl::{self, Flags, Line};
 use crate::entity::Form;
 use crate::error::{Error, Reject};
 use crate::id::{HYPHEN_FREE, Id, IdSource};
@@ -261,6 +262,52 @@ enum Sub {
         /// One specification object; `-` reads stdin.
         json: Option<String>,
     },
+    /// Query with a line of words: `field=value` filters, bare words are roots.
+    Q {
+        // The positional carries no attribute, on purpose: `trailing_var_arg` and
+        // `allow_hyphen_values` swallow every flag after the first token (the second
+        // also leaks a literal `--` into the list), `last` hides the tokens behind
+        // one `--`, and `value_terminator` stops `--` ending flags. Bare, flags parse
+        // on either side of a token, no `--` reaches the list, and `-weird-id` stays
+        // the error that teaches `--` (DEC-037).
+        tokens: Vec<String>,
+        /// The outgoing fields to traverse.
+        #[arg(long)]
+        follow: Option<String>,
+        /// The incoming fields to traverse.
+        #[arg(long)]
+        backlinks: Option<String>,
+        /// How far the traversal goes.
+        #[arg(long)]
+        depth: Option<String>,
+        /// How many entity expansions the traversal may spend.
+        #[arg(long)]
+        budget: Option<String>,
+        /// The fields to project.
+        #[arg(long)]
+        select: Option<String>,
+        /// Project `smut_id` alone.
+        #[arg(long)]
+        ids: bool,
+        /// The sort keys, each with an optional direction.
+        #[arg(long)]
+        order: Option<String>,
+        /// The result cap.
+        #[arg(long)]
+        limit: Option<String>,
+        /// Give a traversal no followed fields, for its edges.
+        #[arg(long)]
+        edges: bool,
+        /// The fields that must be present.
+        #[arg(long)]
+        has: Option<String>,
+        /// The fields that must be absent.
+        #[arg(long)]
+        missing: Option<String>,
+        /// The root escape for an id the grammar cannot carry bare.
+        #[arg(long)]
+        from: Option<String>,
+    },
     /// Render a selection as Markdown.
     Render {
         /// One specification object; `-` reads stdin.
@@ -332,6 +379,43 @@ pub fn parse(
 
             Ok(Invocation::Request(Request::Query(Query {
                 spec: spec::parse(&input)?,
+            })))
+        }
+        Sub::Q {
+            tokens,
+            follow,
+            backlinks,
+            depth,
+            budget,
+            select,
+            ids,
+            order,
+            limit,
+            edges,
+            has,
+            missing,
+            from,
+        } => {
+            let compiled = dsl::compile(&Line {
+                tokens: &tokens,
+                flags: Flags {
+                    follow,
+                    backlinks,
+                    depth,
+                    budget,
+                    select,
+                    ids,
+                    order,
+                    limit,
+                    edges,
+                    has,
+                    missing,
+                    from,
+                },
+            })?;
+
+            Ok(Invocation::Request(Request::Query(Query {
+                spec: spec::parse(&compiled)?,
             })))
         }
         Sub::Render {
