@@ -1,0 +1,86 @@
+# Implementation plan for SL-005 — the authored, durable phase plan.
+#
+# This is the single source of each phase's objective, criteria, verification,
+# and links. Runtime status lives separately under .doctrine/state/ (phase
+# tracking) — never record progress here. Hand-edit freely: the tool reads this
+# file but does not rewrite it.
+schema  = "doctrine.plan.overview"
+version = 1
+slice   = "SL-005"
+
+# Canonical spec/requirement links — cite ids, never restate what they say. The
+# plan reader does not model these yet, so nothing downstream consumes them.
+[specs]
+primary       = []
+collaborators = []
+
+[requirements]
+targets      = []
+dependencies = []
+
+# One [[phase]] per ordered phase, in execution order — the authored array order
+# IS the order; never sort by id. Ids are PHASE-NN (zero-padded), immutable and
+# never reused once authored — edits append, they never renumber, so the id
+# sequence goes non-monotonic after a split and that is expected. Criterion ids
+# are local to their phase, bare, and equally immutable
+# (`lib:reference/glossary.md` § reference forms). The prefix is the only mode
+# marker; there is no mode field. Reference a criterion from another phase
+# phase-qualified (PHASE-01/EX-2) — bare EX-2 is ambiguous.
+
+[[phase]]
+id        = "PHASE-01"
+name      = "Refuse a contradiction, naming the field and the reason"
+objective = "Add the decidable contradiction rule to src/predicate.rs as two pure functions over the parsed AST — a condition-list test and a demanded-position walk — called once at the end of parse; add Reject::ContradictoryFieldConditions with its one Display arm and its boundary row; pin the seven branches, the demand rule, the fixed order and the positive controls at unit level and the refusal's process promises at binary level."
+entrance_criteria = [
+  { id = "EN-1", text = "Design sections 1-3, 5 and 6 are read, and DEC-027 is read in full. The five field operators, Condition::holds as the only evaluator, parse's single external ingress (src/spec.rs:132) and the fixed [(Error, u8); 24] boundary table at src/error.rs:495 are confirmed against the current source." },
+  { id = "EN-2", text = "Ordering guard for the live drift recorded in .doctrine/slice/005/notes.md: SL-004's PHASE-02 (the src/error.rs identity-message respell) has not started. If it has, this phase is rebased onto it before any edit, or the slice waits; it does not race on the same file (design section 6)." },
+  { id = "EN-3", text = "tests/fixture.rs:457's computed $in list is confirmed non-empty before the refusal lands: reached_from_session() is asserted non-empty by backlinks_on_part_of_at_depth_two_reaches_the_clusters_from_the_session, so the new refusal cannot turn that fixture from [] into exit 2. The phase records the confirmation from source and touches no file outside the three selectors." },
+  { id = "EN-4", text = "The gates this phase runs (cargo test --test predicates, cargo test --lib error::, cargo test --test fixture) are green at baseline, or a pre-existing failure is isolated and reported; the operator's dirty README.md stays untouched and unstaged." }
+]
+exit_criteria = [
+  { id = "EX-1", text = "contradiction decides exactly section 2's four steps in that order — empty $in; $exists:false beside any other condition; $eq v then $ne, $in, $contains evaluated on v; else $in S with $ne then $contains applied to the members surviving each step — returning the pinned sentence of the first branch that fires, and None when nothing is provable. It reads only the condition list and decides every case with Condition::holds(Some(v)) or its negation, so refusal cannot disagree with the query." },
+  { id = "EX-2", text = "refusal walks the parsed AST carrying demanded: the root is demanded, And passes demand to every child, Not flips it, Or judges its children only when the Or itself is demanded false, and a Field is judged iff it arrives demanded. parse calls it once at the end, before returning the AST, so the check is key-order independent, has one evaluation path and adds no reach (RV-026 F-1: a contradiction inside a must-hold $or or under an odd $not is never refused; RV-026 F-14: demand is propagated, not inferred from $not parity)." },
+  { id = "EX-3", text = "Reject::ContradictoryFieldConditions { field, contradiction } is added with one doc comment and one Display arm rendering field {field} cannot be satisfied: {contradiction}, plus one row in the_boundary_maps_each_failure_class_to_its_exit_code with the array length moved from 24 to 25 (INVALID_INPUT). MixedPredicateObject, UnknownPredicateOperator, their messages and every other arm are byte-identical (RV-026 F-2: the contradiction sentence is never installed on the shared unknown-operator arm)." },
+  { id = "EX-4", text = "src/predicate.rs unit tests pin all of: the seven-branch table (variant, field, sentence); the demand table's seven shapes — refused at the root, under $and and under $not twice, accepted under $not once, inside $or, inside $and-under-$not and inside $or-under-$not; the fixed operator order via {\"$eq\":1,\"$ne\":1,\"$contains\":\"z\"} reporting $ne's sentence (RV-026 F-3: no tautological key-order swap; RV-026 F-4: step 4's sentence is chosen by operator order, never by the caller's $in array order); the positive controls; and the three pins — a contradiction spanning $and clauses (RV-026 F-13's sibling pin), a single-disjunct $or and an unbounded $contains — each carrying a comment that breaking it is a decision, not a cleanup." },
+  { id = "EX-5", text = "The src/error.rs message test asserts the contradiction's whole rendered text — field status cannot be satisfied: $eq and $ne are given the same value — so a message that omitted the field name or the clause fails." },
+  { id = "EX-6", text = "tests/predicates.rs's malformed-predicate table gains its contradiction rows, and the existing paired success case stays green: exit 2, empty stdout, stderr naming the field and the sentence, and the scratch directory holding no store — the DEC-004 promise that the whole request is validated before the store is opened." },
+  { id = "EX-7", text = "No new import beyond serde_json's Value and crate::error::Reject, no store, clock or filesystem reach added to src/predicate.rs, no guide text, and no file outside src/predicate.rs, src/error.rs and tests/predicates.rs touched; the phase's gates are green." }
+]
+verification = [
+  { id = "VT-1", expects = "The rule and the walk exist as named pure functions over the parsed AST, and the judged field is the one the walk reached in demanded position.", test_file = "src/predicate.rs", keywords = ["fn contradiction", "fn refusal", "ContradictoryFieldConditions", "demanded"], waived = false },
+  { id = "VT-2", expects = "The contradiction variant, its Display arm and its boundary-table row are present, and the frame is field {field} cannot be satisfied: {contradiction}.", test_file = "src/error.rs", keywords = ["ContradictoryFieldConditions", "cannot be satisfied", "INVALID_INPUT"], waived = false },
+  { id = "VT-3", expects = "Binary-level contradiction rows run through the existing malformed-predicate table, which asserts exit 2, empty stdout and no store created.", test_file = "tests/predicates.rs", keywords = ["cannot be satisfied", "$in is given an empty list", "has_store"], waived = false },
+  { id = "VA-1", expects = "Run cargo test --test predicates, cargo test --lib error::, cargo test --test fixture and just check; keep the actual results in the phase evidence, separate from verify-vt's source-presence mandates." },
+  { id = "VA-2", expects = "Walk the shipped rule against section 2's demand table by hand for the seven shapes plus $and-under-$or, $and-under-$not, and an empty $and beside a contradictory field; confirm the $or and $contains pins still accept, and that RV-026 F-1, F-3, F-4, F-13 and F-14's obligations are discharged as written." },
+  { id = "VA-3", expects = "Review the diff for scope: only the three selectors, no guide text, no envelope change, no new dependency; and record the EN-3 confirmation of tests/fixture.rs:457 in the phase evidence." }
+]
+specs             = []
+requirements      = []
+
+[[phase]]
+id        = "PHASE-02"
+name      = "Split the predicate-level $ refusal, keeping both sentences true"
+objective = "Split the single predicate-level $ arm into two true sentences — Reject::MisplacedPredicateOperator for one of the five known operators out of place, UnknownPredicateOperator untouched for a name the language does not define — pin the misplaced message whole for two operators so both interpolation slots are covered, add its boundary row, prove both through the binary, and repair the two source comments the split falsifies."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01/EX-1 through EX-7 hold and its gates are green; design section 4 and DEC-030 are read in full, including the never-invent-a-field constraint, the placeholder rationale and the statement that MixedPredicateObject is untouched." },
+  { id = "EN-2", text = "The ordering guard of PHASE-01/EN-2 still holds: SL-004's PHASE-02 has not started, or this phase is rebased onto it first." },
+  { id = "EN-3", text = "The five operators are confirmed as the closed set parse_condition accepts ($eq, $ne, $in, $exists, $contains), the three clauses are confirmed not to be operators at either level, and both UnknownPredicateOperator call sites (src/predicate.rs:72 predicate level, :173 inside a condition object) are checked against the current source." }
+]
+exit_criteria = [
+  { id = "EX-1", text = "The predicate-level arm at src/predicate.rs:72 matches the five operators to Reject::MisplacedPredicateOperator { operator } and keeps UnknownPredicateOperator for every other $ name at that level; the condition-level arm at :173 is unchanged, so a clause used as a condition ($and/$or/$not) still reads unknown predicate operator." },
+  { id = "EX-2", text = "Reject::MisplacedPredicateOperator { operator } is added with one doc comment and one Display arm writing predicate operator {operator} belongs inside a field's condition object: {\"<field>\": {\"{operator}\": <operand>}} — the operator interpolated into both slots, <field> and <operand> as placeholders, no concrete field name and no concrete operand literal — plus one boundary-table row with the array length moved from 25 to 26 (INVALID_INPUT). UnknownPredicateOperator keeps both call sites, its message and its doc; MixedPredicateObject stays byte-identical (RV-026 F-2: no sentence is false at a second call site; RV-026 F-15: the operand is a placeholder because $in takes an array and $exists a boolean)." },
+  { id = "EX-3", text = "The misplaced message is asserted whole, twice — once for $ne and once for $in — pinning predicate operator $ne belongs inside a field's condition object: {\"<field>\": {\"$ne\": <operand>}} and its $in twin, so an implementation that named one operator in the frame and left the other slot literal, or that printed a caller-visible field name, fails (RV-026 F-5: the whole line, not a substring, is DEC-030's central guard)." },
+  { id = "EX-4", text = "tests/predicates.rs gains the binary rows: the misplaced refusal is exit 2 with empty stdout, its stderr asserted as the whole line and containing no concrete field name and no operand literal, and no store created; the unknown-$foo row still exits 2 and still names $foo, which is the evidence the split did not reword the unknown-name case." },
+  { id = "EX-5", text = "The two source comments the split falsifies are repaired in place with their assertions untouched: tests/predicates.rs:328-330 and src/predicate.rs:397-399, each of which states that any $ key other than the clauses is an unknown operator at the predicate level. The replacement says a name the language does not define is unknown at either level while the five operators out of place are refused as misplaced; design section 6 names only the first, so the second is repaired by the same rule, since a false sentence is not left standing in a selector file." },
+  { id = "EX-6", text = "No guide text, no src/learn.rs change, no envelope change, no new import or reach, and no file outside src/predicate.rs, src/error.rs and tests/predicates.rs touched; tests/compatibility.rs is unchanged and passing, and the phase's gates are green." }
+]
+verification = [
+  { id = "VT-1", expects = "The misplaced variant, its Display arm and its boundary row are present, with the operator interpolated into both slots of the suggested shape.", test_file = "src/error.rs", keywords = ["MisplacedPredicateOperator", "belongs inside a field's condition object", "INVALID_INPUT"], waived = false },
+  { id = "VT-2", expects = "Both whole-line pins exist, one per operator, and sit in the binary-level malformed-predicate table alongside the no-store assertion.", test_file = "tests/predicates.rs", keywords = ["predicate operator $ne belongs inside", "predicate operator $in belongs inside", "has_store"], waived = false },
+  { id = "VT-3", expects = "The predicate-level arm discriminates the five known operators from an undefined name, and the condition-level arm still refuses clauses as unknown.", test_file = "src/predicate.rs", keywords = ["MisplacedPredicateOperator", "$contains", "UnknownPredicateOperator"], waived = false },
+  { id = "VA-1", expects = "Run cargo test --test predicates, cargo test --lib error::, cargo test --test cli_contract, cargo test --test compatibility and just check; keep the actual results in the phase evidence." },
+  { id = "VA-2", expects = "Render the misplaced message from real binary input for at least $ne, $in and $exists, and read each line against DEC-030: both slots name the same operator, no field is invented, no operand literal is printed, and the two-clause reading holds for an operator beside a field, an operator alone and an operator beside a clause." },
+  { id = "VA-3", expects = "Confirm RV-026 F-2, F-5 and F-15's obligations are discharged as written, that the unknown-$foo sentence is unchanged at both levels, and that the diff stays inside the three selectors." }
+]
+specs             = []
+requirements      = []
