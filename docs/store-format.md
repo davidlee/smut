@@ -51,8 +51,9 @@ is corruption (see [Corruption](#corruption)).
 The store layout reserves nothing for conventions: nothing under `.smut/` is read
 back as a convention set. `.config/smut/conventions/` in the project root, the user
 config home and the shipped binary is DEC-026/028's decided home for the layered
-loader tracked by IMP-013; the binary shipped today embeds its one set. A set
-declared into a store is an ordinary stored entity, a record of advice given.
+loader tracked by IMP-013: one set ships with the binary, and a project or a user
+may supply more, with the nearest layer winning a name. A set declared into a
+store is an ordinary stored entity, a record of advice given.
 
 ## The index
 

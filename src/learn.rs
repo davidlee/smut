@@ -60,7 +60,8 @@ others, q included, do.
 
 Exit codes
   0  success, including reported missing ids and a truncated result
-  1  no store, or the store could not be read or written
+  1  no store, or the store could not be read or written, or a conventions set
+     could not be loaded
   2  invalid input or usage
 JSON goes to stdout and diagnostics go to stderr, and a failure never prints a
 success envelope. render prints Markdown, not JSON.
@@ -305,7 +306,10 @@ Labels and rendering
 Conventions
   Structure advice — types, statuses, one direction per relation, a handful of
   labels — lives in the conventions sets: smut conventions prints them, and a
-  set never validates, never selects and never touches a store. A printed set is
+  set never validates, never selects and never touches a store.
+  A set is found in the project, then the user config home, then the binary.
+  The nearest layer carrying a name is the one in force, and the listing prints
+  every file's layer, so a reader can see which file answered. A printed set is
   the body; the frontmatter is metadata and is not reproduced.
 
 Rendering
@@ -385,6 +389,23 @@ mod tests {
     /// wrap sensitivity the review named as its second line of attack).
     fn guide() -> String {
         GUIDE.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
+    /// The guide between two markers, flattened the way `guide()` does.
+    ///
+    /// A whole-sentence pin needs the section it belongs to: the same words
+    /// elsewhere in the guide would satisfy the assertion with that section
+    /// deleted. Flattening the slice keeps the pin about the sentence and not
+    /// about where a hand wrap happens to fall.
+    fn flattened_section(start: &str, end: &str) -> String {
+        let from = GUIDE
+            .find(start)
+            .unwrap_or_else(|| panic!("the guide has no {start:?} heading"));
+        let rest = &GUIDE[from + start.len()..];
+        let to = rest
+            .find(end)
+            .unwrap_or_else(|| panic!("the guide has no {end:?} after {start:?}"));
+        rest[..to].split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     #[test]
@@ -573,6 +594,40 @@ mod tests {
                 "A printed set is the body; the frontmatter is metadata and is not reproduced"
             ),
             "the Conventions section says what the printed set is and leaves the metadata out"
+        );
+    }
+
+    /// DEC-033: the guide says where a set is looked for, and in what order.
+    ///
+    /// The pin is the reassembled `Conventions` paragraph and the whole
+    /// sentence. The guide is hand-wrapped, so a raw-substring pin on `GUIDE`
+    /// would redden for where a line broke rather than for a missing sentence,
+    /// and a clause-only pin (`the user config home`, `then the binary`) could
+    /// be satisfied by the same words somewhere else in the guide.
+    #[test]
+    fn the_guide_states_where_a_set_is_found() {
+        let conventions = flattened_section("\nConventions\n", "\nRendering\n");
+        assert!(
+            conventions.contains(
+                "A set is found in the project, then the user config home, then the binary."
+            ),
+            "the Conventions section does not say where a set is found: {conventions}"
+        );
+    }
+
+    /// DEC-033: the exit table names an unloadable set in its exit-1 row.
+    ///
+    /// The clause belongs to the exit-1 row of the table and nowhere else, so
+    /// the pin is the whole reassembled row. Flattened, a wrap inside the row
+    /// cannot look like a missing clause.
+    #[test]
+    fn the_guide_exit_table_names_an_unloadable_set() {
+        let table = flattened_section("\nExit codes\n", "\nJSON goes to stdout");
+        assert!(
+            table.contains(
+                "1 no store, or the store could not be read or written, or a conventions set could not be loaded"
+            ),
+            "the exit-1 row does not name a conventions set that could not be loaded: {table}"
         );
     }
 
