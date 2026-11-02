@@ -10,6 +10,14 @@ raiser    = "auditor"
 responder = "author"
 rounds_base = 0
 contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+The delivered SL-004 slice at 64e5f4b, read against design rev 47, plan.toml, ADR-001, DEC-020…DEC-028, STD-001 and STD-002: the identity contract, the loader's stored-identity refusal, the format break, the document set, the fixture preservation, the conformance registry and the six-decision reconciliation handoff. Evidence was gathered by probing the built binary (15 commands: design §1 example, nested ordinary id of every shape, changes[].smut_id, the conventions seed, select [], four request-level malformed identities, where on ordinary id, the IMP-005 shape re-run across get/follow/render/query/declare, version 1 and 3 refused, absent and index-less stores, and the fixture inverse rename), by `doctrine check gate` (exit 0, twice — before and after the audit's own repair), by `doctrine slice verify-vt 4` (as source presence only), by `doctrine slice conformance 4`, and by reading each target artefact of the six-record amendment proposal. Eight findings raised, disposed and verified: none behavioural, none a blocker. The reconciliation brief maps each to its write surface.
+"""
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-004"
