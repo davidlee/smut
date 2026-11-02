@@ -167,3 +167,84 @@ disagreeing with evaluation; the walk refusing satisfiable predicates).
 - **IMP-014** — `Reject` coverage is hand-maintained; no `every_reject_refusal` analogue.
 - **IMP-015** — the non-discriminating `!has_store()` idiom across the suite.
 - **IMP-016** — the duplicated five-operator set; one `Operator` parser as the fix (F-2).
+
+## Reconciliation Outcome
+
+RV-027's brief is resolved. Two surfaces were used: per-slice direct edits to
+`design.md`, and one direct correction to `DEC-030`'s body prose. **No REV was authored,
+and none was possible** — see "Governance prose" below.
+
+### Direct edits applied — `.doctrine/slice/005/design.md`
+
+- **§1 (F-4)** — the mermaid label `required-position walk: each Field is judged only
+  when reached through And` becomes `demanded-position walk: each Field is judged only
+  where demand reaches it`; the surrounding prose's *required* becomes *demanded*. The
+  root field is judged with no `And`, and one word now wins across §1–§6.
+- **§2 (F-4)** — "Two pure functions … called once at the end of `parse`" becomes the
+  shipped shape: the private `parse_predicate` builds the tree and the public `parse`
+  calls `refusal` once over the finished tree. That sentence was the recursive-return
+  defect RV-026 F-1 raised, surviving in prose after the code stopped doing it.
+- **§4 (F-5)** — `src/predicate.rs:72` / `:173` become the constructs (`parse_predicate`'s
+  `$` arm; `parse_condition`). Line numbers rot; names do not.
+- **§5 (F-3, F-4)** — the contradiction row now reads *exit 2, and the scratch directory
+  holds no store*, with the reason: exit 2 is what proves the ordering (a request
+  validated after the store step exits 1 with `no store at …`), and the absent directory
+  is a non-vacuity check because `Query::creates_store()` is `false`. The two message
+  rows now state **both strings** — the message-level pin is the bare sentence, the
+  binary pin carries the `smut: ` prefix.
+- **§6 (F-4, F-5)** — the `src/predicate.rs` row's call shape corrected, the `$` arm
+  named by construct rather than line, "including the four pins" → three; the
+  SL-004 ordering paragraph becomes the constraint *plus what happened* (`da4c404`
+  before `7347dff`/`9727c1c`, PHASE-02 after).
+- **§7 (F-4)** — "`$or` contents are not analysed" becomes *a must-hold `$or` stops the
+  walk*, with the negated-`$or` case stated beside it. This is DEC-027's own corrected
+  wording; the design now agrees with the decision.
+
+**CHR-003 is closed** — all six sentences are addressed (items 1, 2, 5, 6 in the design,
+item 3 in §5, item 4 in §6) and the `required-position`/`demanded` split is unified.
+
+### Governance prose — `DEC-030` body, and why not a REV
+
+CHR-003's item 6 ("one of the two should move") resolved onto the **decision**, not the
+design: §3's "each names the operators it is about" is true as written, and the seven
+pinned sentences are the contract, so the false claim was DEC-030's generalisation —
+*"each naming the two operators or the empty list it is about"* — which the
+`$exists: false beside any other condition` row cannot satisfy (its dual is any
+condition, not a second named operator). The sentence now reads: *each naming the
+operators it is about: both sides of a conflicting pair, the single operator whose
+conflict is with any other condition, or the empty list.*
+
+No REV was authored, for three reasons, in order of weight: the reconcile brief recorded
+no governance item (this was found while locating the edit point, not by re-auditing);
+`doctrine revision change add --target` takes a live peer FK from the ADR/SPEC family,
+and a decision is not a REV target; and this slice already corrected DEC-030's body once
+during design under the same authored-truth honour model, so the mechanism matches the
+precedent. The correction is body prose only — the `choice` facet, the seven sentences and
+every pinned message are untouched.
+
+### Locked design run — the brief's caveat, answered
+
+`doctrine design adopt 5` refuses, and the refusal *is* the guidance: *"run is locked;
+adopt refuses. To correct a run still governing execution, regress to reviewing first;
+at reconcile, edit design.md directly and do not adopt."* So the direct edit is the
+prescribed posture here, not a workaround, and there is no desync to repair because the
+run is not re-entered. The run still reports `locked (revision 43)` with a stale RV-026
+pass; that staleness is a statement about RV-026's coverage of the *old* text, and
+re-conducting a design review at reconcile is out of this seam's scope.
+
+### REVs completed
+
+None — no governance/spec item remained after the applicability check above.
+
+### Withdrawn / tolerated
+
+None. All seven findings were `verified`; nothing was withdrawn or tolerated, so there is
+no drift carried into close with a rationale-shaped excuse.
+
+### Items touched outside the write surface
+
+- **CHR-002** — its body now carries the verified detail of F-7 (a doc-only defect, both
+  citations wrong: `§3.1` and `DEC-006`; the authority is DEC-001 rule 1), so the owning
+  chore is actionable without reading this ledger (`dfb14cf`).
+- **ISS-005, IMP-014, IMP-015, IMP-016** — capture-only, unchanged. The originating items
+  ISS-004 and IMP-010 are resolved at close, not here.

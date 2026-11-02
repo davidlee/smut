@@ -11,7 +11,9 @@ message surface.
   one `Display` arm, one row in the failure boundary table. The detecting branch
   supplies the description.
 - **Seven sentences**, one per reachable branch of the rule DEC-027 states, each naming
-  the two operators or the empty list it is about.
+  the operators it is about: both sides of a conflicting pair, the single operator whose
+  conflict is with any other condition (the `$exists:false` row, whose dual is not one
+  named operator), or the empty list.
 - **No epigram.** DEC-027's *a condition that can never hold is a typo, not a
   question* stays in that decision and in the guide sentence IMP-012 owes. stderr is
   one line, so a parenthetical would be repeated on every instance forever.

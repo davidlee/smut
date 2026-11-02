@@ -29,7 +29,7 @@ The boundary the design keeps:
 flowchart TD
   A[query text] --> B["spec::parse: whole request validated"]
   B --> C["predicate::parse: builds the AST, recursing through $and/$or/$not"]
-  C --> D["required-position walk: each Field is judged only when reached through And"]
+  C --> D["demanded-position walk: each Field is judged only where demand reaches it"]
   D -- contradiction --> F["Reject::ContradictoryFieldConditions\nexit 2, one stderr line, no envelope"]
   D -- none --> G["Predicate AST"]
   G --> H["store opened (DEC-004)"]
@@ -38,7 +38,7 @@ flowchart TD
 
 The diagram's purpose is the ordering and the loop: `parse` re-enters itself for every
 clause operand, so the contradiction check cannot live in `parse_field` — it needs to
-know whether the field's conditions are *required* (§2). Nothing on the refusal path
+know whether the field's conditions are *demanded* (§2). Nothing on the refusal path
 reaches a store, a clock or the filesystem, so a refusal cannot leave a store
 half-created, half-locked or half-written. `predicate::parse` has one external ingress
 (`src/spec.rs:132`) and recurses within the module; the predicate module's own doc
@@ -180,8 +180,10 @@ fn refusal(predicate: &Predicate, demanded: bool) -> Option<Reject> {
 }
 ```
 
-Two pure functions over the parsed AST, called once at the end of `parse`. Four
-properties matter and are stated so a reviewer can check them:
+Two pure functions over the parsed AST, and neither runs at a recursive return: the
+private `parse_predicate` builds the tree, and the public `parse` calls `refusal` once
+over the finished tree. Four properties matter and are stated so a reviewer can check
+them:
 
 - **Demanded position only.** Demand is propagated as above and never guessed; the
   `Or` arm's `if !demanded` is what keeps a false disjunct from being refused.
@@ -294,8 +296,9 @@ rather than a conjunction that is merely false.
 ## 4. The predicate-level `$` message
 
 One `Display` arm serves two different defects today, because `UnknownPredicateOperator`
-is raised both at the predicate level (`src/predicate.rs:72`) and inside a condition
-object (`:173`). Splitting them is the only way each sentence can be true.
+is raised both at the predicate level (the `$` arm of `parse_predicate`) and inside a
+condition object (`parse_condition`). Splitting them is the only way each sentence can
+be true.
 
 ### The predicate level
 
@@ -404,9 +407,9 @@ predicates:
 | assertion | why here |
 | --- | --- |
 | contradiction: exit 2, **empty stdout**, stderr names the field | "no success envelope on failure" is structural, and a refusal that printed one would still be green at unit level |
-| contradiction: the scratch directory holds **no store** after the refusal | the DEC-004 promise that the whole request is validated before the store is opened (EX-6) |
-| misplaced operator: exit 2, stderr is the pinned line, `{"<field>": …}` and no concrete field name | the only assertion that fails if the sentence is reverted *or* if a field is invented |
-| unknown `$foo` at predicate level: still exit 2, stderr still names `$foo` | proves the split did not reword the unknown-name case |
+| contradiction: exit 2, and the scratch directory holds **no store** after the refusal | exit 2 is what proves the ordering: a request validated *after* the store step, against an absent store, exits 1 (`no store at …`). The absent directory is a non-vacuity check rather than evidence — a `query` never creates a store (`Query::creates_store()` is false), so that half cannot fail (EX-6) |
+| misplaced operator: exit 2, stderr is the pinned line, `{"<field>": …}` and no concrete field name | the only assertion that fails if the sentence is reverted *or* if a field is invented. **Two strings, not one:** the message-level pin in `src/error.rs` is the bare sentence, and the binary pin here carries the renderer's `smut: ` prefix plus that sentence — the whole line, compared with `assert_eq!` |
+| unknown `$foo` at predicate level: still exit 2, stderr still names `$foo` | proves the split did not reword the unknown-name case; pinned whole, as `smut: unknown predicate operator: $foo` — the prefix belongs to the binary-level assertion, not to the message |
 
 A valid `where` through the same binary remains the paired success case, so a build
 that refused every predicate cannot pass the suite.
@@ -425,7 +428,7 @@ Three files. The selector set recorded for this slice is exactly this table.
 
 | path | change |
 | --- | --- |
-| `src/predicate.rs` | `contradiction(&[Condition]) -> Option<String>` plus a `refusal(&Predicate, demanded) -> Option<Reject>` walk (§2); called once at the end of `parse`, before the AST is returned. The predicate-level `$` arm at line 71 splits: a known operator (the five) becomes `MisplacedPredicateOperator`, anything else stays `UnknownPredicateOperator`. Unit tests as in §5, including the four pins. **No new import** beyond `Value` and `Reject`. |
+| `src/predicate.rs` | `contradiction(&[Condition]) -> Option<String>` plus a `refusal(&Predicate, demanded) -> Option<Reject>` walk (§2), called once by `parse` over the finished AST — never at the end of the recursive `parse_predicate`, which re-enters itself per clause operand. The `$` arm of `parse_predicate` splits: a known operator (the five) becomes `MisplacedPredicateOperator`, anything else stays `UnknownPredicateOperator`. Unit tests as in §5, including the three pins. **No new import** beyond `Value` and `Reject`. |
 | `src/error.rs` | two `Reject` variants (`ContradictoryFieldConditions`, `MisplacedPredicateOperator`), their `Display` arms (the misplaced one interpolating the operator into both slots of the shape), message tests for both, two rows in the boundary table (24 → 26). `UnknownPredicateOperator` is untouched along with its call sites and its message. |
 | `tests/predicates.rs` | the contradiction rows, the misplaced-operator row asserted as a whole line, and the unknown-`$foo` row, in the existing malformed-predicate table and its paired success case. **One comment is reworded:** the doc on the unknown-operator test says any `$` key other than a clause is an unknown operator, which the split makes false for the five operators; the assertions stay, the prose becomes "a name the language does not define". |
 
@@ -439,11 +442,12 @@ Three files. The selector set recorded for this slice is exactly this table.
 
 ### Ordering against SL-004
 
-SL-004's PHASE-02 also edits `src/error.rs` (it respells two identity messages). Its
-three phases are all still `planned`, so this slice lands first and PHASE-02 rebases on
-two added variants and two added `Display` arms. This is a plan-time ordering
-constraint, not a design tradeoff: the overlap costs a rebase only if the order is
-reversed.
+SL-004's PHASE-02 also edits `src/error.rs` (it respells two identity messages), so this
+slice's refusal had to land first; PHASE-02 then rebases on two added variants and two
+added `Display` arms. That is a plan-time ordering constraint, not a design tradeoff —
+the overlap costs a rebase only if the order is reversed. What happened: SL-004's
+PHASE-01 completed at `da4c404` before this slice's code landed at `7347dff` and
+`9727c1c`, and SL-004's PHASE-02 followed.
 
 <!-- doctrine:section sec-7 -->
 ## 7. Constraints, compatibility and known gaps
@@ -477,11 +481,14 @@ sentence IMP-012 owes should name the first two:
   substring test has no finite answer; refusing it would mean guessing.
 - **A contradiction outside demanded position** — inside an `$or`, or under an odd
   number of `$not`s. The query still has an answer there, so a refusal would change it.
-- **`$or` contents are not analysed.** Consequently `{"$or":[{"f":{"$eq":1,"$ne":1}}]}`
-  is accepted and empties the query, even though a one-element `$or` means exactly what
-  its disjunct means. Closing that shape alone would imply the rest of `$or` is
-  analysed, which it is not; the pin in §5 makes the choice explicit, and `{"$or":[]}`
-  staying legal (false, selecting nothing) is part of the same decision.
+- **A *must-hold* `$or` stops the walk.** Its contents are never analysed, so
+  `{"$or":[{"f":{"$eq":1,"$ne":1}}]}` is accepted and empties the query, even though a
+  one-element `$or` means exactly what its disjunct means. (An `$or` that must *not*
+  hold is the other case: it hands its children `false`, so a `$not` beneath it restores
+  demand and the field *is* judged.) Closing the one-element shape alone would imply the
+  rest of `$or` is analysed, which it is not; the pin in §5 makes the choice explicit,
+  and `{"$or":[]}` staying legal (false, selecting nothing) is part of the same
+  decision.
 - **A contradiction spanning `$and`, `$or` or `$not`** — across fields, or across
   clauses. Out of scope by decision.
 
