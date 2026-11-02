@@ -206,10 +206,12 @@ stage: the `PHASE-03` review, then `PHASE-04`; audit is not open.
   EX-4's missing tie-break between two undecodable names, resolved as decoded name → `None`
   last → raw filename. Two design sentences are owed to reconcile (below, items 6 and 7).
 - **`src/error.rs`'s `FileSystem` doc comment widened** from store boundaries to layer reads —
-  the one change EX-2 authorises outside `src/conventions.rs`. Carried in from attempt 1's diff
-  and kept as written: `step` now also names "the layer read that failed (`reading the
-  conventions layer`)". No variant, no inventory row and no rendering changed, so the
-  `every_store_refusal()` count pin is untouched.
+  the one change EX-2 authorises outside `src/conventions.rs`, committed separately at
+  `9281f64` because it is a doc-only tail that three foreign `doc(sl-010)` commits now sit
+  between (see § Implementation run). Carried in from attempt 1's diff and kept as written:
+  `step` now also names "the layer read that failed (`reading the conventions layer`)". No
+  variant, no inventory row and no rendering changed, so the `every_store_refusal()` count pin
+  is untouched.
 - **`PHASE-02` implemented and green at `77444e8`** — `src/conventions.rs` rewritten around
   `Layer`/`Origin`/`Cause`/`Set`/`Entry`/`Outcome` with the pure `parse(bytes, origin)`,
   `SHIPPED` as a `(name, bytes)` table read by that same reader, `Ask` owning its set,
@@ -717,11 +719,20 @@ read.
   `.doctrine/slice/010/` were left untouched.
 - **Recorded delta: `9829de0..cfae50f`** via
   `slice record-delta 008 PHASE-03 --start 9829de0 --end cfae50f`. `--start` is `b3c2fd9^`, the
-  last commit before this phase's code landed (attempt 1's own notes commit); `--end` is the
-  phase's cumulative code tip, pre-knowledge-record. Exactly this phase's three commits are in
-  the range. The `completed` transition was not used to record it — the phase stays
-  `in_progress`, and that transition recomputes and overwrites a span. `--force` is not
-  meaningful with `--start/--end` (ISS-317) and was not needed.
+  last commit before this phase's code landed (attempt 1's own notes commit); `--end` is
+  `cfae50f`, the tip of `src/conventions.rs`. The `completed` transition was not used to record
+  it — the phase stays `in_progress`, and that transition recomputes and overwrites a span.
+  `--force` is not meaningful with `--start/--end` (ISS-317) and was not needed.
+- **The phase's tail is deliberately outside the recorded range, and the reason is the PHASE-02
+  lesson read backwards.** `src/error.rs`'s doc-comment widening (EX-2's one authorised change
+  outside `src/conventions.rs`) landed in `9281f64`, and the notes record in `6a7abf9`; between
+  `cfae50f` and those two, another writer landed three `doc(sl-010)` commits (`deef11e`,
+  `75e4dd2`, `90eec66`). Extending `--end` to `9281f64` would hand the reviewer a range
+  containing SL-010's plan, which is exactly what PHASE-02 narrowed away with `--force` in the
+  other direction. So the range stays the code delta, and the reviewer also reads `9281f64`
+  directly: four lines of doc comment in one file, no variant, no inventory row, no rendering.
+  A moving HEAD interleaving this slice's commits with a neighbour's is the normal state here,
+  not a fault in either run.
 - **`just check` exit 0** at `cfae50f`: build, clippy over both feature configurations with
   `-D warnings` (zero warnings in either), `fmt --check` clean, then the suite twice — **424 lib
   tests on default features and 437 under `--features fault-injection`** (baseline 408/421,
