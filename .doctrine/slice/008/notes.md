@@ -109,6 +109,38 @@ having no global options, and the learn exit table being one line.
    which DEC-031 declined. Amend the clause to point at the listing.
 3. **DEC-017** — the sentence about adding a later set being "a file plus a match arm" is no
    longer how sets arrive; check and amend if it still reads as mechanism.
+4. **`design.md` §5 and §4** — §5's worked listing prints a summary in its binary row where
+   the third-field rule (repeated as DEC-031 rule 4) requires `shadowed`; §4's "one clause per
+   resolved name" contradicts that same rule 4. In place: the example row must read
+   `shadowed`, and the per-name clause restated to match. (Recorded in detail under
+   § Harvest → Produced; listed here so the four obligations read as one set.)
+
+### Design questions the PHASE-02 review raised (RV-030, judgement calls)
+
+Not defects — the design or the operator owns them — but they are owed a ruling, and none of
+this phase's work should invent one.
+
+- **A. Duplicate frontmatter keys are unspecified and the last one silently wins.**
+  `src/conventions.rs:323-326`: a second `summary:` overwrites the first, no refusal. DEC-028
+  covers neither duplicates nor a refusal for them — but the repo refuses a duplicate key
+  loudly in JSON (`Reject::DuplicateKey`, and the guide's own "so is a duplicate key inside
+  one object"), and DEC-028's stated rationale for refusing `title:` *is* the silent-wrongness
+  class, which a duplicated `summary:` is. Owed: settle in the same in-place DEC-028 revision
+  as obligation 1, while the format is one phase old.
+- **B. Three input shapes silently demote frontmatter to prose.** `--- ` with a trailing
+  space, CRLF line endings, and a leading blank line all fail the "exactly `---`" test
+  (`:222`, with an honest comment at `:219-221`), so a Windows-authored set prints its
+  `summary:` as advice and nothing warns. Design-consistent, so not a defect — but it is the
+  reader's one remaining silent-loss path, and EX-8's guide line covers only the *opposite*
+  loss (printed prose omitting frontmatter). Owed: name it deliberately at reconcile, or buy
+  it a one-clause addition to `src/learn.rs` in PHASE-04.
+- **C. The body trim is asymmetric by design — and a conventional file trips it.** Trailing
+  newlines are trimmed (`:244`); a leading blank line after the fence is preserved (`:241`).
+  The shipped file is written without one, so it is invisible today, but the first
+  user-authored set written the way Markdown conventionally is (`---\n…\n---\n\n# Title`)
+  prints and seeds a body that opens with an empty line. Spec-consistent ("everything after
+  the frontmatter … nothing else transformed"), and §7's byte-for-byte row will not catch it.
+  Owed: a design question at reconcile, not a change made in a later phase.
 
 ## Lock residue (2026-11-02)
 
