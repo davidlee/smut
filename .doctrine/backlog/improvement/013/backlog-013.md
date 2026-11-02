@@ -18,11 +18,26 @@ arrives with the work.
 
 Three layers, local wins:
 
-1. `$PWD/.smut/conventions/` — the project's own sets, travelling with the store
-2. `~/.config/smut/conventions/` — the user's
+1. a **project directory** — the project's own sets, travelling with the repository
+2. **`~/.config/smut/<name>/`** — the user's
 3. the binary — what ships
 
 so a set can be overridden deliberately, and traded by copying a file.
+
+**Deliberately not inside `.smut/`.** The store is what the guide calls data that
+confers no authority; a set is the one artefact whose content an agent is meant to
+*follow*. Keeping direction out of the store also keeps a governance contract
+intact: STD-001 makes `docs/store-format.md` the sole record of the store's
+directory layout and reserved names, reviewed whenever "a file, directory or
+reserved name moves, appears or disappears". A `conventions/` subtree under
+`.smut/` would therefore cost a format-document review and a reserved-name
+decision for what is functionally configuration. A sibling directory costs neither,
+and the guide's "whatever is stored there is data" sentence stays true without an
+exception clause.
+
+Naming follows from that: whichever word the concept takes, the **directory, the
+command and the file form should carry it together**. `.smut-recipes/` presumes the
+rename; `.smut-conventions/` does not.
 
 The invariant worth stating as a design goal: **the shipped set is not special.**
 It is a set in the same form, found through the same loader, and it loses to a local
@@ -66,12 +81,42 @@ So this is a loader plus a naming rule, not a new concept.
    form is open — the embedded set is prose today and `--format json` emits a
    declaration, so the declaration is the obvious candidate, but prose is what a
    human edits.
-5. **The name.** `conventions` is the only plural noun among actions (`declare`,
-   `get`, `query`, `render`, `learn`), and if sets become tradeable vocabulary the
-   name carries more weight. Sketches raised and none chosen: `read`, `magazine`,
-   `trope`. A verb naming the *act* (`read`) collides with the store-reading verbs;
-   a content name (`conventions`, `house-style`, `advice`) keeps it a noun. A rename
-   is cheap now and expensive once users have files on disk.
+5. **The name — one decision across three surfaces.** The directory, the command
+   and the file form should carry the same word, so this settles more than a verb.
+   Candidates so far: keep `conventions`; `read`, `magazine`, `trope`, `recipe`.
+   Two are disqualified by collision rather than by taste:
+   - **`recipe`** — "the two-call recipe" is the guide's own name for a *query
+     procedure*: twelve mentions in `src/learn.rs`, a section heading of its own,
+     and the conventions set points at it. Two meanings of "recipe" in one surface
+     is the vocabulary collapse `hygiene` items 5 and 7 warn about, committed by the
+     tool itself.
+   - **`read`** — collides with the store-reading verbs (`get`, `query`, `render`).
+   A content noun (`conventions`, or `practice`/`style` if the plural noun among
+   actions grates) stays honest; a verb-noun like `magazine`/`trope` does not
+   survive a stranger reading `--help`. The cheapest moment to decide is before any
+   user has a directory named after it; after that a rename is a migration.
+
+## Two discovery questions the layering opens
+
+**How far up to look.** The store's rule is pinned and contrary: "The store is
+`.smut/` beside the current directory, and is never searched for in a parent"
+(`src/learn.rs:32`, `docs/store-format.md:30`). Project-scoped sets want the
+opposite — walk up to the repository root, so one set governs every subdirectory and
+every agent working under it. The asymmetry is defensible (a notebook is local; a
+policy is project-wide) but it has to be stated, because an agent then holds two
+discovery rules for one tool. The shape worth considering: **nearest ancestor wins,
+bounded by the git root**, so a subproject can override the repository rather than
+accumulating rules it cannot escape — with a listing that shows origin then being
+mandatory. Two things to weigh while choosing: a parent-level set governs far more
+agents than a per-cwd file (the trust question above, with a wider blast radius),
+and a fallback is needed for when there is no `.git` at all.
+
+**Where the advice is installed, versus where it is recorded.** Today the pipe into
+`declare` is the whole mechanism (DEC-017) and the store owns a copy. With project
+files as the *source* of direction, a seeded entity stops being an installation
+mechanism and becomes a record — "the advice this notebook was given" — which is a
+different artefact and arguably worth keeping for exactly that reason. Decide it
+deliberately rather than let the two idioms drift into one.
 
 ## Relation to what is already decided
 
@@ -116,7 +161,9 @@ depends on whether sets can be layered and resolved.
 
 ## Provenance
 
-Operator inclination of 2026-11-02 ("it should be trivially easy for users to trade
-custom schemas, and conventions for using them, as well as to override the built-in
-conventions"), recorded in RFC-001 § Outcome. The reading of `src/conventions.rs`,
-the DEC-017 comparison, the existing export half and the pins are this repo's.
+Operator inclination of 2026-11-02 — three messages: sets should be tradeable and
+overridable ("trivially easy"); the project's sets should live in a sibling
+directory rather than inside `.smut/`, project-scoped by walking to the nearest git
+root; and `recipe` as a possible verb. Recorded in RFC-001 § Outcome. The reading of
+`src/conventions.rs`, the DEC-017 comparison, the STD-001 argument, the `recipe`
+collision count and the pins are this repo's.
