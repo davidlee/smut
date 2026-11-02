@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 38
+slug = "the-dsl-emits-a-specification-object-and-lets-specparse-read-it"
+title = "The DSL emits a specification object and lets `spec::parse` read it"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = '"Adds no semantics" can be enforced two ways: emit the specification and let `spec::parse` read it, or build `Spec` from widened private helpers. They differ in refusal voice and in how easily the invariant rots.'
+choice = "The compiler produces the specification as JSON and calls the existing `spec::parse`, so equivalence is structural rather than a convention. DSL-only refusals are voiced in the DSL layer before that call; everything else is `spec::parse`'s existing refusal. The DSL's operator table derives from one map rather than becoming a third hand-maintained copy."
+alternatives = ["build `Spec` directly from `spec.rs`'s private helpers, which widens their visibility and turns the invariant into a review obligation", "a second specification parser, which is a duplicate implementation", "a shared internal builder both callers use — the right shape if `spec.rs` ever needs it, not now"]
+rationale = "The property this slice must prove is that every DSL line equals a JSON specification, and routing through `spec::parse` makes that true by construction: the evidence becomes a table of token lines against the JSON the guide prints, not two implementations kept in sync by hand."
+consequences = ["the DSL cannot express anything the specification rejects — for free", "a JSON-vocabulary message can still reach a human where the DSL did not pre-check so each such case is listed rather than discovered", "spec.rs's public surface does not change", "IMP-016 gains a third site rather than staying untouched — the DSL names the five operators as JSON keys so its table lives in one place in dsl.rs and pulling IMP-016 forward is a plan-stage scope question rather than a silent choice"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"

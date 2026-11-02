@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 39
+slug = "the-dsl-refuses-only-what-the-specification-cannot-spell-and-voices-refusals-in-the-callers-tokens"
+title = "The DSL refuses only what the specification cannot spell, and voices refusals in the caller's tokens"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "IDE-006's rule 3 refused any repeated field in the DSL. The research round found DEC-027 already refuses the provably-unsatisfiable case at parse time, by demand and decidability, with a message DEC-030 has pinned."
+choice = "Repeated conditions on one field compile and are judged by `predicate::parse`, except the one shape the specification cannot express — two `=` on one field — which the DSL refuses as a contradiction in DEC-027/DEC-030's family. Every DSL-only refusal exits 2, names the defect, names only flags and fields the caller typed, and points at `smut query` where the DSL cannot express the request."
+alternatives = ["IDE-006's blanket duplicate-field refusal — deletes a refusal the specification already words better, and its suggested cure is only correct when both conditions are `=`", "compiling two `=` into `$in` — silently changes what was asked", "refusing every same-field repeat — refuses requests the specification accepts"]
+rationale = "A front-end that refuses what the machine accepts punishes only humans, and one that silently changes meaning is worse than either. Two different `=` values are unsatisfiable, not interchangeable, so that one shape stays refused; every expressible repeat travels to the mechanism that already decides it, and inherits a sounder rule and a pinned sentence."
+consequences = ["the DSL's refusal count drops, and one refusal the design expected is not built", "a same-field contradiction now speaks DEC-030's sentence rather than a DSL one", "the two-`=` refusal needs its own sentence and a red-first message test", "`$in` is spelled `field=a,b` and is never inferred from two conditions"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"

@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 35
+slug = "a-bare-dsl-value-is-a-json-scalar-when-it-parses-as-one-and-a-string-otherwise"
+title = "A bare DSL value is a JSON scalar when it parses as one, and a string otherwise"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "A bare token carries no type, and the predicate layer compares structurally with no coercion, so the front-end must choose one. `done=true` and `priority=3` are the two shapes a caller most often asks about."
+choice = "Parse a value as a JSON scalar when it is one — `true`, `false`, `null`, a number — and as a verbatim string otherwise. Document it in `learn` beside the escapes it makes necessary: `--ids` for the identity projection, `--from=ID` for a root, `smut query` for exactness."
+alternatives = ["always a string — turns every boolean and numeric question into a silent empty result at exit 0", "a typing sigil on the value — new syntax and a new quoting problem on the hot path", "no typing, with a guide rule to write typed questions in JSON — leaves the hot path unable to ask them"]
+rationale = "The two failures are not symmetric. Always-string fails silently on exactly the shapes a typed store exists to support; scalar-typing fails only where a string happens to look like a scalar, and there the surface can name two escapes and one exactness path. Prefer the failure the surface can name."
+consequences = ["`smut_id=1` compares the number 1, which ADR-001 makes the one place this matters", "`status=null` tests a stored null and is not the same request as `--missing status`", "`v1.2`, `007` and `open,resolved` stay strings, because a JSON number has no leading zero and a comma list is a list", "the guide states the wart where it bites rather than in a footnote"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"

@@ -66,12 +66,11 @@ Binding constraints inherited, none of which this slice may relax:
 ## Scope & Objectives
 
 1. **One compiler, `parse(argv) -> Spec`, as a pure function.** No store, no
-   argv beyond the tokens it is handed, no environment. The design settles *how*
-   "adds no semantics" is enforced — either by emitting the spec object and
-   routing it through the existing `spec::parse`, or by building `Spec` from the
-   same parse helpers — but the property is not negotiable: **every DSL line
-   equals the JSON spec it corresponds to**, asserted against `spec::parse` of
-   that JSON.
+   argv beyond the tokens it is handed, no environment. It emits the specification
+   **as an object** and hands it to the existing `spec::parse` (DEC-038), so
+   "adds no semantics" is structural rather than a convention, and the property it
+   must satisfy is a table: **every DSL line equals the JSON spec** the guide
+   prints.
 2. **The token grammar.** A bare word is a root `smut_id`; `field=value`,
    `field!=value` and `field~value` are `$eq`, `$ne` and `$contains`; a comma
    list on `=` is `$in`; the word `any` is the wildcard `"*"`. The one rule to
@@ -152,7 +151,8 @@ Binding constraints inherited, none of which this slice may relax:
 | `src/main.rs` | the dispatch arm, if `q` reaches the pipeline by any path other than `Invocation::Request(Request::Query)` |
 | `src/error.rs` | the DSL's `Reject` variants: two operators in one token, a duplicate field, a JSON operand, an unknown flag naming its nearest, `--limit all`, a comma list the operator cannot carry |
 | `src/learn.rs` | the hot-path recipes as DSL lines; `query` as the complete surface; the value-typing and `$contains` warts |
-| `src/spec.rs` | nothing semantic. Only if the design lets the compiler build the spec object directly and a helper (`Limit::capped`) needs a visibility it does not have |
+| `src/spec.rs` | nothing semantic, and its public surface does not change: the compiler emits an object and calls the existing `parse` (DEC-038) |
+| `src/predicate.rs` | **no change** — repeated conditions compile and are judged here as they always were (DEC-039); the DSL's small operator-name table lives in `dsl.rs` and is the third site IMP-016 will have to reconcile |
 | `tests/dsl.rs` *(new)* | the compiler's own suite: the worked-examples table as DSL→`Spec` equalities, token hazards, every refusal, and the strictness asymmetry |
 | `tests/cli_contract.rs` | the verb end-to-end: byte-identical envelope against `query`, exit codes, `--` reaching a hyphen-leading id, flags interleaved with conditions, no store created |
 | `tests/compatibility.rs` | untouched — it is the guard that proves the machine surface did not move |
@@ -166,24 +166,17 @@ name this one rather than discover it at closure.
 
 ## Risks, assumptions and open questions
 
-- **R1 — clap may not be able to express this grammar.** Arbitrary positional
-  tokens interleaved with flags, tokens containing `=`, `!` and `~`, and a
-  trailing `--` that must reach an id starting with `-`. If `allow_hyphen_values` /
-  `trailing_var_arg` cannot carry it, `q` would have to read `std::env::args`
-  itself — which contradicts DEC-008's "clap owns the grammar" and must be ruled
-  on, not worked around. **This is the largest unproven implementation risk and
-  the first thing design must spike.**
-- **R2 — two ways to enforce "no new semantics", and they differ in refusal
-  voice.** Emitting the spec object and routing it through `spec::parse` makes the
-  property structural, but every refusal then arrives in JSON vocabulary ("`from`
-  must be a string or an array of strings") when a human typed a token. Name, per
-  refusal, which layer voices it — or the migration message will be wrong exactly
-  where a new user meets it.
-- **R3 — value typing is a semantic decision smuggled into a front-end.** IDE-006
-  recommends parsing a value as a JSON scalar when it is one, so `done=true` and
-  `priority=3` work; the cost is that `smut_id=1` compares the number 1. Whatever
-  is chosen is documented in `learn` and pinned by a test, because "bare is always
-  a string" turns every numeric query into a silent empty result.
+- **R1 — can clap express this grammar?** *Answered by DEC-037* — yes, with a
+  bare `Vec<String>` positional and **no** attributes, so DEC-008 needs no
+  amendment. The risk inverted: the danger is the *silent* alternatives
+  (`trailing_var_arg`, `allow_hyphen_values`), not failure.
+- **R2 — two ways to enforce "no new semantics".** *Answered by DEC-038* — the DSL
+  emits the object and calls `spec::parse`, so the property is structural. The
+  cost is named: JSON-vocabulary refusals can reach a human where the DSL did not
+  pre-check, so each such case is listed rather than discovered.
+- **R3 — value typing is a semantic decision smuggled into a front-end.**
+  *Answered by DEC-035* — JSON scalar when it parses as one, else a string, with
+  the ADR-001 wart (`smut_id=1` compares a number) documented beside its escapes.
 - **R4 — `~` inherits `$contains`'s two meanings** (substring on a string, exact
   member equality on an array; measured on a probe store at 0.2.0). One word with
   two semantics and no signal in the answer is a silent-wrongness class the DSL
@@ -207,33 +200,26 @@ name this one rather than discover it at closure.
 - **R7 — `q` and `query` could drift into two engines.** One pipeline, and the
   byte-identity test is what keeps it one. Any temptation to special-case the
   envelope for `q` is the bug.
-- **R8 — `--ids` collides with `--select`.** An open question, not an
-  implementation detail: refuse the pair, or let one win? A silent last-wins rule
-  is the class of failure this slice exists to remove.
+- **R8 — `--ids` and `--select`.** *Answered by DEC-041* — refused by name, never
+  a silent precedence rule.
 - **R9 — `--edges` beside a named direction.** The spec's own rule is that `edges`
   never overrides a `follow`/`backlinks` the request named; `q` inherits it rather
   than inventing a conflict refusal.
 
-### Open questions for the design run
+### Settled by the design run
 
-- **OQ1 — the verb's name.** `q` (short, and IDE-006's recommendation) versus
-  `find` (discoverable, if a one-letter verb is too terse). A one-way door once
-  documented.
-- **OQ2 — bare roots with an escape, or a condition sigil.** Bare words plus
-  `--from=ID` against `@field=value`, which makes bare words *always* ids but
-  taxes the hot path. IDE-006's explicit rejection stands either way: `a=b` is
-  never resolved as an id because it happens to match one.
-- **OQ3 — value typing.** JSON-scalar-if-parsable (IDE-006's recommendation)
-  versus always-string (R3). Research adds a constraint on the answer: under scalar
-  typing `smut_id=1` compares the *number* 1, and `smut_id` is the one field ADR-001
-  makes structural, so whichever way it goes `--ids` and `--from=1` must be named in
-  the same breath as the wart.
-- **OQ4 — `--brief`:** cut from this slice (proposed) or carried?
-- **OQ5 — `--ids` with `--select`:** refuse, or precedence (R8)?
-- **OQ6 — does `q` appear in the help text's command list and the guide's
-  numbered recipes, and does `query` stay in the guide at all?** Proposed: `q` for
-  the hot path, `query` kept and marked complete — DEC-010 makes the guide the
-  delivery channel, so a verb the guide omits is a verb nobody finds.
+| was | answered by | answer in one line |
+| --- | --- | --- |
+| OQ1 verb name | DEC-034 | `smut q`; `query` keeps JSON and stays the complete surface; `find` remains a rename-plus-guide-text away |
+| OQ2 roots vs sigil | DEC-036 | bare roots, `--from=ID` escape, `--` for hyphen ids; `a=b` is never resolved as an id |
+| OQ3 value typing | DEC-035 | JSON scalar when it parses as one, else a string; `smut_id=1` is the documented wart and `--ids`/`--from=`/`query` are the escapes |
+| OQ4 `--brief` | DEC-041 | out — the envelope is the contract, output shape is IMP-002's |
+| OQ5 `--ids` with `--select` | DEC-041 | refused by name at exit 2; no silent precedence |
+| OQ6 what the guide teaches | DEC-040 | `q` for the hot path, `query` kept and marked complete, both warts stated |
+| R1 can clap carry it | DEC-037 | yes: a bare `Vec<String>` with **no** positional attributes; the silent alternatives are named |
+| R2 how "no new semantics" is enforced | DEC-038 | the DSL emits the specification and calls `spec::parse`, so equivalence is structural |
+| R5 whose voice a repeated condition speaks | DEC-039 | only two `=` on one field is refused, in DEC-027/DEC-030's family; every other repeat compiles to be judged |
+| R10 the third operator copy | DEC-038 | recorded deliberately: the table lives in one place in `dsl.rs`, and pulling IMP-016 forward is a plan-stage question |
 
 ## Verification and closure intent
 
@@ -280,9 +266,11 @@ Add `smut q`, a human query surface whose grammar is the argv token list rather
 than a string: bare words are roots, `field=value` / `field!=value` / `field~value`
 are the operators, a comma list is `$in`, `any` is the wildcard, and each of the
 remaining eight specification keys is a flag of the same name. The compiler is a
-pure function producing the existing `Spec`, so the envelope, exit codes, store
-rules and traversal semantics are inherited rather than reimplemented, and
-`smut query` stays the complete machine surface with its 0.2 compatibility tests
+pure function that emits that specification object and hands it to the existing
+`spec::parse`, so the envelope, exit codes, store rules and traversal semantics are
+inherited rather than reimplemented, and equivalence is a property of the code
+rather than a promise in a document. `smut query` stays the complete machine
+surface with its 0.2 compatibility tests
 untouched. Shell-active characters are banned from the grammar by construction —
 which is what makes `any` the wildcard and `--has`/`--missing` the existence test
 — and every refusal names its fix, the JSON positional's refusal naming its

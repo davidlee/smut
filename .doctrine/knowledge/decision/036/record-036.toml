@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 36
+slug = "a-root-is-a-bare-word-a-condition-is-an-infix-token-and-fromid-is-the-escape"
+title = "A root is a bare word, a condition is an infix token, and `--from=ID` is the escape"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "The grammar must tell a root id from a condition without looking at the store. A sigil makes bare words always ids and is unambiguously total, at the cost of a keystroke on the hot path."
+choice = "A bare token with no operator is a root; `field=value`, `field!=value`, `field~value` and a comma list are conditions. `--from=ID` reaches a root carrying `=`, `~`, a comma or a leading `-`, and `--` reaches a hyphen-leading id. A token containing an operator is never resolved as an id because it matches one."
+alternatives = ["the sigil (`@field=value`), which makes every bare word an id and is total", "store-dependent disambiguation, resolving `a=b` as an id when such an id exists", "requiring `--from=` for every root"]
+rationale = "Roots are what a human types first and most, and inline conditions make the filter the legible token rather than a quoted document. The sigil buys totality with a keystroke on every hot-path line and pays out only where a slug-shaped id collides with a field name. Store-dependent resolution is refused outright: a guess that is right today is wrong after the next declare, which makes the grammar non-deterministic and unauditable."
+consequences = ["a field name containing `=`, `~` or `,`, and a value containing a comma, are outside the DSL and refuse toward `smut query`", "a typo'd field inside a condition stays silent, which is DEC-027's decided silence and not this front-end's to change", "a bare token naming a field-like word (`session`) is a root, and the guide says so", "`--from=` keeps every id reachable without a quote"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"

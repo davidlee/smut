@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 40
+slug = "learn-teaches-the-dsl-for-the-hot-path-and-keeps-query-as-the-complete-surface"
+title = "`learn` teaches the DSL for the hot path and keeps `query` as the complete surface"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "DEC-016 makes `learn` the normative home of the two-call recipe and pins its JSON spelling, and the recipes are additionally pinned by `EXAMPLE_*` constants and an executed test. IDE-006's worked examples change those recipes."
+choice = "The hot-path recipes become `smut q` lines; `smut query` stays documented as the complete surface for what the DSL cannot say; both warts are stated where they bite — value typing with its three escapes, and `~`'s two meanings. The `EXAMPLE_*` constants and the fixture harness gain a token-list path so the printed recipes stay executed, and DEC-016 is amended in place as an obligation owed at reconcile."
+alternatives = ["leave the JSON recipes and document `q` beside them — two normative spellings, drift, and a longer guide", "teach `q` only — loses the escape story, and DEC-016's completeness guard would point at a surface the guide no longer shows", "amend DEC-016 mid-slice — SL-008's precedent defers governance edits to reconcile"]
+rationale = 'The guide is the delivery channel (DEC-010) and is version-bound, so a recipe a reader retypes must be the one they will actually type. Keeping `query` visible is what makes "the DSL cannot say this" an instruction rather than a dead end.'
+consequences = ["DEC-016 is amended at reconcile, not mid-slice", "`tests/fixture.rs` gains a token-list runner beside its `&Value` path", "the guide's sentence tests move with the text", "`~`'s two meanings and the field-typo silence are stated, which is IMP-012's territory and must not read as a cure"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"

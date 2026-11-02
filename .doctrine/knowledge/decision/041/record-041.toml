@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 41
+slug = "ids-and-select-refuse-each-other-and-brief-stays-out-of-the-slice"
+title = "`--ids` and `--select` refuse each other, and `--brief` stays out of the slice"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = """`--ids` is shorthand for `select:["smut_id"]`, so naming it beside `--select` is a silent precedence question. And the human reader's other half of the pain is one line per hit rather than one object."""
+choice = "`--ids` together with `--select` refuses at exit 2 naming both, because silent last-wins is the failure class this surface exists to remove. `--brief` is not in this slice: the envelope is the contract, and output shape belongs to IMP-002's presentation work."
+alternatives = ["last-wins, which is silent", "`--ids` overrides `--select`, which is still silent and one layer quieter", 'merging them, so `--ids --select title` becomes `select:["smut_id","title"]`, which is a request nobody typed']
+rationale = "The verb is a front-end for humans, so it may be stricter than the specification in strictness (scope objective 5): refusing the pair costs one sentence and removes a class of silent wrong answer. `--brief` touches a different seam — output — and adding it here would make the byte-identity test with `query` meaningless."
+consequences = ["`--ids` remains exactly the two-call recipe's shape", "a caller wanting both writes `--select smut_id,title`", "`--brief` becomes an IMP-002 item rather than an unfinished corner here"]
+decided_by = "agent, answering the design run's inquiries; subject to the run's sufficiency acceptance"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-010"
