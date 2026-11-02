@@ -66,7 +66,8 @@ exit_criteria = [
   { id = "EX-3", text = "Both format-version constants are 2; old indexes fail cleanly by version and old committed manifests fail before staged puts/removals replay. Existing recovery order, layout and durability protocol remain." },
   { id = "EX-4", text = "The committed fixture differs only in structural identity keys: inverse comparison recovers the original parsed data with numeric representation distinctions, values and array order preserved; demonstrate rejection of an altered copy." },
   { id = "EX-5", text = "The normative brief, docs/store-format.md, learn, README examples, fixture provenance and affected test expectations consistently describe the new identity/version rules. The brief's unfinished 1.0 requirements and historical fixture prose remain intact." },
-  { id = "EX-6", text = "Residual id uses in the code-impact set are classified by meaning, not banned; existing examples and regressions plus new behavior cases pass just check, and no unrelated test is removed or weakened." }
+  { id = "EX-6", text = "Residual id uses in the code-impact set are classified by meaning, not banned; existing examples and regressions plus new behavior cases pass just check, and no unrelated test is removed or weakened." },
+  { id = "EX-7", text = "The old-manifest refusal fixture begins with an otherwise-readable version-2 store and is paired with an equivalent readable-manifest fixture that successfully replays its puts/removals. Assert the failure names the manifest/version gate, not an unrelated index error; actual new index and manifest documents both carry version 2." }
 ]
 verification = [
   { id = "VT-1", expects = "Pin the independent literal wire contract and structural canonical ordering, including smut_id beside lexically earlier ordinary keys.", test_file = "src/entity.rs", keywords = ["ENTITY_ID", "smut_id", "wire_contract"], waived = false },
@@ -76,7 +77,8 @@ verification = [
   { id = "VT-5", expects = "The conventions JSON seed uses structural smut_id while retaining its fixed public id and upsert behavior.", test_file = "tests/conventions.rs", keywords = ["smut_id", "conventions-hygiene"], waived = false },
   { id = "VA-1", expects = "Compare the inverse-renamed fixture with its recorded Git original using serde_json structural equality, preserving 1 versus 1.0 and array order. Observe an altered target/value or reordered-array copy rejected; keep the baseline revision, exact command and results in slice evidence without committing a second fixture." },
   { id = "VA-2", expects = "Run just check, including default/fault-injection tests and executed README/guide examples; review the full diff and classify residual structural id uses across source, tests and current docs." },
-  { id = "VA-3", expects = "Review docs/store-format.md under STD-001 in the same version-bump change: both versioned documents, canonical bytes, nested-identity corruption and diagnostic examples agree with code. Review the brief as normative and learn as version-matched." }
+  { id = "VA-3", expects = "Review docs/store-format.md under STD-001 in the same version-bump change: both versioned documents, canonical bytes, nested-identity corruption and diagnostic examples agree with code. Review the brief as normative and learn as version-matched." },
+  { id = "VT-6", expects = "Paired old/readable-manifest cases discriminate version refusal from successful replay on an otherwise-readable store, so a no-op recovery fixture cannot pass both.", test_file = "tests/durability_crash.rs", keywords = ["old_manifest_not_replayed", "readable_manifest_replays"], waived = false }
 ]
 specs = []
 requirements = []
@@ -87,7 +89,8 @@ name      = "Assemble integrated evidence and the reconciliation handoff"
 objective = "Prepare the six targeted decision amendments for the audit/reconcile seam and independently recheck the integrated format-2 lifecycle, fixture preservation, documentation and regression evidence before audit."
 entrance_criteria = [
   { id = "EN-1", text = "PHASE-02/EX-1 through EX-6 hold; the version-2 implementation and normative/human documents are green, and the original fixture baseline/equivalence evidence is available." },
-  { id = "EN-2", text = "Read design sections 4-6, DEC-025 and both facet/prose halves of DEC-005, DEC-007, DEC-010, DEC-016, DEC-002 and DEC-012 using doctrine show. RV-023 contains no routed instrument findings to transcribe." }
+  { id = "EN-2", text = "Read design sections 4-6, DEC-025 and both facet/prose halves of DEC-005, DEC-007, DEC-010, DEC-016, DEC-002 and DEC-012 using doctrine show. RV-023 contains no routed instrument findings to transcribe." },
+  { id = "EN-3", text = "PHASE-02/EX-7 paired recovery discrimination and actual version-2 index/manifest evidence are available." }
 ]
 exit_criteria = [
   { id = "EX-1", text = "A precise per-record amendment proposal maps old and new facet/prose passages for all six decisions, with dated ADR-001/SL-004 notes and unchanged rationale identified. DEC-005 explicitly frees ordinary id and cites DEC-021; DEC-007/010/016 and DEC-002/012 examples use the new key. Keep the accepted records untouched until formal reconciliation, as design section 4 requires." },

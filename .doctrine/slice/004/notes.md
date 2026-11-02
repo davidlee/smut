@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · planning · 540cf0b
+fresh-as-of: 2026-11-02 · planning · 507acb6
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -162,8 +162,6 @@ facet/prose halves of the amended decisions can drift. This statement was writte
 after that pass. Offer an inquisition or an external review prompt as alternatives
 to proceeding to planning on the self-review plus the operator's review.
 
-## Operational hazards
-
 ## Design approval and planning
 
 The operator replied "approve, lock & plan" to the completed design and RV-023
@@ -180,6 +178,18 @@ integrated evidence and amendment proposals for the formal audit/reconcile seam.
 Accepted decision edits remain with reconciliation rather than phase execution.
 The plan TOML parses; every VT has an existing file and nonempty keyword mandate.
 These checks validate planning structure, not implementation behavior.
+
+The critical plan pass added PHASE-02 EX-7/VT-6 and PHASE-03 EN-3: pair old-manifest
+no-replay with a readable-manifest replay control on an otherwise-readable store,
+and inspect the actual index/manifest versions. This avoids a vacuous refusal
+test failing for an unrelated index error or never exercising recovery. Existing
+phase/criterion ids were preserved; the new criteria append. No design change
+or implementation was made by this refinement. All three runtime phase sheets
+were materialised from the final plan; every phase remains unstarted. The slice
+moves to ready as the planning handoff, not as authorization to execute. The next
+step is /phase-plan for PHASE-01 when implementation is requested.
+
+## Operational hazards
 
 - **The operator's README draft is staged and uncommitted.** A bare `git commit`
   sweeps it into the commit; this happened twice and was repaired twice. Always

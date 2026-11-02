@@ -57,6 +57,11 @@ Version tests must construct old version values explicitly: changing both a
 fixture's version and the reader constant can otherwise make an old-format test
 quietly stop testing refusal. Recovery tests must inspect staged publication and
 removal effects, not merely an error string or unchanged in-memory result.
+Pair the old-manifest refusal fixture with an otherwise equivalent readable
+manifest that actually publishes/removes its staged targets. Keep the underlying
+store readable in both cases, so an unrelated index-version error or a fixture
+that never reaches recovery cannot satisfy the refusal requirement vacuously.
+Inspect actual versioned index/manifest bytes as well as their constants.
 
 ## Notes
 
