@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19ba6d3587382b19f9e04e0eb0575"
+memory_key = "mem.pattern.smut.flake-package-crane"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "pattern"
+status = "active"
+title = "The flake packages smut with crane: bare buildPackage, a lib.fileset source, one channel statement"
+summary = "smut's flake assembles the binary with a bare crane buildPackage over a lib.fileset source (README.md and the interview fixture must be in it — include_str! and a run-time read), one channel statement via toolchainFor, packages.default + checks.smut."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = ["flake.nix", "flake.lock", "Cargo.toml"]
+commands = []
+tags = ["flake", "nix", "packaging", "crane"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "ee32900e4c3192ceb2886ab01dac9722a2b4837a"
+ref_name = "refs/heads/main"
+checkout_state_id = "efde7f61058bdbc81a42cd97aaff199975eb8e8a62a949f4d0089944417b2a50"
+base_commit = "1cc370e150fd9f6942ebc902e19f312c5fc4e42c"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "low"
+weight = 0
+
