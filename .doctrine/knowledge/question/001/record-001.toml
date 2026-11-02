@@ -1,0 +1,45 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 1
+slug = "does-smut-ever-gain-user-definable-typed-schemas-for-entities"
+title = "Does smut ever gain user-definable typed schemas for entities?"
+record_kind = "question"
+status = "open"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["conventions", "posture", "schemas"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+question = "Does smut ever gain user-definable typed schemas — declared shapes that validate on write — rather than only advisory conventions?"
+why_matters = "It decides what the conventions vocabulary must distinguish, whether the conventions loader is generic over declaration kind as a hedge or a scaffold, and whether DEC-017 never-validate posture is permanent or temporary. Conventions are the schema-shaped thing that is not a schema: their virtue and their ceiling. Answering it early would let a guess harden into a surface; answering it never would let pressure build unseen."
+answer      = ""
+answered_by = ""
+answered_on = ""
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the question RFC-001 open item 7 held"
+target = "RFC-001"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the naming hedge this question would either vindicate or obsolete"
+target = "DEC-029"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the measured pressure that makes schemas plausible"
+target = "IMP-011"
