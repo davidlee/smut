@@ -66,12 +66,17 @@ pub struct Flags {
 
 /// Compiles one argument line to the specification object it denotes.
 ///
-/// Refusals are raised in source order for tokens and in a fixed order for flags,
-/// so a line with two defects always reports the same one — the discipline
+/// Tokens are read first, in source order, and then the flags in the fixed order
+/// `follow`, `backlinks`, `depth`, `budget`, `select`, `ids`, `order`, `limit`,
+/// `edges`, `has`, `missing`, `from` — the design's table order, not the order
+/// they were written. So a line with two defects always reports the same one,
+/// however it was spelled on the command line — the discipline
 /// [`crate::spec::parse`] already keeps.
 pub fn compile(line: &Line<'_>) -> Result<Value, Reject> {
     let mut roots: Vec<Value> = Vec::new();
     let mut filter = Where::default();
+    let mut spec = Map::new();
+    let flags = &line.flags;
 
     for token in line.tokens {
         // The classification order of design §1's flowchart: the JSON operand is
@@ -102,50 +107,117 @@ pub fn compile(line: &Line<'_>) -> Result<Value, Reject> {
         }
     }
 
-    // `--has` and `--missing` merge into the same `where` as the tokens, because
-    // they are conditions of the same predicate, and they are read in `Flags`'
-    // order — so a line carrying both defects reports the same one every time.
-    if let Some(fields) = &line.flags.has {
-        for field in members(fields) {
-            filter.add_exists(field, true, fields)?;
+    // The flags are read in the order below and no other — follow, backlinks, depth,
+    // budget, select, ids, order, limit, edges, has, missing, from. A line with two
+    // flag defects reports the one earliest in that table, so the order the caller
+    // typed them in never decides what they are told.
+    if let Some(raw) = &flags.follow {
+        spec.insert("follow".to_owned(), traversal("--follow", raw)?);
+    }
+
+    if let Some(raw) = &flags.backlinks {
+        spec.insert("backlinks".to_owned(), traversal("--backlinks", raw)?);
+    }
+
+    // The direction test is the flag's presence and not its value, and `--edges` is not
+    // a direction: it asks for an edge set, which is not something to walk.
+    if let Some(raw) = &flags.depth {
+        if flags.follow.is_none() && flags.backlinks.is_none() {
+            return Err(Reject::MissingDirection {
+                flag: "--depth".to_owned(),
+            });
+        }
+
+        // The same rule a token's value gets, so no numeric refusal is clap's and
+        // `--depth 2` is the number `2` rather than its text (DEC-035).
+        spec.insert("depth".to_owned(), value(raw));
+    }
+
+    if let Some(raw) = &flags.budget {
+        if flags.follow.is_none() && flags.backlinks.is_none() {
+            return Err(Reject::MissingDirection {
+                flag: "--budget".to_owned(),
+            });
+        }
+
+        spec.insert("budget".to_owned(), value(raw));
+    }
+
+    if let Some(raw) = &flags.select {
+        // The pair is one projection spelled two ways, so it is refused by name rather
+        // than resolved by precedence (DEC-041) — before the list is read.
+        if flags.ids {
+            return Err(Reject::ConflictingSelection);
+        }
+
+        spec.insert("select".to_owned(), names(&flag_names("--select", raw)?));
+    }
+
+    if flags.ids {
+        // `--select` was read first and refuses the pair, so reaching here means the
+        // projection is `--ids`'s alone: DEC-041's two-call recipe's exact shape.
+        spec.insert(
+            "select".to_owned(),
+            Value::Array(vec![Value::String("smut_id".to_owned())]),
+        );
+    }
+
+    if let Some(raw) = &flags.order {
+        let entries = flag_names("--order", raw)?
+            .into_iter()
+            .map(sort_key)
+            .collect::<Result<Vec<Value>, Reject>>()?;
+
+        spec.insert("order".to_owned(), Value::Array(entries));
+    }
+
+    if let Some(raw) = &flags.limit {
+        // There is no unlimited limit to read: the parsed `Limit` has no
+        // user-reachable unlimited form (DEC-001 rule 4), and reading everything is
+        // `smut get`'s work.
+        if raw == "all" {
+            return Err(Reject::UnreachableLimit);
+        }
+
+        spec.insert("limit".to_owned(), value(raw));
+    }
+
+    if flags.edges {
+        spec.insert("edges".to_owned(), Value::Bool(true));
+    }
+
+    // `--has` and `--missing` merge into the same `where` as the tokens, because they
+    // are conditions of the same predicate: `--has body status=open` is one filter.
+    if let Some(raw) = &flags.has {
+        for field in flag_names("--has", raw)? {
+            filter.add_exists(field, true, raw)?;
         }
     }
 
-    if let Some(fields) = &line.flags.missing {
-        for field in members(fields) {
-            filter.add_exists(field, false, fields)?;
+    if let Some(raw) = &flags.missing {
+        for field in flag_names("--missing", raw)? {
+            filter.add_exists(field, false, raw)?;
         }
     }
 
-    let mut spec = Map::new();
+    // The escape is one id and not a list — a comma may be part of the id it carries —
+    // and it appends to the roots in write order, after the bare ones.
+    if let Some(raw) = &flags.from {
+        if raw.is_empty() {
+            return Err(empty_member("--from=", ListKind::Names));
+        }
 
+        roots.push(Value::String(raw.clone()));
+    }
+
+    // `from` and `where` are written last because the tokens and the flags above are
+    // what fill them.
     if !roots.is_empty() {
         spec.insert("from".to_owned(), Value::Array(roots));
     }
 
     if let Some(predicate) = filter.into_value() {
         spec.insert("where".to_owned(), predicate);
-    }
-
-    if let Some(fields) = &line.flags.follow {
-        spec.insert("follow".to_owned(), names(fields));
-    }
-
-    if let Some(fields) = &line.flags.backlinks {
-        spec.insert("backlinks".to_owned(), names(fields));
-    }
-
-    if let Some(raw) = &line.flags.depth {
-        // The same rule a token's value gets, so no numeric refusal is clap's and
-        // `--depth 2` is the number `2` rather than its text (DEC-035).
-        spec.insert("depth".to_owned(), value(raw));
-    }
-
-    if line.flags.ids {
-        spec.insert(
-            "select".to_owned(),
-            Value::Array(vec![Value::String("smut_id".to_owned())]),
-        );
     }
 
     Ok(Value::Object(spec))
@@ -183,6 +255,20 @@ const EXISTS: &str = "$exists";
 const IN: &str = "$in";
 /// The operator that carries a comma list, spelled as the caller types it.
 const EQUALS: &str = "=";
+
+/// The operators that take one value each, so a comma list on them is a list this
+/// surface has no spelling for.
+const SINGLE_VALUE: [&str; 2] = ["!=", "~"];
+
+/// The wildcard's spelling on this surface: `*` would glob, so the word the guide
+/// teaches is `any`.
+const ANY: &str = "any";
+/// What `any` denotes: the specification's own wildcard.
+const WILDCARD: &str = "*";
+
+/// The two directions a sort key may carry, and the one it means when none is written.
+const ASCENDING: &str = "asc";
+const DESCENDING: &str = "desc";
 
 /// Every operator a token carries, with its byte offset, in source order.
 ///
@@ -246,24 +332,115 @@ fn unreadable(token: impl Into<String>, reason: impl Into<String>) -> Reject {
     }
 }
 
-/// The members of a comma list, in the order written.
-///
-/// A comma means a list only where the surface says so: on `=` it is `$in`, and on
-/// a field list it is one condition per name. Everywhere else the comma is the
-/// caller's own text.
-fn members(raw: &str) -> Vec<&str> {
-    raw.split(',').collect()
+/// What a comma list's members are, for the one sentence that names an empty one.
+#[derive(Clone, Copy)]
+enum ListKind {
+    /// An `=` token's operand list: `status=open,resolved`.
+    Values,
+    /// A flag's list of field names: `--select title,body`.
+    Names,
 }
 
-/// A field list as the specification spells it: an array of names, in the order
-/// written.
-fn names(raw: &str) -> Value {
+impl ListKind {
+    /// The word the refusal calls the members.
+    fn word(self) -> &'static str {
+        match self {
+            ListKind::Values => "values",
+            ListKind::Names => "names",
+        }
+    }
+}
+
+/// The refusal an empty member earns, in whichever list it was written.
+fn empty_member(spelled: &str, kind: ListKind) -> Reject {
+    unreadable(
+        spelled,
+        format!(
+            "a comma list is a list of {}, and one is empty",
+            kind.word()
+        ),
+    )
+}
+
+/// The members of a comma list, in the order written — this module's only splitter.
+///
+/// A comma means a list only where the surface says so: on `=` it is `$in`, and on a
+/// flag list it is one name per field. An empty member is refused rather than padded or
+/// dropped, because the list the caller wrote is not the list they meant, and `spelled`
+/// is how that refusal quotes them.
+fn members<'a>(raw: &'a str, spelled: &str, kind: ListKind) -> Result<Vec<&'a str>, Reject> {
+    let listed: Vec<&str> = raw.split(',').collect();
+
+    if listed.iter().any(|member| member.is_empty()) {
+        return Err(empty_member(spelled, kind));
+    }
+
+    Ok(listed)
+}
+
+/// The names a flag's list holds, quoting the list as the caller typed it — the list's
+/// own text, or the flag with `=` when it is empty and there is no text to quote.
+fn flag_names<'a>(flag: &str, raw: &'a str) -> Result<Vec<&'a str>, Reject> {
+    let spelled = if raw.is_empty() {
+        format!("{flag}=")
+    } else {
+        raw.to_owned()
+    };
+
+    members(raw, &spelled, ListKind::Names)
+}
+
+/// A list of field names as the specification spells it: an array, in the order written.
+fn names(fields: &[&str]) -> Value {
     Value::Array(
-        members(raw)
-            .into_iter()
-            .map(|field| Value::String(field.to_owned()))
+        fields
+            .iter()
+            .map(|field| Value::String((*field).to_owned()))
             .collect(),
     )
+}
+
+/// A traversal flag's value as the specification spells it: the wildcard `"*"` when the
+/// whole value is the word `any`, and otherwise the list of field names written.
+///
+/// `any` inside a longer list is refused rather than read as a field name: the wildcard
+/// stands alone, and a caller who wrote it beside a name meant both.
+fn traversal(flag: &str, raw: &str) -> Result<Value, Reject> {
+    if raw == ANY {
+        return Ok(Value::String(WILDCARD.to_owned()));
+    }
+
+    let fields = flag_names(flag, raw)?;
+
+    if fields.contains(&ANY) {
+        return Err(unreadable(raw, "any is the wildcard, and stands alone"));
+    }
+
+    Ok(names(&fields))
+}
+
+/// One `--order` entry: `field`, or `field:direction`.
+///
+/// The direction defaults to `asc`, and the emitted entry always spells it out rather
+/// than leaving the key ambiguous. A direction that is neither word is refused with the
+/// entry as typed, because there is no third direction to fall back to.
+fn sort_key(entry: &str) -> Result<Value, Reject> {
+    let (field, direction) = match entry.split_once(':') {
+        Some((field, direction)) => (field, direction),
+        None => (entry, ASCENDING),
+    };
+
+    if direction != ASCENDING && direction != DESCENDING {
+        return Err(Reject::UnknownDirection {
+            entry: entry.to_owned(),
+        });
+    }
+
+    let mut key = Map::new();
+    key.insert("field".to_owned(), Value::String(field.to_owned()));
+    key.insert("direction".to_owned(), Value::String(direction.to_owned()));
+
+    Ok(Value::Object(key))
 }
 
 /// The `where` object under construction: one condition per operator per field.
@@ -295,15 +472,35 @@ impl Where {
         raw: &str,
         token: &str,
     ) -> Result<(), Reject> {
-        // A comma list on `=` is `$in`; on every other operator the comma is the
-        // caller's own text and the value is read whole.
-        let (key, operand) = if spelling == EQUALS && raw.contains(',') {
-            let listed = members(raw).into_iter().map(value).collect();
+        // A comma list is a list only where the surface says so: on `=` it is `$in`. On
+        // the single-value operators it has no spelling at all, which is said before the
+        // value is read — the operator is what cannot hold it, so the value is not the
+        // thing to complain about.
+        if raw.contains(',') {
+            if spelling == EQUALS {
+                let listed = members(raw, token, ListKind::Values)?;
 
-            (IN, Value::Array(listed))
-        } else {
-            (key, value(raw))
-        };
+                return self.insert(
+                    field,
+                    spelling,
+                    Condition {
+                        spelled: token.to_owned(),
+                        key: IN,
+                        operand: Value::Array(listed.into_iter().map(value).collect()),
+                    },
+                );
+            }
+
+            if SINGLE_VALUE.contains(&spelling) {
+                return Err(unreadable(
+                    token,
+                    format!(
+                        "a comma list means one of them, which {spelling} cannot express; \
+                         write two conditions or use smut query"
+                    ),
+                ));
+            }
+        }
 
         self.insert(
             field,
@@ -311,7 +508,7 @@ impl Where {
             Condition {
                 spelled: token.to_owned(),
                 key,
-                operand,
+                operand: value(raw),
             },
         )
     }

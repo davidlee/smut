@@ -114,6 +114,24 @@ pub enum Reject {
         /// the caller did not type.
         reason: String,
     },
+    /// A `smut q` flag that takes a number was given without a traversal
+    /// direction, so there is no traversal for the number to bound or count.
+    MissingDirection {
+        /// The flag as the caller typed it, e.g. `--depth`.
+        flag: String,
+    },
+    /// An `--order` entry's `:direction` is neither `asc` nor `desc`. The entry as
+    /// typed travels with the refusal, so the caller can see which one.
+    UnknownDirection {
+        /// The entry as the caller typed it, e.g. `title:user`.
+        entry: String,
+    },
+    /// `--limit all` was typed, and a limit here is a positive number with no
+    /// unlimited spelling: reading everything is `smut get`'s work.
+    UnreachableLimit,
+    /// `--ids` and `--select` were given together, and they are the same
+    /// projection, so one of them can only repeat what the other already says.
+    ConflictingSelection,
     /// One JSON object in the input gives the same key twice, which would lose
     /// the earlier assignment. Refused as the key is read, before a `Value`
     /// exists (§3.1, DEC-006).
@@ -372,6 +390,23 @@ impl fmt::Display for Reject {
             Reject::UnreadableToken { token, reason } => {
                 write!(formatter, "cannot read \"{token}\": {reason}")
             }
+            Reject::MissingDirection { flag } => write!(
+                formatter,
+                "{flag} needs a direction: add --follow, --backlinks, or drop it"
+            ),
+            Reject::UnknownDirection { entry } => write!(
+                formatter,
+                "cannot read \"{entry}\": a direction is asc or desc"
+            ),
+            Reject::UnreachableLimit => write!(
+                formatter,
+                "the limit is a positive number and has no unlimited spelling; use smut get \
+                 to read everything"
+            ),
+            Reject::ConflictingSelection => write!(
+                formatter,
+                "--ids is select smut_id; it cannot also be given --select"
+            ),
             Reject::DuplicateKey { key } => write!(
                 formatter,
                 "duplicate JSON key: {key}, and one object cannot give a key twice"
@@ -585,7 +620,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 29] = [
+        let cases: [(Error, u8); 33] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -743,6 +778,22 @@ mod tests {
                 INVALID_INPUT,
             ),
             (Reject::JsonOperand.into(), INVALID_INPUT),
+            (
+                Reject::MissingDirection {
+                    flag: "--depth".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::UnknownDirection {
+                    entry: "title:user".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (Reject::UnreachableLimit.into(), INVALID_INPUT),
+            (Reject::ConflictingSelection.into(), INVALID_INPUT),
             (sample_store_failure().into(), STORE_FAILURE),
             (sample_artefact_not_loaded().into(), STORE_FAILURE),
         ];
@@ -1040,6 +1091,58 @@ mod tests {
         assert_eq!(
             refusal.to_string(),
             r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#
+        );
+    }
+
+    // Reddens if the sentence stops naming the flag, or grows an epigram after the
+    // repair it already gives.
+    #[test]
+    fn a_missing_direction_names_the_flag_and_the_repair() {
+        let refusal = Reject::MissingDirection {
+            flag: "--depth".to_owned(),
+        };
+
+        assert_eq!(
+            refusal.to_string(),
+            "--depth needs a direction: add --follow, --backlinks, or drop it"
+        );
+    }
+
+    // Reddens if the entry stops being quoted verbatim with its reason, or the
+    // reason names a flag the caller did not type.
+    #[test]
+    fn an_unknown_direction_is_quoted_with_its_entry() {
+        let refusal = Reject::UnknownDirection {
+            entry: "title:user".to_owned(),
+        };
+
+        assert_eq!(
+            refusal.to_string(),
+            r#"cannot read "title:user": a direction is asc or desc"#
+        );
+    }
+
+    // Reddens if the sentence offers `--limit` an unlimited spelling of its own, or
+    // stops pointing `get` at the whole store.
+    #[test]
+    fn an_unreachable_limit_points_at_get() {
+        let refusal = Reject::UnreachableLimit;
+
+        assert_eq!(
+            refusal.to_string(),
+            "the limit is a positive number and has no unlimited spelling; use smut get to read everything"
+        );
+    }
+
+    // Reddens if the sentence names one flag without the other, or claims the two
+    // can be combined.
+    #[test]
+    fn a_conflicting_selection_names_both_flags() {
+        let refusal = Reject::ConflictingSelection;
+
+        assert_eq!(
+            refusal.to_string(),
+            "--ids is select smut_id; it cannot also be given --select"
         );
     }
 
