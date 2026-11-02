@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · slice started, PHASE-01 complete (gates green, VT-1..VT-4 PASS); PHASE-02 planned, unsheeted · base 7347dff (+docs)
+fresh-as-of: 2026-11-02 · slice phases 2/2 complete, gates green, `verify-vt` 7/7 PASS · PHASE-02 landed at 9727c1c · base 9727c1c (+docs)
 
 ### Produced
 
@@ -16,6 +16,24 @@ fresh-as-of: 2026-11-02 · slice started, PHASE-01 complete (gates green, VT-1..
   row (`[(Error, u8); 25]`) and a whole-rendered message assertion; seven unit tests pinning the
   seven sentences, the seven demand positions, the fixed order and the three silences; four
   contradiction rows in the binary refusal table (exit 2, empty stdout, no store).
+- **PHASE-02 implementation** (`9727c1c`): `parse_predicate`'s predicate-level `$` arm split
+  into a five-operator or-pattern (`"$eq" | "$ne" | "$in" | "$exists" | "$contains"`) raising
+  `Reject::MisplacedPredicateOperator` and a `_` arm keeping `UnknownPredicateOperator`;
+  `parse_condition`'s `other =>` arm untouched, so a clause used as a condition still reads
+  *unknown*; the two arms carry cross-referencing comments so a sixth operator cannot be
+  added to one only. `Reject::MisplacedPredicateOperator { operator }` with one doc comment,
+  one `Display` arm interpolating the operator into **both** slots of
+  `predicate operator {operator} belongs inside a field's condition object: {"<field>":
+  {"{operator}": <operand>}}`, and a boundary row (`[(Error, u8); 25]` → `; 26`). Pins:
+  two whole-sentence `assert_eq!`s on `.to_string()` (`$ne`, `$in`) and one new binary test
+  (`a_misplaced_operator_is_refused_naming_its_position_and_never_a_field`) asserting exit 2,
+  empty stdout, the whole `smut: …` line, no `status`, no `"x"` operand and no store — plus
+  the unknown-name whole-line pin `smut: unknown predicate operator: $foo`. Two comments the
+  split falsified repaired, assertions byte-identical (`tests/predicates.rs:328-330`, the doc
+  in `parse_refuses_an_unknown_operator_at_either_level`).
+- **`plan.toml` PHASE-01/VT-2 keyword repaired** (`[(Error, u8); 25]` → `; 26`), one token,
+  authorised by the seat (see § Autonomy log). The `expects` prose stays true; only the
+  stale array-length literal moved. Flagged for the audit seam.
 - **DEC-027** — amended four times: the six-form enumeration → a decidability criterion
   → `$contains` completeness → demanded position. Now the governing rule.
 - **DEC-030** — new: both refusal messages' shape and wording, the never-invent-a-field
@@ -73,12 +91,30 @@ fresh-as-of: 2026-11-02 · slice started, PHASE-01 complete (gates green, VT-1..
   vacuously in the plan's first draft; key on a name or literal the change introduces
   (a new variant, `[(Error, u8); 25]`, a whole pinned line, a test fn name) and grep the
   tree to confirm it is absent before the phase runs.
+- **A keyword that pins a value the *next* phase must change is a latent gate failure.**
+  PHASE-01/VT-2 keyed on `[(Error, u8); 25]`; PHASE-02/EX-2 mandates the same array move to
+  26, so the plan pinned one array at two lengths and PHASE-01's VT went red the moment its
+  sibling phase landed (``verify-vt`` exit 1 with every test green). Remedied here by a
+  one-token keyword edit (see § Autonomy log); the durable rule is: **pin presence, or a name
+  the phase introduces — never a mutable literal a later phase of the same plan invalidates.**
+  Plan hardening should check keyword lifetimes across phases, not only within one.
+- **Raw string literals are how a pinned sentence survives the keyword gate.** A whole-line
+  assertion written as an ordinary Rust literal needs `\"` escapes, and the escaped text no
+  longer contains the plan's keyword, so `verify-vt` fails on a green tree. `r#"…"#` keeps the
+  sentence byte-identical in the file and in the assertion.
 
 ### Open
 
-- **PHASE-01 is done; PHASE-02 is next** and its runtime sheet does not exist yet —
-  `/phase-plan` immediately before executing it. `doctrine slice verify-vt 5` stays non-zero
-  until PHASE-02's own keywords exist; PHASE-01's four VTs pass.
+- **Both phases are done** (`PHASE-01` 7347dff, `PHASE-02` 9727c1c); `doctrine slice
+  verify-vt 5` is **7/7 PASS**, `CARGO_NET_OFFLINE=true just check` exit 0. The slice is
+  ready for `/audit`; audit has not started.
+- **Carried to the audit seam:** the `plan.toml` PHASE-01/VT-2 keyword correction (25 → 26)
+  and CHR-003's six locked-design sentences. PHASE-02 owns RV-026 F-2, F-5, F-15 — all three
+  discharged as written.
+- **Candidate process improvement, not created silently:** plan hardening should reject a VT
+  keyword that a *later phase of the same plan* is mandated to change; PHASE-01/VT-2 vs
+  PHASE-02/EX-2 is the worked example. Worth a backlog item only if the operator wants it —
+  the practical rule is recorded in § Learned above.
 - Nothing open inside the design. Three silences are deliberate and named in §7
   (`$contains` unbounded; anything outside demanded position; `$or` contents never
   analysed — pinned, so breaking it is a decision).
@@ -210,9 +246,13 @@ land before SL-004's PHASE-02, which respells two identity messages in the same
 - **Ordering guard (PHASE-01/EN-2, PHASE-02/EN-2) holds:** SL-004's PHASE-02 is still
   `planned` in `.doctrine/state/slice/004/phases/phase-02.toml`, PHASE-03 too. PHASE-01
   of SL-004 is `completed`. No rebase needed; no race on `src/error.rs` at charter time.
-- **Baseline green at `b544359`:** `cargo test --test predicates` 40, `--test
-  cli_contract` 10, `--test compatibility` 12; `CARGO_NET_OFFLINE=true just check` exit 0
-  (clippy `-D warnings` on both feature sets, `fmt --check`). No known baseline failure.
+- **Baseline green at `b544359`:** measured now rather than recalled — `cargo test
+  --test predicates` **12**, `--lib error::` **6**, `--test cli_contract` **40**,
+  `--test compatibility` **10**, `--lib predicate::` **18**; `CARGO_NET_OFFLINE=true just
+  check` exit 0 (clippy `-D warnings` on both feature sets, `fmt --check`). No known
+  baseline failure. Correction: this seat's earlier preflight and the charter listed the
+  counts rotated (`predicates 40, cli_contract 10, compatibility 12`); the measured figures
+  above are the ones on this tree, and every suite is green before and after PHASE-02.
 - **Toolchain probed:** `cargo 1.100.0-beta.7`, `just 1.58.0`, `git` on PATH;
   `cargo build --offline` and `cargo test --offline` work. Gate command for this phase:
   `CARGO_NET_OFFLINE=true just check` after `cargo fmt`.
@@ -228,3 +268,40 @@ land before SL-004's PHASE-02, which respells two identity messages in the same
   `parse_refuses_an_unknown_operator_at_either_level` (~`:527-530`), and the
   `tests/predicates.rs:328-331` pointer is accurate. The comment is identified by
   content, both hunks are diffed comment-only, assertions byte-identical.
+
+## Autonomy log
+
+Scope: the PHASE-02 charter, the seat's `need_decision` envelope and the seat's reply.
+Every entry is a decision taken inside the envelope; none widened scope.
+
+- **PHASE-02 · decide · task ordering.** Contract type first (`src/error.rs`: variant +
+  `Display` arm + boundary row + message pins), binary pin and comment repair on
+  `tests/predicates.rs` in parallel (disjoint files), then the parse split
+  (`src/predicate.rs`). Reason: a Rust test naming an absent variant is a compile error, so the
+  red has to be behavioural; the observed red was the binary still printing
+  `smut: unknown predicate operator: $ne` with 12 other tests green. Status: **done**.
+- **PHASE-02 · decide · stale pointer corrected.** PHASE-02/EX-5 names
+  `src/predicate.rs:397-399`; the falsified prose is in
+  `parse_refuses_an_unknown_operator_at_either_level` (~`:541`). Identified by content;
+  `plan.toml` untouched for it. Status: **done**, flagged for audit.
+- **PHASE-02 · decide · fixture/helper reuse.** The binary pin reuses `Scratch`/`smut`/`Ran`
+  and adds a sibling test rather than restructuring the malformed-predicate table (its rows are
+  2-tuples asserted with `contains`; a whole-line pin cannot ride them). Status: **done**.
+- **PHASE-02 · decide · raw-string pinning.** Pinned sentences are written as `r#"…"#` so the
+  plan's VT keywords exist verbatim in the file text, which `verify-vt` reads. Status: **done**,
+  recorded in § Learned.
+- **PHASE-02 · decide · baseline-count correction.** The charter's baseline figures
+  (`predicates 40, cli_contract 10, compatibility 12`) are the measured ones rotated; recorded
+  as measured (`predicates 12 → 13, cli_contract 40, compatibility 10, lib 359/372`). No suite
+  lost a test; no guard changed. Status: **done**.
+- **PHASE-02 · escalate (seat) · locked-plan keyword conflict.** `verify-vt 5` exited 1 after
+  the code commit: PHASE-01/VT-2 keyed on `[(Error, u8); 25]` while PHASE-02/EX-2 mandates the
+  same array at 26 — the plan pinned one array at two lengths. Escalated via
+  `contact_supervisor` (`need_decision`) rather than editing a locked artefact unilaterally.
+  Seat's decision: **A — authorised**, exact scope one token on `plan.toml:51`, no `plan.md`
+  change, re-run the gate, tighten the boundary, log it. Applied exactly that; `plan.md`
+  confirmed not to repeat the literal. Status: **decided, flagged for audit**.
+- **PHASE-02 · defer (not actioned).** No out-of-scope defect found in the three selectors, so
+  nothing new went to the backlog. One process improvement (cross-phase VT-keyword lifetime) is
+  recorded in § Learned and offered to the operator in the handback rather than filed silently.
+  Status: **deferred to the seat/operator**.
