@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · plan drafted and hardened (2 phases; run dr-01a19a1e rev 43) · base e4191ad
+fresh-as-of: 2026-11-02 · slice ready, plan approved, PHASE-01 sheeted (2 phases; run dr-01a19a1e rev 43) · base 94f39c6
 
 ### Produced
 
@@ -21,8 +21,17 @@ fresh-as-of: 2026-11-02 · plan drafted and hardened (2 phases; run dr-01a19a1e 
 - `design.md` — seven sections, materialised at revision 43, all seven attested.
 - `plan.toml` + `plan.md` — two phases cut by defect (contradiction rule; `$`-message
   split), every obligation mapped to a criterion, hardened by two independent reviews
-  (obligations; implementation surface) before dispatch.
-- `research/research.md` + two raw threads; the design-surface triage in this file.
+  (obligations; implementation surface) before dispatch. Slice moved `plan → ready`;
+  PHASE-01's runtime sheet is expanded in the state tree, unexecuted.
+- **DEC-030 settled `accepted`** and its body's misplaced-operator example corrected to
+  `<operand>`; **DEC-027's position rule corrected in both tiers** (the `$not`-parity
+  shorthand was too narrow: an `$or` that must not hold hands its children `false`, so a
+  `$not` beneath it restores demand).
+- **CHR-003** — six `design.md` sentences the implemented rule falsifies, parked for the
+  audit/reconcile seam (the design run is locked; editing materialised prose would desync
+  its fingerprints). Also carries the `required-position` vs `demanded` terminology fix.
+- `research/research.md` — baseline re-stamped at plan time with a refresh section; its
+  Thread 2 hotspot map is what the three selectors were drawn from.
 
 ### Learned
 
@@ -36,6 +45,17 @@ fresh-as-of: 2026-11-02 · plan drafted and hardened (2 phases; run dr-01a19a1e 
   severe findings need a `route`, which requires reopen → dispose → verify; section
   review coverage comes from `att-` declarations, not from the `section-reviewed` act
   alone; a reopen clears the pass's concluded marker, so re-conclude.
+- **A post-parse check belongs in a wrapper over a recursive parser** —
+  `mem.fact.smut.recursive-parse-post-check`. `parse` re-enters itself via
+  `parse_all`/`parse_not`, so a walk at its end runs once per clause operand and refuses
+  satisfiable predicates. The natural design sentence "call it once at the end of
+  `parse`" is silently wrong for any recursive parser whose check carries context.
+- **A verify-vt keyword already present in the file is an inert gate** —
+  `mem.fact.doctrine.vt-inert-keywords`. Keywords are raw substring presence checks, so
+  `INVALID_INPUT`, `has_store`, `$contains` and `UnknownPredicateOperator` all passed
+  vacuously in the plan's first draft; key on a name or literal the change introduces
+  (a new variant, `[(Error, u8); 25]`, a whole pinned line, a test fn name) and grep the
+  tree to confirm it is absent before the phase runs.
 
 ### Open
 

@@ -1,0 +1,46 @@
+memory_uid = "mem_01a19aa11bd17e528cd37c214099bfb5"
+memory_key = "mem.fact.doctrine.vt-inert-keywords"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A verify-vt keyword that already exists in the file is an inert gate"
+summary = "VT rows are raw substring presence checks, so a keyword the file already contains passes before the phase lands"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = ["doctrine slice verify-vt"]
+tags = ["doctrine", "verification"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "f17e01df39e22b0263e7f5f52b2797aa5513ce86"
+ref_name = "refs/heads/main"
+checkout_state_id = "312f96cc0a96c7a74ea5ec5c7534a3d72cc79e563253b30b95c128dba23abfd9"
+base_commit = "94f39c66b1984ddb75d7f0026fc4c783299c0967"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "medium"
+
+[ranking]
+severity = "none"
+weight = 0
+
+[[source]]
+kind = "slice"
+ref = "SL-005"
+
