@@ -65,12 +65,12 @@ delete, and a walk that follows the reference the delete left behind. The last
 step reports that reference as dangling rather than recreating it.
 
 ```console
-$ smut declare '[{"id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
-{"changes":[{"id":"smut","previous":null,"status":"created"},{"id":"q-query","previous":null,"status":"created"}],"ids":["smut"],"missing":[]}
+$ smut declare '[{"smut_id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"smut_id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."}]}]'
+{"changes":[{"smut_id":"smut","previous":null,"status":"created"},{"smut_id":"q-query","previous":null,"status":"created"}],"ids":["smut"],"missing":[]}
 $ smut get smut q-query
-{"dangling":[],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","questions":[{"id":"q-query"}],"title":"Smut"},{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
+{"dangling":[],"missing":[],"objects":[{"smut_id":"smut","body":"Persist conversational structure.","questions":[{"smut_id":"q-query"}],"title":"Smut"},{"smut_id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
 $ smut query '{"from":"smut","follow":["questions"],"select":["title","body"]}'
-{"dangling":[],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","title":"Smut"},{"id":"q-query","body":"Keep selection small.","title":"Query design"}],"traversal":{"depths":{"q-query":1,"smut":0},"edges":[{"field":"questions","source":"smut","target":"q-query"}],"frontier":["q-query"]},"truncated":false,"truncation_reasons":[]}
+{"dangling":[],"missing":[],"objects":[{"smut_id":"smut","body":"Persist conversational structure.","title":"Smut"},{"smut_id":"q-query","body":"Keep selection small.","title":"Query design"}],"traversal":{"depths":{"q-query":1,"smut":0},"edges":[{"field":"questions","source":"smut","target":"q-query"}],"frontier":["q-query"]},"truncated":false,"truncation_reasons":[]}
 $ smut render '{"from":"smut","follow":["questions"],"select":["title","body"]}'
 ## Smut
 
@@ -79,18 +79,18 @@ Persist conversational structure.
 ## Query design
 
 Keep selection small.
-$ smut declare '{"id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}'
-{"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
+$ smut declare '{"smut_id":"q-query","status":"resolved","body":"Use bounded traversal and simple predicates."}'
+{"changes":[{"smut_id":"q-query","previous":{"smut_id":"q-query","body":"Keep selection small.","status":"open","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
 $ smut query '{"where":{"type":"question","status":"resolved"}}'
-{"dangling":[],"missing":[],"objects":[{"id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
+{"dangling":[],"missing":[],"objects":[{"smut_id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"}],"truncated":false,"truncation_reasons":[]}
 $ smut render '{"from":"smut","follow":["questions"]}' --format mermaid
 smut: --format mermaid is not supported in this release; planned for 1.0
-$ smut declare '{"id":"q-query","status":"DROP"}'
-{"changes":[{"id":"q-query","previous":{"id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
+$ smut declare '{"smut_id":"q-query","status":"DROP"}'
+{"changes":[{"smut_id":"q-query","previous":{"smut_id":"q-query","body":"Use bounded traversal and simple predicates.","status":"resolved","title":"Query design","type":"question"},"status":"updated"}],"ids":["q-query"],"missing":[]}
 $ smut delete q-query
 {"deleted":["q-query"],"missing":[]}
 $ smut query '{"from":"smut","follow":["questions"]}'
-{"dangling":[{"field":"questions","source":"smut","target":"q-query"}],"missing":[],"objects":[{"id":"smut","body":"Persist conversational structure.","questions":[{"id":"q-query"}],"title":"Smut"}],"traversal":{"depths":{"smut":0},"edges":[],"frontier":[]},"truncated":false,"truncation_reasons":[]}
+{"dangling":[{"field":"questions","source":"smut","target":"q-query"}],"missing":[],"objects":[{"smut_id":"smut","body":"Persist conversational structure.","questions":[{"smut_id":"q-query"}],"title":"Smut"}],"traversal":{"depths":{"smut":0},"edges":[],"frontier":[]},"truncated":false,"truncation_reasons":[]}
 ```
 
 What the transcript shows, in order: one declaration that produced two entities
