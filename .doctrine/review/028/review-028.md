@@ -333,30 +333,34 @@ unfinished scope.
 
 Reconcile pass complete — handoff to `/close`.
 
-### Gate state at this commit — red, for a reason outside this slice
+### Gate state — resolved
 
-`just check` at `4fecf9a` ("readme and such", the operator's commit on top of the
-audit) fails three tests in `tests/readme_example.rs`
-(`the_console_block_carries_the_whole_0_2_example`,
-`every_readme_transcript_runs_and_prints_what_it_records`,
-`the_worked_example_ends_with_a_0_2_traversal`), all at
-`tests/readme_example.rs:232`:
+`just check` at the operator's `4fecf9a` ("readme and such") failed three tests in
+`tests/readme_example.rs` at `tests/readme_example.rs:232`:
 
 ```
 the command line has balanced quotes: smut declare '
 ```
 
-`README.md:53` opens a `$ smut declare '` command whose JSON continues on
-following lines; the rewritten harness runs one console line at a time and asserts
-balanced quotes. Isolated in a detached worktree at `4fecf9a`, so it is the
-committed tree and not a dirty-worktree artefact. Every other suite is green at that
-tree: 370 lib and 383 `--features fault-injection`, zero warnings, build/clippy/fmt
-clean.
+`README.md:53` opens `$ smut declare '` with the JSON wrapped to a closing quote on
+its own line — valid shell syntax, which the rewritten harness could not read
+because it took one console line per command and swallowed the continuation as
+recorded output. Not SL-004's code, prose or gate: the slice's own tree was green
+at `64e5f4b` and again at `58612ca`.
 
-This is not SL-004's code, prose or gate: the slice's own tree was green at
-`64e5f4b` and again at `58612ca`, and the reconcile writes here touch no Rust and no
-README. It is the operator's README rewrite and its harness meeting a multi-line
-console command — the surface CHR-001 owns. Recorded rather than repaired: the
-working tree must not sweep or rewrite that prose. `/close` will want a green gate,
-so this wants resolving first (a one-line README change, or multi-line continuation
-in the harness).
+**Resolved on the user's direction ("fix the test so it passes with valid
+multi-line shell syntax"), commit `37dda01`.** `transcripts` accumulates console
+lines while a quote is open and refuses a block that closes before the quote does;
+a focused test pins that a wrapped command is one step, that the whole quoted
+operand reaches the binary as one argument, and that only the line after the
+closing quote is output. `cargo test --test readme_example`: 8 passed.
+`rustfmt --check` on the file: clean.
+
+**Gate at this commit: green.** `just check` in a detached worktree at
+`37dda01` — exit 0, zero warnings, 370 lib and 383 `--features
+fault-injection`, every suite passing. It is read in a worktree rather than the
+live tree because SL-007 is editing `src/cli.rs`, `src/spec.rs`, `src/walk.rs` and
+`tests/traversal.rs` uncommitted in it; that work is the operator's and was not
+touched.
+
+Reconcile pass complete — handoff to `/close`.
