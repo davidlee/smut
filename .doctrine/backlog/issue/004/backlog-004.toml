@@ -5,10 +5,10 @@ id = 4
 slug = "a-top-level-key-in-a-predicate-is-refused-as-an-unknown-operator-which-sends-the-reader-to-the"
 title = "A top-level `$` key in a predicate is refused as an unknown operator, which sends the reader to the wrong list"
 kind = "issue"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "resolved"
+resolution = "fixed"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = ["cli", "diagnostics", "predicates"]
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role
