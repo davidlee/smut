@@ -93,16 +93,31 @@ Verified locally: the workflow parses as YAML with the expected structure;
 `cargo build`, `just fmt`, and `just lint` are green; `cargo test --features
 fault-injection` is green apart from the item below.
 
-## Still open
+## Result
 
-- **The first run is the only proof.** Nothing local can show that a workflow
-  runs. `taiki-e/install-action@v2` with `tool: just` is the one line in the file
-  carrying an assumption — that the action resolves `just` from that key — so if
-  the job fails early, look there first.
-- **The gate is red here, before any of this.** The uncommitted `0.2.2` bump
-  leaves `tests/cli_contract.rs:540` pinning `smut 0.2.1`, by design: the literal
-  is the tripwire for a bump that missed a file, and it moves with the release
-  number. Move it with the bump, not before CI is trusted.
+Green on both platforms, first run: `ubuntu-latest` and `macos-latest`, the whole gate
+on each — the lib suite, the 50-test CLI contract, and the fault-injection suite with
+its real child-process aborts, on APFS. The portability doubt this chore existed to
+answer is now evidence: the suite compiles and passes on the platform
+`docs/store-format.md` declines to promise, and the promise itself is unchanged.
+
+Both items that were open at authorship closed on that run: `taiki-e/install-action@v2`
+resolves `tool: just` (the one line in the workflow that carried an assumption), and
+the red gate was the `0.2.2` pin, moved with the bump before the run (`9abe6a5`).
+
+Being exact about measured versus constructed, because the difference will matter to
+whoever reads this next:
+
+- **Measured.** The job runs the project's own recipes on both platforms and goes
+  green. `cargo package --list` shows `.github/` and `rust-toolchain.toml` out of the
+  crate. § Portability says what CI exercises and no more.
+- **By construction.** That a red gate reddens the *job*. `just check` was red twice
+  in this work (the `0.2.2` pin, the README fences) and its non-zero exit is the
+  step's exit code, with no `continue-on-error` and no retry — but nobody has watched
+  the job fail. If that ever needs proving, break one lint on a throwaway branch.
+
+Not covered, deliberately: `macos-latest` is arm64, which is the darwin system the
+flake declares. Intel macOS is not run, and Windows is not contemplated.
 
 ## Follow-Ups
 
