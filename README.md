@@ -11,6 +11,12 @@ There's no server. `smut` is private, though it can be shared.
 
 `smut` is so easy to use, it's hard to be sure that's a feature.
 
+## Getting smut
+
+``` console
+cargo install smut
+```
+
 ## Take a peek
 
 An entity is a JSON object. Name it with `smut_id`; leave that out and `smut`
