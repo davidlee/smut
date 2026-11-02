@@ -21,6 +21,7 @@
 
 use serde_json::{Map, Value};
 
+use crate::entity::ENTITY_ID;
 use crate::entity::{self, Form};
 use crate::error::Reject;
 
@@ -112,10 +113,10 @@ pub fn listing() -> String {
         .collect()
 }
 
-/// One set's seed: an ordinary entity declaration. The fields are supplied in the
-/// order `id`, `type`, `version`, `title`, `body`, but `id` is hoisted and the
-/// rest print lexically (§4.2's entity-node rule), so the bytes read `id`, `body`,
-/// `title`, `type`, `version`.
+/// One set's seed: an ordinary entity declaration. The fields are supplied with
+/// the structural key `smut_id` first, then `type`, `version`, `title`, `body`,
+/// but `smut_id` is hoisted and the rest print lexically (§4.2's entity-node
+/// rule), so the bytes read `smut_id`, `body`, `title`, `type`, `version`.
 ///
 /// The id is fixed — `conventions-<name>` — so the pipe is an upsert and never a
 /// duplicate, and the version is the crate's, so the seed cannot be stale against
@@ -123,7 +124,7 @@ pub fn listing() -> String {
 pub fn seed(set: &Set) -> Value {
     let mut declaration = Map::new();
     let fields = [
-        ("id", id_of(set)),
+        (ENTITY_ID, id_of(set)),
         ("type", "convention".to_owned()),
         ("version", env!("CARGO_PKG_VERSION").to_owned()),
         ("title", title_of(set)),
@@ -255,7 +256,10 @@ mod tests {
     fn the_seed_is_the_embedded_prose_under_a_fixed_id_and_the_crates_version() {
         let seed = seed(&HYGIENE);
 
-        assert_eq!(seed["id"], Value::String("conventions-hygiene".to_owned()));
+        assert_eq!(
+            seed[ENTITY_ID],
+            Value::String("conventions-hygiene".to_owned())
+        );
         assert_eq!(seed["type"], Value::String("convention".to_owned()));
         assert_eq!(
             seed["version"],

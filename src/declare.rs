@@ -107,7 +107,10 @@ impl Response {
 impl Change {
     fn to_json(&self, compact: bool) -> Value {
         let mut entry = Map::new();
-        entry.insert("id".to_owned(), Value::String(self.id.as_str().to_owned()));
+        entry.insert(
+            ENTITY_ID.to_owned(),
+            Value::String(self.id.as_str().to_owned()),
+        );
         entry.insert(
             "status".to_owned(),
             Value::String(self.status.as_str().to_owned()),
@@ -512,7 +515,7 @@ mod tests {
         assert!(outcome.response.missing.is_empty());
         assert_eq!(
             outcome.write_set.put,
-            vec![json!({"id": "gen", "body": "hello"})]
+            vec![json!({"smut_id": "gen", "body": "hello"})]
         );
         assert!(outcome.write_set.remove.is_empty());
     }
@@ -521,7 +524,7 @@ mod tests {
     fn an_array_of_declarations_is_applied_in_input_order() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a", "body": "1"}, {"body": "2"}]),
+            json!([{"smut_id": "a", "body": "1"}, {"body": "2"}]),
             &["gen"],
         );
 
@@ -529,8 +532,8 @@ mod tests {
         assert_eq!(
             outcome.write_set.put,
             vec![
-                json!({"id": "a", "body": "1"}),
-                json!({"id": "gen", "body": "2"}),
+                json!({"smut_id": "a", "body": "1"}),
+                json!({"smut_id": "gen", "body": "2"}),
             ]
         );
     }
@@ -539,10 +542,10 @@ mod tests {
     fn omitted_fields_are_preserved_and_supplied_fields_take_effect() {
         let store = snapshot(&[(
             "a",
-            json!({"id": "a", "body": "old", "title": "keep", "meta": {"x": 1}}),
+            json!({"smut_id": "a", "body": "old", "title": "keep", "meta": {"x": 1}}),
         )]);
 
-        let outcome = applied(&store, json!({"id": "a", "body": "new"}), &[]);
+        let outcome = applied(&store, json!({"smut_id": "a", "body": "new"}), &[]);
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Updated"]);
         assert_eq!(
@@ -551,7 +554,7 @@ mod tests {
         );
         assert_eq!(
             outcome.write_set.put,
-            vec![json!({"id": "a", "body": "new", "title": "keep", "meta": {"x": 1}})]
+            vec![json!({"smut_id": "a", "body": "new", "title": "keep", "meta": {"x": 1}})]
         );
     }
 
@@ -559,36 +562,39 @@ mod tests {
     fn an_array_or_embedded_object_replaces_wholesale() {
         let store = snapshot(&[(
             "a",
-            json!({"id": "a", "tags": ["a", "b"], "meta": {"x": 1, "y": 2}}),
+            json!({"smut_id": "a", "tags": ["a", "b"], "meta": {"x": 1, "y": 2}}),
         )]);
 
         let outcome = applied(
             &store,
-            json!({"id": "a", "tags": ["c"], "meta": {"y": 9}}),
+            json!({"smut_id": "a", "tags": ["c"], "meta": {"y": 9}}),
             &[],
         );
 
         assert_eq!(
             outcome.write_set.put,
-            vec![json!({"id": "a", "tags": ["c"], "meta": {"y": 9}})]
+            vec![json!({"smut_id": "a", "tags": ["c"], "meta": {"y": 9}})]
         );
     }
 
     #[test]
     fn drop_removes_a_field() {
-        let store = snapshot(&[("a", json!({"id": "a", "body": "b", "title": "t"}))]);
+        let store = snapshot(&[("a", json!({"smut_id": "a", "body": "b", "title": "t"}))]);
 
-        let outcome = applied(&store, json!({"id": "a", "title": "DROP"}), &[]);
+        let outcome = applied(&store, json!({"smut_id": "a", "title": "DROP"}), &[]);
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Updated"]);
-        assert_eq!(outcome.write_set.put, vec![json!({"id": "a", "body": "b"})]);
+        assert_eq!(
+            outcome.write_set.put,
+            vec![json!({"smut_id": "a", "body": "b"})]
+        );
     }
 
     #[test]
     fn dropping_an_absent_field_is_a_no_op_and_is_not_updated() {
-        let store = snapshot(&[("a", json!({"id": "a", "body": "b"}))]);
+        let store = snapshot(&[("a", json!({"smut_id": "a", "body": "b"}))]);
 
-        let outcome = applied(&store, json!({"id": "a", "title": "DROP"}), &[]);
+        let outcome = applied(&store, json!({"smut_id": "a", "title": "DROP"}), &[]);
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Unchanged"]);
         assert_eq!(outcome.response.changes[0].previous, None);
@@ -597,9 +603,9 @@ mod tests {
 
     #[test]
     fn assigning_a_field_its_current_value_is_unchanged() {
-        let store = snapshot(&[("a", json!({"id": "a", "body": "b"}))]);
+        let store = snapshot(&[("a", json!({"smut_id": "a", "body": "b"}))]);
 
-        let outcome = applied(&store, json!({"id": "a", "body": "b"}), &[]);
+        let outcome = applied(&store, json!({"smut_id": "a", "body": "b"}), &[]);
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Unchanged"]);
         assert!(outcome.write_set.is_empty());
@@ -607,16 +613,24 @@ mod tests {
 
     #[test]
     fn an_explicit_id_with_only_drops_creates_an_id_only_entity() {
-        let outcome = applied(&Entities::new(), json!({"id": "a", "status": "DROP"}), &[]);
+        let outcome = applied(
+            &Entities::new(),
+            json!({"smut_id": "a", "status": "DROP"}),
+            &[],
+        );
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Created"]);
         assert_eq!(outcome.response.changes[0].previous, Some(Value::Null));
-        assert_eq!(outcome.write_set.put, vec![json!({"id": "a"})]);
+        assert_eq!(outcome.write_set.put, vec![json!({"smut_id": "a"})]);
     }
 
     #[test]
     fn a_bare_id_only_object_creates_nothing_and_is_reported_missing() {
-        let outcome = applied(&Entities::new(), json!([{"id": "a"}, {"id": "a"}]), &[]);
+        let outcome = applied(
+            &Entities::new(),
+            json!([{"smut_id": "a"}, {"smut_id": "a"}]),
+            &[],
+        );
 
         assert_eq!(texts(&outcome.response.ids), vec!["a", "a"]);
         assert!(outcome.response.changes.is_empty());
@@ -626,10 +640,10 @@ mod tests {
 
     #[test]
     fn a_reference_is_not_missing_when_the_batch_declares_or_holds_it() {
-        let store = snapshot(&[("stored", json!({"id": "stored"}))]);
+        let store = snapshot(&[("stored", json!({"smut_id": "stored"}))]);
         let outcome = applied(
             &store,
-            json!([{"id": "stored"}, {"id": "a", "refs": [{"id": "b"}]}, {"id": "b", "body": "y"}]),
+            json!([{"smut_id": "stored"}, {"smut_id": "a", "refs": [{"smut_id": "b"}]}, {"smut_id": "b", "body": "y"}]),
             &[],
         );
 
@@ -648,7 +662,7 @@ mod tests {
     fn a_nested_declaration_is_hoisted_and_applied() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a", "refs": [{"id": "b", "note": {"id": "c", "body": "x"}}]}]),
+            json!([{"smut_id": "a", "refs": [{"smut_id": "b", "note": {"smut_id": "c", "body": "x"}}]}]),
             &[],
         );
 
@@ -659,9 +673,9 @@ mod tests {
         assert_eq!(
             outcome.write_set.put,
             vec![
-                json!({"id": "a", "refs": [{"id": "b"}]}),
-                json!({"id": "b", "note": {"id": "c"}}),
-                json!({"id": "c", "body": "x"}),
+                json!({"smut_id": "a", "refs": [{"smut_id": "b"}]}),
+                json!({"smut_id": "b", "note": {"smut_id": "c"}}),
+                json!({"smut_id": "c", "body": "x"}),
             ]
         );
     }
@@ -670,7 +684,7 @@ mod tests {
     fn missing_is_unique_and_in_encounter_order() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a", "x": {"id": "m1"}, "y": [{"id": "m2"}, {"id": "m1"}]}]),
+            json!([{"smut_id": "a", "x": {"smut_id": "m1"}, "y": [{"smut_id": "m2"}, {"smut_id": "m1"}]}]),
             &[],
         );
 
@@ -679,11 +693,11 @@ mod tests {
 
     #[test]
     fn conflicting_assignments_reject_the_whole_batch() {
-        let store = snapshot(&[("a", json!({"id": "a"}))]);
+        let store = snapshot(&[("a", json!({"smut_id": "a"}))]);
 
         let reject = rejected_by_apply(
             &store,
-            json!([{"id": "a", "n": 1}, {"id": "a", "n": 1.0}]),
+            json!([{"smut_id": "a", "n": 1}, {"smut_id": "a", "n": 1.0}]),
             &[],
         );
 
@@ -701,7 +715,7 @@ mod tests {
     fn assigning_and_dropping_the_same_field_rejects() {
         let reject = rejected_by_apply(
             &Entities::new(),
-            json!([{"id": "a", "body": "x"}, {"id": "a", "body": "DROP"}]),
+            json!([{"smut_id": "a", "body": "x"}, {"smut_id": "a", "body": "DROP"}]),
             &[],
         );
 
@@ -718,26 +732,29 @@ mod tests {
     fn identical_assignments_coalesce() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a", "body": "x"}, {"id": "a", "body": "x"}]),
-            &[],
-        );
-
-        assert_eq!(change_texts(&outcome.response.changes), vec!["a:Created"]);
-        assert_eq!(outcome.write_set.put, vec![json!({"id": "a", "body": "x"})]);
-    }
-
-    #[test]
-    fn disjoint_fields_of_one_id_combine() {
-        let outcome = applied(
-            &Entities::new(),
-            json!([{"id": "a", "body": "x"}, {"id": "a", "title": "t"}]),
+            json!([{"smut_id": "a", "body": "x"}, {"smut_id": "a", "body": "x"}]),
             &[],
         );
 
         assert_eq!(change_texts(&outcome.response.changes), vec!["a:Created"]);
         assert_eq!(
             outcome.write_set.put,
-            vec![json!({"id": "a", "body": "x", "title": "t"})]
+            vec![json!({"smut_id": "a", "body": "x"})]
+        );
+    }
+
+    #[test]
+    fn disjoint_fields_of_one_id_combine() {
+        let outcome = applied(
+            &Entities::new(),
+            json!([{"smut_id": "a", "body": "x"}, {"smut_id": "a", "title": "t"}]),
+            &[],
+        );
+
+        assert_eq!(change_texts(&outcome.response.changes), vec!["a:Created"]);
+        assert_eq!(
+            outcome.write_set.put,
+            vec![json!({"smut_id": "a", "body": "x", "title": "t"})]
         );
     }
 
@@ -746,8 +763,8 @@ mod tests {
         let outcome = applied(
             &Entities::new(),
             json!([
-                {"id": "a", "meta": {"p": 1, "q": 2}},
-                {"id": "a", "meta": {"q": 2, "p": 1}},
+                {"smut_id": "a", "meta": {"p": 1, "q": 2}},
+                {"smut_id": "a", "meta": {"q": 2, "p": 1}},
             ]),
             &[],
         );
@@ -762,9 +779,9 @@ mod tests {
         let outcome = applied(
             &Entities::new(),
             json!([
-                {"id": "q", "refs": [{"id": "t", "label": "x"}]},
-                {"id": "q", "refs": [{"id": "t"}]},
-                {"id": "t", "label": "x"},
+                {"smut_id": "q", "refs": [{"smut_id": "t", "label": "x"}]},
+                {"smut_id": "q", "refs": [{"smut_id": "t"}]},
+                {"smut_id": "t", "label": "x"},
             ]),
             &[],
         );
@@ -776,8 +793,8 @@ mod tests {
         assert_eq!(
             outcome.write_set.put,
             vec![
-                json!({"id": "q", "refs": [{"id": "t"}]}),
-                json!({"id": "t", "label": "x"})
+                json!({"smut_id": "q", "refs": [{"smut_id": "t"}]}),
+                json!({"smut_id": "t", "label": "x"})
             ]
         );
     }
@@ -786,7 +803,7 @@ mod tests {
     fn a_nested_declaration_inside_a_replacement_array_is_hoisted() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a", "tags": [{"id": "b", "label": "x"}]}, {"id": "b"}]),
+            json!([{"smut_id": "a", "tags": [{"smut_id": "b", "label": "x"}]}, {"smut_id": "b"}]),
             &[],
         );
 
@@ -794,8 +811,8 @@ mod tests {
         assert_eq!(
             outcome.write_set.put,
             vec![
-                json!({"id": "a", "tags": [{"id": "b"}]}),
-                json!({"id": "b", "label": "x"})
+                json!({"smut_id": "a", "tags": [{"smut_id": "b"}]}),
+                json!({"smut_id": "b", "label": "x"})
             ]
         );
     }
@@ -804,7 +821,7 @@ mod tests {
     fn the_response_echoes_top_level_order_and_lists_each_entity_once() {
         let outcome = applied(
             &Entities::new(),
-            json!([{"id": "a"}, {"id": "b", "body": "1"}, {"id": "a"}, {"body": "g"}]),
+            json!([{"smut_id": "a"}, {"smut_id": "b", "body": "1"}, {"smut_id": "a"}, {"body": "g"}]),
             &["gen"],
         );
 
@@ -817,10 +834,10 @@ mod tests {
 
     #[test]
     fn the_compact_form_omits_previous_while_status_ids_and_missing_hold() {
-        let store = snapshot(&[("a", json!({"id": "a", "body": "old"}))]);
+        let store = snapshot(&[("a", json!({"smut_id": "a", "body": "old"}))]);
         let outcome = applied(
             &store,
-            json!([{"id": "a", "body": "new"}, {"id": "n", "body": "x"}, {"id": "gone"}]),
+            json!([{"smut_id": "a", "body": "new"}, {"smut_id": "n", "body": "x"}, {"smut_id": "gone"}]),
             &[],
         );
 
@@ -831,7 +848,7 @@ mod tests {
         assert_eq!(full["missing"], json!(["gone"]));
         assert_eq!(
             full["changes"][0]["previous"],
-            json!({"id": "a", "body": "old"})
+            json!({"smut_id": "a", "body": "old"})
         );
         assert_eq!(full["changes"][1]["previous"], Value::Null);
         assert_eq!(full["changes"][0]["status"], json!("updated"));
@@ -845,7 +862,10 @@ mod tests {
         }
         assert_eq!(compact["ids"], full["ids"]);
         assert_eq!(compact["missing"], full["missing"]);
-        assert_eq!(compact["changes"][0]["id"], full["changes"][0]["id"]);
+        assert_eq!(
+            compact["changes"][0]["smut_id"],
+            full["changes"][0]["smut_id"]
+        );
         assert_eq!(
             compact["changes"][0]["status"],
             full["changes"][0]["status"]
@@ -854,8 +874,8 @@ mod tests {
 
     #[test]
     fn an_unchanged_entry_omits_previous_in_the_full_form_too() {
-        let store = snapshot(&[("a", json!({"id": "a", "body": "b"}))]);
-        let outcome = applied(&store, json!({"id": "a", "body": "b"}), &[]);
+        let store = snapshot(&[("a", json!({"smut_id": "a", "body": "b"}))]);
+        let outcome = applied(&store, json!({"smut_id": "a", "body": "b"}), &[]);
 
         let full = outcome.response.to_json(false);
 
@@ -902,10 +922,13 @@ mod tests {
     #[test]
     fn an_invalid_id_is_rejected_and_never_generated() {
         for (input, found) in [
-            (json!({"id": null}), "null"),
-            (json!({"id": 5}), "a number"),
-            (json!({"id": ""}), "an empty string"),
-            (json!([{"id": "a", "meta": {"id": false}}]), "a boolean"),
+            (json!({"smut_id": null}), "null"),
+            (json!({"smut_id": 5}), "a number"),
+            (json!({"smut_id": ""}), "an empty string"),
+            (
+                json!([{"smut_id": "a", "meta": {"smut_id": false}}]),
+                "a boolean",
+            ),
         ] {
             let mut source = ScriptedSource::new(&["gen", "gen"]);
 
@@ -924,7 +947,7 @@ mod tests {
 
     #[test]
     fn a_generated_id_avoids_every_id_the_snapshot_holds() {
-        let store = snapshot(&[("stored", json!({"id": "stored", "body": "b"}))]);
+        let store = snapshot(&[("stored", json!({"smut_id": "stored", "body": "b"}))]);
         let mut source = ScriptedSource::new(&["stored", "fresh"]);
 
         let batch = normalize(&store, &json!({"body": "x"}), &mut source).expect("normalises");
@@ -939,7 +962,7 @@ mod tests {
 
         let batch = normalize(
             &Entities::new(),
-            &json!([{"body": "x"}, {"id": "taken"}]),
+            &json!([{"body": "x"}, {"smut_id": "taken"}]),
             &mut source,
         )
         .expect("normalises");
@@ -968,7 +991,7 @@ mod tests {
 
     #[test]
     fn normalisation_is_deterministic_for_a_given_id_source() {
-        let input = json!([{"id": "a", "refs": [{"body": "x"}]}, {"id": "b"}]);
+        let input = json!([{"smut_id": "a", "refs": [{"body": "x"}]}, {"smut_id": "b"}]);
 
         let mut first_source = ScriptedSource::new(&["gen"]);
         let mut second_source = ScriptedSource::new(&["gen"]);
@@ -982,8 +1005,8 @@ mod tests {
     #[test]
     fn plan_delete_dedupes_in_first_occurrence_order() {
         let store = snapshot(&[
-            ("a", json!({"id": "a"})),
-            ("b", json!({"id": "b", "refs": [{"id": "a"}]})),
+            ("a", json!({"smut_id": "a"})),
+            ("b", json!({"smut_id": "b", "refs": [{"smut_id": "a"}]})),
         ]);
         let requested = ["b", "gone", "a", "b"]
             .iter()
@@ -1025,8 +1048,8 @@ mod properties {
             Just(json!(1.0)),
             "[a-z]{0,3}".prop_map(|text| json!(text)),
             Just(json!("DROP")),
-            Just(json!([{"id": "b"}])),
-            Just(json!({"id": "c", "body": "nested"})),
+            Just(json!([{"smut_id": "b"}])),
+            Just(json!({"smut_id": "c", "body": "nested"})),
             Just(json!({"k": [1, 2]})),
         ]
     }

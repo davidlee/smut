@@ -32,7 +32,7 @@ pub const COMMIT_STATE: &str = JOURNAL_STATES[1];
 pub const DONE_STATE: &str = JOURNAL_STATES[2];
 
 /// The manifest format this build writes and reads (§4.7).
-pub const MANIFEST_FORMAT_VERSION: u64 = 1;
+pub const MANIFEST_FORMAT_VERSION: u64 = 2;
 
 const FORMAT_VERSION_KEY: &str = "format_version";
 const PUTS_KEY: &str = "puts";
@@ -771,12 +771,12 @@ mod tests {
             fs::write(directory.join(crate::store::LOCK_BASENAME), b"").expect("the lock");
             fs::write(
                 directory.join("Ab3.json"),
-                entity_bytes(json!({"id": "alpha", "body": "first"})),
+                entity_bytes(json!({"smut_id": "alpha", "body": "first"})),
             )
             .expect("alpha's file");
             fs::write(
                 directory.join("Zq7.json"),
-                entity_bytes(json!({"id": "beta", "body": "second"})),
+                entity_bytes(json!({"smut_id": "beta", "body": "second"})),
             )
             .expect("beta's file");
             fs::write(
@@ -852,7 +852,7 @@ mod tests {
 
         assert_eq!(
             manifest.to_bytes(),
-            "{\n  \"format_version\": 1,\n  \"puts\": [\n    \"Ab3.json\",\n    \"index.json\"\n  ],\n  \"removes\": [\n    \"Zq7.json\"\n  ]\n}\n"
+            "{\n  \"format_version\": 2,\n  \"puts\": [\n    \"Ab3.json\",\n    \"index.json\"\n  ],\n  \"removes\": [\n    \"Zq7.json\"\n  ]\n}\n"
         );
         assert_eq!(
             Manifest::parse(manifest.to_bytes().as_bytes()).expect("its own bytes"),
@@ -866,7 +866,7 @@ mod tests {
 
         assert_eq!(
             manifest.to_bytes(),
-            "{\n  \"format_version\": 1,\n  \"puts\": [],\n  \"removes\": []\n}\n"
+            "{\n  \"format_version\": 2,\n  \"puts\": [],\n  \"removes\": []\n}\n"
         );
         assert_eq!(
             Manifest::parse(manifest.to_bytes().as_bytes()).expect("its own bytes"),
@@ -877,7 +877,7 @@ mod tests {
     #[test]
     fn a_manifest_of_another_format_version_is_refused() {
         for document in [
-            r#"{"format_version":2,"puts":[],"removes":[]}"#,
+            r#"{"format_version":1,"puts":[],"removes":[]}"#,
             r#"{"format_version":"1","puts":[],"removes":[]}"#,
             r#"{"puts":[],"removes":[]}"#,
         ] {
@@ -897,10 +897,10 @@ mod tests {
         for document in [
             "not json",
             "[]",
-            r#"{"format_version":1}"#,
-            r#"{"format_version":1,"puts":{},"removes":[]}"#,
-            r#"{"format_version":1,"puts":[1],"removes":[]}"#,
-            r#"{"format_version":1,"puts":[]}"#,
+            r#"{"format_version":2}"#,
+            r#"{"format_version":2,"puts":{},"removes":[]}"#,
+            r#"{"format_version":2,"puts":[1],"removes":[]}"#,
+            r#"{"format_version":2,"puts":[]}"#,
         ] {
             let error = Manifest::parse(document.as_bytes()).expect_err(document);
 
@@ -966,7 +966,10 @@ mod tests {
         let staged = translate(
             &scratch.directory(),
             &snapshot(),
-            &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+            &write_set(
+                vec![json!({"smut_id": "alpha", "body": "changed"})],
+                &["beta"],
+            ),
         )
         .expect("a consistent write set");
 
@@ -976,7 +979,7 @@ mod tests {
         assert_eq!(staged.files()[0].0, "Ab3.json");
         assert_eq!(
             staged.files()[0].1,
-            serialise(&json!({"id": "alpha", "body": "changed"}), Form::File).into_bytes()
+            serialise(&json!({"smut_id": "alpha", "body": "changed"}), Form::File).into_bytes()
         );
 
         let successor = Index::parse(&staged.files()[1].1).expect("a parseable index");
@@ -990,7 +993,7 @@ mod tests {
         let staged = translate(
             &scratch.directory(),
             &snapshot(),
-            &write_set(vec![json!({"id": "alpha"})], &[]),
+            &write_set(vec![json!({"smut_id": "alpha"})], &[]),
         )
         .expect("a consistent write set");
 
@@ -1008,7 +1011,7 @@ mod tests {
         let staged = translate(
             &scratch.directory(),
             &snapshot(),
-            &write_set(vec![json!({"id": "gamma"})], &[]),
+            &write_set(vec![json!({"smut_id": "gamma"})], &[]),
         )
         .expect("a consistent write set");
 
@@ -1109,7 +1112,7 @@ mod tests {
         let both = translate(
             &scratch.directory(),
             &snapshot(),
-            &write_set(vec![json!({"id": "beta"})], &["beta"]),
+            &write_set(vec![json!({"smut_id": "beta"})], &["beta"]),
         )
         .expect_err("one id cannot be put and removed");
         assert!(matches!(both, StoreError::InvalidWriteSet { .. }), "{both}");
@@ -1126,7 +1129,10 @@ mod tests {
         commit(
             &scratch.directory(),
             &snapshot,
-            &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+            &write_set(
+                vec![json!({"smut_id": "alpha", "body": "changed"})],
+                &["beta"],
+            ),
         )
         .expect("the batch commits");
         let calls = take();
@@ -1187,7 +1193,10 @@ mod tests {
         commit(
             &scratch.directory(),
             &snapshot,
-            &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+            &write_set(
+                vec![json!({"smut_id": "alpha", "body": "changed"})],
+                &["beta"],
+            ),
         )
         .expect("the batch commits");
 
@@ -1215,7 +1224,10 @@ mod tests {
             let error = commit(
                 &scratch.directory(),
                 &snapshot,
-                &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+                &write_set(
+                    vec![json!({"smut_id": "alpha", "body": "changed"})],
+                    &["beta"],
+                ),
             )
             .expect_err("the barrier fails");
 
@@ -1245,7 +1257,10 @@ mod tests {
             let error = commit(
                 &scratch.directory(),
                 &snapshot,
-                &write_set(vec![json!({"id": "alpha", "body": "changed"})], &["beta"]),
+                &write_set(
+                    vec![json!({"smut_id": "alpha", "body": "changed"})],
+                    &["beta"],
+                ),
             )
             .expect_err("the decision's fsync fails");
 
@@ -1290,11 +1305,11 @@ mod tests {
             &[
                 (
                     "Ab3.json",
-                    &entity_bytes(json!({"id": "alpha", "body": "changed"})),
+                    &entity_bytes(json!({"smut_id": "alpha", "body": "changed"})),
                 ),
                 (
                     STAGED_UID,
-                    &entity_bytes(json!({"id": "gamma", "body": "new"})),
+                    &entity_bytes(json!({"smut_id": "gamma", "body": "new"})),
                 ),
                 (
                     INDEX_BASENAME,
@@ -1416,7 +1431,7 @@ mod tests {
                 &scratch,
                 PREPARE_STATE,
                 &manifest,
-                &[("Ab3.json", b"{\"id\":\"alpha\"}")],
+                &[("Ab3.json", b"{\"smut_id\":\"alpha\"}")],
             );
 
             recover(&scratch.directory()).expect("a prepare state is always discardable");
@@ -1450,7 +1465,7 @@ mod tests {
 
         fs::write(
             scratch.directory().join("Ab3.json"),
-            entity_bytes(json!({"id": "alpha", "body": "changed"})),
+            entity_bytes(json!({"smut_id": "alpha", "body": "changed"})),
         )
         .expect("an earlier attempt got this far");
         fs::remove_file(scratch.directory().join("Zq7.json")).expect("and this far");
@@ -1483,7 +1498,7 @@ mod tests {
     }
 
     fn disagreeing() -> Vec<Disagreeing> {
-        let entity = entity_bytes(json!({"id": "alpha", "body": "changed"}));
+        let entity = entity_bytes(json!({"smut_id": "alpha", "body": "changed"}));
         let staged = |name: &'static str| vec![(name, entity.clone())];
 
         vec![
@@ -1524,7 +1539,7 @@ mod tests {
             },
             Disagreeing {
                 what: "the manifest version is unknown",
-                manifest: br#"{"format_version":2,"puts":[],"removes":[]}"#.to_vec(),
+                manifest: br#"{"format_version":1,"puts":[],"removes":[]}"#.to_vec(),
                 staged: Vec::new(),
             },
         ]
@@ -1569,7 +1584,7 @@ mod tests {
         let outside = scratch.path.join("outside.json");
         fs::write(
             &outside,
-            entity_bytes(json!({"id": "gamma", "body": "outside"})),
+            entity_bytes(json!({"smut_id": "gamma", "body": "outside"})),
         )
         .expect("an entity outside the store");
         write_state(
@@ -1578,7 +1593,7 @@ mod tests {
             &manifest_json(&["Ab3.json", STAGED_UID], &[]),
             &[(
                 "Ab3.json",
-                &entity_bytes(json!({"id": "alpha", "body": "changed"})),
+                &entity_bytes(json!({"smut_id": "alpha", "body": "changed"})),
             )],
         );
         std::os::unix::fs::symlink(

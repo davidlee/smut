@@ -22,10 +22,10 @@ pub enum Reject {
     UnknownCommand(String),
     /// The declaration input is not an object or an array of objects.
     NotADeclaration,
-    /// An entity's `id` is present but is not a nonempty string: `null`, a
+    /// An entity's `smut_id` is present but is not a nonempty string: `null`, a
     /// number and `""` are invalid, and none of them asks for generation.
     InvalidId {
-        /// What the `id` member held, for the message.
+        /// What the `smut_id` member held, for the message.
         found: String,
     },
     /// One top-level field of one entity is given two incompatible operations by
@@ -209,7 +209,7 @@ pub enum StoreError {
         entry: String,
         /// The public id the index maps the file to.
         key: String,
-        /// The `id` the file itself holds, for the message.
+        /// The `smut_id` the file itself holds, for the message.
         found: String,
     },
     /// An entry in the store directory that nothing explains (§5.2).
@@ -293,7 +293,7 @@ impl fmt::Display for Reject {
             }
             Reject::InvalidId { found } => write!(
                 formatter,
-                "invalid entity id: {found}, and an id must be a nonempty string"
+                "invalid smut_id: {found}, and smut_id must be a nonempty string"
             ),
             Reject::ConflictingDeclaration { id, field } => write!(
                 formatter,
@@ -412,7 +412,7 @@ impl fmt::Display for StoreError {
             ),
             StoreError::IdDisagreement { entry, key, found } => write!(
                 formatter,
-                "the entity file {entry} holds id {found}, and the index maps it to {key}"
+                "the entity file {entry} holds {found} under smut_id, and the index maps it to {key}"
             ),
             StoreError::UnexplainedEntry { entry } => write!(
                 formatter,

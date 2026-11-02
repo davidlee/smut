@@ -179,7 +179,9 @@ mod tests {
         entities
             .iter()
             .map(|entity| {
-                let id = entity["id"].as_str().expect("every fixture names its id");
+                let id = entity["smut_id"]
+                    .as_str()
+                    .expect("every fixture names its smut_id");
                 (Id::new(id), entity.clone())
             })
             .collect()
@@ -202,10 +204,10 @@ mod tests {
     #[test]
     fn missing_values_sort_last_per_key_and_never_as_a_final_partition() {
         let store = store(&[
-            json!({"id": "a", "priority": 1, "title": "b"}),
-            json!({"id": "b", "title": "a"}),
-            json!({"id": "c", "priority": 2, "title": "a"}),
-            json!({"id": "d", "title": "z"}),
+            json!({"smut_id": "a", "priority": 1, "title": "b"}),
+            json!({"smut_id": "b", "title": "a"}),
+            json!({"smut_id": "c", "priority": 2, "title": "a"}),
+            json!({"smut_id": "d", "title": "z"}),
         ]);
 
         let order = ordered(&store, &ascending(&["priority", "title"]))
@@ -218,9 +220,9 @@ mod tests {
     #[test]
     fn the_cmp_puts_a_missing_value_last_whichever_the_direction() {
         let store = store(&[
-            json!({"id": "a", "priority": 1}),
-            json!({"id": "b"}),
-            json!({"id": "c", "priority": 2}),
+            json!({"smut_id": "a", "priority": 1}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c", "priority": 2}),
         ]);
 
         let ascending_order = ordered(&store, &ascending(&["priority"])).expect("scalar values");
@@ -234,9 +236,9 @@ mod tests {
     #[test]
     fn direction_reverses_present_values_but_never_the_id_tiebreak() {
         let store = store(&[
-            json!({"id": "b", "title": "same"}),
-            json!({"id": "a", "title": "same"}),
-            json!({"id": "c", "title": "same"}),
+            json!({"smut_id": "b", "title": "same"}),
+            json!({"smut_id": "a", "title": "same"}),
+            json!({"smut_id": "c", "title": "same"}),
         ]);
 
         let order = ordered(&store, &[SortKey::descending("title")]).expect("scalar values");
@@ -247,9 +249,9 @@ mod tests {
     #[test]
     fn equal_sort_values_fall_back_to_id_ascending() {
         let store = store(&[
-            json!({"id": "m", "priority": 1}),
-            json!({"id": "z", "priority": 1}),
-            json!({"id": "a", "priority": 1}),
+            json!({"smut_id": "m", "priority": 1}),
+            json!({"smut_id": "z", "priority": 1}),
+            json!({"smut_id": "a", "priority": 1}),
         ]);
 
         assert_eq!(
@@ -261,11 +263,11 @@ mod tests {
     #[test]
     fn the_scalar_type_order_is_null_then_booleans_then_numbers_then_strings() {
         let store = store(&[
-            json!({"id": "string", "value": "text"}),
-            json!({"id": "number", "value": 1}),
-            json!({"id": "true", "value": true}),
-            json!({"id": "false", "value": false}),
-            json!({"id": "null", "value": null}),
+            json!({"smut_id": "string", "value": "text"}),
+            json!({"smut_id": "number", "value": 1}),
+            json!({"smut_id": "true", "value": true}),
+            json!({"smut_id": "false", "value": false}),
+            json!({"smut_id": "null", "value": null}),
         ]);
 
         let order = ordered(&store, &ascending(&["value"])).expect("scalar values");
@@ -278,11 +280,11 @@ mod tests {
         // Locale collation would interleave `Ä` with `A`; byte order puts every
         // ASCII letter first, then the two-byte sequences by their bytes.
         let store = store(&[
-            json!({"id": "a", "value": "a"}),
-            json!({"id": "upper", "value": "Z"}),
-            json!({"id": "umlaut", "value": "Ä"}),
-            json!({"id": "acute", "value": "é"}),
-            json!({"id": "capital", "value": "A"}),
+            json!({"smut_id": "a", "value": "a"}),
+            json!({"smut_id": "upper", "value": "Z"}),
+            json!({"smut_id": "umlaut", "value": "Ä"}),
+            json!({"smut_id": "acute", "value": "é"}),
+            json!({"smut_id": "capital", "value": "A"}),
         ]);
 
         let order = ordered(&store, &ascending(&["value"])).expect("scalar values");
@@ -291,11 +293,15 @@ mod tests {
     }
 
     #[test]
-    fn an_id_is_an_ordinary_order_field() {
-        let store = store(&[json!({"id": "a"}), json!({"id": "b"}), json!({"id": "c"})]);
+    fn smut_id_is_an_ordinary_order_field() {
+        let store = store(&[
+            json!({"smut_id": "a"}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c"}),
+        ]);
 
         assert_eq!(
-            ordered(&store, &[SortKey::descending("id")]).expect("scalar values"),
+            ordered(&store, &[SortKey::descending("smut_id")]).expect("scalar values"),
             ["c", "b", "a"]
         );
     }
@@ -303,9 +309,9 @@ mod tests {
     #[test]
     fn order_naming_a_field_absent_from_every_entity_ties_to_id_order() {
         let store = store(&[
-            json!({"id": "c", "title": "third"}),
-            json!({"id": "a", "title": "first"}),
-            json!({"id": "b", "title": "second"}),
+            json!({"smut_id": "c", "title": "third"}),
+            json!({"smut_id": "a", "title": "first"}),
+            json!({"smut_id": "b", "title": "second"}),
         ]);
 
         assert_eq!(
@@ -317,8 +323,8 @@ mod tests {
     #[test]
     fn one_and_one_point_zero_tie_for_ordering_and_break_on_id() {
         let store = store(&[
-            json!({"id": "float", "value": 1.0}),
-            json!({"id": "integer", "value": 1}),
+            json!({"smut_id": "float", "value": 1.0}),
+            json!({"smut_id": "integer", "value": 1}),
         ]);
 
         assert_eq!(
@@ -329,7 +335,7 @@ mod tests {
 
     #[test]
     fn an_array_in_an_order_field_is_rejected_even_with_a_single_candidate() {
-        let store = store(&[json!({"id": "only", "tags": ["storage"]})]);
+        let store = store(&[json!({"smut_id": "only", "tags": ["storage"]})]);
 
         let rejection = ordered(&store, &ascending(&["tags"])).expect_err("an array cannot sort");
 
@@ -345,8 +351,8 @@ mod tests {
     #[test]
     fn validation_reaches_a_later_key_that_no_comparison_would_consult() {
         let store = store(&[
-            json!({"id": "first", "priority": 1, "tags": {"kind": "storage"}}),
-            json!({"id": "second", "priority": 2, "tags": {"kind": "graph"}}),
+            json!({"smut_id": "first", "priority": 1, "tags": {"kind": "storage"}}),
+            json!({"smut_id": "second", "priority": 2, "tags": {"kind": "graph"}}),
         ]);
 
         // `priority` decides every comparison, so a lazily validated comparator
@@ -365,9 +371,9 @@ mod tests {
     #[test]
     fn null_is_a_value_that_sorts_first_and_absence_still_sorts_last() {
         let store = store(&[
-            json!({"id": "absent"}),
-            json!({"id": "null", "priority": null}),
-            json!({"id": "one", "priority": 1}),
+            json!({"smut_id": "absent"}),
+            json!({"smut_id": "null", "priority": null}),
+            json!({"smut_id": "one", "priority": 1}),
         ]);
 
         assert_eq!(

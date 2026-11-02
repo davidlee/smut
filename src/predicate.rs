@@ -566,7 +566,7 @@ mod tests {
     fn the_clauses_evaluate_as_the_identities_say() {
         // §6.3: `And` of nothing is true, `Or` of nothing is false, and `Not`
         // negates its one predicate.
-        let entity = json!({"id": "a", "status": "open"});
+        let entity = json!({"smut_id": "a", "status": "open"});
         let open = field("status", vec![Condition::Eq(json!("open"))]);
 
         assert!(Predicate::And(Vec::new()).holds(&entity));
@@ -582,7 +582,7 @@ mod tests {
         // §6.3's rows, including `$ne`'s "a missing field does not match" and
         // `$contains`'s "other combinations do not match".
         let entity = json!({
-            "id": "a",
+            "smut_id": "a",
             "type": "question",
             "tags": ["open", {"k": 2}],
             "count": 3,
@@ -630,8 +630,8 @@ mod tests {
     fn missing_and_present_null_are_different_fields() {
         // §6.3: present `null` is present, and presence is what `$exists`
         // decides; a missing field fails every operator but `$exists`.
-        let absent = json!({"id": "a"});
-        let null = json!({"id": "a", "f": null});
+        let absent = json!({"smut_id": "a"});
+        let null = json!({"smut_id": "a", "f": null});
 
         assert!(field("f", vec![Condition::Exists(true)]).holds(&null));
         assert!(field("f", vec![Condition::Exists(false)]).holds(&absent));

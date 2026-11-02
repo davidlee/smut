@@ -309,9 +309,9 @@ mod tests {
         entities
             .iter()
             .map(|entity| {
-                let id = entity["id"]
+                let id = entity["smut_id"]
                     .as_str()
-                    .expect("every fixture entity names its id");
+                    .expect("every fixture entity names its smut_id");
                 (Id::new(id), entity.clone())
             })
             .collect()
@@ -366,9 +366,9 @@ mod tests {
         // §7.1: one expansion does outgoing entirely, then incoming, so a root's
         // outgoing target is discovered before the sources that point back at it.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "b"}}),
-            json!({"id": "b"}),
-            json!({"id": "z", "next": {"id": "a"}}),
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "z", "next": {"smut_id": "a"}}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -393,9 +393,9 @@ mod tests {
         // §7.1: a requested label is the only thing a walk looks at, so an
         // unrequested reference is neither discovered nor dangling.
         let store = store(&[
-            json!({"id": "a", "link": {"id": "b"}, "note": {"id": "c"}, "other": {"id": "gone"}}),
-            json!({"id": "b"}),
-            json!({"id": "c"}),
+            json!({"smut_id": "a", "link": {"smut_id": "b"}, "note": {"smut_id": "c"}, "other": {"smut_id": "gone"}}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c"}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -411,9 +411,9 @@ mod tests {
         // §7.4: `scan_refs` reports object keys lexically, so the walker groups
         // by the requested label list instead of trusting the scan's order.
         let store = store(&[
-            json!({"id": "a", "zeta": {"id": "t1"}, "alpha": {"id": "t2"}}),
-            json!({"id": "t1"}),
-            json!({"id": "t2"}),
+            json!({"smut_id": "a", "zeta": {"smut_id": "t1"}, "alpha": {"smut_id": "t2"}}),
+            json!({"smut_id": "t1"}),
+            json!({"smut_id": "t2"}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -436,10 +436,10 @@ mod tests {
         // field points at the expanded entity; sources are discovered in
         // `Entities` order, which is id order.
         let store = store(&[
-            json!({"id": "t"}),
-            json!({"id": "s1", "link": {"id": "t"}, "memo": {"id": "t"}}),
-            json!({"id": "s2", "memo": {"id": "t"}}),
-            json!({"id": "s3", "link": {"id": "t"}, "memo": {"id": "t"}}),
+            json!({"smut_id": "t"}),
+            json!({"smut_id": "s1", "link": {"smut_id": "t"}, "memo": {"smut_id": "t"}}),
+            json!({"smut_id": "s2", "memo": {"smut_id": "t"}}),
+            json!({"smut_id": "s3", "link": {"smut_id": "t"}, "memo": {"smut_id": "t"}}),
         ]);
         let roots = stored(&store, &["t"]);
 
@@ -456,8 +456,8 @@ mod tests {
     fn a_cycle_terminates_with_each_entity_expanded_once() {
         // §7.1: an entity is expanded at most once, so a cycle terminates.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "b"}}),
-            json!({"id": "b", "next": {"id": "a"}}),
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b", "next": {"smut_id": "a"}}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -480,7 +480,7 @@ mod tests {
     fn a_self_reference_is_discovered_once_and_does_not_requeue() {
         // §7.1: a self-reference is its own second encounter, so the seen set
         // absorbs it: `a → a` neither requeues `a` nor re-expands it.
-        let store = store(&[json!({"id": "a", "self": {"id": "a"}})]);
+        let store = store(&[json!({"smut_id": "a", "self": {"smut_id": "a"}})]);
         let roots = stored(&store, &["a"]);
 
         let walked = walk(
@@ -504,9 +504,9 @@ mod tests {
         // §7.1: root dedupe keeps the first occurrence in `roots` order, and a
         // second encounter with a discovered entity does not enqueue it again.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "c"}}),
-            json!({"id": "b", "next": {"id": "c"}}),
-            json!({"id": "c"}),
+            json!({"smut_id": "a", "next": {"smut_id": "c"}}),
+            json!({"smut_id": "b", "next": {"smut_id": "c"}}),
+            json!({"smut_id": "c"}),
         ]);
         let roots = stored(&store, &["b", "a", "b", "a"]);
 
@@ -523,9 +523,9 @@ mod tests {
         // triple, so the same target twice in one field is one dangling
         // reference while the same target in another field is a second one.
         let store = store(&[json!({
-            "id": "a",
-            "list": [{"id": "gone"}, {"id": "gone"}],
-            "other": {"id": "gone"},
+            "smut_id": "a",
+            "list": [{"smut_id": "gone"}, {"smut_id": "gone"}],
+            "other": {"smut_id": "gone"},
         })]);
         let roots = stored(&store, &["a"]);
 
@@ -543,11 +543,11 @@ mod tests {
         // §7.1: the queue is breadth-first, so `r2`'s target precedes `r1`'s
         // chain — a depth-first walk would have gone `r1`, `a1`, `a2`.
         let store = store(&[
-            json!({"id": "r1", "next": {"id": "a1"}}),
-            json!({"id": "a1", "next": {"id": "a2"}}),
-            json!({"id": "a2"}),
-            json!({"id": "r2", "next": {"id": "b1"}}),
-            json!({"id": "b1"}),
+            json!({"smut_id": "r1", "next": {"smut_id": "a1"}}),
+            json!({"smut_id": "a1", "next": {"smut_id": "a2"}}),
+            json!({"smut_id": "a2"}),
+            json!({"smut_id": "r2", "next": {"smut_id": "b1"}}),
+            json!({"smut_id": "b1"}),
         ]);
         let roots = stored(&store, &["r2", "r1"]);
 
@@ -567,9 +567,9 @@ mod tests {
         // frontier and expanded by nobody, which is a depth boundary, not
         // truncation: `exhausted` stays false at every bound.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "b"}}),
-            json!({"id": "b", "next": {"id": "c"}}),
-            json!({"id": "c"}),
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b", "next": {"smut_id": "c"}}),
+            json!({"smut_id": "c"}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -593,11 +593,11 @@ mod tests {
         // reports them, and the dangling field is the top-level field name —
         // `box`, never `deep` — which is what proves there is one interpretation.
         let store = store(&[
-            json!({"id": "a", "outer": {"inner": {"id": "target"}}}),
-            json!({"id": "b", "list": [{"id": "t2"}]}),
-            json!({"id": "c", "box": {"deep": {"id": "gone"}}}),
-            json!({"id": "target"}),
-            json!({"id": "t2"}),
+            json!({"smut_id": "a", "outer": {"inner": {"smut_id": "target"}}}),
+            json!({"smut_id": "b", "list": [{"smut_id": "t2"}]}),
+            json!({"smut_id": "c", "box": {"deep": {"smut_id": "gone"}}}),
+            json!({"smut_id": "target"}),
+            json!({"smut_id": "t2"}),
         ]);
         let roots = stored(&store, &["a", "b", "c"]);
 
@@ -618,10 +618,10 @@ mod tests {
         // §7.3: PHASE-01 passes `u64::MAX`, so no permitted expansion is ever
         // declined and the walk runs to its depth bound.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "b"}}),
-            json!({"id": "b", "next": {"id": "c"}}),
-            json!({"id": "c", "next": {"id": "d"}}),
-            json!({"id": "d"}),
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b", "next": {"smut_id": "c"}}),
+            json!({"smut_id": "c", "next": {"smut_id": "d"}}),
+            json!({"smut_id": "d"}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -638,9 +638,9 @@ mod tests {
         // §7.3/DEC-015: the check runs before the expansion, so a walk that
         // empties its queue with exactly `budget` expansions is complete.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "b"}}),
-            json!({"id": "b", "next": {"id": "c"}}),
-            json!({"id": "c"}),
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b", "next": {"smut_id": "c"}}),
+            json!({"smut_id": "c"}),
         ]);
         let roots = stored(&store, &["a"]);
 
@@ -658,9 +658,9 @@ mod tests {
         // frontier, in discovery order, and only a declined expansion sets
         // `exhausted`.
         let store = store(&[
-            json!({"id": "a", "next": [{"id": "b"}, {"id": "c"}]}),
-            json!({"id": "b"}),
-            json!({"id": "c"}),
+            json!({"smut_id": "a", "next": [{"smut_id": "b"}, {"smut_id": "c"}]}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c"}),
         ]);
         let roots = stored(&store, &["a"]);
 

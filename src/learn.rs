@@ -567,4 +567,163 @@ mod tests {
 
         assert_eq!(taught, KEYS, "the guide's key list is the nine keys of §5");
     }
+
+    // ── PHASE-02 VT-7: the guide's identity claims ───────────────────────────
+    //
+    // Each pin below reads the flattened guide's own sentences rather than one
+    // long substring, because a claim is taught when a sentence makes it: a bare
+    // `smut_id` would also match a worked example, and a bare `data` the opening
+    // paragraph. The wordings are alternatives because the guide says a thing in
+    // its own words; within one wording every fragment has to share a sentence.
+
+    /// The guide's sentences, flattened and lowercased.
+    fn sentences() -> Vec<String> {
+        guide()
+            .split_inclusive(['.', '!', '?'])
+            .map(str::to_lowercase)
+            .collect()
+    }
+
+    /// The sentences that teach `claim`: those carrying every fragment of at
+    /// least one of `wordings`, in guide order.
+    fn teaching(claim: &str, wordings: &[&[&str]]) -> Vec<String> {
+        let taught: Vec<String> = sentences()
+            .into_iter()
+            .filter(|sentence| {
+                wordings
+                    .iter()
+                    .any(|fragments| fragments.iter().all(|fragment| carries(sentence, fragment)))
+            })
+            .collect();
+
+        assert!(!taught.is_empty(), "the guide does not teach that {claim}");
+
+        taught
+    }
+
+    /// Whether `sentence` carries `fragment` as words rather than as part of a
+    /// longer one: a pin on `data` must not be satisfied by `metadata`, and one
+    /// on `id` must not be satisfied by `smut_id`.
+    fn carries(sentence: &str, fragment: &str) -> bool {
+        let word = |character: char| character.is_alphanumeric() || character == '_';
+
+        sentence.match_indices(fragment).any(|(at, _)| {
+            let before = sentence[..at].chars().next_back();
+            let after = sentence[at + fragment.len()..].chars().next();
+
+            !before.is_some_and(word) && !after.is_some_and(word)
+        })
+    }
+
+    #[test]
+    fn the_guide_teaches_that_smut_id_is_the_identity_key() {
+        // The identity key by name, not the value convention: an entity is a
+        // JSON object whose identity member is `smut_id`.
+        teaching("`smut_id` is the identity key", &[&["smut_id", "identity"]]);
+
+        // And the existing validity rule still holds for it: a structural
+        // identity is a nonempty string, which is the rule the loader refuses
+        // malformed stored identity on.
+        teaching(
+            "a structural `smut_id` must be a nonempty string",
+            &[&["smut_id", "nonempty string"]],
+        );
+    }
+
+    #[test]
+    fn the_guide_teaches_that_an_ordinary_id_is_data() {
+        // Identity moved, so the old spelling is caller data at every depth.
+        teaching(
+            "an ordinary id is data rather than identity",
+            &[&["ordinary", "data"]],
+        );
+    }
+
+    #[test]
+    fn the_guide_warns_that_a_payload_field_named_smut_id_is_interpreted_structurally() {
+        // `smut_id` frees `id`, not every identity-shaped field: a payload that
+        // uses the reserved spelling is read as structure, so it cannot be
+        // stored verbatim and the guide says so.
+        teaching(
+            "a payload field named `smut_id` is interpreted structurally, so such a payload cannot be stored verbatim",
+            &[&["smut_id", "verbatim"], &["smut_id", "cannot be stored"]],
+        );
+    }
+
+    #[test]
+    fn the_guide_states_that_identity_predicates_and_projections_use_smut_id() {
+        // Projection: the `select` clause says identity is whatever always comes
+        // back, under its own key.
+        teaching(
+            "identity is always returned under `smut_id`, whatever `select` names",
+            &[&["smut_id", "always returned"]],
+        );
+
+        // Predicates and projections in the guide's worked recipe, which is what
+        // a reader copies: address identity by name in both calls.
+        assert!(
+            EXAMPLE_FILTER.contains(r#""where":{"smut_id""#),
+            "the recipe's where filters identity by `smut_id`: {EXAMPLE_FILTER}"
+        );
+        for example in [EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW, EXAMPLE_FILTER] {
+            assert!(
+                example.contains(r#""select":["smut_id"]"#),
+                "the recipe's select projects identity by `smut_id`: {example}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_guide_states_that_older_stores_are_refused_and_never_migrated() {
+        let refusal = teaching(
+            "older stores are refused and that there is no migration",
+            &[
+                &["store", "refused", "no migration"],
+                &["stores", "refused", "no migration"],
+            ],
+        );
+
+        // Versionless: the refusal names no format figure and no release, because
+        // a figure there would be false in one direction or the other.
+        for sentence in &refusal {
+            assert!(
+                !sentence.chars().any(|character| character.is_ascii_digit()),
+                "the refusal names no format or release figure: {sentence}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_guide_states_that_a_query_on_the_old_spelling_returns_nothing() {
+        // DEC-027: a query naming a field no entity carries is taught, never
+        // refused. After the rename the old spelling is such a field wherever no
+        // entity carries `id` as data, so the answer is an empty result rather
+        // than an error.
+        teaching(
+            "a query on the old spelling returns nothing rather than an error wherever no entity carries `id` as data",
+            &[
+                &["old spelling", "nothing"],
+                &["old spelling", "empty result"],
+                &["old-spelling", "nothing"],
+                &["old-spelling", "empty result"],
+                &["no entity carries", "nothing"],
+                &["no entity carries", "empty result"],
+                &["no entity carries", "not refused"],
+            ],
+        );
+    }
+
+    #[test]
+    fn the_guide_states_that_a_field_no_entity_carries_fails_every_operator() {
+        // DEC-027's wording: a field nothing carries behaves exactly as a missing
+        // field on one entity does, which the predicate summary already says
+        // fails every operator but `$exists`.
+        teaching(
+            "a field no entity carries fails every operator exactly as a missing field on one entity does",
+            &[
+                &["no entity carries", "every operator"],
+                &["every operator", "exactly as"],
+            ],
+        );
+    }
 }

@@ -350,7 +350,9 @@ mod tests {
         entities
             .iter()
             .map(|entity| {
-                let id = entity["id"].as_str().expect("every fixture names its id");
+                let id = entity["smut_id"]
+                    .as_str()
+                    .expect("every fixture names its smut_id");
                 (Id::new(id), entity.clone())
             })
             .collect()
@@ -366,7 +368,7 @@ mod tests {
     /// The entity DEC-009's own example renders.
     fn notebook() -> Entities {
         store(&[json!({
-            "id": "design",
+            "smut_id": "design",
             "title": "Query design",
             "body": "Keep selection small.",
             "type": "question",
@@ -387,9 +389,9 @@ mod tests {
     #[test]
     fn entities_render_in_selection_order_separated_by_exactly_one_blank_line() {
         let store = store(&[
-            json!({"id": "a", "title": "Alpha"}),
-            json!({"id": "b", "title": "Beta", "body": "second"}),
-            json!({"id": "c", "title": "Gamma"}),
+            json!({"smut_id": "a", "title": "Alpha"}),
+            json!({"smut_id": "b", "title": "Beta", "body": "second"}),
+            json!({"smut_id": "c", "title": "Gamma"}),
         ]);
 
         assert_eq!(
@@ -416,7 +418,8 @@ mod tests {
 
     #[test]
     fn the_heading_field_follows_the_option() {
-        let store = store(&[json!({"id": "a", "title": "Alpha", "name": "Named", "body": "text"})]);
+        let store =
+            store(&[json!({"smut_id": "a", "title": "Alpha", "name": "Named", "body": "text"})]);
         let options = Options {
             heading_field: "name".to_owned(),
             ..Options::default()
@@ -441,7 +444,7 @@ mod tests {
 
     #[test]
     fn a_newline_inside_heading_text_collapses_to_one_space() {
-        let store = store(&[json!({"id": "a", "title": "one\ntwo\r\nthree\rfour"})]);
+        let store = store(&[json!({"smut_id": "a", "title": "one\ntwo\r\nthree\rfour"})]);
 
         assert_eq!(
             rendered(&store, &["a"], &Options::default()),
@@ -452,9 +455,9 @@ mod tests {
     #[test]
     fn a_heading_needs_a_selected_non_empty_string_field() {
         let store = store(&[
-            json!({"id": "empty", "title": ""}),
-            json!({"id": "number", "title": 42}),
-            json!({"id": "absent", "body": "bodyless heading"}),
+            json!({"smut_id": "empty", "title": ""}),
+            json!({"smut_id": "number", "title": 42}),
+            json!({"smut_id": "absent", "body": "bodyless heading"}),
         ]);
 
         assert_eq!(
@@ -474,7 +477,7 @@ mod tests {
     #[test]
     fn the_body_is_emitted_verbatim_never_trimmed_and_never_escaped() {
         let store = store(&[json!({
-            "id": "a",
+            "smut_id": "a",
             "title": "T",
             "body": "  *raw* [link](x) <b>\n\n**untouched**  "
         })]);
@@ -487,7 +490,7 @@ mod tests {
 
     #[test]
     fn a_body_ending_in_newlines_keeps_them() {
-        let store = store(&[json!({"id": "a", "title": "T", "body": "text\n\n"})]);
+        let store = store(&[json!({"smut_id": "a", "title": "T", "body": "text\n\n"})]);
 
         assert_eq!(
             rendered(&store, &["a"], &Options::default()),
@@ -497,7 +500,7 @@ mod tests {
 
     #[test]
     fn a_non_string_body_is_not_a_body_block() {
-        let store = store(&[json!({"id": "a", "title": "T", "body": 42})]);
+        let store = store(&[json!({"smut_id": "a", "title": "T", "body": 42})]);
 
         assert_eq!(rendered(&store, &["a"], &Options::default()), "## T\n");
     }
@@ -526,7 +529,7 @@ mod tests {
     #[test]
     fn a_string_value_is_raw_and_anything_else_is_compact_json() {
         let store = store(&[json!({
-            "id": "a",
+            "smut_id": "a",
             "flag": true,
             "list": [1, 2],
             "n": 1.5,
@@ -548,7 +551,7 @@ mod tests {
 
     #[test]
     fn a_non_string_body_stays_displayable_as_an_attribute() {
-        let store = store(&[json!({"id": "a", "body": 42})]);
+        let store = store(&[json!({"smut_id": "a", "body": 42})]);
 
         assert_eq!(
             rendered(&store, &["a"], &fields_shown(Options::default())),
@@ -558,7 +561,7 @@ mod tests {
 
     #[test]
     fn the_heading_field_is_excluded_only_when_it_rendered_a_heading() {
-        let store = store(&[json!({"id": "a", "title": "", "type": "x"})]);
+        let store = store(&[json!({"smut_id": "a", "title": "", "type": "x"})]);
 
         assert_eq!(
             rendered(&store, &["a"], &fields_shown(Options::default())),
@@ -569,7 +572,7 @@ mod tests {
     #[test]
     fn the_body_named_as_the_heading_field_renders_once() {
         let store = store(&[json!({
-            "id": "a",
+            "smut_id": "a",
             "title": "ignored",
             "body": "B text",
             "type": "x"
@@ -588,7 +591,7 @@ mod tests {
     #[test]
     fn field_labels_are_escaped() {
         let store = store(&[json!({
-            "id": "a",
+            "smut_id": "a",
             "*bold*": "x",
             "a[b]`c`": "y",
             "two\nlines": "z"
@@ -604,7 +607,7 @@ mod tests {
 
     #[test]
     fn attributes_honour_the_selections_fields() {
-        let store = store(&[json!({"id": "a", "title": "T", "type": "x", "body": "text"})]);
+        let store = store(&[json!({"smut_id": "a", "title": "T", "type": "x", "body": "text"})]);
         let roots = [Id::new("a")];
         let fields = ["type".to_owned()];
         let mut selection = get(&store, &roots);
@@ -618,7 +621,7 @@ mod tests {
 
     #[test]
     fn the_id_is_never_an_attribute() {
-        let store = store(&[json!({"id": "a", "type": "x"})]);
+        let store = store(&[json!({"smut_id": "a", "type": "x"})]);
 
         assert_eq!(
             rendered(&store, &["a"], &fields_shown(Options::default())),
@@ -635,7 +638,7 @@ mod tests {
 
     #[test]
     fn show_ids_renders_identity_in_addition_to_the_content() {
-        let store = store(&[json!({"id": "a", "title": "T", "body": "b", "type": "x"})]);
+        let store = store(&[json!({"smut_id": "a", "title": "T", "body": "b", "type": "x"})]);
 
         assert_eq!(
             rendered(&store, &["a"], &ids_shown(Options::default())),
@@ -649,7 +652,7 @@ mod tests {
 
     #[test]
     fn the_visibility_fallback_renders_identity_when_nothing_else_would_be_visible() {
-        let store = store(&[json!({"id": "a"})]);
+        let store = store(&[json!({"smut_id": "a"})]);
 
         assert_eq!(rendered(&store, &["a"], &Options::default()), "`a`\n");
         assert_eq!(
@@ -661,9 +664,9 @@ mod tests {
     #[test]
     fn an_empty_or_whitespace_only_body_cannot_suppress_the_fallback() {
         let store = store(&[
-            json!({"id": "empty", "body": ""}),
-            json!({"id": "blank", "body": "   \n\t "}),
-            json!({"id": "titled", "title": "T", "body": "  "}),
+            json!({"smut_id": "empty", "body": ""}),
+            json!({"smut_id": "blank", "body": "   \n\t "}),
+            json!({"smut_id": "titled", "title": "T", "body": "  "}),
         ]);
 
         assert_eq!(
@@ -683,11 +686,11 @@ mod tests {
     #[test]
     fn an_id_with_backticks_gets_a_fence_longer_than_its_longest_run() {
         let store = store(&[
-            json!({"id": "a`b"}),
-            json!({"id": "a``b"}),
-            json!({"id": "`lead"}),
-            json!({"id": "trail`"}),
-            json!({"id": " spaced ` middle "}),
+            json!({"smut_id": "a`b"}),
+            json!({"smut_id": "a``b"}),
+            json!({"smut_id": "`lead"}),
+            json!({"smut_id": "trail`"}),
+            json!({"smut_id": " spaced ` middle "}),
         ]);
 
         assert_eq!(rendered(&store, &["a`b"], &Options::default()), "``a`b``\n");
@@ -711,7 +714,7 @@ mod tests {
 
     #[test]
     fn each_entity_gets_its_own_span() {
-        let store = store(&[json!({"id": "a"}), json!({"id": "b`c"})]);
+        let store = store(&[json!({"smut_id": "a"}), json!({"smut_id": "b`c"})]);
 
         assert_eq!(
             rendered(&store, &["a", "b`c"], &Options::default()),
@@ -721,9 +724,9 @@ mod tests {
 
     fn sample() -> Entities {
         store(&[
-            json!({"id": "a", "title": "Alpha", "body": "first"}),
-            json!({"id": "b", "title": "Beta", "body": "second"}),
-            json!({"id": "c", "title": "Gamma", "body": "third"}),
+            json!({"smut_id": "a", "title": "Alpha", "body": "first"}),
+            json!({"smut_id": "b", "title": "Beta", "body": "second"}),
+            json!({"smut_id": "c", "title": "Gamma", "body": "third"}),
         ])
     }
 

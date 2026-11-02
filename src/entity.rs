@@ -14,20 +14,21 @@ use crate::error::Reject;
 use crate::id::Id;
 
 /// The entity's public key. The entity root carries it first.
-pub const ENTITY_ID: &str = "id";
+pub const ENTITY_ID: &str = "smut_id";
 
 /// The literal string that removes a top-level entity field, and only that: below
 /// the top level it is ordinary data (DEC-002).
 const DROP: &str = "DROP";
 
 /// The single definition of an entity node (DEC-005): an object with a member
-/// `id` whose value is a nonempty string. Presence is the whole test; field count
-/// and names are irrelevant.
+/// `smut_id` whose value is a nonempty string. Presence is the whole test; field
+/// count and names are irrelevant.
 ///
-/// `Ok(None)` means the value is not an object carrying `id` at all. An `id` that
-/// is present but not a nonempty string is rejected, never read as "no id". The
-/// error's class is the caller's: the request path reports it as user error, and
-/// the store's loader reports it as corruption (DEC-005).
+/// `Ok(None)` means the value is not an object carrying `smut_id` at all. A
+/// `smut_id` that is present but not a nonempty string is rejected, never read as
+/// "not an entity node". The error's class is the caller's: the request path
+/// reports it as user error, and the store's loader reports it as corruption
+/// (DEC-005).
 pub fn reference_id(value: &Value) -> Result<Option<&str>, Reject> {
     let Some(fields) = value.as_object() else {
         return Ok(None);
@@ -45,7 +46,7 @@ pub fn reference_id(value: &Value) -> Result<Option<&str>, Reject> {
     })
 }
 
-/// Whether an object's `id` member is a nonempty string — §3.1's entity node,
+/// Whether an object's `smut_id` member is a nonempty string — §3.1's entity node,
 /// and the one predicate the serialisation wrapper asks about a value.
 fn names_entity_node(fields: &Map<String, Value>) -> bool {
     matches!(fields.get(ENTITY_ID), Some(Value::String(id)) if !id.is_empty())
@@ -57,7 +58,7 @@ pub fn is_reference(value: &Value) -> bool {
     matches!(reference_id(value), Ok(Some(_)))
 }
 
-/// Every reference occurrence reachable from an entity's non-`id` fields, as
+/// Every reference occurrence reachable from an entity's non-`smut_id` fields, as
 /// `(label, target)` in encounter order.
 ///
 /// The label is the entity's own field name, carried through embedded objects and
@@ -65,8 +66,8 @@ pub fn is_reference(value: &Value) -> bool {
 /// descended into, because the entity it names is scanned in its own right
 /// (DEC-005). Objects iterate lexically, arrays positionally.
 ///
-/// The input must be a validated, normalised entity: an entity node's `id` is
-/// always a nonempty string, and a malformed one here is corruption the loader
+/// The input must be a validated, normalised entity: an entity node's `smut_id`
+/// is always a nonempty string, and a malformed one here is corruption the loader
 /// should have refused.
 pub fn scan_refs(entity: &Value) -> impl Iterator<Item = (&str, &str)> {
     let mut found = Vec::new();
@@ -91,7 +92,7 @@ fn collect_refs<'a>(label: &'a str, value: &'a Value, found: &mut Vec<(&'a str, 
                     return;
                 }
                 Some(_) => panic!(
-                    "scan_refs requires a validated entity: an `id` that is not a nonempty string is corruption"
+                    "scan_refs requires a validated entity: a `smut_id` that is not a nonempty string is corruption"
                 ),
                 None => {}
             }
@@ -129,7 +130,7 @@ pub struct Decl {
 }
 
 impl Decl {
-    /// The declared entity as a value, with `id` in place and dropped fields
+    /// The declared entity as a value, with `smut_id` in place and dropped fields
     /// absent, so the shared reference scan can read it.
     pub fn entity(&self) -> Value {
         let mut fields = Map::new();
@@ -189,9 +190,9 @@ pub fn extract(value: &Value) -> Result<(Value, Vec<Decl>), Reject> {
     }
 }
 
-/// Hoists the entity node `fields` names as `id`: its non-`id` members become one
-/// operation each, and the value that stands in its place is the id-only
-/// reference.
+/// Hoists the entity node `fields` names as `smut_id`: its non-`smut_id` members
+/// become one operation each, and the value that stands in its place is the
+/// id-only reference.
 fn hoist(id: &str, fields: &Map<String, Value>) -> Result<(Value, Vec<Decl>), Reject> {
     let mut ops = BTreeMap::new();
     let mut nested = Vec::new();
@@ -259,8 +260,8 @@ pub enum Form {
 /// The canonical bytes of a value for `form` (§4.2, DEC-007).
 ///
 /// One ordering, applied here at the byte boundary and nowhere else: an entity
-/// node — an object whose `id` is a nonempty string, [`reference_id`]'s own
-/// predicate — names `id` first and its remaining keys lexically; every other
+/// node — an object whose `smut_id` is a nonempty string, [`reference_id`]'s own
+/// predicate — names `smut_id` first and its remaining keys lexically; every other
 /// object is all-lexical; arrays keep their order. Because the rule is
 /// structural rather than positional, a projected entity inside a response's
 /// `objects` array is serialised by this same wrapper as a stored entity file,
@@ -303,9 +304,9 @@ impl Serialize for Canonical<'_> {
                 let mut keys: Vec<&str> = fields.keys().map(String::as_str).collect();
                 keys.sort_unstable();
 
-                // An entity node is the only object whose `id` is hoisted: an
-                // embedded *ordinary* object — one without a nonempty string
-                // `id` — stays all-lexical.
+                // An entity node is the only object whose `smut_id` is hoisted:
+                // an embedded *ordinary* object — one without a nonempty string
+                // `smut_id` — stays all-lexical.
                 if names_entity_node(fields)
                     && let Some(position) = keys.iter().position(|key| *key == ENTITY_ID)
                 {
@@ -336,13 +337,13 @@ mod tests {
     use serde_json::{Value, json};
 
     const PRETTY_ENTITY: &str =
-        "{\n  \"id\": \"smut\",\n  \"body\": \"hello\",\n  \"title\": \"first\"\n}\n";
-    const COMPACT_ENTITY: &str = "{\"id\":\"smut\",\"body\":\"hello\",\"title\":\"first\"}\n";
+        "{\n  \"smut_id\": \"smut\",\n  \"body\": \"hello\",\n  \"title\": \"first\"\n}\n";
+    const COMPACT_ENTITY: &str = "{\"smut_id\":\"smut\",\"body\":\"hello\",\"title\":\"first\"}\n";
 
     fn sample() -> Value {
-        // Lexically `body` precedes `id`; the entity-node rule has to move `id`
+        // Lexically `body` precedes `smut_id`; the entity-node rule has to move `smut_id`
         // ahead of it.
-        json!({"title": "first", "body": "hello", "id": "smut"})
+        json!({"title": "first", "body": "hello", "smut_id": "smut"})
     }
 
     #[test]
@@ -357,14 +358,14 @@ mod tests {
 
     #[test]
     fn an_embedded_ordinary_object_is_lexical_and_is_not_hoisted() {
-        // An ordinary *embedded* object carries no nonempty string `id`; only an
+        // An ordinary *embedded* object carries no nonempty string `smut_id`; only an
         // entity node hoists one, and normalisation never leaves an entity node
         // embedded (it becomes a declaration).
-        let entity = json!({"id": "a", "note": {"zebra": true, "alpha": 1}});
+        let entity = json!({"smut_id": "a", "note": {"zebra": true, "alpha": 1}});
 
         assert_eq!(
             serialise(&entity, Form::Stdout),
-            "{\"id\":\"a\",\"note\":{\"alpha\":1,\"zebra\":true}}\n"
+            "{\"smut_id\":\"a\",\"note\":{\"alpha\":1,\"zebra\":true}}\n"
         );
     }
 
@@ -373,44 +374,44 @@ mod tests {
         // DEC-007: the wrapper is shared by stored files and projections, so the
         // rule is structural — it cannot depend on being at the top of the value.
         let response = json!({
-            "objects": [{"title": "t", "id": "a"}],
-            "changes": [{"previous": {"body": "b", "id": "c"}, "id": "c"}],
+            "objects": [{"title": "t", "smut_id": "a"}],
+            "changes": [{"previous": {"body": "b", "smut_id": "c"}, "smut_id": "c"}],
             "missing": [],
         });
 
         assert_eq!(
             serialise(&response, Form::Stdout),
-            "{\"changes\":[{\"id\":\"c\",\"previous\":{\"id\":\"c\",\"body\":\"b\"}}],\"missing\":[],\"objects\":[{\"id\":\"a\",\"title\":\"t\"}]}\n"
+            "{\"changes\":[{\"smut_id\":\"c\",\"previous\":{\"smut_id\":\"c\",\"body\":\"b\"}}],\"missing\":[],\"objects\":[{\"smut_id\":\"a\",\"title\":\"t\"}]}\n"
         );
     }
 
     #[test]
     fn arrays_keep_their_order() {
-        let entity = json!({"id": "a", "tags": ["zulu", "alpha", "mike"]});
+        let entity = json!({"smut_id": "a", "tags": ["zulu", "alpha", "mike"]});
 
         assert_eq!(
             serialise(&entity, Form::Stdout),
-            "{\"id\":\"a\",\"tags\":[\"zulu\",\"alpha\",\"mike\"]}\n"
+            "{\"smut_id\":\"a\",\"tags\":[\"zulu\",\"alpha\",\"mike\"]}\n"
         );
     }
 
     #[test]
     fn the_root_ordering_holds_in_the_pretty_form_too() {
-        let entity = json!({"id": "a", "meta": {"zebra": true, "alpha": 1}, "body": "b"});
+        let entity = json!({"smut_id": "a", "meta": {"zebra": true, "alpha": 1}, "body": "b"});
 
         assert_eq!(
             serialise(&entity, Form::File),
-            "{\n  \"id\": \"a\",\n  \"body\": \"b\",\n  \"meta\": {\n    \"alpha\": 1,\n    \"zebra\": true\n  }\n}\n"
+            "{\n  \"smut_id\": \"a\",\n  \"body\": \"b\",\n  \"meta\": {\n    \"alpha\": 1,\n    \"zebra\": true\n  }\n}\n"
         );
     }
 
     #[test]
     fn integers_and_floats_keep_their_own_bytes() {
-        let entity = json!({"id": "a", "one": 1, "float": 1.0});
+        let entity = json!({"smut_id": "a", "one": 1, "float": 1.0});
 
         assert_eq!(
             serialise(&entity, Form::Stdout),
-            "{\"id\":\"a\",\"float\":1.0,\"one\":1}\n"
+            "{\"smut_id\":\"a\",\"float\":1.0,\"one\":1}\n"
         );
     }
 
@@ -447,7 +448,7 @@ mod tests {
     #[test]
     fn the_bytes_parse_back_to_the_same_value() {
         let entity = json!({
-            "id": "a",
+            "smut_id": "a",
             "body": "line\nquote\" tab\t",
             "nested": [{"z": 1, "a": 2}, null],
             "flag": false,
@@ -476,6 +477,98 @@ mod tests {
         assert_eq!(serialise(&json!({}), Form::File), "{}\n");
         assert_eq!(serialise(&json!({}), Form::Stdout), "{}\n");
     }
+
+    // ── PHASE-02/VT-1: `smut_id` is the structural identity ─────────────────
+
+    #[test]
+    fn the_wire_contract_is_the_literal_smut_id() {
+        // DEC-020: an independent literal pin, so a consumer reading the
+        // constant cannot move the wire key silently.
+        assert_eq!(ENTITY_ID, "smut_id");
+    }
+
+    #[test]
+    fn canonical_bytes_name_smut_id_first_wherever_an_entity_node_appears() {
+        // `alpha` precedes `smut_id` lexically, so only the structural rule can
+        // put identity first; the embedded `note` object carries no `smut_id`, so
+        // it stays all-lexical, and arrays keep their own order. The projected
+        // entity inside `objects` is ordered by the same shared wrapper.
+        let response = json!({
+            "objects": [{"alpha": 1, "smut_id": "a", "beta": 2}],
+            "note": {"zebra": true, "alpha": 1},
+            "tags": ["zulu", "alpha"],
+        });
+
+        assert_eq!(
+            serialise(&response, Form::Stdout),
+            "{\"note\":{\"alpha\":1,\"zebra\":true},\"objects\":[{\"smut_id\":\"a\",\"alpha\":1,\"beta\":2}],\"tags\":[\"zulu\",\"alpha\"]}\n"
+        );
+        assert_eq!(
+            serialise(&response, Form::File),
+            "{\n  \"note\": {\n    \"alpha\": 1,\n    \"zebra\": true\n  },\n  \"objects\": [\n    {\n      \"smut_id\": \"a\",\n      \"alpha\": 1,\n      \"beta\": 2\n    }\n  ],\n  \"tags\": [\n    \"zulu\",\n    \"alpha\"\n  ]\n}\n"
+        );
+    }
+
+    #[test]
+    fn an_object_carrying_both_keys_puts_smut_id_first_and_leaves_id_lexical() {
+        // The identity member is hoisted; ordinary `id` is one of the remaining
+        // keys and sorts with them.
+        let entity = json!({"id": "data", "smut_id": "structural", "alpha": 1});
+
+        assert_eq!(
+            serialise(&entity, Form::Stdout),
+            "{\"smut_id\":\"structural\",\"alpha\":1,\"id\":\"data\"}\n"
+        );
+        assert_eq!(
+            serialise(&entity, Form::File),
+            "{\n  \"smut_id\": \"structural\",\n  \"alpha\": 1,\n  \"id\": \"data\"\n}\n"
+        );
+    }
+
+    #[test]
+    fn reference_recognition_reads_only_the_structural_key() {
+        // An ordinary `id` alone names nothing: it is caller data, of any shape.
+        for value in [
+            json!({"id": "data"}),
+            json!({"id": null}),
+            json!({"id": 7}),
+            json!({"id": ["a"]}),
+            json!({"id": {"nested": true}}),
+        ] {
+            assert_eq!(reference_id(&value), Ok(None), "{value}");
+            assert!(!is_reference(&value), "{value}");
+        }
+
+        // Beside a structural `smut_id` the ordinary `id` is ignored whatever it
+        // holds, and identity is the `smut_id` value.
+        for value in [
+            json!({"smut_id": "s", "id": "data"}),
+            json!({"smut_id": "s", "id": null}),
+            json!({"smut_id": "s", "id": 7}),
+            json!({"smut_id": "s", "id": ["a"]}),
+            json!({"smut_id": "s", "id": {"nested": true}}),
+        ] {
+            assert_eq!(reference_id(&value), Ok(Some("s")), "{value}");
+            assert!(is_reference(&value), "{value}");
+        }
+
+        // A malformed structural identity is still refused, never read as data.
+        for (value, found) in [
+            (json!({"smut_id": null, "id": "data"}), "null"),
+            (json!({"smut_id": "", "id": "data"}), "an empty string"),
+            (json!({"smut_id": 7}), "a number"),
+            (json!({"smut_id": ["a"]}), "an array"),
+        ] {
+            assert_eq!(
+                reference_id(&value),
+                Err(Reject::InvalidId {
+                    found: found.to_owned()
+                }),
+                "{value}"
+            );
+            assert!(!is_reference(&value), "{value}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -485,7 +578,7 @@ mod reference_tests {
 
     #[test]
     fn an_id_only_object_is_a_reference() {
-        let value = json!({"id": "a"});
+        let value = json!({"smut_id": "a"});
 
         assert_eq!(reference_id(&value), Ok(Some("a")));
         assert!(is_reference(&value));
@@ -493,7 +586,7 @@ mod reference_tests {
 
     #[test]
     fn an_id_plus_fields_is_an_entity_node_too() {
-        let value = json!({"id": "a", "body": "text"});
+        let value = json!({"smut_id": "a", "body": "text"});
 
         assert_eq!(reference_id(&value), Ok(Some("a")));
         assert!(is_reference(&value));
@@ -501,7 +594,7 @@ mod reference_tests {
 
     #[test]
     fn an_object_without_an_id_is_not_an_entity_node() {
-        let value = json!({"body": "text", "nested": {"id": "b"}});
+        let value = json!({"body": "text", "nested": {"smut_id": "b"}});
 
         assert_eq!(reference_id(&value), Ok(None));
         assert!(!is_reference(&value));
@@ -509,7 +602,7 @@ mod reference_tests {
 
     #[test]
     fn a_scalar_is_not_an_entity_node() {
-        for value in [json!(null), json!(1), json!("a"), json!([{"id": "a"}])] {
+        for value in [json!(null), json!(1), json!("a"), json!([{"smut_id": "a"}])] {
             assert_eq!(reference_id(&value), Ok(None), "{value}");
             assert!(!is_reference(&value), "{value}");
         }
@@ -518,12 +611,12 @@ mod reference_tests {
     #[test]
     fn a_malformed_id_is_rejected_rather_than_treated_as_absent() {
         for (value, found) in [
-            (json!({"id": null}), "null"),
-            (json!({"id": 5}), "a number"),
-            (json!({"id": ""}), "an empty string"),
-            (json!({"id": true}), "a boolean"),
-            (json!({"id": ["a"]}), "an array"),
-            (json!({"id": {"x": 1}}), "an object"),
+            (json!({"smut_id": null}), "null"),
+            (json!({"smut_id": 5}), "a number"),
+            (json!({"smut_id": ""}), "an empty string"),
+            (json!({"smut_id": true}), "a boolean"),
+            (json!({"smut_id": ["a"]}), "an array"),
+            (json!({"smut_id": {"x": 1}}), "an object"),
         ] {
             assert_eq!(
                 reference_id(&value),
@@ -537,12 +630,12 @@ mod reference_tests {
 
     #[test]
     fn a_whitespace_only_id_is_a_valid_opaque_id() {
-        assert_eq!(reference_id(&json!({"id": " "})), Ok(Some(" ")));
+        assert_eq!(reference_id(&json!({"smut_id": " "})), Ok(Some(" ")));
     }
 
     #[test]
     fn scan_refs_labels_each_reference_with_the_containing_entitys_field() {
-        let entity = json!({"id": "a", "refs": [{"id": "b"}], "note": {"id": "c"}});
+        let entity = json!({"smut_id": "a", "refs": [{"smut_id": "b"}], "note": {"smut_id": "c"}});
 
         let found: Vec<(&str, &str)> = scan_refs(&entity).collect();
 
@@ -551,7 +644,8 @@ mod reference_tests {
 
     #[test]
     fn scan_refs_carries_the_label_through_arrays_and_embedded_objects() {
-        let entity = json!({"id": "a", "links": [{"to": {"id": "b"}}, {"id": "c"}, "plain"]});
+        let entity =
+            json!({"smut_id": "a", "links": [{"to": {"smut_id": "b"}}, {"smut_id": "c"}, "plain"]});
 
         let found: Vec<(&str, &str)> = scan_refs(&entity).collect();
 
@@ -560,7 +654,7 @@ mod reference_tests {
 
     #[test]
     fn scan_refs_stops_at_a_reference_occurrence() {
-        let entity = json!({"id": "a", "refs": {"id": "b", "nested": {"id": "c"}}});
+        let entity = json!({"smut_id": "a", "refs": {"smut_id": "b", "nested": {"smut_id": "c"}}});
 
         let found: Vec<(&str, &str)> = scan_refs(&entity).collect();
 
@@ -569,16 +663,16 @@ mod reference_tests {
 
     #[test]
     fn scan_refs_ignores_the_entitys_own_id_and_embedded_values() {
-        let entity = json!({"id": "a", "body": "text", "meta": {"x": 1, "y": [1, 2]}});
+        let entity = json!({"smut_id": "a", "body": "text", "meta": {"x": 1, "y": [1, 2]}});
 
         assert_eq!(scan_refs(&entity).count(), 0);
-        assert_eq!(scan_refs(&json!({"id": "a"})).count(), 0);
+        assert_eq!(scan_refs(&json!({"smut_id": "a"})).count(), 0);
     }
 
     #[test]
     fn a_hoisted_declaration_carries_the_label_of_the_entity_holding_the_reference() {
         let (_, declarations) =
-            extract(&json!({"id": "a", "refs": [{"id": "b", "note": {"id": "c"}}]}))
+            extract(&json!({"smut_id": "a", "refs": [{"smut_id": "b", "note": {"smut_id": "c"}}]}))
                 .expect("a nested reference chain is valid");
         let holder = declarations
             .iter()
@@ -615,27 +709,28 @@ mod extract_tests {
 
     #[test]
     fn an_id_only_object_extracts_to_a_pure_reference() {
-        let (replacement, declarations) = extract(&json!({"id": "a"})).expect("id-only is valid");
+        let (replacement, declarations) =
+            extract(&json!({"smut_id": "a"})).expect("id-only is valid");
 
-        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(replacement, json!({"smut_id": "a"}));
         assert!(declarations.is_empty());
     }
 
     #[test]
     fn a_declaration_hoists_and_its_occurrence_becomes_a_reference() {
         let (replacement, declarations) =
-            extract(&json!({"id": "a", "refs": [{"id": "b", "note": {"id": "c", "body": "x"}}]}))
+            extract(&json!({"smut_id": "a", "refs": [{"smut_id": "b", "note": {"smut_id": "c", "body": "x"}}]}))
                 .expect("a nested declaration chain is valid");
 
-        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(replacement, json!({"smut_id": "a"}));
         assert_eq!(ids(&declarations), vec!["a", "b", "c"]);
         assert_eq!(
             ops(&declarations[0]),
-            vec![("refs".to_owned(), Op::Set(json!([{"id": "b"}])))]
+            vec![("refs".to_owned(), Op::Set(json!([{"smut_id": "b"}])))]
         );
         assert_eq!(
             ops(&declarations[1]),
-            vec![("note".to_owned(), Op::Set(json!({"id": "c"})))]
+            vec![("note".to_owned(), Op::Set(json!({"smut_id": "c"})))]
         );
         assert_eq!(
             ops(&declarations[2]),
@@ -646,7 +741,7 @@ mod extract_tests {
     #[test]
     fn a_parent_is_recorded_before_the_declarations_it_contains() {
         let (_, declarations) = extract(
-            &json!({"id": "a", "zeta": {"id": "c", "body": 3}, "alpha": {"id": "b", "body": 2}}),
+            &json!({"smut_id": "a", "zeta": {"smut_id": "c", "body": 3}, "alpha": {"smut_id": "b", "body": 2}}),
         )
         .expect("siblings are valid");
 
@@ -656,14 +751,14 @@ mod extract_tests {
     #[test]
     fn an_embedded_object_without_an_id_stays_embedded() {
         let (replacement, declarations) = extract(&json!({
-            "id": "a",
-            "meta": {"status": "x", "list": [1, {"id": "b", "body": "y"}]},
+            "smut_id": "a",
+            "meta": {"status": "x", "list": [1, {"smut_id": "b", "body": "y"}]},
         }))
         .expect("an embedded value is valid");
 
         assert_eq!(
             replacement,
-            json!({"id": "a"}),
+            json!({"smut_id": "a"}),
             "the hoisted occurrence stands in as an id-only reference"
         );
         assert_eq!(ids(&declarations), vec!["a", "b"]);
@@ -671,7 +766,7 @@ mod extract_tests {
             ops(&declarations[0]),
             vec![(
                 "meta".to_owned(),
-                Op::Set(json!({"status": "x", "list": [1, {"id": "b"}]}))
+                Op::Set(json!({"status": "x", "list": [1, {"smut_id": "b"}]}))
             )]
         );
     }
@@ -679,17 +774,17 @@ mod extract_tests {
     #[test]
     fn arrays_are_replaced_wholesale_including_inside_arrays() {
         let (replacement, declarations) =
-            extract(&json!({"id": "a", "x": [[{"id": "b", "body": 1}], "plain"]}))
+            extract(&json!({"smut_id": "a", "x": [[{"smut_id": "b", "body": 1}], "plain"]}))
                 .expect("an array of arrays is valid");
 
-        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(replacement, json!({"smut_id": "a"}));
         assert_eq!(ids(&declarations), vec!["a", "b"]);
     }
 
     #[test]
     fn the_drop_sentinel_holds_only_as_a_top_level_field_value() {
         let (replacement, declarations) = extract(&json!({
-            "id": "a",
+            "smut_id": "a",
             "status": "DROP",
             "meta": {"status": "DROP", "list": ["DROP"]},
         }))
@@ -697,7 +792,7 @@ mod extract_tests {
 
         assert_eq!(
             replacement,
-            json!({"id": "a"}),
+            json!({"smut_id": "a"}),
             "a declaration's occurrence is always the id-only reference"
         );
         assert_eq!(
@@ -714,10 +809,10 @@ mod extract_tests {
 
     #[test]
     fn a_declaration_whose_only_field_is_a_drop_is_still_a_declaration() {
-        let (replacement, declarations) = extract(&json!({"id": "a", "status": "DROP"}))
+        let (replacement, declarations) = extract(&json!({"smut_id": "a", "status": "DROP"}))
             .expect("a drop-only declaration is valid");
 
-        assert_eq!(replacement, json!({"id": "a"}));
+        assert_eq!(replacement, json!({"smut_id": "a"}));
         assert_eq!(ids(&declarations), vec!["a"]);
         assert_eq!(ops(&declarations[0]), vec![("status".to_owned(), Op::Drop)]);
     }
@@ -734,11 +829,17 @@ mod extract_tests {
     #[test]
     fn an_invalid_id_is_rejected_wherever_it_appears() {
         for (value, found) in [
-            (json!({"id": null}), "null"),
-            (json!({"id": 5}), "a number"),
-            (json!({"id": ""}), "an empty string"),
-            (json!({"id": "a", "meta": {"id": false}}), "a boolean"),
-            (json!({"id": "a", "list": [{"id": ["x"]}]}), "an array"),
+            (json!({"smut_id": null}), "null"),
+            (json!({"smut_id": 5}), "a number"),
+            (json!({"smut_id": ""}), "an empty string"),
+            (
+                json!({"smut_id": "a", "meta": {"smut_id": false}}),
+                "a boolean",
+            ),
+            (
+                json!({"smut_id": "a", "list": [{"smut_id": ["x"]}]}),
+                "an array",
+            ),
         ] {
             assert_eq!(
                 extract(&value),

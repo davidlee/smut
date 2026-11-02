@@ -25,7 +25,7 @@ use crate::store::fs;
 use crate::store::{INDEX_BASENAME, JOURNAL_STATES, LOCK_BASENAME, MANIFEST_BASENAME, read_entry};
 
 /// The index format this build reads and writes.
-pub const FORMAT_VERSION: u64 = 1;
+pub const FORMAT_VERSION: u64 = 2;
 
 /// The temporary suffix §4.1 reserves, whether or not the protocol generates the
 /// name: `fs::is_protocol_temporary` is the narrower namespace it writes.
@@ -239,7 +239,7 @@ mod tests {
 
         assert_eq!(
             bytes,
-            "{\n  \"format_version\": 1,\n  \"objects\": {\n    \"alpha\": \"Ab3.json\",\n    \"beta\": \"Zq7.json\"\n  }\n}\n"
+            "{\n  \"format_version\": 2,\n  \"objects\": {\n    \"alpha\": \"Ab3.json\",\n    \"beta\": \"Zq7.json\"\n  }\n}\n"
         );
         assert_eq!(
             Index::parse(bytes.as_bytes()).expect("its own bytes"),
@@ -252,7 +252,7 @@ mod tests {
         let index = Index::empty();
         let bytes = index.to_bytes();
 
-        assert_eq!(bytes, "{\n  \"format_version\": 1,\n  \"objects\": {}\n}\n");
+        assert_eq!(bytes, "{\n  \"format_version\": 2,\n  \"objects\": {}\n}\n");
         assert_eq!(
             Index::parse(bytes.as_bytes()).expect("its own bytes"),
             index
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn an_unknown_format_version_is_refused_and_never_migrated() {
         for document in [
-            r#"{"format_version":2,"objects":{}}"#,
+            r#"{"format_version":1,"objects":{}}"#,
             r#"{"format_version":0,"objects":{}}"#,
             r#"{"format_version":"1","objects":{}}"#,
             r#"{"format_version":1.5,"objects":{}}"#,
@@ -285,10 +285,10 @@ mod tests {
             "not json",
             "[]",
             "{}",
-            r#"{"format_version":1}"#,
-            r#"{"format_version":1,"objects":[]}"#,
-            r#"{"format_version":1,"objects":{"alpha":1}}"#,
-            r#"{"format_version":1,"objects":{"":"Ab3.json"}}"#,
+            r#"{"format_version":2}"#,
+            r#"{"format_version":2,"objects":[]}"#,
+            r#"{"format_version":2,"objects":{"alpha":1}}"#,
+            r#"{"format_version":2,"objects":{"":"Ab3.json"}}"#,
         ] {
             let error = Index::parse(document.as_bytes()).expect_err(document);
 
@@ -318,7 +318,7 @@ mod tests {
         );
 
         let read = Index::parse(
-            br#"{"format_version":1,"objects":{"alpha":"Ab3.json","beta":"Ab3.json"}}"#,
+            br#"{"format_version":2,"objects":{"alpha":"Ab3.json","beta":"Ab3.json"}}"#,
         )
         .expect_err("the same duplicate came from the document");
 
@@ -355,7 +355,7 @@ mod tests {
             assert!(written.to_string().contains(basename), "{written}");
 
             let document = format!(
-                r#"{{"format_version":1,"objects":{{"alpha":"{}"}}}}"#,
+                r#"{{"format_version":2,"objects":{{"alpha":"{}"}}}}"#,
                 basename.replace('\\', "\\\\")
             );
             let read = Index::parse(document.as_bytes()).expect_err(basename);

@@ -439,7 +439,9 @@ mod tests {
         entities
             .iter()
             .map(|entity| {
-                let id = entity["id"].as_str().expect("every fixture names its id");
+                let id = entity["smut_id"]
+                    .as_str()
+                    .expect("every fixture names its smut_id");
                 (Id::new(id), entity.clone())
             })
             .collect()
@@ -448,7 +450,7 @@ mod tests {
     /// `count` entities named `id-000`, `id-001`, …
     fn numbered(count: u32) -> Entities {
         let entities: Vec<Value> = (0..count)
-            .map(|index| json!({"id": format!("id-{index:03}")}))
+            .map(|index| json!({"smut_id": format!("id-{index:03}")}))
             .collect();
 
         store(&entities)
@@ -472,9 +474,9 @@ mod tests {
 
     fn sample() -> Entities {
         store(&[
-            json!({"id": "a", "title": "alpha", "priority": 3}),
-            json!({"id": "b", "title": "beta", "priority": 1}),
-            json!({"id": "c", "title": "gamma", "priority": 2}),
+            json!({"smut_id": "a", "title": "alpha", "priority": 3}),
+            json!({"smut_id": "b", "title": "beta", "priority": 1}),
+            json!({"smut_id": "c", "title": "gamma", "priority": 2}),
         ])
     }
 
@@ -612,7 +614,7 @@ mod tests {
 
     #[test]
     fn an_unsortable_order_value_is_rejected_through_select() {
-        let store = store(&[json!({"id": "a", "tags": ["storage"]})]);
+        let store = store(&[json!({"smut_id": "a", "tags": ["storage"]})]);
         let spec = parse(json!({"order": [{"field": "tags"}]}));
 
         assert_eq!(
@@ -625,22 +627,22 @@ mod tests {
     }
 
     #[test]
-    fn project_gives_id_only_for_an_empty_select_and_naming_id_is_a_no_op() {
-        let store = store(&[json!({"id": "a", "title": "alpha", "body": "text"})]);
+    fn project_gives_smut_id_only_for_an_empty_select_and_naming_smut_id_is_a_no_op() {
+        let store = store(&[json!({"smut_id": "a", "title": "alpha", "body": "text"})]);
 
-        for fields in [json!([]), json!(["id"])] {
+        for fields in [json!([]), json!(["smut_id"])] {
             let spec = parse(json!({"select": fields}));
             let selection = select(&store, &spec).expect("nothing to sort");
 
-            assert_eq!(projected(&selection), [json!({"id": "a"})]);
+            assert_eq!(projected(&selection), [json!({"smut_id": "a"})]);
         }
 
-        let spec = parse(json!({"select": ["title", "id"]}));
+        let spec = parse(json!({"select": ["title", "smut_id"]}));
         let selection = select(&store, &spec).expect("nothing to sort");
 
         assert_eq!(
             projected(&selection),
-            [json!({"id": "a", "title": "alpha"})]
+            [json!({"smut_id": "a", "title": "alpha"})]
         );
     }
 
@@ -651,7 +653,7 @@ mod tests {
         let selection = select(&store, &spec).expect("nothing to sort");
         let objects = projected(&selection);
 
-        assert_eq!(objects, [json!({"id": "a", "title": "alpha"})]);
+        assert_eq!(objects, [json!({"smut_id": "a", "title": "alpha"})]);
         assert!(
             !objects[0]
                 .as_object()
@@ -662,7 +664,7 @@ mod tests {
 
     #[test]
     fn the_select_set_never_determines_the_objects_key_order() {
-        let store = store(&[json!({"id": "a", "zebra": 1, "alpha": 2, "title": "t"})]);
+        let store = store(&[json!({"smut_id": "a", "zebra": 1, "alpha": 2, "title": "t"})]);
         let spec = parse(json!({"select": ["zebra", "alpha"]}));
         let selection = select(&store, &spec).expect("nothing to sort");
         let objects = projected(&selection);
@@ -673,21 +675,21 @@ mod tests {
             .map(String::as_str)
             .collect();
 
-        assert_eq!(keys, ["alpha", "id", "zebra"]);
+        assert_eq!(keys, ["alpha", "smut_id", "zebra"]);
     }
 
     #[test]
     fn projection_is_flat_and_never_inlines_a_referenced_entity() {
         let store = store(&[
-            json!({"id": "a", "title": "alpha", "questions": [{"id": "b"}]}),
-            json!({"id": "b", "title": "beta"}),
+            json!({"smut_id": "a", "title": "alpha", "questions": [{"smut_id": "b"}]}),
+            json!({"smut_id": "b", "title": "beta"}),
         ]);
         let spec = parse(json!({"from": "a"}));
         let selection = select(&store, &spec).expect("nothing to sort");
 
         assert_eq!(
             projected(&selection),
-            [json!({"id": "a", "title": "alpha", "questions": [{"id": "b"}]})]
+            [json!({"smut_id": "a", "title": "alpha", "questions": [{"smut_id": "b"}]})]
         );
     }
 
@@ -700,7 +702,7 @@ mod tests {
         assert_eq!(
             envelope(&selection),
             json!({
-                "objects": [{"id": "a", "title": "alpha", "priority": 3}],
+                "objects": [{"smut_id": "a", "title": "alpha", "priority": 3}],
                 "missing": ["gone"],
                 "dangling": [],
                 "truncated": false,
@@ -754,9 +756,9 @@ mod tests {
         // the returned objects in *result* order, not a second account of the
         // walk.
         let store = store(&[
-            json!({"id": "a", "next": {"id": "c"}, "title": "Zulu"}),
-            json!({"id": "b", "next": {"id": "c"}, "title": "Able"}),
-            json!({"id": "c", "title": "Middle"}),
+            json!({"smut_id": "a", "next": {"smut_id": "c"}, "title": "Zulu"}),
+            json!({"smut_id": "b", "next": {"smut_id": "c"}, "title": "Able"}),
+            json!({"smut_id": "c", "title": "Middle"}),
         ]);
         let spec = parse(json!({
             "from": ["a", "b"],

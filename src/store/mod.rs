@@ -504,13 +504,13 @@ fn failure(step: &'static str, path: &Path, source: io::Error) -> StoreError {
 
 fn describe(id: Option<&Value>) -> String {
     match id {
-        None => "no `id`".to_owned(),
+        None => "nothing".to_owned(),
         Some(value) => value.to_string(),
     }
 }
 
 /// Refuse a loaded entity that `scan_refs` could not read: every object in it
-/// that carries `id` must carry a nonempty string (§3, DEC-005).
+/// that carries `smut_id` must carry a nonempty string (§3, DEC-005).
 ///
 /// This establishes `scan_refs`' precondition — documented there as "a
 /// validated, normalised entity" — once, at the load boundary, instead of
@@ -518,8 +518,8 @@ fn describe(id: Option<&Value>) -> String {
 /// malformed identity therefore reaches no caller of `scan_refs` at all: it is
 /// refused as `Corrupt`, with the path to the offending member, by the load
 /// that met it. The walk does not check reference targets, repair anything or
-/// treat `id` as data to validate; it asks `reference_id` for the one identity
-/// rule and reports what that rule rejects.
+/// treat `smut_id` as data to validate; it asks `reference_id` for the one
+/// identity rule and reports what that rule rejects.
 ///
 /// Every object value and every array element is descended into, including
 /// through an object whose own identity is valid, because a nested entity node
@@ -725,7 +725,7 @@ mod tests {
 
     #[test]
     fn a_parsed_entity_with_a_valid_identity_is_accepted() {
-        let value: Value = serde_json::from_str(r#"{"id":"alpha","body":"a thought"}"#)
+        let value: Value = serde_json::from_str(r#"{"smut_id":"alpha","body":"a thought"}"#)
             .expect("the fixture parses");
 
         assert!(
@@ -739,7 +739,7 @@ mod tests {
         // Identities at depth, arrays of identity-bearing and identity-free
         // objects, and scalars beside them: the shapes a load must accept.
         let value: Value = serde_json::from_str(
-            r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":"deeper"}},"tags":[{"id":"one"},{"name":"two"},{"id":"three","nested":[{"id":"four"},7,"a",null,true]}]}"#,
+            r#"{"smut_id":"alpha","payload":{"smut_id":"opaque","meta":{"smut_id":"deeper"}},"tags":[{"smut_id":"one"},{"name":"two"},{"smut_id":"three","nested":[{"smut_id":"four"},7,"a",null,true]}]}"#,
         )
         .expect("the fixture parses");
 
@@ -751,7 +751,10 @@ mod tests {
 
     #[test]
     fn a_whitespace_only_identity_is_still_a_nonempty_string() {
-        for fixture in [r#"{"id":" "}"#, r#"{"id":"alpha","payload":{"id":"\t"}}"#] {
+        for fixture in [
+            r#"{"smut_id":" "}"#,
+            r#"{"smut_id":"alpha","payload":{"smut_id":"\t"}}"#,
+        ] {
             let value: Value = serde_json::from_str(fixture).expect("the fixture parses");
 
             assert!(
@@ -764,7 +767,7 @@ mod tests {
     #[test]
     fn scalars_below_the_root_are_ignored() {
         let value: Value = serde_json::from_str(
-            r#"{"id":"alpha","n":1,"f":1.5,"t":true,"z":null,"s":"x","arr":[1,"two",null,false],"deep":[[[{"note":"no identity here"}]]]}"#,
+            r#"{"smut_id":"alpha","n":1,"f":1.5,"t":true,"z":null,"s":"x","arr":[1,"two",null,false],"deep":[[[{"note":"no identity here"}]]]}"#,
         )
         .expect("the fixture parses");
 
@@ -779,11 +782,11 @@ mod tests {
         // One path, five shapes: the refusal is the same rule whatever stands
         // where an identity belongs.
         for identity in ["null", r#""""#, "0", "[]", "{}"] {
-            let fixture = format!(r#"{{"id":"alpha","payload":{{"id":{identity}}}}}"#);
+            let fixture = format!(r#"{{"smut_id":"alpha","payload":{{"smut_id":{identity}}}}}"#);
 
             assert_eq!(
                 refusal_reason(&fixture),
-                r#"identity at $["payload"]["id"] must be a nonempty string"#,
+                r#"identity at $["payload"]["smut_id"] must be a nonempty string"#,
                 "the identity {identity} is malformed"
             );
         }
@@ -792,8 +795,8 @@ mod tests {
     #[test]
     fn an_identity_inside_an_array_reports_its_position() {
         assert_eq!(
-            refusal_reason(r#"{"id":"alpha","payload":{"tags":["a","b",{"id":""}]}}"#),
-            r#"identity at $["payload"]["tags"][2]["id"] must be a nonempty string"#
+            refusal_reason(r#"{"smut_id":"alpha","payload":{"tags":["a","b",{"smut_id":""}]}}"#),
+            r#"identity at $["payload"]["tags"][2]["smut_id"] must be a nonempty string"#
         );
     }
 
@@ -801,10 +804,10 @@ mod tests {
     fn the_root_object_is_walked_too() {
         // `Store::load`'s own root check owns this case in the real loader, but
         // the walk is handed the root object and validates it like any other.
-        for fixture in [r#"{"id":""}"#, r#"{"id":null}"#] {
+        for fixture in [r#"{"smut_id":""}"#, r#"{"smut_id":null}"#] {
             assert_eq!(
                 refusal_reason(fixture),
-                r#"identity at $["id"] must be a nonempty string"#,
+                r#"identity at $["smut_id"] must be a nonempty string"#,
                 "{fixture}"
             );
         }
@@ -812,12 +815,14 @@ mod tests {
 
     #[test]
     fn a_valid_reference_shaped_object_does_not_stop_the_walk() {
-        // `{"id":"opaque"}` is what `reference_id` reads as an entity node, so
+        // `{"smut_id":"opaque"}` is what `reference_id` reads as an entity node, so
         // it is the shape a walk could mistake for a leaf. The malformed
         // identity deeper inside is what must be refused.
         assert_eq!(
-            refusal_reason(r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":null}}}"#),
-            r#"identity at $["payload"]["meta"]["id"] must be a nonempty string"#
+            refusal_reason(
+                r#"{"smut_id":"alpha","payload":{"smut_id":"opaque","meta":{"smut_id":null}}}"#,
+            ),
+            r#"identity at $["payload"]["meta"]["smut_id"] must be a nonempty string"#
         );
     }
 
@@ -828,9 +833,9 @@ mod tests {
         // object components and the numeric array component are pinned verbatim.
         assert_eq!(
             refusal_reason(
-                r#"{"id":"alpha",".":{"[x]":{"a\"b":{"a\\b":{"\u0001":{"":[{"id":null}]}}}}}}"#,
+                r#"{"smut_id":"alpha",".":{"[x]":{"a\"b":{"a\\b":{"\u0001":{"":[{"smut_id":null}]}}}}}}"#,
             ),
-            r#"identity at $["."]["[x]"]["a\"b"]["a\\b"]["\u0001"][""][0]["id"] must be a nonempty string"#
+            r#"identity at $["."]["[x]"]["a\"b"]["a\\b"]["\u0001"][""][0]["smut_id"] must be a nonempty string"#
         );
     }
 
@@ -839,16 +844,18 @@ mod tests {
         // Both members are malformed, and the fixture writes `zzz` first, so only
         // the map's lexical iteration order can report `aaa`.
         assert_eq!(
-            refusal_reason(r#"{"id":"alpha","zzz":{"id":""},"aaa":{"id":[]}}"#),
-            r#"identity at $["aaa"]["id"] must be a nonempty string"#
+            refusal_reason(r#"{"smut_id":"alpha","zzz":{"smut_id":""},"aaa":{"smut_id":[]}}"#),
+            r#"identity at $["aaa"]["smut_id"] must be a nonempty string"#
         );
     }
 
     #[test]
     fn the_earliest_array_position_reports_the_identity() {
         assert_eq!(
-            refusal_reason(r#"{"id":"alpha","tags":["a",{"id":null},"b",{"id":""}]}"#),
-            r#"identity at $["tags"][1]["id"] must be a nonempty string"#
+            refusal_reason(
+                r#"{"smut_id":"alpha","tags":["a",{"smut_id":null},"b",{"smut_id":""}]}"#
+            ),
+            r#"identity at $["tags"][1]["smut_id"] must be a nonempty string"#
         );
     }
 
@@ -857,7 +864,7 @@ mod tests {
         // Forty alternating wrappers: the reported path carries every component
         // the walk descended through, which a path built along the walk gives and
         // a subtree rebuilt at the failure would not.
-        let mut fixture = String::from(r#"{"id":null}"#);
+        let mut fixture = String::from(r#"{"smut_id":null}"#);
         let mut steps: Vec<&str> = Vec::new();
         for depth in 0..40 {
             if depth % 2 == 0 {
@@ -873,7 +880,7 @@ mod tests {
         for step in steps.iter().rev() {
             path.push_str(step);
         }
-        path.push_str(r#"["id"]"#);
+        path.push_str(r#"["smut_id"]"#);
 
         assert_eq!(
             refusal_reason(&fixture),
@@ -887,13 +894,13 @@ mod tests {
         // walk judge the same object: a walk that kept its own rule would drift
         // away from `reference_id` on at least one row.
         let candidates = [
-            r#"{"id":"ok"}"#,
-            r#"{"id":" "}"#,
-            r#"{"id":""}"#,
-            r#"{"id":null}"#,
-            r#"{"id":0}"#,
-            r#"{"id":[]}"#,
-            r#"{"id":{}}"#,
+            r#"{"smut_id":"ok"}"#,
+            r#"{"smut_id":" "}"#,
+            r#"{"smut_id":""}"#,
+            r#"{"smut_id":null}"#,
+            r#"{"smut_id":0}"#,
+            r#"{"smut_id":[]}"#,
+            r#"{"smut_id":{}}"#,
             "{}",
             r#"{"other":1}"#,
         ];
@@ -920,10 +927,12 @@ mod tests {
         // here: every identity in this tree is a nonempty string.
         let items: Vec<String> = (0..200)
             .map(|index| {
-                format!(r#"{{"id":"e{index}","tags":[{{"id":"t{index}"}},{{"note":"n{index}"}}]}}"#)
+                format!(
+                    r#"{{"smut_id":"e{index}","tags":[{{"smut_id":"t{index}"}},{{"note":"n{index}"}}]}}"#
+                )
             })
             .collect();
-        let fixture = format!(r#"{{"id":"alpha","items":[{}]}}"#, items.join(","));
+        let fixture = format!(r#"{{"smut_id":"alpha","items":[{}]}}"#, items.join(","));
         let value: Value = serde_json::from_str(&fixture).expect("the fixture parses");
 
         assert!(
@@ -978,7 +987,7 @@ mod store_tests {
     use crate::id::Id;
 
     /// One entity and its index entry: the smallest healthy store.
-    const ENTITY: &str = "{\"id\":\"alpha\",\"body\":\"a thought\"}";
+    const ENTITY: &str = "{\"smut_id\":\"alpha\",\"body\":\"a thought\"}";
 
     fn fresh_index() -> String {
         Index::new([(Id::new("alpha"), "Ab3.json".to_owned())])
@@ -1213,7 +1222,7 @@ mod store_tests {
         let scratch = Scratch::new();
         scratch.create_store();
         scratch.write(INDEX_BASENAME, &fresh_index());
-        scratch.write("Ab3.json", "{\"id\":\"beta\"}");
+        scratch.write("Ab3.json", "{\"smut_id\":\"beta\"}");
 
         let error = scratch.store().load().expect_err("the file says beta");
 
@@ -1345,7 +1354,7 @@ mod store_tests {
 
     fn one_put() -> WriteSet {
         WriteSet {
-            put: vec![serde_json::json!({"id": "alpha"})],
+            put: vec![serde_json::json!({"smut_id": "alpha"})],
             remove: Vec::new(),
         }
     }
@@ -1423,7 +1432,7 @@ mod store_tests {
         let snapshot = store.load().expect("the committed store");
         assert_eq!(
             snapshot.entities()[&Id::new("alpha")],
-            serde_json::json!({"id": "alpha"}),
+            serde_json::json!({"smut_id": "alpha"}),
             "the put replaced the stored entity"
         );
         assert_eq!(

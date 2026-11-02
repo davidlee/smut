@@ -505,12 +505,12 @@ mod tests {
     #[test]
     fn a_declaration_operand_is_parsed_before_the_store_is_touched() {
         let Request::Declare(command) =
-            request(parse_of(&["declare", "{\"id\":\"a\"}"]).expect("a valid declaration"))
+            request(parse_of(&["declare", "{\"smut_id\":\"a\"}"]).expect("a valid declaration"))
         else {
             panic!("declare is a declaration");
         };
 
-        assert_eq!(command.input, json!({"id": "a"}));
+        assert_eq!(command.input, json!({"smut_id": "a"}));
         assert!(!command.compact);
     }
 
@@ -528,29 +528,29 @@ mod tests {
     #[test]
     fn declare_reads_stdin_when_the_operand_is_a_dash() {
         let Request::Declare(command) =
-            request(parse_with(&["declare", "-"], "{\"id\":\"a\"}", true).expect("stdin"))
+            request(parse_with(&["declare", "-"], "{\"smut_id\":\"a\"}", true).expect("stdin"))
         else {
             panic!("declare is a declaration");
         };
 
-        assert_eq!(command.input, json!({"id": "a"}));
+        assert_eq!(command.input, json!({"smut_id": "a"}));
     }
 
     #[test]
     fn declare_reads_stdin_when_the_operand_is_absent_and_stdin_is_a_pipe() {
         let Request::Declare(command) =
-            request(parse_with(&["declare"], "{\"id\":\"a\"}", false).expect("stdin"))
+            request(parse_with(&["declare"], "{\"smut_id\":\"a\"}", false).expect("stdin"))
         else {
             panic!("declare is a declaration");
         };
 
-        assert_eq!(command.input, json!({"id": "a"}));
+        assert_eq!(command.input, json!({"smut_id": "a"}));
     }
 
     #[test]
     fn a_missing_operand_on_a_terminal_is_refused() {
         assert_eq!(
-            rejection(parse_with(&["declare"], "{\"id\":\"a\"}", true)),
+            rejection(parse_with(&["declare"], "{\"smut_id\":\"a\"}", true)),
             Reject::MissingInput
         );
     }
@@ -558,9 +558,12 @@ mod tests {
     #[test]
     fn a_duplicate_key_is_refused_while_the_operand_is_parsed() {
         assert_eq!(
-            rejection(parse_of(&["declare", "{\"id\":\"a\",\"id\":\"b\"}"])),
+            rejection(parse_of(&[
+                "declare",
+                "{\"smut_id\":\"a\",\"smut_id\":\"b\"}"
+            ])),
             Reject::DuplicateKey {
-                key: "id".to_owned()
+                key: "smut_id".to_owned()
             }
         );
     }
@@ -568,7 +571,7 @@ mod tests {
     #[test]
     fn trailing_input_is_refused_while_the_operand_is_parsed() {
         assert_eq!(
-            rejection(parse_of(&["declare", "{\"id\":\"a\"} {}"])),
+            rejection(parse_of(&["declare", "{\"smut_id\":\"a\"} {}"])),
             Reject::TrailingInput
         );
     }
