@@ -1,0 +1,268 @@
+id    = 32
+slug  = "phase-03-loader-code-and-correctness-review-over-9829de0cfae50f-plus-9281f64"
+title = "PHASE-03 loader — code and correctness review over 9829de0..cfae50f plus 9281f64"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Independent per-phase review of SL-008 PHASE-03 over `9829de0..cfae50f` plus the out-of-range `9281f64`, conducted by a fresh `reviewer` against EX-1..EX-8, design §2/§3/§4/§7 and RV-029 F-5/F-12/F-13/F-14/F-16, with a hunting list aimed at the five silent failure modes. Eight findings raised (1 major, 3 minor, 4 nit), none a blocker; seven disposed `fix-now` and discharged in `1ced7c8`, one (F-6) disposed `follow-up` to IMP-020 as outside the phase's files. F-1 was the substantive catch and it failed an exit criterion: the binary layer was kind-blind, so every kind's load resolved the shipped conventions set. F-2 was the phase's own new tie-break rule left unreachable by any fixture. The reviewer recorded five candidates that did not survive verification so the seat would not re-derive them, and corrected the seat's own suspicion about a stale doc comment. Nothing concluded on the reviewer's verdict alone: the seat re-ran the gate (exit 0, 425/437, zero warnings), `verify-vt` (PHASE-03 VT-1 PASS) and inspected the corrective diff for every finding. As with RV-030, raise, dispose and verify were all the seat's turns because the reviewer returns prose only; the audit's pre-close review should read this ledger rather than trust it."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-008"
+phase = "PHASE-03"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "load(roots, kind) appends the shipped conventions sets to every kind"
+detail = """
+`src/conventions.rs:349-374` + `:411-413`. `binary_layer()` takes no `kind`; `SHIPPED: [(&str, &str); 1]` is `("hygiene", …)`; `load` appends it unconditionally. So `load(&roots, "shapes")` returns a `Layer::Binary` entry named `hygiene` out of a directory that never held it, and `set_in_force(&shapes_entries, "hygiene")` resolves a conventions set for a shapes lookup.
+
+This contradicts `load`'s own doc at `:399-400` ("Nothing in it is specific to the `conventions` kind: the kind is a parameter, so the same loader reads every kind from every layer"), **EX-1's third clause**, and the discharge of RV-029 F-14. The genericity test cannot see it: `a_second_kind_uses_the_same_loader` (`:1868`) computes `names` over all entries at `:1878-1882` then filters to `Layer::Project` at `:1887-1890`, so it asserts only what the file layer contributed — the leak is untestable by it in either direction.
+
+Latent today only because EX-8 forbids a caller this phase, which is why it is not a blocker. It is an exit criterion not met as written.
+
+Raised from independent review run `37a0a516` over `9829de0..cfae50f` + `9281f64`."""
+disposition = "fix-now"
+response = """
+Upheld, and it is the one finding here that changes behaviour rather than prose. EX-1's third clause says the kind is a parameter so nothing in the function is specific to `conventions`; the binary layer makes that false, and it makes `set_in_force` able to resolve a conventions set inside any other kind's lookup. Latent only because EX-8 forbids a caller this phase — which is exactly the sort of thing that stops being latent in PHASE-04.
+
+Correction taken: make the binary layer kind-aware, so a kind nothing ships contributes no `Layer::Binary` entries, and close the hole in the genericity test with an assertion that a second-kind load carries **no** binary entry. The doc sentence at `:399-400` is then true as written rather than needing narrowing."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Upheld, and it is the one finding here that changes behaviour rather than prose. EX-1's third clause says the kind is a parameter so nothing in the function is specific to `conventions`; the binary layer makes that false, and it makes `set_in_force` able to resolve a conventions set inside any other kind's lookup. Latent only because EX-8 forbids a caller this phase — which is exactly the sort of thing that stops being latent in PHASE-04.
+
+Correction taken: make the binary layer kind-aware, so a kind nothing ships contributes no `Layer::Binary` entries, and close the hole in the genericity test with an assertion that a second-kind load carries **no** binary entry. The doc sentence at `:399-400` is then true as written rather than needing narrowing."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Discharged in `1ced7c8`. `SHIPPED_KIND` + `shipped(kind)` (`:207-221`) return the shipped table only for `conventions` and `&[]` otherwise; `binary_layer(kind)` and `load` carry the kind through, and `listing`/`set_named` pass `SHIPPED_KIND` explicitly so those two call sites state their assumption rather than inheriting it. `conventions` is byte-identical — gate green with the shipped-set rows unchanged, and `SHIPPED`'s shape preserved because `main.rs` indexes it.
+
+The red was observed first and it is the best evidence in this phase: `[Some("one"), Some("hygiene")]` — the leak named in the failure message rather than argued about. The pre-existing `names`/`project` assertions were left alone and the new assertion is additive, so the genericity test can now fail in the direction it was blind to."""
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The undecodable-name tie-break is unexercised, and EX-4 does not describe it"
+detail = """
+`src/conventions.rs:598-603`. The `(None, None)` arm compares raw `file_name()` bytes, justified in the doc at `:588-593` by determinism. Every fixture holds exactly **one** unnameable file (`:2199`, `:2241`), so with one `None` per layer there is nothing for the arm to order. Replacing the arm with `Ordering::Equal` — restoring `read_dir` order for that pair — leaves `just check` green. The arm is a pin nobody can redden, the exact inverse of the standard this charter child applied when it added a sixth negative control because one row "was green on arrival".
+
+Separately: EX-4 says "Sorting is by the decoded name only", and the tie-break is more than that, so the criterion and the code disagree about what exists.
+
+Smallest acceptable correction: one fixture holding two undecodable names in one layer whose raw bytes are not in `read_dir` order, asserting order by `origin.path`. Deleting the arm instead would let EX-4's text govern; the criterion's re-wording is a reconcile item, not this phase's."""
+disposition = "fix-now"
+response = """
+Upheld, and it is the finding I was watching for: the charter child added a sixth negative control because one row "was green on arrival", then left its own new rule in exactly that condition. A tie-break arm no input can reach is not evidence.
+
+Correction taken: a fixture holding two undecodable names in one layer whose raw bytes are not in `read_dir` order, asserting the order by `origin.path` — so an `Ordering::Equal` mutant reddens. EX-4's "by the decoded name only" wording genuinely disagrees with the arm and belongs to reconcile, where this phase's design-text obligations already sit; the plan's criterion text is not the phase's to rewrite mid-flight."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Upheld, and it is the finding I was watching for: the charter child added a sixth negative control because one row "was green on arrival", then left its own new rule in exactly that condition. A tie-break arm no input can reach is not evidence.
+
+Correction taken: a fixture holding two undecodable names in one layer whose raw bytes are not in `read_dir` order, asserting the order by `origin.path` — so an `Ordering::Equal` mutant reddens. EX-4's "by the decoded name only" wording genuinely disagrees with the arm and belongs to reconcile, where this phase's design-text obligations already sit; the plan's criterion text is not the phase's to rewrite mid-flight."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = '''Discharged in `1ced7c8`. A new fixture holds two undecodable names in one layer with the byte-smaller written first, asserted by `origin.path`, so `read_dir` order and the tie-break's order disagree by construction. Mutating the `(None, None)` arm to `Ordering::Equal` reddens it (`zz\xFF` before `aa\xFE` where the assertion wants the reverse), and the arm is confirmed restored to the `file_name()` comparison at `:646-650` — no mutant left in the tree, which is the failure mode a "revert" claim usually hides.'''
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "load's doc claims a filesystem-read monopoly it does not have"
+detail = """
+`src/conventions.rs:379-381`: "This is the only place in this module that reads a filesystem." False twice — `read_layer` (`:464`) performs all three reads (`read_dir` `:470`, `metadata` `:515`, `read` `:544`) and is a separate function, and `project_root` (`:66`) calls `symlink_metadata` in this same module.
+
+This is the class PHASE-03/EX-2 already ruled fair game when it widened `error.rs` ("no criterion otherwise accounts for a doc that contradicts the use").
+
+Smallest acceptable correction: "This is the only entry point that reads a directory; the layer read below it and the root walk above it are the module's other two filesystem calls.""""
+disposition = "fix-now"
+response = """Upheld. "The only place in this module that reads a filesystem" is false against `read_layer`'s three reads and `project_root`'s `symlink_metadata`, and a doc that overstates a monopoly is worse than a doc that understates one — it tells the next reader not to look. Reworded to name the three sites: the root walk above, the directory entry point, the layer read below."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Upheld. "The only place in this module that reads a filesystem" is false against `read_layer`'s three reads and `project_root`'s `symlink_metadata`, and a doc that overstates a monopoly is worse than a doc that understates one — it tells the next reader not to look. Reworded to name the three sites: the root walk above, the directory entry point, the layer read below."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `1ced7c8`. `load`'s doc now names the three filesystem sites — the root walk above, this directory entry point, the layer read below — instead of claiming a monopoly that `read_layer` and `project_root` both broke."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "The entry-level read_dir error channel is silent and nothing names it"
+detail = """
+`src/conventions.rs:491`: `for entry in reading.flatten()`. An `Err` from `ReadDir::next` — a directory mutated between `getdents` calls — yields no `DirEntry`, so no path, so no row and no refusal. The file is neither listed nor failed.
+
+EX-2 owns the *directory*-level class only and no comment claims this one. In a phase whose stated failure class is silence, this is the one place silence is unbought — though it is close to unfixable as a *row*, since there is no path to report, which is why it is minor rather than a defect against EX-2.
+
+Smallest acceptable correction: a comment on `:491` stating that an entry which vanishes mid-iteration is directory churn rather than a set, and is deliberately skipped — so the silence is chosen rather than inherited."""
+disposition = "fix-now"
+response = "Upheld as a comment, since it cannot be a row: an entry that vanishes between `getdents` calls has no path to report, so there is no `Cause` to build and no origin to name. That makes it the one place in this module where silence is unavoidable — which is precisely the reason it must be written down rather than inherited. Comment added at `:491` stating that the skip is directory churn, not a set, and is deliberate."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld as a comment, since it cannot be a row: an entry that vanishes between `getdents` calls has no path to report, so there is no `Cause` to build and no origin to name. That makes it the one place in this module where silence is unavoidable — which is precisely the reason it must be written down rather than inherited. Comment added at `:491` stating that the skip is directory churn, not a set, and is deliberate."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `1ced7c8`, and as a comment rather than a row, because the reviewer was right that it cannot become a row: an entry that vanishes between `getdents` calls yields no `DirEntry`, hence no path, hence no `Cause` and no `Origin` to build one from. The comment above `for entry in reading.flatten()` now says the skip is directory churn rather than a set, and that it is deliberate — the silence is chosen instead of inherited."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "nit"
+title = "Box::leak's justification is false even where the technique is defensible"
+detail = """
+`src/conventions.rs:477-478`. The technique is defensible: one small allocation per failing load, on a path that ends the command's work; the alternative (`step: Cow<'static, str>`) touches every `FileSystem` construction site for no behavioural gain. Not raised as a change request.
+
+The comment's claim "in a process about to exit" is false for the in-process callers this code already has (`an_unreadable_layer_is_an_error` at `:1746`; PHASE-04's `answer` under `main`'s unit tests), and this is the second site in the crate that would need the trick.
+
+Smallest acceptable correction: state the real bound — one leaked allocation per refused load, bounded by the number of failing loads in one process — and name `Cow` as the shape to adopt if a third site appears."""
+disposition = "fix-now"
+response = """Upheld, narrowly: the technique stays, the claim goes. "In a process about to exit" is false for the in-process tests this crate already runs, so the comment asserted the one reassurance that does not hold while omitting the one that does — one leaked allocation per refused load, bounded by the count of failing loads. Correction: restate the real bound and name `Cow<'static, str>` as the shape to adopt if a third site ever needs it, so the next author has the exit ramp instead of a precedent."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Upheld, narrowly: the technique stays, the claim goes. "In a process about to exit" is false for the in-process tests this crate already runs, so the comment asserted the one reassurance that does not hold while omitting the one that does — one leaked allocation per refused load, bounded by the count of failing loads. Correction: restate the real bound and name `Cow<'static, str>` as the shape to adopt if a third site ever needs it, so the next author has the exit ramp instead of a precedent."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Discharged in `1ced7c8`. The false reassurance ("in a process about to exit") is replaced by the real bound — one leaked allocation per refused load, a refusal ending the invocation — with `Cow<'static, str>` named for a third site. The technique was never the finding; the claim that hid its cost was."""
+
+[[finding]]
+id = "F-6"
+status = "answered"
+severity = "nit"
+title = "The mode-000 row's skip announcement is invisible at the gate"
+detail = """
+`src/conventions.rs:1782-1815`. The `Ok` branch asserts nothing and `eprintln!`s its skip; the default harness captures that stream and prints it only on failure or with `--show-output`. A root-run gate therefore reports the test as passing with no evidence and no signal — EN-3's letter ("the test says so in its own message") but not its purpose.
+
+The class is carried by `an_unreadable_layer_is_an_error`, so this is not worth a fix inside the phase. The one-line remedy, if visibility is wanted, is `--show-output` in the gate's test recipe."""
+disposition = "follow-up"
+response = """
+Accepted as a real visibility defect and deliberately not fixed here. EN-3's purpose was that a skipped unreadable-layer row never silently counts as passing; `eprintln!` under a capturing harness defeats that purpose while satisfying its letter, and the class is only carried today by the sibling row.
+
+Out of this phase's charter (the remedy is the gate's test recipe, not `src/conventions.rs`), so it goes to the backlog rather than being absorbed. Fixing it means either a gate flag or an assertion that fails when the row is skipped for a reason other than running as root — the latter is the honest form, since a skip should be evidence rather than an absence."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Accepted as a real visibility defect and deliberately not fixed here. EN-3's purpose was that a skipped unreadable-layer row never silently counts as passing; `eprintln!` under a capturing harness defeats that purpose while satisfying its letter, and the class is only carried today by the sibling row.
+
+Out of this phase's charter (the remedy is the gate's test recipe, not `src/conventions.rs`), so it goes to the backlog rather than being absorbed. Fixing it means either a gate flag or an assertion that fails when the row is skipped for a reason other than running as root — the latter is the honest form, since a skip should be evidence rather than an absence."""
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "nit"
+title = "The module doc no longer describes the module"
+detail = """
+`src/conventions.rs:1-24` still tells the single-layer print/declare story ("One set ships… a caller who names a set gets that set… there is no store here") and says nothing about three layers, precedence, or the ~760 non-test lines the loader added. PHASE-03 grew the file by ~1100 lines without touching the sentence a reader meets first.
+
+Smallest acceptable correction: one paragraph after the existing one, naming the layer ladder (project, user, binary), precedence as positional, and pointing at `load`/`set_in_force`. Not a restructure."""
+disposition = "fix-now"
+response = "Upheld. The module's opening paragraph still describes a single shipped set with no store — true when it was written, and now the first thing a reader meets on a 2400-line file that loads three layers. A doc that describes the file it used to be is a defect in comprehension, not a nit; adding the paragraph is cheap and this is the moment it is cheap."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld. The module's opening paragraph still describes a single shipped set with no store — true when it was written, and now the first thing a reader meets on a 2400-line file that loads three layers. A doc that describes the file it used to be is a defect in comprehension, not a nit; adding the paragraph is cheap and this is the moment it is cheap."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `1ced7c8`. The module doc gains the layer ladder, precedence as positional order alone, and the pointer to `load`/`set_in_force`. The original paragraph was not rewritten — it is still true of the reader, which is what it describes."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "nit"
+title = "One test's name promises a branch it never reaches"
+detail = """
+`src/conventions.rs:2350`. `a_file_that_cannot_be_read_is_a_failed_row` says "cannot be read", but its fixture is a dangling symlink, which fails at `std::fs::metadata` (`:515`) — not at `std::fs::read` (`:544`). The `fs::read` error branch is reached by no test, and it duplicates `:516-520`'s sentence character for character, so a mutation there is undetectable.
+
+Smallest acceptable correction: factor the two identical blocks into the one `failed_row` call they already are, or rename the test to the branch it actually pins — and if the branches genuinely differ, reach `fs::read`'s with a fixture that opens but cannot be read."""
+disposition = "fix-now"
+response = "Upheld, and it is the sharper kind of nit: the test's name promises `fs::read`'s branch while its dangling-symlink fixture dies at `metadata`, and the two failure blocks are character-for-character identical, so the untested branch is also an undetectable duplication. Corrected by folding the duplicate blocks into the single `failed_row` call they already are, so one sentence has one source and the test's name is answerable. If the branches do differ in intent, the fixture must reach `fs::read` — a file that opens but cannot be read — rather than the name being softened."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld, and it is the sharper kind of nit: the test's name promises `fs::read`'s branch while its dangling-symlink fixture dies at `metadata`, and the two failure blocks are character-for-character identical, so the untested branch is also an undetectable duplication. Corrected by folding the duplicate blocks into the single `failed_row` call they already are, so one sentence has one source and the test's name is answerable. If the branches do differ in intent, the fixture must reach `fs::read` — a file that opens but cannot be read — rather than the name being softened."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `1ced7c8` by folding the duplicate failure blocks into the single `failed_row` call they already were, so the sentence has one source and the test's name is answerable. The `fs::read` branch is no longer an undetectable duplication of the line above it."
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

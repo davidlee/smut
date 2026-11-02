@@ -779,9 +779,49 @@ read.
   `in_progress` flip and the registry write, both the CLI's), another writer's staged
   `README.md` and their untracked `_envrc`/`.quotient/`, and `doc(sl-010)`'s uncommitted
   `.doctrine/slice/010/plan.{toml,md}`. None was staged or committed.
-- **PHASE-03 stays `in_progress`.** Green, committed and delta-recorded, but the independent
-  code/correctness review runs over this diff before the phase concludes — on this phase the
-  review is the point, per the standing cadence.
+- **PHASE-03 concluded `completed` at `3/5`** — green, committed, delta-recorded, then reviewed
+  before it concluded, per the standing cadence. On this phase the review was the point, and it
+  found an exit criterion the gate could not see.
+
+### PHASE-03 review — RV-032, eight findings, one criterion failed
+
+`9829de0..1ced7c8` plus the out-of-range `9281f64`. Eight findings (1 major, 3 minor, 4 nit),
+none a blocker; seven `fix-now` discharged in `1ced7c8`, F-6 `follow-up` to IMP-020.
+
+- **F-1 (major) — EX-1's third clause was not met.** `binary_layer()` took no `kind`, so the
+  shipped conventions set was appended to *every* kind's load: `load(&roots, "shapes")`
+  yielded a `Layer::Binary` entry named `hygiene`, and `set_in_force` could resolve a
+  conventions set inside a shapes lookup. Latent only because EX-8 forbids a caller this phase.
+  The genericity test was structurally blind to it — it computed `names` over all entries then
+  filtered to `Layer::Project`, so it only ever asserted what the *file* layer contributed.
+  Fixed by `SHIPPED_KIND` + `shipped(kind)` returning `&[]` for a kind nothing ships, with the
+  added assertion reddening first to `[Some("one"), Some("hygiene")]` — the leak named in the
+  failure message rather than argued about.
+- **F-2 — the phase's own new rule was unfalsifiable.** The tie-break `PHASE-03` ruled and
+  logged (raw filename bytes among `None`s) was unreachable: every fixture held exactly one
+  unnameable file, so an `Ordering::Equal` mutant stayed green. Fixed with a two-undecodable
+  fixture whose raw byte order and `read_dir` order disagree by construction. The charter child
+  had applied exactly this standard to someone else's row and added a sixth control for it;
+  the review applied it to the child's own rule.
+- **F-3, F-5 — two docs that claimed what was not true** ("the only place in this module that
+  reads a filesystem"; "in a process about to exit", false for the in-process tests this crate
+  runs). **F-7** the module doc still described the single-set file. **F-8** one test named
+  `fs::read`'s branch while its fixture died at `metadata`, leaving that branch unreached *and*
+  an undetectable duplication of the sentence above it.
+- **F-4 — `reading.flatten()` confirmed as the one unbought silence**, and correctly not
+  turned into a row: no `DirEntry` means no path means no `Cause` to build. The fix is a
+  comment making the skip chosen. The reviewer's reading beat the seat's here.
+- **The reviewer's discipline worth keeping:** it listed five candidates that did *not* survive
+  verification so the seat would not re-derive them, and it corrected the seat — `load`'s doc
+  *had* been rewritten; the false claim was a different sentence.
+
+**Delta, and why it is wider than PHASE-02's.** `9829de0..1ced7c8` necessarily contains three
+foreign `doc(sl-010)` commits (`deef11e`, `75e4dd2`, `90eec66`) because they sit *between* the
+phase's code tip and its corrective — unlike PHASE-02, where narrowing could exclude the
+foreign commit, here no contiguous range covers the code and its review fix without them. The
+engine's own answer applies: they ride along into `slice conformance`'s undeclared cell, where
+they are visible. The narrower `9829de0..cfae50f` was rejected because it would have left
+`1ced7c8` — the commit discharging this phase's review — attributed to nobody.
 
 ## Autonomy log
 
