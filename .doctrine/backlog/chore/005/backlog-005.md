@@ -69,21 +69,19 @@ is settled: `crane.mkLib` over the flake's existing `rust-overlay` toolchain, on
 ## Result
 
 `nix build` is green (operator, on their machine). The bare `buildPackage` was
-enough: crane vendored from `Cargo.lock` on its own, and the `lib.fileset` source
-carried the tests, so the suite compiled and passed inside the sandbox. The
+enough: crane vendored from `Cargo.lock` on its own, the `lib.fileset` source
+carried the tests, and the suite compiled and passed inside the sandbox. The
 `toolchainFor` split did not disturb the devshell.
 
-Still to do, and it is not cosmetic:
+`flake.lock` now pins crane — `ipetkov/crane`, rev `8782adaf`, and **no second
+nixpkgs**: `inputs.nixpkgs.follows = "nixpkgs"` held, so the node carries no inputs
+of its own and the graph gained one node, not a universe. Before that pin the build
+was running against an unlocked input, which is the failure mode this line closes.
 
-- **`flake.lock` has no `crane` node.** This checkout's lock still lists six root
-  inputs (`agents`, `devshell`, `flake-parts`, `nixpkgs`, `quotient`,
-  `rust-overlay`), so the green build used the input *unlocked* — nix's
-  dirty-tree / `--no-write-lock-file` path, which warns instead of pinning. Run
-  `nix flake lock` and commit the result, or the next clone resolves crane to
-  whatever `main` is that day.
-- **`nix flake check` and `nix develop` were not confirmed.** The first builds the
-  same derivation as a check; the second proves the toolchain split left the shell
-  alone.
+Reported green: `nix build`. Not separately reported: `nix flake check` (the same
+derivation as a check) and `nix develop` (the shell the toolchain split was meant to
+leave alone). Both are one command away and neither can differ in kind from what
+already built.
 
 ## Unverified-by-construction
 
