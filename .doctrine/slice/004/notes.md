@@ -870,3 +870,9 @@ commits sit outside it and are not hidden inside the phase's row.
   the diff), and the file is not in design §4's code-impact table. Recorded here and left in
   the conformance cell rather than hidden or reverted: a test fixture naming an entity node
   must move with the key, and the audit should see it.
+- **PHASE-02 · three foreign commits inside the range, logged not hidden.** Observed.
+  `ff7bb05` (SL-006 design), `920ce82` (backlog capture) and `cb5c74d` (SL-006 harvest)
+  landed in this worktree between own commits `658e76e` and `04d7424`. They are another
+  writer's `.doctrine`-only work, were never staged by this run, and no source path is in
+  them (verified); they therefore ride inside `00bc823..14f6a7d` and appear in
+  `slice conformance`'s undeclared cell exactly as this slice's rules require.
