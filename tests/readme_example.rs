@@ -538,7 +538,7 @@ fn the_console_block_carries_the_whole_0_2_example() {
 #[test]
 fn the_readme_names_the_published_release_beside_this_tree() {
     assert!(
-        README.contains("smut 0.2.1"),
+        README.contains("smut 0.2.2"),
         "the release paragraph names the version this tree is"
     );
     assert!(

@@ -25,6 +25,26 @@ never executed and may contradict the binary. Watch for this in the rewrite: use
 exact fence the harness matches (`console`, no space), or the examples stay
 unverified.
 
+## Progress
+
+- **The fence defect is fixed, and the harness was not widened.** The two blocks under
+  `## Getting smut` were ` ``` console ` — the exact spelling `transcripts()`
+  deliberately fails on. They are not transcripts and never could be: the harness
+  runs each `console` line as a `smut` invocation and compares it with the line
+  below, and `cargo install smut` is not one. They are `sh` now, as the pre-0.2
+  build block was. With the parser no longer aborting on them, every remaining
+  transcript runs and matches its recorded output: 9 of 10 tests pass.
+- **The release paragraph is still missing, so the over-claim guard is red.**
+  `the_readme_names_the_published_release_beside_this_tree` fails because the page
+  now names no version at all, while `cargo install smut` sits directly above
+  "That'll get you one self-contained binary" — false while crates.io carries
+  0.1.1. The paragraph that said this plainly is in `git show 09708c8:README.md`
+  (`## Install`). Restoring it is the operator's prose, not an agent's edit.
+- **Its version literal moved with the bump.** `tests/readme_example.rs` now looks
+  for `smut 0.2.2`, matching `tests/cli_contract.rs` (9abe6a5). The literal is right
+  and the test still fails, which is the correct state: the sentence it asks for
+  does not exist yet.
+
 ## Done when
 
 - The rewrite is complete and its examples execute under `tests/readme_example.rs`

@@ -13,13 +13,13 @@ There's no server. `smut` is private, though it can be shared.
 
 ## Getting smut
 
-``` console
+```sh
 cargo install smut
 ```
 
 That'll get you one self-contained binary. Now just tell your agent to:
 
-``` console
+```sh
 smut learn
 ```
 
