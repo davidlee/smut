@@ -536,8 +536,11 @@ fn help_and_version_exit_zero_and_touch_no_store() {
     // literal, because this is the one place a bump that missed a file would be
     // caught (`src/main.rs` and `src/cli.rs` both read `CARGO_PKG_VERSION`).
     // Moved to 0.2.1 when `edges` joined the surface (IMP-018): additive, optional,
-    // and no 0.1 caller sends it, so the bump is a patch.
-    assert_eq!(version.stdout, "smut 0.2.1\n");
+    // and no 0.1 caller sends it, so the bump is a patch. Moved to 0.2.2 for a
+    // release that changes no `src/` at all — the README was rewritten and
+    // `tests/readme_example.rs` grew the harness that executes its transcripts, so
+    // the binary is 0.2.1's binary and the bump is again a patch.
+    assert_eq!(version.stdout, "smut 0.2.2\n");
 
     assert!(
         !scratch.has_store(),
