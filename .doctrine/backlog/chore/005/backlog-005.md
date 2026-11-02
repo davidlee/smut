@@ -78,10 +78,12 @@ nixpkgs**: `inputs.nixpkgs.follows = "nixpkgs"` held, so the node carries no inp
 of its own and the graph gained one node, not a universe. Before that pin the build
 was running against an unlocked input, which is the failure mode this line closes.
 
-Reported green: `nix build`. Not separately reported: `nix flake check` (the same
-derivation as a check) and `nix develop` (the shell the toolchain split was meant to
-leave alone). Both are one command away and neither can differ in kind from what
-already built.
+Reported green: `nix build` (the default package) and `nix build .#smut` (the named
+attribute), so both entry points into the same derivation resolve. Not separately
+reported: `nix flake check`, which builds that derivation as a check, and
+`nix develop`, which is the one thing here nobody has looked at since the toolchain
+split — `rust` is now `(toolchainFor pkgs).override { extensions = …; }`, an
+equivalent expression that has not been evaluated.
 
 ## Unverified-by-construction
 
