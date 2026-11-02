@@ -12,3 +12,13 @@ The shape, and why each part is that way:
 Caveat found after the green build: `flake.lock` still had no `crane` node, so nix used the input unlocked (dirty-tree path). `nix flake lock` must be run and `flake.lock` committed, else the next clone resolves crane to whatever `main` is that day.
 
 CI does not build the package. Every input is publicly fetchable (`ipetkov/crane`, `davidlee/nix-config`, `davidlee/quotient` all 200), so that is a decision, not a credential blocker.
+
+
+## Verified on the operator's machine
+
+`nix build` and `nix build .#smut` compile, and `nix develop --command rustc --version
+--verbose` prints `1.100.0-beta.7`, host `x86_64-unknown-linux-gnu`. That is the same
+beta three ways: the devshell, the crane build, and the CI runner resolving
+`rust-toolchain.toml`'s `channel = "beta"`. One channel, three consumers, no drift.
+
+Not run: `nix flake check` (the same derivation, entered as a check).

@@ -79,11 +79,19 @@ of its own and the graph gained one node, not a universe. Before that pin the bu
 was running against an unlocked input, which is the failure mode this line closes.
 
 Reported green: `nix build` (the default package) and `nix build .#smut` (the named
-attribute), so both entry points into the same derivation resolve. Not separately
-reported: `nix flake check`, which builds that derivation as a check, and
-`nix develop`, which is the one thing here nobody has looked at since the toolchain
-split — `rust` is now `(toolchainFor pkgs).override { extensions = …; }`, an
-equivalent expression that has not been evaluated.
+attribute), so both entry points into the same derivation resolve.
+
+`nix develop` is confirmed too, and it closes the one thing the split could have
+broken: `nix develop --command rustc --version --verbose` prints `1.100.0-beta.7`,
+host `x86_64-unknown-linux-gnu`. That number is the point — the devshell, the crane
+build and the CI runner (through `rust-toolchain.toml`'s `channel = "beta"`) all
+resolve the same channel. The split made the *derivations* differ by role, never the
+channel they come from: the build gets `toolchainFor` bare, the shell gets
+`(toolchainFor pkgs).override { extensions = …; }`, and `rustc` in both is the same
+compiler.
+
+Not run: `nix flake check` — the same derivation, entered as a check. Nothing else in
+this chore is unlooked-at.
 
 ## Unverified-by-construction
 
