@@ -127,7 +127,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 completed
-· bb6a9d2 · PHASE-02 completed · d20a84f
+· bb6a9d2 · PHASE-02 completed · d20a84f · PHASE-03 completed · cd69acd
 
 ### Produced
 
@@ -168,6 +168,15 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   `notes.md` § Implementation run; runtime sheet
   `state/slice/010/phases/phase-02.md`. Delta recorded (`ea8dacb..d20a84f`);
   `verify-vt` PASS for VT-1…VT-3.
+- **PHASE-03** (`cd69acd`) — the guide: `The short form: smut q` before the
+  specification chapter (the one rule, the five token shapes, the twelve flags,
+  the three character consequences, the two warts, the field silence, the boundary
+  that keeps `smut query` the complete surface, and the five hot-path queries);
+  `q` in the `Commands` block and in the no-store sentence; the two-call recipe in
+  both spellings with the JSON one line below each short line; and
+  `tests/fixture.rs`'s token-list runner (`Declared::q`, the grammar-safe `IDS`
+  substitution) executing the traversing, follow and filtering recipes in both
+  spellings. Delta recorded (`f26f923..cd69acd`); `verify-vt` PASS for VT-1/VT-2.
 
 ### Learned
 
@@ -220,6 +229,25 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   the same request produce the same bytes even when both select nothing, so every
   byte-identity test here also asserts the expected ids — the difference between
   proving one engine and proving two empty envelopes.
+- **A guide prose pin is weaker than the section it names.** A guide-wide
+  `contains("smut query …")` can be satisfied by a sentence that drifted into the
+  specification chapter, so PHASE-03's short-form pins extract the section between
+  its heading and `Querying` and assert inside it; a missing heading fails at the
+  extraction with a named reason, not at an index panic.
+- **The recipe and the hot-path examples can collide.** Two of the three printed
+  recipe lines also appear as hot-path examples above the recipe, so an adjacency
+  test that takes the guide-wide first occurrence finds a line with no JSON twin;
+  PHASE-03 searches from the `The two-call recipe` heading.
+- **A contiguous-clause pin moves the prose, not the assertion.** "smut query's,
+  which takes the full specification" does not contain the pinned clause "smut query
+  takes the full specification"; the guide splits the sentence instead of the test
+  loosening it.
+- **The execution guard can be green before the prose.**
+  `the_two_call_recipe_runs_in_both_spellings` passes as soon as the `q` verb exists,
+  because it tests behaviour and not printing; the red that proves the guide is
+  `the_guide_prints_the_token_lines_this_suite_executes` plus the `src/learn.rs`
+  sentence tests. A phase whose suite includes a regression guard should say which
+  test is allowed to be green at the red step.
 
 ### What the hostile pass taught (RV-031)
 
@@ -274,9 +302,18 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-- Slice is `started`; **PHASE-01, PHASE-04 and PHASE-02 are `completed`** (2026-11-03).
-  Next: `/phase-plan` for PHASE-03 — the guide, both spellings, both executed — which
-  PHASE-02 unblocked by making `smut q` run end to end.
+- Slice is `started`; **all four phases are `completed`** (2026-11-03):
+  PHASE-01 `1fb66de`, PHASE-04 `bb6a9d2`, PHASE-02 `d20a84f`, PHASE-03 `cd69acd`.
+  `doctrine slice verify-vt 10` reports every VT PASS (PHASE-01…04). The lifecycle is
+  deliberately **not** moved to `audit` — that is the seat's call, and audit is not
+  this run's charter.
+- **VH-1 is pending** (a human terminal gate, not claimable here): type the five hot-path
+  queries from the guide without a quote — `smut q title~graph`; `smut q IDS status=open
+  --ids`; `smut q session --backlinks part-of --depth 2 --ids`; `smut q type=question
+  status=open --select smut_id,title`; `smut q --has body --order title:desc` — against a
+  populated store, `IDS` being the first call's id list.
+- **Next:** the seat decides on audit. Nothing in SL-010's implementation is open; the
+  five design corrections and the six reconcile obligations above are audit/reconcile's.
 
 ## Implementation run
 
@@ -493,10 +530,104 @@ stamp), `completed` after the delta.
   provider change, no rework of either output beyond the orchestrator's own mutation
   checks (four mutations applied, red observed, all reverted).
 
+### PHASE-03 — the guide (completed 2026-11-03)
+
+One commit on the two owned paths: `cd69acd` (`src/learn.rs` + `tests/fixture.rs`).
+`doctrine slice record-delta 10 PHASE-03 --commit cd69acd` recorded
+`f26f923..cd69acd` (the default start is `cd69acd^`, which is exactly the sheet's
+stamp, so no range fallback was needed), and `doctrine slice verify-vt 10` reports
+**every** VT PASS, PHASE-03 VT-1/VT-2 included. Lifecycle: `in_progress` at
+`f26f923`, `completed` after the delta and the VT check.
+
+- **Gate.** `just check` exit 0: build; clippy `--all-targets -D warnings` in both
+  feature configurations, no warnings; `fmt --check` clean; `cargo test` 444 lib
+  tests default / 457 with `--features fault-injection` (baseline 439/452: +5
+  sentence tests); `tests/cli_contract.rs` 62/62 in both; `tests/dsl.rs` 19/19;
+  `tests/fixture.rs` 17/17 (baseline 15: +2). No known failures, nothing skipped,
+  no guard touched.
+- **Red observed first.** With the tests and no prose: `cargo test --lib` 438 passed
+  / 6 failed (`the_short_form_is_taught_before_the_specification`,
+  `the_short_form_states_the_two_warts_and_the_field_silence`,
+  `the_json_spelling_sits_one_line_below_its_short_twin`,
+  `the_guide_lists_the_short_form_among_the_commands`,
+  `the_guide_calls_query_the_complete_surface`,
+  `the_guide_prints_the_examples_the_fixture_executes`), every failure a missing
+  section/sentence, no compile error. `cargo test --test fixture` 16 passed / 1
+  failed (`the_guide_prints_the_token_lines_this_suite_executes`, the guide not
+  printing the `q` lines). `the_two_call_recipe_runs_in_both_spellings` was green at
+  the red step **by design** — it is the execution guard, and the `q` verb already
+  worked; the red proving the guide is the printing test plus the sentence tests.
+- **What landed.** `GUIDE`: `smut q <TOKEN>...` in the `Commands` block and `q` in
+  the no-store sentence; `The short form: smut q` inserted after `Batch responses`
+  and before `Querying` (one rule, five token shapes, twelve flags, three character
+  consequences, both warts, the field silence, the boundary that keeps `query` the
+  complete surface, and the five hot-path queries); `The two-call recipe` rewritten
+  so each call prints `smut q …` with its `smut query '…'` JSON twin directly below,
+  plus the roots-vs-`$in` sentence; the completeness guard unchanged. `src/learn.rs`
+  tests: five new pins and extensions to the printed-examples and identity tests;
+  `the_guide_teaches_exactly_the_ten_keys` and its `Querying`…`Traversal` span
+  untouched. `tests/fixture.rs`: `Declared::q` splitting a line on whitespace onto
+  `smut q`, `grammar_safe`, `filter_over_words` (unsafe ids name `--from=ID`), and
+  the two VT-1 tests.
+- **The five hot paths were re-measured**, not copied: 18, 28, 50, 55 and 36
+  characters, matching IDE-006's table. They are printed without the counts (D1).
+- **Decisions** (full text in the runtime sheet § Decisions): D1 no printed character
+  counts; D2 the field silence is repeated beside the shortcut table; D3 pins are
+  whole sentences/tokens/lines; D4 the runner is an inherent `Declared::q` beside
+  `Declared::query`, keeping the `&Value` path untouched.
+- **Findings.**
+  - **F1 — the adjacency test must search from the recipe heading.** Two of the
+    three printed recipe lines also appear as hot-path examples above the recipe, so
+    a guide-wide first occurrence finds a line with no JSON twin; the test now
+    searches `GUIDE[GUIDE.find("The two-call recipe")..]`. Caught after the worker's
+    red step and fixed before green.
+  - **F2 — the boundary clause forced a sentence split.** "…are all smut query's,
+    which takes the full specification" does not contain the pinned clause "smut
+    query takes the full specification"; the prose made it a second sentence rather
+    than the test loosening the pin.
+  - **F3 — the execution guard was green before the prose** (the `q` verb already
+    ran), so the red evidence is the printing test and the five sentence tests; a
+    suite with a regression guard should say which test is allowed to be green at
+    the red step.
+- **Notable worker misses / measured shape.** Two native `worker` runs — one red test
+  author (no rebrief) and one prose-green transcribe. The prose worker reported two
+  timed-out attempts to ask about the boundary clause and then applied the minimal
+  rewording itself; the orchestrator verified the result against the red pins and
+  ran the full gate. No model or provider change. One orchestrator fix: the
+  adjacency test's occurrence search (F1).
+- **VH-1 is pending** and is not claimed: the operator types the five hot-path lines
+  from the guide at a terminal, without a quote. The exact script is in § Open and
+  the handback.
+
 ## Autonomy log
 
 Seat-level envelope decisions, one line each: phase · decision · reason ·
 (decided / deferred / escalated).
+
+- **PHASE-03 · the hot-path table prints the five lines and no character counts,
+  decided.** IDE-006's lengths were re-measured (18/28/50/55/36) to confirm the
+  table rather than copied; a printed figure is a claim that drifts, so the guide
+  prints the commands only. Reason: EX-1 asks for re-measurement, not a transcribed
+  number, and the human gate needs the lines, not their widths.
+- **PHASE-03 · the field-silence sentence is repeated in the short form, decided.**
+  It sits beside the token table where a typo'd field bites, and the `Querying`
+  chapter keeps its fuller version. Reason: EX-3 says the silence is stated where
+  it bites; nothing is moved out of the specification chapter.
+- **PHASE-03 · the boundary sentence split in two, decided.** "…are all smut
+  query's: smut query takes the full specification and is the complete surface."
+  keeps the pinned clause contiguous inside one sentence; a "which takes" phrasing
+  would have made the test's whole-clause pin unreachable without loosening it.
+  Reason: EX-5/EX-6 say no pin is loosened, so the prose moves rather than the
+  assertion.
+- **PHASE-03 · VH-1 left pending, deferred to the operator.** It is a human
+  terminal gate and is not claimable by this run; the exact five-query script is
+  handed back and recorded in notes. Reason: the plan's VH mode is a human act.
+- **PHASE-03 · slice lifecycle left at `started` with 4/4 phases complete,
+  deferred to the seat.** The charter stops before audit; moving to `audit` is the
+  seat's decision, and the rollup warning is the expected divergent signal.
+- **PHASE-03 · nothing else left the envelope.** No escalation, no backlog
+  deferral, no design drift, no source edit outside `src/learn.rs` and
+  `tests/fixture.rs`; `.quotient/` and `_envrc` untouched.
 
 - **PHASE-04 · F1 ruled decided.** `--depth abc`, `--depth=-1` and `--budget 0`
   reach the specification's sentence only with a direction present, because
