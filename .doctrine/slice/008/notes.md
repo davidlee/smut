@@ -120,6 +120,18 @@ having no global options, and the learn exit table being one line.
    one word with no space in it, and a `:` follows it"). The example illustrates clause shape
    rather than exact wording, so this is a staleness fix, not a rule change: update the quoted
    sentence in place, or drop the quotation and name the class.
+6. **`design.md` §6 (and EX-4, which restates it) has no tie-break among unnameable entries.**
+   "Sorted by name … a `name: None` entry sorts last … sorting is by the decoded name only" is
+   total only while a layer holds at most one undecodable filename: with two, the decoded key is
+   equal twice and the order is `read_dir`'s — which is exactly what the rule exists to prevent
+   (RV-029 F-16). PHASE-03 ruled the tie-break as the raw filename, compared as an `OsStr`;
+   § Autonomy log carries the reasoning and the alternatives. Owed: one sentence in §6.
+7. **`design.md` §3 does not say what a *candidate* whose metadata cannot be read is.** Its
+   failure table lists "cannot be opened or read" as a reasoned row, while its candidate filter
+   requires "a regular file" — so a dangling `x.md` is either a row (§3's table) or nothing
+   (the filter). PHASE-03 ruled it a failed row, which is also the only portable, root-proof
+   fixture for that class; a directory whose name is undecodable stays silent because the
+   metadata test runs first. Owed: one sentence in §3.
 
 ### Design questions the PHASE-02 review raised (RV-030, judgement calls)
 
@@ -177,13 +189,27 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 ## Harvest
 
 **fresh-as-of:** `SL-008` lifecycle `started`, `PHASE-01` `completed` (roots landed,
-gate green, VT-1/VT-2 PASS at head `c3385c2`), `PHASE-02` **`in_progress`** (the reader
-landed green at `77444e8`, VT-1..VT-5 PASS, deliberately left open for its independent
-review), design run `dr-01a19b61` locked at revision 36. Next stage: the `PHASE-02` review,
-then `PHASE-03`; audit is not open.
+gate green, VT-1/VT-2 PASS at head `c3385c2`), `PHASE-02` green at `77444e8` with its review
+(RV-030) discharged in `8503b93`, `PHASE-03` **`in_progress`** — the loader landed green at
+`cfae50f`, `just check` exit 0, `PHASE-03 VT-1 PASS`, delta `9829de0..cfae50f`, deliberately
+left open for its independent review. Design run `dr-01a19b61` locked at revision 36. Next
+stage: the `PHASE-03` review, then `PHASE-04`; audit is not open.
 
 ### Produced
 
+- **`PHASE-03` implemented and green at `cfae50f`** — `load(roots, kind) -> Result<Vec<Entry>,
+  Error>` and `set_in_force(entries, name)` with a private `read_layer` and `sort_layer`, three
+  path-limited commits (`b3c2fd9`, `84a8155`, `cfae50f`), 14 pinned rows plus the six negative
+  controls above. The loader is written and pinned before its consumer, as EX-8 requires.
+- **The attempt-1 gap, stated and ruled in § Autonomy log**: four outcomes collapsed into one
+  (absent / unreadable layer / unreadable file / non-UTF-8 bytes / non-UTF-8 filename), and
+  EX-4's missing tie-break between two undecodable names, resolved as decoded name → `None`
+  last → raw filename. Two design sentences are owed to reconcile (below, items 6 and 7).
+- **`src/error.rs`'s `FileSystem` doc comment widened** from store boundaries to layer reads —
+  the one change EX-2 authorises outside `src/conventions.rs`. Carried in from attempt 1's diff
+  and kept as written: `step` now also names "the layer read that failed (`reading the
+  conventions layer`)". No variant, no inventory row and no rendering changed, so the
+  `every_store_refusal()` count pin is untouched.
 - **`PHASE-02` implemented and green at `77444e8`** — `src/conventions.rs` rewritten around
   `Layer`/`Origin`/`Cause`/`Set`/`Entry`/`Outcome` with the pure `parse(bytes, origin)`,
   `SHIPPED` as a `(name, bytes)` table read by that same reader, `Ask` owning its set,
@@ -236,6 +262,24 @@ then `PHASE-03`; audit is not open.
 
 ### Learned
 
+- **A doc comment that decides a question is a decision nobody made.** Attempt 1's `load` doc
+  said "this phase makes 'absent' and 'unreadable' the same thing, so nothing here errs yet" and
+  its `read_layer` doc said "Nothing is sorted or deduplicated here" — and those two sentences
+  were the whole of its response to two criteria that say the opposite. A contradiction written
+  into prose reads as an implementation note, so it survived a whole run; the same contradiction
+  in code (a bare `Vec<Entry>` return, a `continue` on every error) is what the tests caught.
+  The lesson for the next charter: when a criterion and the code disagree, the doc comment is
+  where the disagreement gets hidden, so it is the first thing to read.
+- **A test that is green on arrival is a pin, not evidence, until a mutation reddens it.**
+  `a_broken_set_still_wins_its_name` passed the moment it was written, because `set_in_force`
+  already returned failed entries. It only became evidence when `set_in_force` was filtered to
+  `Loaded` entries and the row went red — so a pinned name in VT-1 that is satisfiable before
+  the phase starts is a name the phase has to *prove* bites.
+- **A negative control's blast radius can be honest without being narrow.** The double-join
+  mutant reddens 14 rows, because deleting the project layer is a bigger change than the
+  duplicate segment: `the_kind_is_joined_once` names the defect precisely, and the other 13
+  catch it as collateral. Reporting the breadth is the honest move; engineering the mutant so
+  that only one row reddens would have proved less.
 - **`record-delta --commit <S>` records exactly `[S^, S]`, and its guard fires when the
   phase sheet's stamp predates a foreign commit.** PHASE-02's stamp was `43ca052`, a
   `doc(sl-010)` commit (`4015f6a`, two `.doctrine/slice/010/` files, proven doc-only with
@@ -286,9 +330,22 @@ then `PHASE-03`; audit is not open.
 
 ### Open
 
-- **`PHASE-02` is `in_progress`, awaiting its independent code/correctness review** (standing
-  cadence). Green and committed; the seat concludes after the review lands and any
-  `fix-now` finding is corrected.
+- **`PHASE-03` is `in_progress`, awaiting its independent code/correctness review** (standing
+  cadence). Green and committed at `cfae50f`, `just check` exit 0, delta `9829de0..cfae50f`
+  recorded, and the seat concludes after the review lands and any `fix-now` finding is corrected.
+  The reviewer is handed the range, not the file: `src/conventions.rs` also carries PHASE-01 and
+  PHASE-02, and reviewing the whole file would re-raise their findings as if they were new.
+  Baseline for the range is the phase sheet's `code_start_oid` (`bfe98e2`).
+- **Two design sentences are owed to reconcile and are *not* fixed here** — §6's missing
+  tie-break among unreadable names and §3's silence on a candidate whose metadata cannot be
+  read (items 6 and 7 of § Obligations owed at reconcile, with PHASE-03's rulings).
+- **`PHASE-03`'s `Box::leak` on the exit-1 path is a deliberate, bounded leak** — one small
+  allocation per failed layer read, in a process about to exit 1, because
+  `StoreError::FileSystem.step` is `&'static str` and EX-2 authorises only a doc comment in
+  `src/error.rs`. If a later phase widens that field (a `Cow`, or a `String` carrying the step),
+  the leak should be retired with it. Recorded, not scheduled.
+- **`PHASE-02`'s `in_progress`-awaiting-review note is discharged**: RV-030 was raised, disposed
+  all-`fix-now` and corrected in `8503b93`; the phase is `completed` in the registry.
 - **`every_store_refusal()` omits `NoFreshBasename`** — pre-existing, and PHASE-02 added only
   its own row. The list's length is now pinned at 13 with a comment naming the gap, so the pin
   is honest rather than complete. Flagged, not fixed: repairing another phase's inventory is
@@ -643,7 +700,159 @@ had already exhausted the wall clock, so handing the same saturated context anot
 is the least likely route to green. The state that matters is in the tree, and the tree can be
 read.
 
+### PHASE-03 attempt 2 — observed at `cfae50f`
+
+- **The inherited diff was adopted, not reverted**, and the two contradictions were corrected:
+  attempt 1's `load`, `set_in_force`, `read_layer`, fixtures and 42 green tests survive, and only
+  the two doc-comment contradictions were replaced by the behaviour the criteria name. The gap
+  statement attempt 1 died carrying, and the rulings on it, are § Autonomy log's first four
+  entries — written to disk before the first line of this attempt's code.
+- **Three path-limited commits, each green before it landed** (`cargo test --lib conventions::`
+  45 → 47 → 50 passed): `b3c2fd9` the per-layer sort with `None` last plus the undecodable
+  filename as a pre-read failed row (this commit also carries attempt 1's 731 inherited lines,
+  which is why it reads as +780); `84a8155` the absent/unreadable split and the mode-000 second
+  row; `cfae50f` the two failure rows below the read plus `a_broken_set_still_wins_its_name`. No
+  bare `git commit`, `add -A`, `--amend`, reset, stash or checkout was run; the other writer's
+  `README.md` was still staged after all three, and `doc(sl-010)`'s edits to
+  `.doctrine/slice/010/` were left untouched.
+- **Recorded delta: `9829de0..cfae50f`** via
+  `slice record-delta 008 PHASE-03 --start 9829de0 --end cfae50f`. `--start` is `b3c2fd9^`, the
+  last commit before this phase's code landed (attempt 1's own notes commit); `--end` is the
+  phase's cumulative code tip, pre-knowledge-record. Exactly this phase's three commits are in
+  the range. The `completed` transition was not used to record it — the phase stays
+  `in_progress`, and that transition recomputes and overwrites a span. `--force` is not
+  meaningful with `--start/--end` (ISS-317) and was not needed.
+- **`just check` exit 0** at `cfae50f`: build, clippy over both feature configurations with
+  `-D warnings` (zero warnings in either), `fmt --check` clean, then the suite twice — **424 lib
+  tests on default features and 437 under `--features fault-injection`** (baseline 408/421,
+  +16 each from this phase). `pre-existing failures: none`; no jail-only failures.
+- **`doctrine slice verify-vt 008` exits 0 with `PHASE-03 VT-1 PASS`**; PHASE-01's two rows and
+  PHASE-02's five still `PASS`; PHASE-04's VT-1..VT-4 `FAIL` and its VT-5/VT-6 `UNATTRIBUTABLE`,
+  PHASE-05's two `FAIL` — all on symbols those phases have not written yet.
+- **EX-8 — the binary references neither function.**
+  `grep -rn "conventions::load\|conventions::set_in_force\|set_in_force" src/main.rs src/cli.rs
+  src/learn.rs tests/` → no matches (exit 1). The `load()` hits elsewhere in `tests/*.rs` are the
+  store's own loader. `resolve`, `answer`, `listing` and `seed` are untouched by these commits.
+- **VA-2 — the module read for the two properties source cannot show.** `grep -n "fs::"
+  src/conventions.rs` returns four non-test sites: `:83`, `project_root`'s `symlink_metadata`
+  (PHASE-01's `.git` predicate — a stat, not a read of a set), and `:469`/`:512`/`:544` inside
+  `read_layer` — `read_dir`, `metadata`, `read`. `read_layer` is private and its only callers are
+  `load`'s two lines (`:402`, `:406`), so every set read in the module is inside `load`;
+  `binary_layer` reads bytes the build embedded, and `parse`, `listing_of`, `set_in_force` and
+  `seed` touch neither filesystem nor environment. The absent-vs-unreadable branch is `:470-471`
+  (`Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new())`)
+  against `:472-486` (the `StoreError::FileSystem` refusal) — different paths, and
+  `an_absent_layer_is_not_an_error` / `an_unreadable_layer_is_an_error` are what keep them apart.
+- **Six negative controls for the five silent failure modes**, each mutation applied to
+  `src/conventions.rs`, the whole `conventions::` suite run, and the file restored
+  byte-identically (`git status` clean for the file after each):
+
+  | # | mutation | reddened |
+  | --- | --- | --- |
+  | 1 | the `NotFound` guard widened to every `Err` (unreadable as absent) | `an_unreadable_layer_is_an_error` only; `an_absent_layer_is_not_an_error` stayed green |
+  | 2 | the pre-read name decision removed and `stem_of` made lossy | `a_non_utf8_filename_is_a_failed_row` (listed as `na\u{fffd}me`) and `an_undecodable_name_sorts_last` — two rows, one property seen from two sides |
+  | 3a | `sort_layer` a no-op (`read_dir` order leaking) | `each_layer_is_sorted_by_name` only |
+  | 3b | `sort_layer` sorting `Option<String>` directly (`Option`'s own `Ord`) | `an_undecodable_name_sorts_last` only (`[None, Some("a"), …]`) |
+  | 4 | `roots.project.join(kind).join(kind)` | `the_kind_is_joined_once` **and 13 other rows** — reported honestly: a double join deletes the whole project layer, so every project-layer row reddens, not only the genericity row that names the defect |
+  | 5 | the crate's version written onto *every* loaded entry in `load` | `the_binary_layer_carries_the_crates_version` only (`authored` read `0.2.2` where it declares `9.9.9`) |
+  | 6 | `set_in_force` filtered to `Loaded` entries (validity as a tie-breaker) | `a_broken_set_still_wins_its_name` only |
+
+  Six mutations for five modes because mode 3 has two halves — no sort, and a sort in the wrong
+  order — and each half has its own row. Control 6 exists because
+  `a_broken_set_still_wins_its_name` was green on arrival (`set_in_force` already returned
+  failed entries): a pin with no red is not evidence until a mutation reddens it, so one was
+  run.
+- **Left dirty for the seat, deliberately:** `.doctrine/slice/008/slice-008.toml` (the phase's
+  `in_progress` flip and the registry write, both the CLI's), another writer's staged
+  `README.md` and their untracked `_envrc`/`.quotient/`, and `doc(sl-010)`'s uncommitted
+  `.doctrine/slice/010/plan.{toml,md}`. None was staged or committed.
+- **PHASE-03 stays `in_progress`.** Green, committed and delta-recorded, but the independent
+  code/correctness review runs over this diff before the phase concludes — on this phase the
+  review is the point, per the standing cadence.
+
 ## Autonomy log
+
+- **PHASE-03 attempt 2 — the gap attempt 1 died carrying, stated in full and ruled.** Two
+  under-determinations sit inside EX-2/EX-3 and EX-4. The inherited diff did not ask about
+  either; it wrote the wrong answer into its own doc comment, and the doc comment is what a
+  reader would have believed.
+
+  *Gap A — five outcomes collapsed into one.* Inherited `read_layer` returns a bare
+  `Vec<Entry>` and swallows every failure: a `read_dir` error and an absent directory both
+  yield no entries, and a stat failure, an unopenable file and a non-UTF-8 *filename* all
+  yield silence. EX-2 and EX-3 name five outcomes and the code has one — absent (no entries,
+  no error), a layer that exists and cannot be read (exit 1 through
+  `StoreError::FileSystem`), an unopenable/unreadable file (a `Failed` row carrying the
+  operating system's own words and the path), bytes that are not UTF-8 (a `Failed` row with
+  §3's fixed sentence *the file is not UTF-8 text*), and the filename that is not UTF-8
+  (`name: None`, decided before any read). `load`'s `Result` exists for the layer branch
+  alone, so a signature that never errs contradicts the criterion that shaped it. **Ruling:
+  the criteria win and each outcome gets its own branch** — not a supervisor item, because
+  EX-2 states the rule and the code contradicts it, which is a defect and not a choice. The
+  one judgement call inside Gap A is the discriminator for "absent": `io::ErrorKind::NotFound`
+  from `read_dir` is the absent case and *every other* `Err` is exit 1, `NotADirectory`
+  included — a layer path whose parent is a regular file is a malformed root and fails loud
+  rather than reading as "this project has not opted in". Chosen because silence is this
+  phase's failure class, and because no fixture in the crate can produce a non-`NotFound`
+  error for a genuinely absent layer.
+
+  *Gap B — EX-4 supplies no order between two undecodable names, and this is the item that
+  needed a ruling rather than an implementation.* EX-4 says each layer is sorted by name with
+  `None` last, and that "sorting is by the decoded name only". Two entries whose names are
+  both `None` have equal keys, so a stable sort leaves `read_dir`'s order — and EX-4's own
+  next clause says the `None`-last rule "makes that order total". A key-only reading cannot
+  make the order total; it can only make it *mostly* total, and where it does not, the
+  listing is `read_dir`'s and RV-029 F-16 is back. **Ruling (the seat's hypothesis, confirmed
+  rather than merely assumed):** the decoded name orders what has one, `None` sorts last, and
+  ties among `None`s break on the raw filename, compared as an `OsStr` (bytewise on unix).
+  Reasons: (i) it preserves EX-4's stated rule exactly — the decoded name is what orders
+  entries that have one, and nothing decoded is consulted for entries that have none; (ii) it
+  preserves EX-4's purpose, determinism of the listing, which is what rules out "leave the
+  tie to `read_dir`", since an unspecified tie is an unspecified listing; (iii) the tie is
+  unreachable unless one layer literally holds two undecodable filenames, so the clarification
+  changes no behaviour any criterion states; (iv) the envelope's "design clarification
+  preserving scope, decisions and behaviour" is exactly this — a tie-break in an unspecified
+  case. Alternatives considered and rejected: sorting on `Option`'s derived `Ord` (`None`
+  first, contradicts EX-4, and `an_undecodable_name_sorts_last` exists to catch it); dropping
+  undecodable names out of the ordering question (the same non-determinism, spelled shorter);
+  keying on `Origin`'s full path instead of the filename (identical order within one layer, so
+  the same rule with more words).
+
+  Two sentences are owed to reconcile rather than fixed here, because both are design text:
+  §6 does not say how a tie among unnameable entries breaks, and §3 does not say what a
+  *candidate* whose metadata cannot be read is.
+
+- **PHASE-03 attempt 2 — `StoreError::FileSystem.step` is `&'static str` and the kind is a
+  parameter.** EX-2 requires `step` to name the layer read (`reading the conventions layer`),
+  which cannot be a literal for the second kind the genericity pin loads. Ruled: `Box::leak`
+  one `format!`, on the exit-1 path only, never on a successful load. Rejected: a literal
+  `conventions` (false for kind `shapes`, and `a_second_kind_uses_the_same_loader` exists to
+  make that falsehood reachable); widening the field to a `Cow` (touches every `FileSystem`
+  construction site in `store.rs`, outside this phase's two files, and EX-2 authorises only the
+  doc comment in `error.rs`). The leak is one small allocation in a process that is about to
+  exit 1.
+
+- **PHASE-03 attempt 2 — `x.md` whose metadata cannot be read is a failed row, not silence.**
+  EX-2's filter is "a regular file", so a dangling symlink is arguably not a candidate at all.
+  Ruled the other way: §3's failure table names "cannot be opened or read" as a reasoned row
+  with the operating system's words and the path, and this phase's whole subject is failure
+  classes that go silent. Consequences recorded honestly: the metadata test runs *before* the
+  name decode, so a directory whose name is undecodable is still not an entry (the filter's
+  "directories are not entries" half is untouched); and this row is what makes
+  `a_file_that_cannot_be_read_is_a_failed_row` provable at all, since a mode-000 file cannot
+  fail as root and no other portable fixture for the class exists.
+
+- **PHASE-03 attempt 2 — the binary layer is sorted like the other two.** The attempt-1 phase
+  sheet's decision 4 kept `SHIPPED`'s table order; EX-4 says "each layer's entries are
+  sorted". Immaterial with one shipped pair, so the two readings cannot differ in behaviour
+  today; the uniform rule is chosen so that a second shipped set cannot create an unsorted
+  layer. Supersedes decision 4 of the attempt-1 sheet.
+
+- **PHASE-03 attempt 2 — the inherited diff was adopted, not reverted.** `load`,
+  `set_in_force`, `read_layer` and 42 green `conventions::` tests are a predecessor's real
+  work: what was right (the layer order, the candidate filter, the version passthrough, the
+  fixtures) was kept, and only the two contradictions above were corrected. No `checkout`,
+  `reset` or `stash` was run against it.
 
 - **PHASE-02 — the phase was split by compile unit, not by the charter's editorial seam.**
   The charter put `SHIPPED`, the binary-layer helper, `ArtefactNotLoaded` and `hygiene.md` in
@@ -691,6 +900,27 @@ read.
   `completed`, so the recorded registry range was re-tightened to cover both commits.
 - **PHASE-01 — one tautological assertion removed.** Reverted with its fixture; the property
   is re-homed in a falsifiable row (see § Harvest → Learned). Not a test weakening.
+
+- **PHASE-03 attempt 2 — six mutations for five failure modes, and the sixth admitted as one.**
+  Failure mode 3 has two halves (no per-layer sort, and a sort in the wrong order), and each
+  half has its own pinned row, so both were run. A seventh was added for
+  `a_broken_set_still_wins_its_name`, which was green on arrival: a pin nobody can redden is not
+  evidence. Decided (verification ownership) and recorded in § Implementation run as a table.
+- **PHASE-03 attempt 2 — the double-join control's breadth reported rather than engineered
+  away.** It reddens 14 rows. Narrowing it so only `the_kind_is_joined_once` failed would have
+  meant a contrived mutant that joins twice only when the first join is empty; the honest
+  reading — a duplicated segment deletes the layer, and one row names the cause — is worth more
+  than a tidy table. Decided.
+- **PHASE-03 attempt 2 — `84a8155`'s commit message has a typo** ("Nowread_dir's", a lost
+  space). `--amend` is forbidden on this shared index, so the blemish stands and this line is
+  its record; the subject and every other line are intact.
+- **PHASE-03 attempt 2 — two design sentences flagged, not fixed.** §6's missing tie-break and
+  §3's stat-failed candidate are design text; the phase records its ruling and its reasoning in
+  this log and adds them to § Obligations owed at reconcile (items 6 and 7) rather than editing
+  `design.md` from an implementation charter. Flagged.
+- **PHASE-03 attempt 2 — the phase is left `in_progress` on purpose**, per the standing review
+  cadence: green, committed, delta recorded, and the seat concludes after the independent review.
+  Decided (operator cadence, not this charter's choice).
 
 - **PHASE-01..05 — model envelope: inherit, all five. Operator ruling, not the seat's.**
   Asked once, at charter 1 (`6daf8f6e`), because `super-orchestrator` forbids the seat from
