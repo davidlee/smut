@@ -1,0 +1,41 @@
+memory_uid = "mem_01a19aeaa10b75819dbe007f963f2cfa"
+schema_version = 1
+memory_type = "pattern"
+status = "active"
+title = "smut field shapes: one shape per field, or the queries lie"
+summary = "A smut field holding a string in one entity and an array in another changes what $contains means per row, breaks $eq, and makes order refuse the field."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = ["src/predicate.rs", "src/select.rs", "src/learn.rs"]
+globs = []
+commands = []
+tags = ["smut", "query", "predicates", "data-model"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "aed08ba9ceeb0f70a8ee893e29f373bfba1fd100"
+ref_name = "refs/heads/main"
+checkout_state_id = "35c9ea34dffd610eac136582d0d6059bb1dd9d44485f8f8a1ffa278cbad69619"
+base_commit = "658e76e983dc0cc442e1b337c832f6a1bed62d79"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "medium"
+
+[ranking]
+severity = "none"
+weight = 0
+

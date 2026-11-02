@@ -78,3 +78,28 @@ diagnostic channel that would soften two of the four cases.
 Usability exercise RFC-001: 18 questions across three independently authored
 stores; every claim above was measured on the built binary, 0.2.0. The tense rule
 records the operator's answer to RFC-001 § Outcome Q3.
+
+## Measured addition (2026-11-02): `$contains` changes meaning with the value's shape
+
+Found while designing a conventions set (`epistemic-records`, SL-006), on a probe
+store, binary 0.2.0. Four records, one field holding a string in one entity and an
+array in two others:
+
+| request | result |
+| --- | --- |
+| `{"decided_by": "trev from the disco"}` | the string row only — an array row is not equal to a string |
+| `{"decided_by": {"$in": ["trev from the disco"]}}` | the string row only |
+| `{"decided_by": {"$contains": "trev"}}` | the **string** row (substring) and the array row whose element is exactly `"trev"` — but not the array row whose element is `"trev from the disco"` |
+| `{"decided_by": {"$contains": {"id": "pty-cfo"}}}` | both array rows; the object element is matched by whole-value equality |
+| `{"decided_by": {"$eq": {"id": "pty-cfo"}}}` | nothing — the field is an array, not that object |
+| `{"order":[{"field":"decided_by",…}]}` | refused: `an array has no ordering, and a sort value must be null, a boolean, a number or a string` |
+
+So `$contains` is a substring test on a string and an exact-element test on an
+array, with nothing in the response saying which one ran, and one field cannot be
+sorted at all if any row holds an array. This is a fifth case for the "what the
+surface cannot do" paragraph, and a sharper one than the other four because the
+operator *works* — it silently answers a different question per row rather than
+failing or over-answering.
+
+It also settles a conventions question from the other side: a store that writes one
+field in two shapes pays in query shape, and the payment is invisible.
