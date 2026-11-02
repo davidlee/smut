@@ -9,9 +9,12 @@ homepage = "https://doctrinal.systems"
 readme = "README.md"
 keywords = ["json", "graph", "cli", "markdown", "notes"]
 categories = ["command-line-utilities", "database"]
-# Project governance, the implementation brief and the Nix devshell are not part
-# of the crate; the code, its tests, its documents and the README image are.
-exclude = [".doctrine/", ".pi/", "AGENTS.md", "smut-implementation-brief.org", "smut.jpg", "flake.nix", "flake.lock"]
+# Project governance, the implementation brief, the Nix devshell and the CI
+# harness are not part of the crate; the code, its tests, its documents, the gate
+# they are held to (`justfile`) and the README image are. `rust-toolchain.toml`
+# is excluded on purpose: shipped inside the tarball it would pin a downstream
+# `cargo install` to a beta compiler.
+exclude = [".doctrine/", ".pi/", ".github/", "AGENTS.md", "smut-implementation-brief.org", "smut.jpg", "flake.nix", "flake.lock", "rust-toolchain.toml"]
 
 [lib]
 name = "smut"

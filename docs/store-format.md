@@ -340,7 +340,11 @@ commit path and by nothing else.
 ## Portability
 
 Linux is the acceptance platform. The format is plain files and directories, and
-nothing in it is Linux-specific by intent, but nothing else is tested.
+nothing in it is Linux-specific by intent. A macOS runner also builds the crate
+and runs the whole gate on every push, so the code is known to compile and pass
+there; that is evidence of portability, not a second acceptance platform, and it
+makes no claim about `flock` or `fsync` on APFS that the paragraphs below do not
+already make.
 
 `flock` is advisory. It excludes cooperating `smut` commands and nothing else: a
 process that does not take the lock — an editor, `cat >`, a stray script — is

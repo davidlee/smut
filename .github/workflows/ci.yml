@@ -1,0 +1,58 @@
+# The gate, run somewhere that is not this laptop.
+#
+# `just check` is the only definition of the gate — build, clippy over both
+# feature configurations, fmt, then the suite twice — and `doctrine check gate`
+# already defaults to those same recipes. This file names that one recipe and
+# never a cargo invocation, so CI and the devshell cannot drift apart.
+#
+# Linux is the acceptance platform (docs/store-format.md § Portability). macOS is
+# here to find out what "nothing else is tested" was hiding: it is evidence of
+# portability, not a second acceptance platform, and it proves nothing about
+# `flock` or `fsync` on APFS. `macos-latest` is arm64, which is the darwin system
+# the flake already declares.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # A red platform must not hide the other's result: this job exists to
+      # report what each platform does, so both always run.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      # `rust-toolchain.toml` names the channel the flake also names, so the
+      # compiler is a property of the checkout rather than of this file. `show`
+      # installs the override if the runner lacks it and prints what it chose.
+      - name: toolchain
+        run: |
+          rustup show
+          rustc --version --verbose
+
+      - name: just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: gate
+        run: just check

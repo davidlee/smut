@@ -1,0 +1,15 @@
+# The compiler the project is built and tested with.
+#
+# The devshell pins the same channel through rust-overlay, and CI resolves this
+# file through rustup, so the two name one thing rather than two. It is `beta`
+# because the crate ships on edition 2024 and its authors work on beta — which
+# means a beta bump can redden CI with no change in this repository. That is the
+# price of testing the compiler the code is actually written against, and the
+# devshell already pays it.
+#
+# Components are those the gate needs (`just check` runs clippy and rustfmt). The
+# devshell adds rust-src, rust-analyzer and rust-docs for its own reasons; a
+# runner does not need them to prove anything.
+[toolchain]
+channel = "beta"
+components = ["clippy", "rustfmt"]
