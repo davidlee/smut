@@ -865,3 +865,8 @@ commits sit outside it and are not hidden inside the phase's row.
 - **PHASE-02 · document worker verified every quoted diagnostic in a scratch store.** Decided.
   EX-9/STD-001 make the worked diagnostics contractual, so each line in `docs/store-format.md`
   was triggered against this build rather than transcribed from code.
+- **PHASE-02 · `src/predicate.rs` is undeclared in `slice conformance`, knowingly.** Decided.
+  Its four inline-test fixtures were respelled; only `#[cfg(test)]` lines changed (verified in
+  the diff), and the file is not in design §4's code-impact table. Recorded here and left in
+  the conformance cell rather than hidden or reverted: a test fixture naming an entity node
+  must move with the key, and the audit should see it.
