@@ -161,3 +161,27 @@ renderer. ✓
   row in `tests/predicates.rs:549` for exit 2 + empty stdout + no store. Positive
   controls (`$eq` with `$in` holding it; `$contains` combinations) and the
   `$and`-spanning non-refusal pin belong in the same two files.
+
+## Baseline refresh at plan time (2026-11-02)
+
+The advisory reported drift on two files: `slice-005.md` changed and `design.md` was
+added. Both are the expected shape of a design landing on top of research, not a stale
+evidence base, so nothing in Threads 1-2 was rewritten.
+
+Re-verified rather than assumed, before planning against this artefact:
+
+- **Thread 2's hotspots still hold.** `parse_field` is still the only site building a
+  field's `Condition` list, the predicate-level `$` arm is still `src/predicate.rs:72`
+  (condition-level `:173`), the boundary table is still a hand-maintained
+  `[(Error, u8); 24]` at `src/error.rs:496`, and the binary refusal table is still
+  `tests/predicates.rs:549`.
+- **Thread 2's cited facts still hold**, including the one call site
+  (`src/spec.rs:132`), the no-store/no-clock module invariant, `serde_json` equality,
+  per-operator presence, and the one-line renderer.
+- **One fact the plan had to add to Thread 2:** `parse` re-enters itself through
+  `parse_all` and `parse_not`, so an AST walk at the end of `parse` runs once per clause
+  operand. That is why the plan puts the walk in a wrapper (PHASE-01/EX-2), and it is
+  recorded as `mem.fact.smut.recursive-parse-post-check`.
+
+The three selectors this slice uses (`src/predicate.rs`, `src/error.rs`,
+`tests/predicates.rs`) come from Thread 2's hotspot map, not from recall.
