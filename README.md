@@ -102,15 +102,20 @@ The binary is self-contained: `target/release/smut` is the whole program, and
 
 `cargo install smut` installs **0.1.1**, the release crates.io carries. This tree
 is 0.2.0 and is not published, so building it is the only way to get the surface
-below: the 0.1.1 on crates.io has none of the five query keys 0.2 adds.
+below: the 0.1.1 on crates.io has none of the six query keys this tree adds to
+0.1.
 
-This is **smut 0.2.0**, and its query surface is nine keys: `from`, `where`,
-`follow`, `backlinks`, `depth`, `select`, `order`, `limit` and `budget`. 0.1 had
-four of them — `from`, `select`, `order` and `limit` — and 0.2 adds the other
-five: `where`, which filters the roots with a small predicate language, and the
-traversal keys `follow`, `backlinks`, `depth` and `budget`, which walk the graph
+This is **smut 0.2.0**, and its query surface is ten keys: `from`, `where`,
+`follow`, `backlinks`, `depth`, `select`, `order`, `limit`, `budget` and
+`edges`. 0.1 had
+four of them — `from`, `select`, `order` and `limit` — and 0.2 adds `where`,
+which filters the roots with a small predicate language, and the traversal keys
+`follow`, `backlinks`, `depth` and `budget`, which walk the graph
 from those roots, bounded by hops and by expansions, and report what the walk
-found. The envelope stays additive: five keys when nothing was traversed and a
+found. `edges` is the sixth addition and asks for that report **without** the
+walk, which is how a query reaches anything outside `smut` that draws arrows:
+the edge set travels in the reply, already oriented and deduplicated. The
+envelope stays additive: five keys when nothing was traversed and a
 sixth, `traversal`, when something was, so a 0.1 query reads exactly as it did.
 Mermaid arrives in 1.0 only: where it would be, `smut` refuses by name instead
 of guessing. The commands below are the whole surface.
@@ -168,12 +173,12 @@ dangling and left alone.
 
 | command | what it does |
 | --- | --- |
-| `smut declare [JSON] [--compact]` | record or amend entities; the only command that creates a store |
+| `smut declare [JSON] [-c\|--compact]` | record or amend entities; the only command that creates a store |
 | `smut get <ID>...` | fetch entities by `smut_id`, in the order given, with no limit |
 | `smut delete <ID>...` | remove entities in one batch; incoming references are left untouched |
 | `smut query [JSON]` | select entities with a query specification |
 | `smut render [JSON]` | the same selection, printed as Markdown |
-| `smut conventions [NAME] [--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
+| `smut conventions [NAME] [-f\|--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
 
 `declare`, `query` and `render` take one JSON argument or one complete JSON value
@@ -182,7 +187,8 @@ attached you get usage instead of a silent wait. Trailing input after the JSON
 value is refused, and so is a duplicate key inside one object.
 
 The specification keys are `from`, `where`, `select`, `order`, `limit`,
-`follow`, `backlinks`, `depth` and `budget`. Absent `from` means every entity in
+`follow`, `backlinks`, `depth`, `budget` and `edges`. Absent `from` means every
+entity in
 `smut_id` order; absent `select` means every field, and `smut_id` is always
 returned whatever `select` names; `order` is
 `[{"field": NAME, "direction": "asc" | "desc"}]`, sorting missing values last
@@ -194,13 +200,17 @@ named roots only, before any traversal. `follow` and `backlinks` take `"*"` on
 its own — never as an array element — or an array of top-level field names,
 `depth` defaults to 1 (0 is roots only), `budget` defaults to 10000 entity
 expansions and is inert without a traversal key, and a supplied traversal key
-adds a `traversal` member carrying `depths`, `edges` and `frontier`. `get` is
+adds a `traversal` member carrying `depths`, `edges` and `frontier`. `edges: true`
+is the way to get that member without asking for a walk: it supplies a traversal
+that follows nothing, so it discovers nothing, spends no `budget` and cannot
+truncate, and the edge set is derived from the returned objects. `get` is
 selection with the ids you name, no limit and no truncation.
 
-`render` flags: `--format markdown` (the only format this release writes;
-`mermaid` is refused by name, because it is 1.0's), `--heading-field`
-(default `title`), `--heading-level 1-6` (default 2), `--show-fields`,
-`--show-ids`.
+`render` flags, each with a one-letter spelling because they are typed often:
+`-f|--format markdown` (the only format this release writes;
+`mermaid` is refused by name, because it is 1.0's), `-t|--heading-field`
+(default `title`), `-l|--heading-level 1-6` (default 2), `-s|--show-fields`,
+`-i|--show-ids`.
 
 Exit codes: `0` success, including reported missing ids and a truncated result;
 `1` no store, or a store that could not be read or written; `2` invalid input or
@@ -252,6 +262,49 @@ per reference, deduplicated, in encounter order, and not cut to the returned
 sources — and nothing is ever recreated to fill the gap. A non-traversing query
 carries exactly 0.1's five keys, so nothing above appears where nothing was
 walked.
+
+### The edge set without a traversal
+
+A question about the graph does not have to be a walk. `edges: true` supplies a
+traversal that follows nothing, so the reply carries the edge set and nothing was
+expanded:
+
+```console
+$ smut declare '[{"smut_id":"hub","title":"Hub","children":[{"smut_id":"leaf","title":"Leaf"},{"smut_id":"stem","title":"Stem","up":{"smut_id":"hub"}}]}]'
+{"changes":[{"smut_id":"hub","previous":null,"status":"created"},{"smut_id":"leaf","previous":null,"status":"created"},{"smut_id":"stem","previous":null,"status":"created"}],"ids":["hub"],"missing":[]}
+$ smut query '{"where":{"title":{"$in":["Hub","Stem"]}},"edges":true,"select":["title"]}'
+{"dangling":[],"missing":[],"objects":[{"smut_id":"hub","title":"Hub"},{"smut_id":"stem","title":"Stem"}],"traversal":{"depths":{"hub":0,"stem":0},"edges":[{"field":"children","source":"hub","target":"stem"},{"field":"up","source":"stem","target":"hub"}],"frontier":[]},"truncated":false,"truncation_reasons":[]}
+```
+
+Two edges, pointing opposite ways, because that is how the store holds them:
+`hub` lists `stem` as a child and `stem` names `hub` as its container. The edge
+set reports what is stored and infers nothing from which direction anyone walked.
+Nothing was walked at all — every `depths` entry is `0`, `frontier` is empty,
+and no `budget` was spent — and the edges are still there because they are
+derived from the returned objects, not from the walk.
+
+That is the whole external-rendering story, and it costs one line of shell: the
+reply already carries `{source, field, target}` triples, so anything that draws
+arrows draws the graph `smut` would.
+
+```sh
+$ smut query '{"where":{"title":{"$in":["Hub","Stem"]}},"edges":true}' \
+  | jq -r '.traversal.edges[] | "  \(.source) -->|\(.field)| \(.target)"'
+  hub -->|children| stem
+  stem -->|up| hub
+```
+
+Which is the format `mermaid` reads, from a store that has no renderer at all.
+Note the node symbols: they are generated, never the ids. An id is opaque data
+that may hold any character, so a converter that pasted one into the graph would
+hand a payload the syntax — the same rule `smut render --format mermaid` will
+follow in 1.0.
+
+```mermaid
+graph TD
+  n0["Hub"] -->|children| n1["Stem"]
+  n1 -->|up| n0
+```
 
 ## Sharp edges
 

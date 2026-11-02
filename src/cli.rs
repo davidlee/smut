@@ -240,7 +240,7 @@ enum Sub {
         /// One object or an array of objects; `-` reads stdin.
         json: Option<String>,
         /// Omit `previous` from every change.
-        #[arg(long)]
+        #[arg(long, short = 'c')]
         compact: bool,
     },
     /// Fetch entities by id, in the order given.
@@ -265,19 +265,19 @@ enum Sub {
         /// One specification object; `-` reads stdin.
         json: Option<String>,
         /// The output format: `markdown` is the only value this release writes.
-        #[arg(long)]
+        #[arg(long, short = 'f')]
         format: Option<String>,
         /// The field the heading comes from (default `title`).
-        #[arg(long)]
+        #[arg(long, short = 't')]
         heading_field: Option<String>,
         /// The heading's level, 1 to 6 (default 2).
-        #[arg(long, allow_hyphen_values = true)]
+        #[arg(long, short = 'l', allow_hyphen_values = true)]
         heading_level: Option<String>,
         /// Show identity even when the entity has visible content.
-        #[arg(long)]
+        #[arg(long, short = 'i')]
         show_ids: bool,
         /// Show the other selected fields.
-        #[arg(long)]
+        #[arg(long, short = 's')]
         show_fields: bool,
     },
     /// Print the embedded guide.
@@ -287,7 +287,7 @@ enum Sub {
         /// The set to print; omit it for the listing.
         name: Option<String>,
         /// `text` (default) prints prose, `json` prints one declaration.
-        #[arg(long)]
+        #[arg(long, short = 'f')]
         format: Option<String>,
     },
 }
@@ -857,5 +857,117 @@ mod tests {
                 "{candidate} would need `--` to reach at the shell"
             );
         }
+    }
+
+    /// The renderer options one `render` argument line produces.
+    fn render_options(arguments: &[&str]) -> Options {
+        let Request::Render(command) = request(parse_of(arguments).expect("the flags are valid"))
+        else {
+            panic!("render is a rendering");
+        };
+
+        command.options
+    }
+
+    #[test]
+    fn every_short_flag_reaches_exactly_the_state_its_long_form_reaches() {
+        // IMP-007: a short flag is a second spelling and nothing else, so the
+        // assertion is equivalence of the whole rendered request — not "the
+        // short form parses". A letter that reached a different field, or dropped
+        // a value, is invisible to a bare `is_ok`.
+        let pairs: [(&[&str], &[&str]); 7] = [
+            (
+                &["render", "{}", "-f", "markdown"],
+                &["render", "{}", "--format", "markdown"],
+            ),
+            (&["render", "{}", "-i"], &["render", "{}", "--show-ids"]),
+            (&["render", "{}", "-s"], &["render", "{}", "--show-fields"]),
+            (
+                &["render", "{}", "-t", "type"],
+                &["render", "{}", "--heading-field", "type"],
+            ),
+            (
+                &["render", "{}", "-l", "3"],
+                &["render", "{}", "--heading-level", "3"],
+            ),
+            // The invocation IMP-007 quotes, in full, because the letters have to
+            // read as one line rather than one flag at a time.
+            (
+                &[
+                    "render", "{}", "-i", "-s", "-t", "type", "-l", "3", "-f", "markdown",
+                ],
+                &[
+                    "render",
+                    "{}",
+                    "--show-ids",
+                    "--show-fields",
+                    "--heading-field",
+                    "type",
+                    "--heading-level",
+                    "3",
+                    "--format",
+                    "markdown",
+                ],
+            ),
+            // The other two long-only flags in the CLI, for the same reason.
+            (&["declare", "{}", "-c"], &["declare", "{}", "--compact"]),
+        ];
+
+        for (short, long) in pairs {
+            assert_eq!(
+                render_or_request(short),
+                render_or_request(long),
+                "{short:?} and {long:?} are the same request"
+            );
+        }
+
+        assert_eq!(
+            render_options(&["render", "{}", "-i", "-s"]),
+            Options {
+                show_ids: true,
+                show_fields: true,
+                ..Options::default()
+            }
+        );
+    }
+
+    /// A short/long pair may spell either a rendering or a declaration, so the
+    /// comparison is over the parts that differ between them.
+    fn render_or_request(arguments: &[&str]) -> (String, String) {
+        match request(parse_of(arguments).expect("the flags are valid")) {
+            Request::Render(command) => (
+                "render".to_owned(),
+                format!("{:?}|{:?}", command.spec, command.options),
+            ),
+            Request::Declare(command) => (
+                "declare".to_owned(),
+                format!("{:?}|{}", command.input, command.compact),
+            ),
+            _ => panic!("the fixture asks for a render or a declare"),
+        }
+    }
+
+    #[test]
+    fn a_short_flag_cannot_be_smuggled_past_the_end_of_flags() {
+        // DEC-008: `--` terminates flag parsing, so an opaque id that begins with
+        // a hyphen stays reachable. Short flags must not weaken that — the id is
+        // read as an id, not as a flag and a leftover.
+        let Request::Get(command) = request(parse_of(&["get", "--", "-i", "-s"]).expect("two ids"))
+        else {
+            panic!("get is a fetch");
+        };
+
+        assert_eq!(command.ids, vec![Id::new("-i"), Id::new("-s")]);
+    }
+
+    #[test]
+    fn conventions_takes_the_same_format_letter_as_render() {
+        // One letter means one thing across the CLI: `-f` is `--format` wherever
+        // a format is a flag.
+        assert!(parse_of(&["conventions", "hygiene", "-f", "json"]).is_ok());
+        assert_eq!(
+            rejection(parse_of(&["conventions", "hygiene", "-f", "bogus"])),
+            rejection(parse_of(&["conventions", "hygiene", "--format", "bogus"]))
+        );
     }
 }

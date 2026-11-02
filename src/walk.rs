@@ -149,6 +149,13 @@ impl<'a, 'f> Walker<'a, 'f> {
             self.discover(root, 0);
         }
 
+        // A traversal may be supplied and still request no field: `follow: []`,
+        // and its `edges: true` spelling, exist to make the envelope carry the
+        // induced edge set, not to walk. Such a traversal discovers nothing, so
+        // it has nothing to expand — charging the budget for it would report a
+        // `traversal_budget` truncation on a request with more roots than
+        // budget, and frontier roots nobody declined.
+        let expands = !requests_no_field(self.follow) || !requests_no_field(self.backlinks);
         let mut expanded = 0u64;
 
         while let Some((id, at)) = self.queue.pop_front() {
@@ -156,6 +163,10 @@ impl<'a, 'f> Walker<'a, 'f> {
                 // The depth boundary: selected into the frontier, expanded by
                 // nobody, and never truncation (§7.2, DEC-013).
                 self.frontier.push(id);
+                continue;
+            }
+
+            if !expands {
                 continue;
             }
 
@@ -243,6 +254,20 @@ impl<'a, 'f> Walker<'a, 'f> {
             dangling: self.dangling,
             exhausted: self.exhausted,
         }
+    }
+}
+
+/// Whether a requested direction names no field at all: `None` (no direction
+/// asked for) and `Some` of an empty list both expand nothing.
+///
+/// The wildcard names every field, so it always expands. This is the predicate
+/// that separates "supplied a traversal" from "asked to traverse", which are
+/// different requests (§5).
+fn requests_no_field(fields: Option<&Fields>) -> bool {
+    match fields {
+        None => true,
+        Some(Fields::Named(labels)) => labels.is_empty(),
+        Some(Fields::All) => false,
     }
 }
 
@@ -670,5 +695,43 @@ mod tests {
         assert_eq!(depths(&walked), [("a", 0), ("b", 1), ("c", 1)]);
         assert_eq!(frontier(&walked), ["b", "c"]);
         assert!(walked.exhausted);
+    }
+
+    #[test]
+    fn a_traversal_that_requests_no_field_expands_nothing_and_spends_no_budget() {
+        // `follow: []` — and its request-key spelling `edges` — asks for a
+        // traversal so the envelope carries the induced edge set, and for no
+        // field at all. Nothing can be discovered, so nothing is expanded:
+        // charging the budget would report a `traversal_budget` truncation on a
+        // request with more roots than budget, and leave a frontier of roots
+        // nobody declined.
+        let store = store(&[
+            json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+            json!({"smut_id": "b"}),
+            json!({"smut_id": "c"}),
+        ]);
+        let roots = stored(&store, &["a", "b", "c"]);
+
+        let walked = walk(&store, &roots, Some(&named(&[])), None, 10, 1);
+
+        assert_eq!(ordered(&walked), ["a", "b", "c"]);
+        assert_eq!(depths(&walked), [("a", 0), ("b", 0), ("c", 0)]);
+        assert!(frontier(&walked).is_empty());
+        assert!(!walked.exhausted);
+        assert!(dangling(&walked).is_empty());
+    }
+
+    #[test]
+    fn a_traversal_that_requests_no_field_still_frontiers_at_a_zero_depth_boundary() {
+        // The depth boundary is decided before any expansion, so `depth: 0`
+        // keeps its meaning even when there is nothing to follow: every root is
+        // discovered and deliberately unexpanded, which is the frontier.
+        let store = store(&[json!({"smut_id": "a"}), json!({"smut_id": "b"})]);
+        let roots = stored(&store, &["a", "b"]);
+
+        let walked = walk(&store, &roots, Some(&named(&[])), None, 0, 1);
+
+        assert_eq!(frontier(&walked), ["a", "b"]);
+        assert!(!walked.exhausted);
     }
 }

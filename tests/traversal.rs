@@ -457,6 +457,54 @@ fn envelope_keys(document: &Value) -> Vec<&str> {
 }
 
 #[test]
+fn edges_is_the_request_key_spelling_of_follow_empty() {
+    // DEC-012, amended for `edges`: the key exists so a request that asks no
+    // question about the graph still gets the induced edge set. It is not a
+    // second mechanism — it parses to `follow: []`, so the two envelopes are
+    // identical, member for member.
+    let entities = hub();
+    let asked = envelope_of(&entities, json!({"from": ["hub", "n-a"], "edges": true}));
+    let spelled = envelope_of(&entities, json!({"from": ["hub", "n-a"], "follow": []}));
+
+    assert_eq!(asked, spelled);
+    assert_eq!(
+        traversal_member(&asked)["edges"],
+        json!([{"source": "hub", "field": "alpha", "target": "n-a"}]),
+        "the induced edge among returned objects: {asked}"
+    );
+}
+
+#[test]
+fn edges_beside_a_supplied_traversal_changes_nothing() {
+    // A request that already traverses carries the edge set regardless, so the
+    // key is redundant there — and must stay redundant rather than decisive.
+    let entities = hub();
+    let with_key = envelope_of(
+        &entities,
+        json!({"from": "hub", "follow": ["alpha"], "edges": true}),
+    );
+    let without = envelope_of(&entities, json!({"from": "hub", "follow": ["alpha"]}));
+
+    assert_eq!(with_key, without);
+}
+
+#[test]
+fn edges_spends_no_traversal_budget() {
+    // A traversal that follows nothing expands nothing, so it cannot exhaust the
+    // budget. The trap: charging a budget unit per root reports a
+    // `traversal_budget` truncation on a request that traversed nothing at all,
+    // which is a false account of what the store could answer.
+    let envelope = envelope_of(
+        &hub(),
+        json!({"from": ["hub", "n-a", "n-z"], "edges": true, "budget": 1}),
+    );
+
+    assert_eq!(envelope["truncated"], json!(false), "{envelope}");
+    assert_eq!(envelope["truncation_reasons"], json!([]), "{envelope}");
+    assert_frontier(&traversal_member(&envelope), json!([]));
+}
+
+#[test]
 fn follow_empty_still_supplies_the_traversal_member() {
     // §8.1 "including an empty array": `follow: []` is a supplied traversal that
     // follows nothing, so the member is present with an empty walk.

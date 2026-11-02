@@ -1,14 +1,21 @@
-//! The query specification: nine accepted keys, and one kind of refusal.
+//! The query specification: ten accepted keys, and one kind of refusal.
 //!
-//! `from`, `where`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth`
-//! and `budget` are the whole surface (DEC-011, §5). `where` is the predicate
-//! object of §6, parsed here so a malformed predicate is refused before any
-//! store access. A traversal key is either the wildcard `"*"` or an array of
+//! `from`, `where`, `select`, `order`, `limit`, `follow`, `backlinks`, `depth`,
+//! `budget` and `edges` are the whole surface (DEC-011, §5). `where` is the
+//! predicate object of §6, parsed here so a malformed predicate is refused before
+//! any store access. A traversal key is either the wildcard `"*"` or an array of
 //! top-level field names; the wildcard has that one spelling, because a mixed
 //! array would need a precedence rule between query order and lexical order that
 //! the brief does not give. The traversal keys imply neither each other nor a
 //! traversal: `depth` or `budget` without `follow` or `backlinks` parses and is
 //! inert.
+//!
+//! `edges` is the one key that *supplies* a traversal rather than asking for one.
+//! It is the request-key spelling of `follow: []` — a traversal that follows
+//! nothing, supplied so that the envelope carries `traversal.edges`, the induced
+//! subgraph of the returned objects — and it parses to that same representation
+//! rather than to a second one, so nothing downstream can disagree about what was
+//! asked. It never overrides a `follow` or `backlinks` the request already named.
 //!
 //! Keys nobody planned are refused plainly as unknown, because naming a release
 //! for them would be a guess presented as a promise. `query {}` is valid and
@@ -125,6 +132,7 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
         depth: DEFAULT_DEPTH,
         budget: DEFAULT_BUDGET,
     };
+    let mut edges = false;
 
     for (key, value) in fields {
         match key.as_str() {
@@ -137,12 +145,20 @@ pub fn parse(input: &Value) -> Result<Spec, Reject> {
             "backlinks" => spec.backlinks = Some(parse_fields("backlinks", value)?),
             "depth" => spec.depth = parse_depth(value)?,
             "budget" => spec.budget = parse_budget(value)?,
+            "edges" => edges = parse_edges(value)?,
             key => {
                 return Err(Reject::UnknownSpecificationKey {
                     key: key.to_owned(),
                 });
             }
         }
+    }
+
+    // Applied after the loop, so the result does not depend on the order the keys
+    // happen to arrive in, and only when no direction was named: a request that
+    // already traverses carries the edge set regardless.
+    if edges && spec.follow.is_none() && spec.backlinks.is_none() {
+        spec.follow = Some(Fields::Named(Vec::new()));
     }
 
     Ok(spec)
@@ -268,6 +284,11 @@ fn parse_depth(value: &Value) -> Result<u64, Reject> {
     value
         .as_u64()
         .ok_or_else(|| invalid("depth", "a nonnegative integer"))
+}
+
+/// Parses `edges`: a boolean asking for the induced edge set, and nothing else.
+fn parse_edges(value: &Value) -> Result<bool, Reject> {
+    value.as_bool().ok_or_else(|| invalid("edges", "a boolean"))
 }
 
 fn invalid(key: &str, expected: &str) -> Reject {
@@ -513,7 +534,7 @@ mod tests {
     }
 
     #[test]
-    fn the_nine_keys_are_accepted_and_nothing_else_is() {
+    fn the_ten_keys_are_accepted_and_nothing_else_is() {
         // Both halves are asserted here, because the first rename of this test
         // claimed the exclusivity half was owned elsewhere and it was not: the
         // two unknown-key tests probe only `sort`, so a tenth accepted key left
@@ -539,6 +560,7 @@ mod tests {
             ("backlinks", json!(["questions"])),
             ("depth", json!(0)),
             ("budget", json!(1)),
+            ("edges", json!(true)),
         ] {
             assert!(spec(json!({key: value})).is_ok(), "{key} is accepted");
         }
@@ -644,6 +666,64 @@ mod tests {
         assert_eq!(parsed.backlinks, None);
         assert_eq!(parsed.depth, DEFAULT_DEPTH);
         assert_eq!(DEFAULT_DEPTH, 1);
+    }
+
+    #[test]
+    fn edges_asks_for_a_traversal_that_follows_nothing() {
+        // Rule (DEC-012, amended for `edges`): the key is the request-key
+        // spelling of `follow: []`. It exists so that a request which asks no
+        // question about the graph still gets `traversal.edges`, which is the
+        // induced subgraph of the returned objects. The two spellings parse to
+        // the same specification — there is one representation, not two.
+        let asked = spec(json!({"edges": true})).expect("edges is accepted");
+        let spelled = spec(json!({"follow": []})).expect("an empty follow list");
+
+        assert_eq!(asked.follow, Some(Fields::Named(Vec::new())));
+        assert_eq!(asked, spelled);
+        assert_eq!(asked.backlinks, None);
+    }
+
+    #[test]
+    fn edges_never_overrides_a_supplied_traversal() {
+        // Rule: a request that already traverses carries the edge set anyway, so
+        // the key is redundant there rather than decisive. It must not replace
+        // the fields that were actually asked for, whatever order the keys are
+        // read in.
+        let outgoing =
+            spec(json!({"edges": true, "follow": ["questions"]})).expect("both keys, compatible");
+        let incoming =
+            spec(json!({"edges": true, "backlinks": "*"})).expect("both keys, compatible");
+
+        assert_eq!(
+            outgoing.follow,
+            Some(Fields::Named(vec!["questions".into()]))
+        );
+        assert_eq!(outgoing.backlinks, None);
+        assert_eq!(incoming.backlinks, Some(Fields::All));
+        assert_eq!(incoming.follow, None);
+    }
+
+    #[test]
+    fn edges_false_asks_for_nothing() {
+        // Rule: the value is a boolean, and `false` is the absent request — it
+        // must not start a traversal of its own.
+        assert_eq!(
+            spec(json!({"edges": false})).expect("accepted"),
+            spec(json!({})).expect("an empty spec is valid")
+        );
+    }
+
+    #[test]
+    fn edges_refuses_a_value_that_is_not_a_boolean() {
+        for value in [json!([]), json!("true"), json!(1), json!(null), json!({})] {
+            assert_eq!(
+                rejection(json!({"edges": value})),
+                Reject::InvalidSpecificationValue {
+                    key: "edges".to_owned(),
+                    expected: "a boolean".to_owned(),
+                }
+            );
+        }
     }
 
     #[test]
