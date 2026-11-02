@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19c0604b57ce397b575176682fc97"
+memory_key = "mem.pattern.harden-plan.read-only-lanes"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "pattern"
+status = "active"
+title = "harden-plan's lanes cannot write: read-only audit agents return findings, they do not drop files"
+summary = 'evidence-auditor and reviewer have no write tool, so a lane brief that says "write your report to X.local.md" produces nothing; brief them to return, and have the integrator read the return'
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = [".agents/skills/harden-plan", ".doctrine/slice"]
+globs = []
+commands = []
+tags = ["subagents", "workflows", "doctrine", "harden-plan"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "4c6d64ec61148a1afa4ae19d4cbdae3a503452c6"
+ref_name = "refs/heads/main"
+checkout_state_id = "cecf7a11d143c471da14559740a3bd1c45a96ee56626cde9b6b4bd4b80d97017"
+base_commit = "a6ec23102dc041ff50ed3b094c881d0fde436609"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
