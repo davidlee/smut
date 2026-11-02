@@ -602,6 +602,47 @@ extends it. Facts here were observed this session at head `de8cf3d`.
   nothing is hidden — but no party was independent of every step. The independent check on
   this phase is the audit's pre-close review, which reads RV-030 rather than these notes.
 
+### PHASE-03 attempt 1 — timed out, partial diff inherited
+
+`44338764` hit the 30-minute wall-clock ceiling at 101k tokens / 109k peak context and exited
+non-zero. It did not fail on the work: it was mid-TDD and had a **decision request in flight**
+when it was killed, of which only one line survived — *"All three tests are red in the expected
+ways. Before finalizing, I hit one design gap worth a decision rather than a silent deviation."*
+The gap itself was never delivered. That is the operational lesson: a charter that ends only at
+its boundary loses everything if it times out, so attempt 2 commits each green cycle.
+
+**Inherited partial state, uncommitted, adopted by attempt 2 rather than reverted:**
+`src/conventions.rs` +731 lines and `src/error.rs` +7/−5 on top of `31de296`. `load`,
+`set_in_force` and `read_layer` exist; 42 `conventions::` tests pass; the gate is red on
+exactly three — `a_non_utf8_filename_is_a_failed_row`, `an_undecodable_name_sorts_last`,
+`each_layer_is_sorted_by_name`. `PHASE-03` is `in_progress`, nothing committed.
+
+**Two contradictions in that diff, which are the likely gap.** Both are stated in the code's own
+doc comments, which is how the dead run was thinking out loud:
+
+1. `load`'s doc says *"This phase makes 'absent' and 'unreadable' the same thing, so nothing
+   here errs yet"* and `read_layer` returns a bare `Vec<Entry>`, swallowing every error. EX-2
+   requires the opposite: absent contributes no entries and no error, while
+   existing-but-unreadable refuses at exit 1 through `StoreError::FileSystem { step, path,
+   source }`. `load`'s `Result` exists for exactly this branch, so a signature that never errs
+   contradicts the criterion that shaped it. This is silent-failure mode 1 of the five, written
+   into the code rather than merely missed.
+2. The doc says *"Nothing is sorted or deduplicated here"*, while EX-4 requires each layer
+   sorted by name with `None` **last** — and here is the gap worth a ruling: EX-4 also says
+   *"sorting is by the decoded name only"*, which gives **no** order between two undecodable
+   names. With two of them in one layer the listing falls back to `read_dir` order, defeating
+   the determinism EX-4 exists to guarantee (RV-029 F-16). The seat's reading, offered to
+   attempt 2 as a hypothesis to confirm or replace rather than as a ruling it may assume: the
+   decoded name orders what has one, `None` sorts last, and ties among `None`s break on the raw
+   filename bytes — a tie-break in an unspecified case that preserves both the stated rule and
+   its purpose, which is the envelope's "design clarification preserving scope, decisions and
+   behaviour".
+
+Attempt 2 is a fresh charter rather than a resume: the dead run was at 109k peak context and
+had already exhausted the wall clock, so handing the same saturated context another 30 minutes
+is the least likely route to green. The state that matters is in the tree, and the tree can be
+read.
+
 ## Autonomy log
 
 - **PHASE-02 — the phase was split by compile unit, not by the charter's editorial seam.**
