@@ -249,6 +249,21 @@ step is /phase-plan for PHASE-01 when implementation is requested.
   PHASE-02/EN-4 (`interview.local/.smut` re-declare path) and PHASE-02/EN-3
   (CHR-001 README executed block). Neither is charted until the operator rules.
 
+### Operator act — PHASE-02/EN-4 recorded (2026-11-02)
+
+The operator replied **"agreed"** to the re-declare path proposed by the seat, having
+seen the measurement: `interview.local/.smut` is `format_version` 1 with 66 entities,
+**all 66 parse-equal** to `tests/fixtures/interview/entities.json` (0 differing), every
+entity file carrying one mtime (2026-11-01 20:53) a day before the snapshot, so the
+live store holds nothing the committed fixture does not. Agreed path, after PHASE-02's
+spelling-only fixture rewrite (DEC-024): move the version-1 `.smut` aside — the
+operator's own destructive act, never an agent's — and
+`smut declare - < ../smut/tests/fixtures/interview/entities.json` in `interview.local`.
+The same reply acknowledged that the store stops loading at PHASE-02's version bump,
+meeting the version refusal at exit 1 with no migration, dual reader or repair path
+(DEC-022). Recorded in `.doctrine/state/slice/004/phases/phase-02.md` § Decisions as
+the phase-visible copy; this is the durable record. **EN-4 is satisfied; EN-3 is not.**
+
 Not started. PHASE-01 is next; `doctrine slice phase SL-004 PHASE-01 --status in_progress` opens it.
 
 ## Pre-implementation review
