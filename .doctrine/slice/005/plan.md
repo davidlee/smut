@@ -55,6 +55,36 @@ printed an envelope would stay green at unit level. Every VT row carries the fil
 and the substrings the gate reads, so `doctrine slice verify-vt` has signal rather
 than an inert passing row.
 
+**Size, and the one seam if a budget forces one.** The phases are not evenly
+weighted. PHASE-01 is roughly 250-300 lines and 13-15 tests — two seven-row tables,
+seven pinned sentences, a four-step rule and three pins — and it is the slice's
+reasoning load. PHASE-02 is roughly 60 lines and 4-6 tests. The ~120-line figure this
+plan first carried was the handover's, taken before the seven-sentence table and the
+demand table existed; the conclusion it supported still holds, but the arithmetic did
+not. No third phase for evidence assembly belongs here, and `/audit` owns
+integration. If a budget ever forces a cut, the only separable seam is PHASE-01's
+binary rows (`EX-6`): the rule and the demand walk are never split, since a rule
+without the walk re-opens RV-026 F-1.
+
+**A chain, never two worktrees.** Both phases write the same `parse` function and the
+same `malformed` array literal in `tests/predicates.rs`. PHASE-01 appends rows to that
+array; PHASE-02 adds a separate test rather than restructuring it. Dispatch them in
+order onto one branch: parallel worktrees would collide on both literals, and the
+second would have to redo the first.
+
+**Model requirements.** PHASE-01 needs sustained frontier reasoning. Its four failure
+modes all look green at first glance: the walk installed at every recursive return,
+sentences chosen by `BTreeMap` key order, step 2 read as "refuse any `$exists:false`",
+and a pin "fixed" instead of honoured. Dispatch it to a model that can hold §2's
+propagation rule and the seven shapes in one context and that will honour a pin
+contradicting its own instinct. PHASE-02 is mechanical adherence with exact-string
+discipline — two `write!` arms, two placeholder slots, two whole-line pins, two
+comment repairs — and is safe for a mid-tier model provided DEC-030 is in context and
+the pinned lines are copied, never paraphrased.
+
+The same one-line floor belongs in each runtime phase sheet at `/phase-plan` time,
+because the sheet, not this plan, is what a dispatched worker reads.
+
 ## Notes
 
 **Verified premises (re-grepped against the tree at plan time).** `parse` has one
@@ -63,8 +93,10 @@ external ingress (`src/spec.rs:132`); the predicate-level `$` arm is
 `Condition::holds` are where the design says they are; the boundary table is a
 fixed `[(Error, u8); 24]`; the malformed-predicate table in `tests/predicates.rs`
 already asserts exit 2, empty stdout and no store created, so it is the right home
-for both new rows. No existing test or fixture expects an empty-set answer for a
-shape this slice now refuses, so nothing outside the selectors has to move.
+for the contradiction rows — PHASE-02's whole-line pin needs a separate test beside
+it, because that table's rows are 2-tuples asserted by substring. No existing test
+or fixture expects an empty-set answer for a shape this slice now refuses, so
+nothing outside the selectors has to move.
 
 **`tests/fixture.rs:457` is discharged, not deferred.** The handover flagged that
 test's computed `{"id":{"$in": reached}}`. The derivation cannot be empty:
@@ -99,9 +131,61 @@ selectors this plan assumes come from research's Thread 2 hotspot map, and each
 hotspot was re-checked against the tree above. No restamp is needed to plan; it can
 be done at audit if the research artifact is to be reused.
 
-**What is deliberately absent.** No third phase for evidence assembly — three files
-and ~120 lines do not need one, and `/audit` owns integration. No guide text
+**What is deliberately absent.** No third phase for evidence assembly: PHASE-01 alone
+is 250-300 lines and 13-15 tests, and `/audit` owns integration. No guide text
 (DEC-027's scoping sentence belongs to IMP-012's delivery), no envelope change, no
 `$or` analysis, no `$and`-spanning analysis, and no repair of CHR-002's own
 misattribution in `src/error.rs`. Each absence is a decision recorded in the design
 or the backlog, not an omission.
+
+## Hardening
+
+Two independent read-only reviews ran over this plan before dispatch: one over
+obligation coverage — every claim in design §1-§7 mapped to a criterion — and one over
+implementation-surface viability — call sites, assertion homes and gate sharpness
+checked against the tree. The changes below are the adjudicated result.
+
+**What the reviews changed.**
+
+- **The call-site split is named.** "Called once at the end of `parse`" is writable as a
+  walk at every recursive return, which refuses a contradiction inside `$or` or under a
+  single `$not` — two of the phase's own pins. PHASE-01/EX-2 now names the private
+  builder, the one-call public `parse`, and `a_single_disjunct_or_is_not_refused` as the
+  pin that catches the mistake.
+- **Fixed order is pinned by more than one adjacency.** PHASE-01/EX-4 enumerates the
+  seven named tests, the verbatim sentences, the positive controls, the rows that prove
+  §2's order across steps 3 and 4, the array-order pair and the `1`/`1.0` row, plus
+  `{"$exists":false}` alone, which step 2 must not swallow.
+- **Inert VT keywords are replaced.** Rows keyed on substrings that already sat in the
+  named file — `INVALID_INPUT` in `src/error.rs`, `has_store`, `$contains` and
+  `UnknownPredicateOperator` in the other two — now key on strings that can only exist
+  once the phase lands, and PHASE-01 gains VT-4 keyed on the seven test names.
+- **The whole-line assertion has a home.** The malformed-predicate table is 2-tuples
+  asserted with `contains`, so it cannot carry a whole-line assertion; PHASE-02/EX-4
+  puts the new pin in a separate test beside it and leaves the three rows untouched.
+- **`$foo` gets a whole-line pin.** The three existing `$foo` assertions are variant
+  equality or substring, so none of them could see a reworded unknown-name sentence.
+- **DEC-030's status is an entrance condition.** PHASE-02/EN-1 requires the decision to
+  read `accepted`, or the operator's recorded assent to be in the evidence, and names
+  its `choice` facet rather than its stale body example as the byte source.
+
+**Routed to `/feedback`, not fixed here.** Each is a defect in the locked design or in a
+decision it transcribes; repairing one in the plan would hide it.
+
+- §1's diagram label, "each `Field` is judged only when reached through `And`", is
+  false for a bare root field — the same error DEC-027 corrected.
+- §2 and §6's "called once at the end of `parse`" is refuted by §1's own premise:
+  `parse` re-enters itself through `parse_all` and `parse_not`.
+- §5's `the_sentence_is_chosen_by_the_fixed_order` discriminates one adjacency, while
+  §2 claims the message is the same for every spelling of a predicate.
+- DEC-030's body prints `{"$ne": "x"}` against its own facet's `<operand>`, and its
+  status reads `proposed` where DEC-027 reads `accepted`.
+- §6 says "including the four pins"; §5 defines three.
+- §5's binary row does not say whether the pinned stderr line carries the `smut: `
+  prefix.
+- §3's second sentence names one operator where DEC-030's own criterion asks for the
+  two operators or the empty list the sentence is about.
+- "required-position" in §1 against "demanded" in §2-§6 and in this plan's VT-1: one
+  word should win.
+- DEC-027's `$not`-parity shorthand predicts non-refusal for a contradiction on a path
+  where an `$or` sits under a `$not`, which the walk soundly refuses.

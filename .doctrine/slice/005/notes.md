@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · design locked (run dr-01a19a1e, rev 43; slice → plan) · base da4c404
+fresh-as-of: 2026-11-02 · plan drafted and hardened (2 phases; run dr-01a19a1e rev 43) · base e4191ad
 
 ### Produced
 
@@ -19,6 +19,9 @@ fresh-as-of: 2026-11-02 · design locked (run dr-01a19a1e, rev 43; slice → pla
 - **CHR-002** — `src/error.rs` cites DEC-006 for the duplicate-key refusal; the
   authority is DEC-001 rule 1. Out of this slice's scope.
 - `design.md` — seven sections, materialised at revision 43, all seven attested.
+- `plan.toml` + `plan.md` — two phases cut by defect (contradiction rule; `$`-message
+  split), every obligation mapped to a criterion, hardened by two independent reviews
+  (obligations; implementation surface) before dispatch.
 - `research/research.md` + two raw threads; the design-surface triage in this file.
 
 ### Learned
@@ -39,6 +42,15 @@ fresh-as-of: 2026-11-02 · design locked (run dr-01a19a1e, rev 43; slice → pla
 - Nothing open inside the design. Three silences are deliberate and named in §7
   (`$contains` unbounded; anything outside demanded position; `$or` contents never
   analysed — pinned, so breaking it is a decision).
+- **Plan hardening routed nine repairs to the locked material, not to the plan.** They
+  await `/feedback` (and, for the two decision records, the operator's act): design
+  §1's diagram label; §2/§6's "called once at the end of `parse`" against §1's own
+  recursion premise; §5's single fixed-order adjacency against §2's every-spelling
+  claim; DEC-030's body printing a concrete operand against its facet's `<operand>`;
+  DEC-030 `proposed` where DEC-027 is `accepted`; §6's "four pins" against §5's three;
+  §5's binary row silent on the `smut: ` prefix; §3's second sentence naming one
+  operator; "required-position" vs "demanded"; DEC-027's `$not`-parity shorthand. The
+  plan implements the correct behaviour (demand walk, `<operand>`) in every case.
 - Carried into the plan: `tests/fixture.rs:457` composes `{"id":{"$in": reached}}`
   from a computed list; an empty derivation now refuses. Check it at implementation.
 - Ordering: SL-005 lands before SL-004's PHASE-02 (both touch `src/error.rs`); SL-004's
