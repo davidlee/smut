@@ -75,10 +75,6 @@ kept as the prior, not as the answer.
 - **A4** — text is the human channel and `--format json` the piped one; the json
   declaration's shape does not change beyond `source`.
 
-## Harvest
-
-Nothing yielded yet — the slice is in design. Collected at close.
-
 ## Critical pass before drafting (informal, 2026-11-02)
 
 An independent read-only review — a second agent, given the scope, this file, the research
@@ -139,3 +135,48 @@ Two things the operator explicitly declined to pull in, and why they cost nothin
 revision 32), but no review *pass* has run over the edited text, so the run reports
 `RV-029 STALE — it no longer covers current content`. It is an advisory, not a gate; the
 audit should treat the two hedge paragraphs as reviewed-by-attestation only.
+
+## Harvest
+
+**fresh-as-of:** `SL-008` status `plan`, design run locked at revision 36, head `d4f593f`
+plus this commit. Captured before handover to `/plan`.
+
+### Produced
+
+- **DEC-031** — the set in force is chosen by layer, never by validity; origin printed in the
+  listing; the body stays the file's bytes. **DEC-032** — the loader takes its roots as
+  parameters; nearest `.git` for the project root; the config home for the user layer; only
+  the binary reads the environment; resolution happens after parsing. **DEC-033** — exit 2 for
+  what the caller typed, 1 for what the filesystem supplied, a listing reporting a broken set
+  at 0. All three `shapes → SL-008`.
+- **QUE-002** — the environment override's name, what it names, and its rank: open by design.
+- **RV-029** — twenty findings (nine major, eleven minor), all disposed `fix-now`, verified,
+  ten severe ones routed (`review` ×6, `demonstrate` ×4), pass concluded.
+- `design.md` (314 lines, seven sections), eight design-target selectors, one scope-relevant
+  glob, `docs/store-format.md` added to the fence.
+- Memories: `mem_01a19bcdb9177f53bd0d7597098b312f` (review-stage mechanics beyond the base
+  set), `mem_01a19bce0c187080a465340cfaf6f8bd` (shared worktree git discipline).
+
+### Learned
+
+- **Origin printing and byte-identity cannot both hold.** DEC-026 promised a header naming the
+  file; DEC-028 made a set's bytes load-bearing. Keeping the bytes and moving the origin to
+  the listing was the whole hinge of the design.
+- **Validity is not a tie-breaker.** A broken nearer set makes that name *unaskable*. Accepted
+  on the operator's word ("fails loud and clearly") after being stated as a consequence.
+- **A pure resolver needs its roots passed in**, and the leak it prevents is in the *unit*
+  tests, not the CLI — `main`'s in-process `dispatch_of` reads real cwd and `$HOME`.
+- Attestation is not coverage: a pass opened before late edits still reports `STALE` after the
+  edits are re-attested.
+
+### Open
+
+- **QUE-002** — the environment override (name, target, rank).
+- **IMP-008** — the section grammar and the `--with-conventions` flag; deliberately deferred,
+  free to add later because the loader never interprets the body.
+- **Reconcile obligations** (three governance amendments, in § Obligations owed at reconcile):
+  DEC-028's malformed-file clause, DEC-026's "set header naming its own file", DEC-017's
+  "a file plus a match arm".
+- **RV-029 coverage residue** — the two hedge paragraphs (§5, §6 at revisions 30–31) are
+  attested but no pass ran over them.
+- **SL-006** is unblocked by this slice landing: `epistemic-records` returns to `plan`.
