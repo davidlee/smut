@@ -15,6 +15,10 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
+use smut::learn::{
+    EXAMPLE_FILTER, EXAMPLE_FILTER_Q, EXAMPLE_FOLLOW, EXAMPLE_FOLLOW_Q, EXAMPLE_TRAVERSE,
+    EXAMPLE_TRAVERSE_Q,
+};
 
 /// A scratch working directory holding at most one store, removed when dropped.
 struct Scratch {
@@ -1638,4 +1642,468 @@ fn a_traversal_response_keeps_its_container_names() {
         .collect();
     returned.sort_unstable();
     assert_eq!(returned, vec!["kept", "root"], "{envelope}");
+}
+
+// ── smut q: the verb end to end (PHASE-02, EX-1…EX-8) ──────────────────────
+//
+// The compiler is `tests/dsl.rs`'s. What is here is the verb: that one line of
+// words and its JSON twin come out of the same pipeline with the same bytes, that
+// every refusal arrives whole and at the right code, and that `q` creates nothing.
+
+/// The recipe's store: a session, and two questions that reach it by `part-of`,
+/// one open and one resolved. `q-other`'s title carries "graph" so the compound
+/// condition in `operators_and_commas_reach_the_compiler_verbatim` selects exactly
+/// one entity.
+fn store_of_a_session_and_two_questions(scratch: &Scratch) {
+    for declaration in [
+        r#"{"smut_id":"session","title":"Session"}"#,
+        r#"{"smut_id":"q-query","type":"question","status":"open","title":"Query shape","part-of":[{"smut_id":"session"}]}"#,
+        r#"{"smut_id":"q-other","type":"question","status":"resolved","title":"A graph view","part-of":[{"smut_id":"session"}]}"#,
+    ] {
+        let declared = smut(scratch, &["declare", declaration]);
+        assert_eq!(declared.code, 0, "{declaration}: {}", declared.stderr);
+    }
+}
+
+/// The arguments a printed `smut q` line denotes: the verb, then the words the
+/// guide prints, cut where a shell would cut them. The words come from the
+/// constant, so the line asserted here is the line the guide types.
+fn q_words(printed: &str) -> Vec<&str> {
+    std::iter::once("q")
+        .chain(printed.split_whitespace())
+        .collect()
+}
+
+/// Runs one `smut q` line and the JSON specification it denotes on the same store,
+/// and asserts both succeeded with the *same bytes* on stdout — the evidence that
+/// `q` is a front-end and not a second engine (design §7).
+fn same_answer(scratch: &Scratch, words: &[&str], specification: &str) -> Ran {
+    let from_words = smut(scratch, words);
+    let from_json = smut(scratch, &["query", specification]);
+
+    assert_eq!(from_words.code, 0, "{words:?}: {}", from_words.stderr);
+    assert_eq!(from_json.code, 0, "{specification}: {}", from_json.stderr);
+    assert_eq!(
+        from_words.stdout, from_json.stdout,
+        "{words:?} and {specification} are one pipeline"
+    );
+
+    from_words
+}
+
+/// The `smut_id`s an envelope selected, in the order it returned them.
+fn selected_ids(envelope: &Value) -> Vec<String> {
+    envelope["objects"]
+        .as_array()
+        .unwrap_or_else(|| panic!("an envelope of entities: {envelope}"))
+        .iter()
+        .map(|entity| {
+            entity["smut_id"]
+                .as_str()
+                .expect("a stored identity")
+                .to_owned()
+        })
+        .collect()
+}
+
+#[test]
+fn the_two_call_recipe_reads_the_same_both_ways() {
+    // EX-1…EX-4: the guide's two calls, each typed as words and as JSON, are one
+    // answer byte for byte. The traverse and follow lines answer *differently*, so
+    // neither can be an accidentally empty envelope.
+    let scratch = Scratch::new();
+    store_of_a_session_and_two_questions(&scratch);
+
+    let traversed = same_answer(&scratch, &q_words(EXAMPLE_TRAVERSE_Q), EXAMPLE_TRAVERSE);
+    let mut reached = selected_ids(&traversed.json());
+    reached.sort_unstable();
+    assert_eq!(
+        reached,
+        ["q-other", "q-query", "session"].map(String::from),
+        "both hops back through part-of from the session: {}",
+        traversed.json()
+    );
+
+    let followed = same_answer(&scratch, &q_words(EXAMPLE_FOLLOW_Q), EXAMPLE_FOLLOW);
+    let mut walked = selected_ids(&followed.json());
+    walked.sort_unstable();
+    assert_eq!(
+        walked,
+        ["session"].map(String::from),
+        "the session stores no part-of, so the other direction reaches it alone: {}",
+        followed.json()
+    );
+    assert_ne!(
+        walked, reached,
+        "the two lines are a pair because they answer different questions"
+    );
+
+    // The filter twin is *not* the JSON twin: bare roots are this surface's spelling
+    // of a `$in` on identity, so the two agree on the selected set rather than on an
+    // envelope or on an order (design §5.2).
+    let line = EXAMPLE_FILTER_Q.replace("IDS", "q-query q-other");
+    let from_words = smut(&scratch, &q_words(&line));
+    let from_json = smut(
+        &scratch,
+        &[
+            "query",
+            &EXAMPLE_FILTER.replace("IDS", r#"["q-query","q-other"]"#),
+        ],
+    );
+
+    assert_eq!(from_words.code, 0, "{line}: {}", from_words.stderr);
+    assert_eq!(from_json.code, 0, "{}", from_json.stderr);
+
+    let mut selected = selected_ids(&from_words.json());
+    let mut twin = selected_ids(&from_json.json());
+    selected.sort_unstable();
+    twin.sort_unstable();
+
+    assert_eq!(
+        selected,
+        ["q-query"].map(String::from),
+        "the open half of the reached pair: {}",
+        from_words.json()
+    );
+    assert_eq!(
+        selected,
+        twin,
+        "the two spellings select the same entities: {}",
+        from_words.json()
+    );
+}
+
+#[test]
+fn q_creates_no_store_and_a_declare_beside_it_does() {
+    let scratch = Scratch::new();
+
+    let refused = smut(&scratch, &["q", "session"]);
+
+    assert_eq!(refused.code, 1, "a read with no store: {}", refused.stderr);
+    assert_eq!(refused.stdout, "", "a failure prints no success envelope");
+    assert!(!scratch.has_store(), "q creates nothing");
+
+    // Paired in the same directory, so the assertion above discriminates: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"session","title":"S"}"#],
+    );
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(scratch.has_store(), "declare creates the store q did not");
+}
+
+#[test]
+fn tokens_keep_their_order_around_flags() {
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let between = same_answer(
+        &scratch,
+        &["q", "c", "--ids", "a", "b"],
+        r#"{"from":["c","a","b"],"select":["smut_id"]}"#,
+    );
+    assert_eq!(
+        selected_ids(&between.json()),
+        ["c", "a", "b"].map(String::from),
+        "a flag between the roots does not reorder them: {}",
+        between.json()
+    );
+
+    let leading = same_answer(
+        &scratch,
+        &["q", "--ids", "a", "b"],
+        r#"{"from":["a","b"],"select":["smut_id"]}"#,
+    );
+    assert_eq!(
+        selected_ids(&leading.json()),
+        ["a", "b"].map(String::from),
+        "a leading flag does not swallow the tokens: {}",
+        leading.json()
+    );
+
+    let trailing = same_answer(
+        &scratch,
+        &["q", "a", "b", "--ids"],
+        r#"{"from":["a","b"],"select":["smut_id"]}"#,
+    );
+    assert_eq!(
+        selected_ids(&trailing.json()),
+        ["a", "b"].map(String::from),
+        "a trailing flag does not swallow the tokens: {}",
+        trailing.json()
+    );
+
+    // `--from` is the escape for an id the grammar cannot carry bare, and it appends
+    // after the bare roots in write order.
+    let escaped = same_answer(
+        &scratch,
+        &["q", "a", "b", "--from=c", "--ids"],
+        r#"{"from":["a","b","c"],"select":["smut_id"]}"#,
+    );
+    assert_eq!(
+        selected_ids(&escaped.json()),
+        ["a", "b", "c"].map(String::from),
+        "--from appends after the bare roots: {}",
+        escaped.json()
+    );
+}
+
+#[test]
+fn a_token_after_a_value_flag_is_that_flags_value() {
+    // Standard `--flag value` convention, and the grammar's consequence rather than
+    // clap's quirk: `--follow session` is a direction named `session`, never a root.
+    let scratch = Scratch::new();
+    store_of_a_session_and_two_questions(&scratch);
+
+    let ran = same_answer(
+        &scratch,
+        &["q", "--follow", "session", "status=open"],
+        r#"{"follow":["session"],"where":{"status":{"$eq":"open"}}}"#,
+    );
+
+    assert_eq!(
+        selected_ids(&ran.json()),
+        ["q-query"].map(String::from),
+        "`session` is --follow's value and never a root: {}",
+        ran.json()
+    );
+}
+
+#[test]
+fn operators_and_commas_reach_the_compiler_verbatim() {
+    // `~`, `!` and `,` are all shell-active; the shell already quoted them, and the
+    // compiler must receive the words it was given.
+    let scratch = Scratch::new();
+    store_of_a_session_and_two_questions(&scratch);
+
+    let ran = same_answer(
+        &scratch,
+        &["q", "title~graph", "status!=open", "status=open,resolved"],
+        r#"{"where":{"status":{"$ne":"open","$in":["open","resolved"]},"title":{"$contains":"graph"}}}"#,
+    );
+
+    assert_eq!(
+        selected_ids(&ran.json()),
+        ["q-other"].map(String::from),
+        "resolved, and the only title carrying graph: {}",
+        ran.json()
+    );
+}
+
+#[test]
+fn ids_and_select_cannot_both_be_asked_for() {
+    let scratch = Scratch::new();
+
+    let refused = smut(&scratch, &["q", "session", "--ids", "--select", "title"]);
+
+    assert_eq!(refused.code, 2, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "");
+    assert_eq!(
+        refused.stderr, "smut: --ids is select smut_id; it cannot also be given --select\n",
+        "one line, whole, naming both flags"
+    );
+}
+
+#[test]
+fn depth_without_a_direction_is_refused_while_the_specification_accepts_it() {
+    let scratch = Scratch::new();
+
+    let refused = smut(&scratch, &["q", "--depth", "2"]);
+
+    assert_eq!(refused.code, 2, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "");
+    assert_eq!(
+        refused.stderr,
+        "smut: --depth needs a direction: add --follow, --backlinks, or drop it\n"
+    );
+    assert!(
+        !scratch.has_store(),
+        "the refusal happens before any store access"
+    );
+
+    // The asymmetry from the other side: the specification still defines `depth`
+    // with no direction, and `query` still answers it.
+    store_of_three(&scratch);
+
+    let accepted = smut(&scratch, &["query", r#"{"depth":2}"#]);
+
+    assert_eq!(accepted.code, 0, "{}", accepted.stderr);
+    assert_eq!(
+        selected_ids(&accepted.json()).len(),
+        3,
+        "a depth with no direction is accepted and walks nothing: {}",
+        accepted.json()
+    );
+}
+
+#[test]
+fn a_same_value_contradiction_speaks_the_specifications_sentence() {
+    let scratch = Scratch::new();
+    store_of_a_session_and_two_questions(&scratch);
+
+    let refused = smut(&scratch, &["q", "status=open", "status!=open"]);
+    let twin = smut(
+        &scratch,
+        &[
+            "query",
+            r#"{"where":{"status":{"$eq":"open","$ne":"open"}}}"#,
+        ],
+    );
+
+    assert_eq!(refused.code, 2, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "");
+    assert!(
+        !refused.stderr.is_empty(),
+        "an equality of two empty lines would prove nothing"
+    );
+    assert_eq!(
+        refused.stderr, twin.stderr,
+        "the same line a JSON caller gets, because the specification is what refuses it"
+    );
+
+    // The near miss: a different value is satisfiable, and is answered.
+    let answered = same_answer(
+        &scratch,
+        &["q", "status=open", "status!=resolved"],
+        r#"{"where":{"status":{"$eq":"open","$ne":"resolved"}}}"#,
+    );
+
+    assert_eq!(
+        selected_ids(&answered.json()),
+        ["q-query"].map(String::from),
+        "{}",
+        answered.json()
+    );
+}
+
+#[test]
+fn the_specifications_own_messages_reach_the_human() {
+    // Every numeric flag arrives as text, so no numeric refusal is clap's. `--follow
+    // any` is present wherever it is required: without a direction the front-end
+    // refuses the flag first, and that sentence is the one below.
+    let scratch = Scratch::new();
+
+    for (words, sentence) in [
+        (
+            &["--depth", "abc", "--follow", "any"][..],
+            "smut: depth must be a nonnegative integer\n",
+        ),
+        (
+            &["--depth=-1", "--follow", "any"][..],
+            "smut: depth must be a nonnegative integer\n",
+        ),
+        (
+            &["--budget", "0", "--follow", "any"][..],
+            "smut: budget must be a positive integer\n",
+        ),
+        (
+            &["--limit", "0"][..],
+            "smut: limit must be a positive integer\n",
+        ),
+    ] {
+        let mut arguments = vec!["q"];
+        arguments.extend_from_slice(words);
+
+        let refused = smut(&scratch, &arguments);
+
+        assert_eq!(refused.code, 2, "{words:?}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{words:?}");
+        assert_eq!(refused.stderr, sentence, "{words:?}");
+    }
+
+    // The same numeric text with no direction is refused for the missing direction,
+    // so the two sentences are told apart.
+    let undirected = smut(&scratch, &["q", "--depth", "abc"]);
+
+    assert_eq!(undirected.code, 2, "{}", undirected.stderr);
+    assert_eq!(
+        undirected.stderr,
+        "smut: --depth needs a direction: add --follow, --backlinks, or drop it\n"
+    );
+}
+
+#[test]
+fn q_takes_its_bare_positional_so_the_usage_line_says_tokens() {
+    // The load-bearing fact of DEC-037: the positional carries no attribute, so its
+    // name is its own field's. `value_name`, `trailing_var_arg` or
+    // `allow_hyphen_values` would redden this line.
+    let scratch = Scratch::new();
+
+    let help = smut(&scratch, &["q", "--help"]);
+
+    assert_eq!(help.code, 0, "{}", help.stderr);
+    assert!(
+        help.stdout
+            .lines()
+            .any(|line| line == "Usage: smut q [OPTIONS] [TOKENS]..."),
+        "the usage line names the bare positional: {}",
+        help.stdout
+    );
+    assert!(!scratch.has_store(), "--help touches no store");
+}
+
+#[test]
+fn claps_own_refusals_are_unchanged_and_named() {
+    // clap's render is multi-line, so whole-*line* membership is this test's rule;
+    // the binary's own one-line refusals are asserted whole elsewhere.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    for (arguments, line) in [
+        (
+            &["q", "--follo"][..],
+            "error: unexpected argument '--follo' found",
+        ),
+        (
+            &["q", "--follow", "a", "--follow", "b"][..],
+            "error: the argument '--follow <FOLLOW>' cannot be used multiple times",
+        ),
+        (
+            &["q", "-weird-id"][..],
+            "error: unexpected argument '-w' found",
+        ),
+    ] {
+        let refused = smut(&scratch, arguments);
+
+        assert_eq!(refused.code, 2, "{arguments:?}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{arguments:?}");
+        assert!(
+            refused.stderr.lines().any(|rendered| rendered == line),
+            "{arguments:?} must name what was typed, line for line: {:?}",
+            refused.stderr
+        );
+    }
+
+    // An unknown subcommand is this binary's own sentence, and it suggests no near
+    // names.
+    let unknown = smut(&scratch, &["quer"]);
+
+    assert_eq!(unknown.code, 2, "{}", unknown.stderr);
+    assert_eq!(unknown.stdout, "");
+    assert_eq!(unknown.stderr, "smut: unknown command: quer\n");
+}
+
+#[test]
+fn a_double_dash_reaches_a_hyphen_leading_root() {
+    let scratch = Scratch::new();
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"-weird-id","title":"Weird"}"#],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let ran = same_answer(
+        &scratch,
+        &["q", "--ids", "--", "-weird-id"],
+        r#"{"from":["-weird-id"],"select":["smut_id"]}"#,
+    );
+
+    assert_eq!(
+        selected_ids(&ran.json()),
+        ["-weird-id"].map(String::from),
+        "{}",
+        ran.json()
+    );
 }
