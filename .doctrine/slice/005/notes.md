@@ -200,3 +200,31 @@ phases are all still `planned`" — true when written, false now. The ordering c
 they state is therefore **live rather than theoretical**: SL-005's refusal phase should
 land before SL-004's PHASE-02, which respells two identity messages in the same
 `src/error.rs`. Enforce it in the plan; do not reopen the design for a dated sentence.
+
+## Implementation run
+
+### Preflight (super-orchestrator seat, PHASE-02 charter)
+
+- **Charter:** SL-005 PHASE-02 only (`Split the predicate-level $ refusal, keeping both
+  sentences true`). The seat announces it; the sub-orchestrator drives it.
+- **Ordering guard (PHASE-01/EN-2, PHASE-02/EN-2) holds:** SL-004's PHASE-02 is still
+  `planned` in `.doctrine/state/slice/004/phases/phase-02.toml`, PHASE-03 too. PHASE-01
+  of SL-004 is `completed`. No rebase needed; no race on `src/error.rs` at charter time.
+- **Baseline green at `b544359`:** `cargo test --test predicates` 40, `--test
+  cli_contract` 10, `--test compatibility` 12; `CARGO_NET_OFFLINE=true just check` exit 0
+  (clippy `-D warnings` on both feature sets, `fmt --check`). No known baseline failure.
+- **Toolchain probed:** `cargo 1.100.0-beta.7`, `just 1.58.0`, `git` on PATH;
+  `cargo build --offline` and `cargo test --offline` work. Gate command for this phase:
+  `CARGO_NET_OFFLINE=true just check` after `cargo fmt`.
+- **Research:** `doctrine slice research 5` — "baseline is current". No refresh.
+- **verify-vt snapshot:** PHASE-01 `VT-1..VT-4` PASS; PHASE-02 `VT-1..VT-3` FAIL on
+  their own absent names (`MisplacedPredicateOperator`, the pinned `$ne` line). Expected
+  before the phase; the gate needs `record-delta` before it can attribute (see Harvest).
+- **Paths not owned by this slice — never staged:** `README.md` (operator's 0.2 rewrite),
+  and untracked other-writer work: `.doctrine/slice/006*/`, `.doctrine/slice/006-*`,
+  `.doctrine/backlog/idea/004*/`, `005*/`. Commits use explicit pathspecs only.
+- **Plan pointer drift, decided not escalated:** PHASE-02/EX-5 names
+  `src/predicate.rs:397-399` for the falsified comment; that text actually lives in
+  `parse_refuses_an_unknown_operator_at_either_level` (~`:527-530`), and the
+  `tests/predicates.rs:328-331` pointer is accurate. The comment is identified by
+  content, both hunks are diffed comment-only, assertions byte-identical.
