@@ -127,7 +127,8 @@ named direction) needs no decision: the spec's own rule is inherited.
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
 fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 completed
-· bb6a9d2 · PHASE-02 completed · d20a84f · PHASE-03 completed · cd69acd
+· bb6a9d2 · PHASE-02 completed · d20a84f · PHASE-03 completed · cd69acd · VH-1 pass
+· head e09a18b · audit **not opened**
 
 ### Produced
 
@@ -739,3 +740,10 @@ PHASE-02 → PHASE-03, and the `Seat` block closes the run.
   reproducible fixture and eight verified transcripts, including two limit examples.
   Reason: `README.md` is operator-owned (CHR-001), and paying it now would put an
   unreviewed edit on a file another writer holds.
+- **Seat · handover rather than continuing into audit, decided.** The run ends with a
+  full `handover.md` packet; the audit itself is left to a fresh context. Reason:
+  audit's value is fresh eyes, and this session authored every charter and holds the
+  seat's own rationalisations (the F1 ruling, the “no flags” defence) — the very
+  judgements audit should interrogate without deference. The durable records are
+  current as of `e09a18b`, so the packet only frames the next stage and points at
+  them.
