@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..8ea2ee7 + the range-record commit) · all three phases implemented · **audit next**
+fresh-as-of: 2026-11-02 · **audit complete** — RV-028 8/8 terminal, pass concluded; slice at `reconcile` · code base `64e5f4b` + the audit repair (F-5) · gate green after the repair
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -28,12 +28,69 @@ fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..8ea2ee7 + the rang
   notation, the guide's identity teaching, the brief in place, and the executed README fence;
   ~40 new behaviour tests across seven VT homes (cli_contract +10, durability +14, entity +4,
   learn +7, render +1, store_corruption +4, conventions +0)
-- SL-004 PHASE-03 — `.doctrine/slice/004/decision-amendments.md`: the six-decision
-  amendment proposal (per-record facet/prose mapping, DEC-005's withdrawal + DEC-021
-  citation + `Reject` signature correction); an independently repeated evidence set
+- SL-004 — `decision-amendments.md`: the six-decision amendment proposal (per-record
+  facet/prose mapping, DEC-005's withdrawal + DEC-021 citation + `Reject` signature correction); an independently repeated evidence set
   (format-2 lifecycle, version-1 index refusal, version-1 manifest no-replay against
   a readable control, RV-022 F-3 re-run, fixture equivalence from blob `f5b29de6`,
   residual classification 1091→65, gate 370/383)
+- **RV-028 — the audit**: 8 findings (0 blocker, 3 major, 4 minor, 1 nit), all
+  answered, disposed and verified; `## Synthesis` + `## Reconciliation Brief` in
+  `.doctrine/review/028/review-028.md`; audit repair of `src/store/index.rs:1`
+  (F-5) with the gate re-run over the repaired tree
+
+### Audit (RV-028, 2026-11-02)
+
+Eight findings, all terminal, all confirmed; **no behavioural defect found**. The
+surface was the `64e5f4b` tree, probed against the built binary rather than read off
+the phase handbacks. Fifteen probes: the design §1 example; nested ordinary `id` as
+number/`null`/object/array; `changes[].smut_id`; the conventions seed; `select: []`;
+four request-level malformed identities at exit 2; `where` on ordinary `id`; the
+IMP-005 shape re-run (five commands, all exit 1 with file and path, bytes unchanged);
+version 1 and 3 refused, version 2 read; absent store and index-less `.smut/`;
+fixture inverse-rename byte-identical to blob `f5b29de6`.
+
+- **F-1 (major, fix-now → selector + design mirror)** — `src/predicate.rs` was edited
+  (8 lines of inline-fixture respell) and design §4 never listed it, so
+  `slice conformance` reads it undeclared. The registry is the fix, not the code.
+- **F-2 (major, fix-now → brief)** — the DEC-007 amendment omits its `title`
+  ("id-first canonical order"), the first rejected-alternative bullet, and the slug;
+  the proposal's claim to retain "all four rejected alternatives" is what hides it.
+  Slug is un-editable by `knowledge edit` → tolerated, with rationale.
+- **F-3 (minor, fix-now → brief)** — DEC-010's `choice` row quotes a mid-field
+  substring with no ellipsis; a whole-field replacement would drop the README clause.
+- **F-4 (major, design-wrong → REV STD-001)** — the standard that governs the format
+  record still says canonical bytes are "`id`-first within an entity".
+- **F-5 (minor, fix-now → repaired)** — `src/store/index.rs:1` said
+  "`format_version` 1". Repaired at audit; gate re-run green.
+- **F-6 (minor, design-wrong)** — `docs/store-format.md` (and design §3) state as
+  current that conventions sets live under `.config/smut/conventions/`; the binary
+  embeds one set and reads no file (IMP-013). Negative rule kept, positive claim
+  re-timed.
+- **F-7 (minor, follow-up → CHR-001)** — the committed README still teaches the
+  reversed rule; the operator's in-flight rewrite already corrects it.
+- **F-8 (nit, fix-now)** — the brief's "ID/content disagreement" vs the format
+  record's "identity/content disagreement".
+
+RV-024's two blockers were verified on evidence in the same pass (design §3 now
+carries both resolutions; STD-002 exists and the slice discharges it by example).
+
+### Learned (audit)
+
+- **A proposal's coverage claim is not coverage** — verify a mapping against the
+  artefact, not against the proposal's own "everything else is retained" list. The
+  DEC-007 omission was invisible precisely because the claim was confident.
+  (`mem.pattern.doctrine.proposal-coverage-claims`.)
+- **`doctrine knowledge edit` cannot change a slug** (title/tags/body and facet
+  subverbs only), so a slug derived from a renamed title goes stale and stays stale;
+  treat it as an immutable identifier, not a defect.
+  (`mem.fact.doctrine.knowledge-slug-immutable`.)
+- **The audit that probes the binary finds different things from the audit that reads
+  the tests.** Every behavioural claim here was re-run as a command; the eight findings
+  are all in prose, registries and one governance record — none in behaviour. The gate
+  was green before and after and could not have surfaced any of them.
+- **A locked design run's prose is still editable, but only through `design adopt`.**
+  `design status` reported "changes 1 since the declared baseline" before this audit
+  touched anything; reconcile will add another and must re-baseline.
 
 ### Learned
 - DEC-020 — identity constant and per-surface pins
@@ -74,29 +131,27 @@ fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..8ea2ee7 + the rang
   comparison, which keeps `1` distinct from `1.0`) and `node`
 
 ### Open
-- **SL-004 — formal audit is the next action, and it must not be closure.** The three
-  phases are implemented and committed; the audit consumes
-  `.doctrine/slice/004/decision-amendments.md` and writes the reconciliation brief.
-  `/reconcile` then lands the six record amendments; `/close` follows that
-- **SL-004 — the audit must dispose of the `src/predicate.rs` selector gap.** Its 8-line
-  inline-test respell (`{"id":"a"}` → `{"smut_id":"a"}`) landed in a file design §4's
-  code-impact table never listed; `slice conformance` reports it undeclared. Not a
-  defect — a design-selector gap. Do not retro-fit the locked design
-- **SL-004 — README.md's surrounding prose is the operator's and still teaches the old
-  key** (`"id"` at lines 16, 73, 77, 249, 252; never-executed fences show old
-  declarations). Lines 247-250 state the exact claim DEC-005 reverses — "An embedded
-  object carrying `id` is a reference, not metadata… there is no way to store inline
-  metadata under a field named `id`". Out of this slice's write scope (CHR-001): flag
-  it and let the operator land it; the audit should record it as unresolved work, not
-  as a slice miss
-- SL-004 — the brief's line 89 says "ID/content disagreement" as the prose name of the
-  index/entity condition; it is identity shorthand, not the old key, but a later editorial
-  pass could say "identity/content"
-- SL-004 — the amendment proposal's DEC-010 item restates the documentation *contract*
-  (README sharp edge, format version 2). The README bullet it proposes is not an edit
-  permission: reconcile edits the record, CHR-001 edits the prose
-- RV-025 — 8 minor + 2 nit answered, none contested; not verified, no route required
-- Doctrine — design status reports `review_pass RV-025 STALE` on a locked run whose content matches its watermark and whose cache is current (projection quirk, not a gate)
+- **SL-004 — `/reconcile` is the next action, and it owns two write surfaces.** Per-slice
+  direct edits: the `src/predicate.rs` selector (verb) + its design §4 row (mirror), and
+  the design §3 / `docs/store-format.md` conventions-timing correction, and the brief's
+  "identity/content" respell. Governance by REV: STD-001's `id`-first parenthetical and
+  the six decision amendments (DEC-002, 005, 007, 010, 012, 016) — with DEC-007's title,
+  first rejected-alternative bullet and (tolerated) slug, and DEC-010's full-field text.
+  `doctrine design adopt 4` after editing `design.md` (locked run, out-of-run edits)
+- **SL-004 — CHR-001 owns the README prose** (`id`-as-identity at 16, 65, 73, 77 and the
+  reversed rule at 247-250 in the `64e5f4b` file). The operator's in-flight rewrite
+  already carries the corrected rule; the work is landing it, keeping the
+  ` ```console ` fence shape `tests/readme_example.rs` matches
+- SL-004 — the design-target selectors for the six decision records read `undelivered`
+  until reconcile lands their REVs. Expected state, not a defect
+- **RV-024 — six major, three minor and one nit findings its own pass left open**, and
+  **RV-025 — eight minor and two nit answered but unverified**. Neither carries an
+  unresolved blocker (RV-024's two blockers were verified at this audit), so neither
+  gates reconcile or close; both read `active`, and `/close` will want them terminal
+- IMP-013 — the layered conventions loader DEC-026/028 decided; the format record's
+  location sentence is written against it (F-6)
+- Doctrine — design status reports `review_pass RV-025 STALE` and `changes 1 since the
+  declared baseline` on a locked run; advisory, not a gate
 
 ## Working mode (operator)
 

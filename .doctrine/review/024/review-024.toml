@@ -22,7 +22,7 @@ ref   = "SL-004"
 
 [[finding]]
 id = "F-1"
-status = "answered"
+status = "verified"
 severity = "blocker"
 title = "Identity-naming diagnostics are left to the implementer while STD-001 makes their text contractual"
 detail = """
@@ -44,9 +44,14 @@ role = "responder"
 disposition = "fix-now"
 response = """Operator assented to D2 ("uh huh") on 2026-11-02, in the same reply that commissioned this ledger. Fixed by amending §3 to state the corruption reason exactly and to name every identity-naming diagnostic (`Reject::InvalidId`, `StoreError::IdDisagreement`, `describe()`'s absent-identity text, the `scan_refs` assertion, the index refusal wording), with `docs/store-format.md` quoting the resulting strings. PHASE-02/EX-9 then becomes a design obligation rather than a plan reading of §3."""
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Verified at the SL-004 audit. Design §3 now states the corruption reason exactly ("identity at <path> must be a nonempty string") and names every identity-naming diagnostic — Reject::InvalidId, StoreError::IdDisagreement, describe()'s absent-identity text, the scan_refs assertion — and requires docs/store-format.md to quote the resulting strings. The shipped tree carries all four spellings as smut_id (src/error.rs:296,415; src/store/mod.rs:505; src/entity.rs:95) and the format document quotes them verbatim (docs/store-format.md:266-272,294). PHASE-02/EX-9 records the same obligation."""
+
 [[finding]]
 id = "F-2"
-status = "answered"
+status = "verified"
 severity = "blocker"
 title = "Recovery replays before validation, so it can publish exactly the bytes the loader then refuses — with no repair path"
 detail = """
@@ -108,6 +113,11 @@ Carried as an invariant with a home, not as machinery: **a stricter stored-valid
 Its home is now STD-002 — "Recovery replays a committed manifest before the loader validates it — every stored-validity rule that tightens lands with a version bump, or proves it cannot refuse an in-flight manifest" — minted at operator direction on the ground that the defence is process, and unenshrined process is not a defence. The title names the trigger so it rides boot context and is surfaced for every slice; the statement carries the two obligations and the pre-replay review table; the rationale records why recovery must run first, that the window widens monotonically with the loader's rule count, and that no test can observe the violation. RSK-001 (the unenforced-invariant gap) is resolved `promoted`. The residual writer-bug leg is left to the write-set tests rather than to a design decision.
 
 Design consequence for this slice: §3 gains the invariant sentence as a statement, not a new rule — SL-004 discharges it by example, version 1 → 2 with the old-manifest refusal pinned pre-replay."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified at the SL-004 audit. Design §3 now carries the invariant as a statement (a stricter stored-validity rule lands with a version bump, or proves it cannot refuse an in-flight manifest) and names STD-002 as its home; STD-002 exists as a default standard with the two obligations and the pre-replay review table. The slice discharges it by example — both version constants are 2, a version-1 manifest is refused before any staged put replays (VT-4/VT-6 paired cases), and design §6 records the unreleased-at-format-1 window that proves no prior-build manifest can be refused."
 
 [[finding]]
 id = "F-3"

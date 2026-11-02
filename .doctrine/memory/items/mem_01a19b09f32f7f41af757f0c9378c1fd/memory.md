@@ -1,0 +1,3 @@
+`doctrine knowledge edit <ID>` offers `--title`, `--tags`, `--body`/`--body-mode`, and the per-kind facet subverbs (`edit decision <ID>`, etc.). There is no `--slug`.
+
+Consequence: when an amendment renames a record's title, the derived `slug` (e.g. DEC-007's `01-projection-and-envelope-…-entity-serialisation-id-first`) keeps the old wording forever. Write the finding as `tolerated` with that rationale — the slug is an identifier, like a durable id — rather than as an open defect a later agent will hunt and fail to fix. Check the same class on `memory edit`, which also exposes no slug.

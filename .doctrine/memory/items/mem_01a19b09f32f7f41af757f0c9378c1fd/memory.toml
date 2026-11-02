@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19b09f32f7f41af757f0c9378c1fd"
+memory_key = "mem.fact.doctrine.knowledge-slug-immutable"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "`doctrine knowledge edit` cannot change a slug, so a renamed title leaves a stale slug"
+summary = "Knowledge records expose `--title`, `--tags`, `--body` and the facet subverbs; the slug is derived at mint and has no edit path, so treat it as an immutable identifier."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "knowledge", "cli"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "0ecda870840f7047e67bdfc97b9608641fe3ba16"
+ref_name = "refs/heads/main"
+checkout_state_id = "7cc3b779d57ec377268abd7c6b282518a0558e4bc3fa73b6e078d2166618375f"
+base_commit = "64e5f4baa2c26bbb8cd9143aa43f8ccea46a1f9e"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "low"
+weight = 0
+

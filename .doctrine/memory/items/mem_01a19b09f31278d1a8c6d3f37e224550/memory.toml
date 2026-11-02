@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19b09f31278d1a8c6d3f37e224550"
+memory_key = "mem.pattern.doctrine.proposal-coverage-claims"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "pattern"
+status = "active"
+title = "A proposal's coverage claim is not coverage — verify a mapping against the artefact"
+summary = """A migration/amendment proposal that says "everything else is retained" is making exactly the claim an audit must not accept; grep the target artefact for the old token and diff the hits against the proposal's list."""
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = [".doctrine/slice"]
+globs = []
+commands = []
+tags = ["audit", "review", "governance", "amendments"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "0ecda870840f7047e67bdfc97b9608641fe3ba16"
+ref_name = "refs/heads/main"
+checkout_state_id = "e04213e159631fd3cbcb3efe6e8a1280f6de3ec837b728123c1de79f4a267dac"
+base_commit = "64e5f4baa2c26bbb8cd9143aa43f8ccea46a1f9e"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+

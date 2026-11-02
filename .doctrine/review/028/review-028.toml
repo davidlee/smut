@@ -1,0 +1,308 @@
+id    = 28
+slug  = "sl-004-audit-the-delivered-smut-id-format-break-its-loader-its-documents-and-the-six-decision"
+title = "SL-004 audit — the delivered smut_id format break, its loader, its documents and the six-decision handoff"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "auditor"
+responder = "author"
+rounds_base = 0
+contests_base = 0
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-004"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "`src/predicate.rs` was edited (§4 never lists it) so conformance reads it undeclared — the registry, not the code, is the gap"
+detail = """
+Expected: every path the design declared as a design target covers every source path the slice edits, so `doctrine slice conformance 4` separates foreign work from this slice's own touches.
+
+Observed: `doctrine slice conformance 4` reports `M src/predicate.rs` under **undeclared**. The edit is 8 lines of inline-test fixture respell (`{"id":"a","status":"open"}` → `{"smut_id":...}` in `src/predicate.rs:566,582,630`) — legitimate, because those fixtures name structural identity — but design §4's code-impact table has no row for the file and `.doctrine/slice/004/slice-004.toml` declares no selector for it. The predicate module never reads identity (it evaluates field predicates), so the design's impact analysis missed it while the repo-wide occurrence count had named it.
+
+The same cell also carries two non-defects which must not be read as one: the operator's and SL-006's `.doctrine` work that landed inside the recorded phase range (named in `45bc4a0`), and this slice's own `notes.md`/`slice-004.toml`/`decision-amendments.md`. Only `src/predicate.rs` is this slice's own undeclared source touch.
+
+Remedy, load-bearing first: `doctrine slice selector add 4 src/predicate.rs --intent design-target`; the design §4 table row is its human mirror, not the fix — a prose-only change leaves conformance red."""
+disposition = "fix-now"
+response = """
+Confirmed, and the remedy is the registry rather than the code. `src/predicate.rs` holds no identity logic; its fixtures named structural identity because they build entity-shaped values, so the respell was unavoidable and correct. The defect is that design §4's code-impact analysis enumerated the occurrence count's files incompletely and no selector covers the path.
+
+Reconcile action, load-bearing first: `doctrine slice selector add 4 src/predicate.rs --intent design-target`. Human mirror: a design §4 row ("`src/predicate.rs` | Evaluate field predicates only; no identity read. Update the inline fixtures that name structural identity; keep the operator grammar unchanged"). The undeclared cell's other members are carried in the synthesis as foreign/out-of-scope, not as slice findings: the operator's and SL-006's `.doctrine` commits that landed inside the recorded phase range, and this slice's own notes/toml/decision-amendments artefacts."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed, and the remedy is the registry rather than the code. `src/predicate.rs` holds no identity logic; its fixtures named structural identity because they build entity-shaped values, so the respell was unavoidable and correct. The defect is that design §4's code-impact analysis enumerated the occurrence count's files incompletely and no selector covers the path.
+
+Reconcile action, load-bearing first: `doctrine slice selector add 4 src/predicate.rs --intent design-target`. Human mirror: a design §4 row ("`src/predicate.rs` | Evaluate field predicates only; no identity read. Update the inline fixtures that name structural identity; keep the operator grammar unchanged"). The undeclared cell's other members are carried in the synthesis as foreign/out-of-scope, not as slice findings: the operator's and SL-006's `.doctrine` commits that landed inside the recorded phase range, and this slice's own notes/toml/decision-amendments artefacts."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed: the selector verb is the load-bearing change (`doctrine slice selector add 4 src/predicate.rs --intent design-target`) with the design §4 row as its mirror. Recorded in the Reconciliation Brief, Per-slice (direct edit)."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "The DEC-007 amendment omits its title, its slug and its first rejected alternative, all of which still say `id`-first"
+detail = """
+Expected: DEC-025 and design §4 require the six targeted amendments to leave no facet field or prose passage asserting that an ordinary `id` carries identity; the proposal's own cross-record check 6 states that as the goal ("after the amendment no facet field and no prose passage in any of the six records says an ordinary `id` carries identity").
+
+Observed: `.doctrine/slice/004/decision-amendments.md` (DEC-007 section) maps `choice` and four prose passages, then explicitly retains "all four rejected alternatives" — but the first alternative is:
+
+  `- Fully key-sorted entities (no `id`-first) — rejected: `id` is what a reader looks for first, in output and in files, for a small amount of code.` (`record-007.md:78-80`)
+
+which is a rule about the identity key's canonical position, not about id values. The same stale claim is in the record's header facet: `title = "0.1 projection and envelope: ... id-first canonical order"` (`record-007.toml:7`) and the derived `slug = "...-entity-serialisation-id-first"` (`record-007.toml:6`). The proposal names neither, so a reconcile that follows it lands an amendment while three passages in the same record still reverse it.
+
+Remedy: the reconciliation brief must name the title ("smut_id-first canonical order") and the rejected-alternative bullet ("no `smut_id`-first"), and record that `knowledge edit` exposes no slug edit (`--title/--tags/--body` only), so the slug is tolerated as an immutable identifier with that rationale stated — not silently left."""
+disposition = "fix-now"
+response = """
+Confirmed on evidence. Reading `record-007.toml:6-7` and `record-007.md:78-80` shows three passages the proposal neither maps nor flags, and the proposal's own claim to retain "all four rejected alternatives" is what hides the first one — it is the alternative that names `id`-first as the rule it rejects.
+
+Reconcile action, in the same REV as the rest of DEC-007: amend `title` to "`smut_id`-first canonical order" (`knowledge edit --title`); amend the rejected-alternative bullet to "`- Fully key-sorted entities (no `smut_id`-first) — rejected: `smut_id` is what a reader looks for first, in output and in files, for a small amount of code.`"; and record the slug as tolerated in the amendment note, because `doctrine knowledge edit` exposes title/tags/body and facet subverbs only — no slug edit — so `...-entity-serialisation-id-first` stays as a derived identifier. The brief carries the exact texts."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed on evidence. Reading `record-007.toml:6-7` and `record-007.md:78-80` shows three passages the proposal neither maps nor flags, and the proposal's own claim to retain "all four rejected alternatives" is what hides the first one — it is the alternative that names `id`-first as the rule it rejects.
+
+Reconcile action, in the same REV as the rest of DEC-007: amend `title` to "`smut_id`-first canonical order" (`knowledge edit --title`); amend the rejected-alternative bullet to "`- Fully key-sorted entities (no `smut_id`-first) — rejected: `smut_id` is what a reader looks for first, in output and in files, for a small amount of code.`"; and record the slug as tolerated in the amendment note, because `doctrine knowledge edit` exposes title/tags/body and facet subverbs only — no slug edit — so `...-entity-serialisation-id-first` stays as a derived identifier. The brief carries the exact texts."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed: DEC-007's title, first rejected-alternative bullet and slug are carried as an explicit correction to the proposal, with the slug tolerated because `knowledge edit` exposes no slug edit. Recorded in the Reconciliation Brief, Governance/spec (REV)."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "DEC-010's `choice` row quotes a mid-field substring with no ellipsis, so a whole-field replacement silently drops the README clause"
+detail = """
+Expected: the proposal's stated rule is "Quotation is verbatim except where an ellipsis is marked", and its replacement texts are precise enough for reconcile to apply without re-authoring.
+
+Observed: DEC-010's facet row gives Current as `"docs/store-format.md versioned as format_version 1 covering ...; learn limited to the 0.1 surface."` and Proposed as the same span at version 2. The actual field (`record-010.toml` `choice`) begins `"README with worked example, command table and sharp edges quoting the DEC-003 guarantee; docs/store-format.md versioned as format_version 1 ..."`. The quotation starts mid-field with no leading ellipsis. Applied as a whole-field replacement the proposal would delete the README clause, which the proposal's own "Unaffected rationale" list treats as retained.
+
+Remedy: state the full replacement field text, or mark the leading ellipsis and say the replacement is a substring edit."""
+disposition = "fix-now"
+response = """
+Confirmed. DEC-010's `choice` begins with the README clause and the proposal's "Current" column starts at `docs/store-format.md`, so the quotation is a substring presented as the field.
+
+Reconcile action: apply the amendment as the full field text, retaining the leading clause — "README with worked example, command table and sharp edges quoting the DEC-003 guarantee; `docs/store-format.md` versioned as format_version 2 covering layout, serialisation (structural identity `smut_id`, an ordinary `id` as data), journal states and fsync obligations, recovery, reserved names, the nested-identity corruption refusal and the commit-before-acknowledgement ambiguity; learn limited to the shipped surface." The brief states it in full."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed. DEC-010's `choice` begins with the README clause and the proposal's "Current" column starts at `docs/store-format.md`, so the quotation is a substring presented as the field.
+
+Reconcile action: apply the amendment as the full field text, retaining the leading clause — "README with worked example, command table and sharp edges quoting the DEC-003 guarantee; `docs/store-format.md` versioned as format_version 2 covering layout, serialisation (structural identity `smut_id`, an ordinary `id` as data), journal states and fsync obligations, recovery, reserved names, the nested-identity corruption refusal and the commit-before-acknowledgement ambiguity; learn limited to the shipped surface." The brief states it in full."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed: DEC-010's `choice` amendment is stated as the full field text, leading README clause retained. Recorded in the Reconciliation Brief, Governance/spec (REV)."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "STD-001 — the standard that governs the format record — still says the canonical bytes are `id`-first"
+detail = """
+Expected: after a format break, every binding record states the shipped rule; STD-001's title makes the document's identity-key and ordering contract its trigger.
+
+Observed: `.doctrine/standard/001/standard-001.md:13`:
+
+  `| the identity key and canonical bytes (entity-first ordering, `id`-first within an entity) | the identity key's spelling changes, an ordering rule changes, or the serialiser's shape changes |`
+
+The shipped rule is `smut_id`-first (`src/entity.rs:201,217,311`; `docs/store-format.md:118-124`), and the standard's own trigger column has just fired on this slice. A reader following STD-001's table gets the reversed ordering rule from the record that tells them where the ordering rule lives.
+
+No REV has been opened for it: design §4's amendment set is the six decision records, and design §4 says "ADR-001 and STD-001 govern these changes and need no amendment to authorize them" — true of authorisation, not of the stale spelling. ADR-001 is clean (its `id` mentions are historical context); STD-002 is clean.
+
+Remedy: REV modify STD-001's row to `smut_id`-first within an entity."""
+disposition = "design-wrong"
+response = """
+Confirmed, and it is the governance surface's own drift rather than a code defect: the standard that tells a reader where the ordering rule lives states the reversed rule in its trigger table.
+
+Reconcile action: a REV modify on STD-001, changing one parenthetical and nothing else — "`id`-first within an entity" → "`smut_id`-first within an entity". The trigger column, statement, rationale and scope are unchanged: the standard's argument (prose has no test; the format is what callers cannot re-derive) is unaffected by the key's spelling, and its trigger has just been exercised correctly by this slice. No second edit to the standard is proposed; STD-002 checked clean, ADR-001's `id` mentions are historical context and stay."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed, and it is the governance surface's own drift rather than a code defect: the standard that tells a reader where the ordering rule lives states the reversed rule in its trigger table.
+
+Reconcile action: a REV modify on STD-001, changing one parenthetical and nothing else — "`id`-first within an entity" → "`smut_id`-first within an entity". The trigger column, statement, rationale and scope are unchanged: the standard's argument (prose has no test; the format is what callers cannot re-derive) is unaffected by the key's spelling, and its trigger has just been exercised correctly by this slice. No second edit to the standard is proposed; STD-002 checked clean, ADR-001's `id` mentions are historical context and stay."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed as a REV modify on STD-001, one parenthetical, nothing else. Recorded in the Reconciliation Brief, Governance/spec (REV)."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "`src/store/index.rs`'s module doc still declares `format_version` 1"
+detail = """
+Expected: a module that owns the version constant and the version refusal describes the format it now reads (design §4's `src/store/**` row: "Set index and manifest format versions to 2 ... update format-bearing tests").
+
+Observed: `src/store/index.rs:1`: `//! The store index: `format_version` 1, public ids mapped to safe basenames.` The constant below it is 2 (`FORMAT_VERSION`), the shipped index serialises 2, and `docs/store-format.md` says 2. Prose only, no behaviour; the phase's document sweep reached the format record, the guide and the brief but not this source module's header.
+
+Remedy: land the one-word correction now (audit repair) and re-run the gate over the repaired tree."""
+disposition = "fix-now"
+response = """Confirmed and landed as an audit repair: `src/store/index.rs:1` now reads "`format_version` 2". The gate was re-run over the repaired tree — `doctrine check gate` exit 0, build/clippy (both feature configurations, warnings denied)/fmt/default and fault-injection suites all green — so the evidence covers the bytes that will land. The repair is one prose character, adds no behaviour and touches no design target outside design §4's `src/store/**` row."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Confirmed and landed as an audit repair: `src/store/index.rs:1` now reads "`format_version` 2". The gate was re-run over the repaired tree — `doctrine check gate` exit 0, build/clippy (both feature configurations, warnings denied)/fmt/default and fault-injection suites all green — so the evidence covers the bytes that will land. The repair is one prose character, adds no behaviour and touches no design target outside design §4's `src/store/**` row."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and repaired at audit: `src/store/index.rs:1` now reads `format_version` 2, and `doctrine check gate` was re-run over the repaired tree — exit 0, zero warnings, 370 lib / 383 fault-injection passing. No reconcile edit needed."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "minor"
+title = "The format record states as current that conventions sets live in `.config/smut/conventions/` — the shipped binary reads no such file"
+detail = """
+Expected (STD-001): the format document records what the reader does; a mechanism decided but not shipped is either marked as the adopted home for a future loader or left out.
+
+Observed: `docs/store-format.md:54-60` — "Sets live under `.config/smut/conventions/` — in the project root, in the user config home, or in the shipped binary (DEC-026, DEC-028)". Probed against the built binary: a project `.config/smut/conventions/local.md` is not listed and `smut conventions local` refuses at exit 2 ("the sets are: hygiene"); `src/conventions.rs` embeds exactly one set with `include_str!` and reads no path. IMP-013 records that gap as open, and DEC-026's own consequence says "docs/store-format.md and STD-001 stay untouched because no file appears inside `.smut/`" — the paragraph this slice added goes beyond that.
+
+The negative rule the design actually needs ("the store layout reserves nothing for conventions ... never inside `.smut/`") is true and worth keeping. Design §3 repeats the same present-tense source sentence, so the correction is a design edit mirrored in the document.
+
+Remedy: state the layout reservation and name `.config/smut/conventions/` as DEC-026/028's decided home for the loader IMP-013 will build, not as a shipped reader."""
+disposition = "design-wrong"
+response = """
+Confirmed by probe: a project `.config/smut/conventions/local.md` is invisible to the binary, and `smut conventions local` refuses at exit 2. The paragraph therefore states a decided mechanism as a shipped one, which is exactly the drift STD-001 exists to prevent — and design §3 carries the same present-tense sentence, so the design is the surface to correct, with the document as its mirror.
+
+Reconcile action: in design §3 and `docs/store-format.md`, keep the true negative rule ("the store layout reserves nothing for conventions; nothing under `.smut/` is read back as a set") and re-time the positive claim — "`.config/smut/conventions/` is DEC-026/028's decided home for the layered loader IMP-013 tracks; the shipped binary embeds its one set." No behaviour changes and no new scope: IMP-013 already owns the loader."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed by probe: a project `.config/smut/conventions/local.md` is invisible to the binary, and `smut conventions local` refuses at exit 2. The paragraph therefore states a decided mechanism as a shipped one, which is exactly the drift STD-001 exists to prevent — and design §3 carries the same present-tense sentence, so the design is the surface to correct, with the document as its mirror.
+
+Reconcile action: in design §3 and `docs/store-format.md`, keep the true negative rule ("the store layout reserves nothing for conventions; nothing under `.smut/` is read back as a set") and re-time the positive claim — "`.config/smut/conventions/` is DEC-026/028's decided home for the layered loader IMP-013 tracks; the shipped binary embeds its one set." No behaviour changes and no new scope: IMP-013 already owns the loader."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed as a design §3 correction mirrored in `docs/store-format.md`, keeping the negative layout rule and re-timing the layered location to IMP-013's loader. Recorded in the Reconciliation Brief, Per-slice (direct edit)."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "The committed README still teaches the reversed rule; the operator's uncommitted rewrite already fixes it, and CHR-001 still owns landing it"
+detail = """
+Expected: the shipped 0.2 README does not state the identity rule the binary reverses. The slice's own boundary puts the surrounding prose in CHR-001, so the finding is about the landing, not the slice.
+
+Observed: at HEAD (`64e5f4b`) `README.md:247-250` says "An embedded object carrying `id` is a reference, not metadata… there is no way to store inline metadata under a field named `id`" — the exact claim DEC-005 withdraws and this slice falsifies — plus `id`-as-identity at lines 16, 65, 73, 77. This matches the seat's record in `notes.md`.
+
+The working tree at audit time already carries the operator's rewrite, which corrects it (`README.md:249-255`: "`smut_id` is structural at every depth; `id` is yours"), so the repair exists and is simply uncommitted. CHR-001's "Done when" already covers this ("No declaration or response example contradicts the shipped binary at 0.2"), and its sharp edge (the ```console```-with-a-space fence that the harness never matches) is a live risk for the new block.
+
+Disposition: follow-up to CHR-001. Not a slice defect — the slice held its boundary, the phase records show no README prose staged, and the executed fence carried `smut_id` by the gate run."""
+disposition = "follow-up"
+response = """
+Confirmed, and it is owned work rather than a slice miss: CHR-001 exists for the README rewrite and its "Done when" already covers this class ("No declaration or response example contradicts the shipped binary at 0.2"). The slice held its declared boundary — no phase staged README prose, the executed fence carried `smut_id`, and the seat recorded the stale lines for the operator.
+
+Follow-up action: none on the slice. At reconcile the outcome records CHR-001 as the owner and adds the checked facts — the committed lines to correct (16, 65, 73, 77, 247-250 at `64e5f4b`), and that the operator's in-flight rewrite already carries the corrected rule at `README.md:249-255`, so the remaining work is landing it and keeping the ```console``` fence shape the harness matches (CHR-001's sharp edge)."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Confirmed, and it is owned work rather than a slice miss: CHR-001 exists for the README rewrite and its "Done when" already covers this class ("No declaration or response example contradicts the shipped binary at 0.2"). The slice held its declared boundary — no phase staged README prose, the executed fence carried `smut_id`, and the seat recorded the stale lines for the operator.
+
+Follow-up action: none on the slice. At reconcile the outcome records CHR-001 as the owner and adds the checked facts — the committed lines to correct (16, 65, 73, 77, 247-250 at `64e5f4b`), and that the operator's in-flight rewrite already carries the corrected rule at `README.md:249-255`, so the remaining work is landing it and keeping the ```console``` fence shape the harness matches (CHR-001's sharp edge)."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed as CHR-001's follow-up, with the committed lines to correct and the note that the operator's in-flight rewrite already carries the corrected rule. Recorded in the Reconciliation Brief, Follow-up."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "nit"
+title = """The normative brief's corruption list says "ID/content disagreement" where the format record says "identity/content disagreement""""
+detail = """
+Expected: the two documents name the same refusal the same way, and the name does not read as the old key.
+
+Observed: `smut-implementation-brief.org:89` lists "Unknown format versions, malformed JSON, missing indexed files, duplicate path mappings and ID/content disagreement are errors"; `docs/store-format.md:250-256` says "an identity/content disagreement". Both are identity shorthand rather than the JSON member — the rule itself is correct in both — but the brief is the normative product record and the spelling churns with the key.
+
+Remedy: editorial respell to "identity/content" when the brief is next touched, alongside the six-record reconciliation."""
+disposition = "fix-now"
+response = """
+Confirmed. Editorial only — both documents state the correct rule; only the prose name of the index/entity condition differs, and "ID" reads as the old key.
+
+Reconcile action: respell `smut-implementation-brief.org:89` to "identity/content disagreement" in the same pass that lands the six decision amendments, so the normative brief and the format record name the refusal identically."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed. Editorial only — both documents state the correct rule; only the prose name of the index/entity condition differs, and "ID" reads as the old key.
+
+Reconcile action: respell `smut-implementation-brief.org:89` to "identity/content disagreement" in the same pass that lands the six decision amendments, so the normative brief and the format record name the refusal identically."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Confirmed and briefed as an editorial respell of `smut-implementation-brief.org:89`. Recorded in the Reconciliation Brief, Per-slice (direct edit)."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
