@@ -233,6 +233,18 @@ step is /phase-plan for PHASE-01 when implementation is requested.
   worker/delegate/scout/planner/researcher/reviewer) plus `worker`, `reviewer`,
   `scout`, `evidence-auditor` are installed. Main worktree, no worktrees, no
   Quotient. Operator's model configuration inherited unchanged.
+- **Operator ruling, at the seat, 2026-11-02: SL-005 lands before SL-004
+  PHASE-02.** The operator re-affirmed the slice's `after: SL-005` ordering
+  against PHASE-02/EN-5 while PHASE-01 was running. Consequences the seat
+  applies: (a) this super-orchestrator run terminates at PHASE-01's completed
+  boundary and reports a checkpoint, it does not charter PHASE-02; (b) PHASE-02
+  is chartered only once SL-005's refusal phase (IMP-010/ISS-004 under DEC-027)
+  has landed, because both edit `src/error.rs`; otherwise this work takes a
+  rebase. PHASE-01 is unaffected: it adds no `Reject` variant and edits no
+  `src/error.rs` — its state lands in `src/store/mod.rs`, `src/entity.rs` and
+  `tests/`. Verified at preflight: no uncommitted `src/` change exists for
+  SL-005 to collide with (its dirty paths are `.doctrine` prose and records
+  only).
 - **Operator gates held at the seat, not delegated** (handover §Procedure):
   PHASE-02/EN-4 (`interview.local/.smut` re-declare path) and PHASE-02/EN-3
   (CHR-001 README executed block). Neither is charted until the operator rules.
@@ -386,3 +398,8 @@ interfere; the gap is that one edited file was outside the code-impact contract.
 - **Preflight · baseline gate accepted as green.** Decided. `just check` ran to
   exit 0 in this jail with 0 failures across both feature configurations, so any
   later red is a regression, not a baseline condition.
+- **Run shape · PHASE-01 is the terminus.** Decided. Operator re-affirmed the
+  SL-005 ordering at the seat, so the charter range is PHASE-01 alone and the run
+  ends there with a checkpoint. Reason: PHASE-02/EN-5 binds PHASE-02's entrance on
+  SL-005's refusal phase landing in the shared `src/error.rs`; charting PHASE-02
+  now would either breach EN-5 or force a rebase nobody has scoped.
