@@ -176,7 +176,17 @@ mod tests {
         let rendered = dispatch_of(&["conventions", "hygiene"]);
 
         assert_eq!(rendered.exit, 0, "{}", rendered.stderr);
-        assert_eq!(rendered.stdout, conventions::HYGIENE.prose);
+        // The prose is the file's body — everything below the frontmatter — plus
+        // the one newline the binary writes (DEC-031); the frontmatter is metadata
+        // and is never printed. The body is derived here from the bytes the crate
+        // ships, so a reader that reproduced the file's frontmatter, dropped the
+        // body or dropped the newline reddens on the assertion below.
+        let body = conventions::SHIPPED[0]
+            .1
+            .split_once("\n---\n")
+            .map(|(_, body)| body.trim_end_matches('\n'))
+            .expect("the shipped set opens with frontmatter");
+        assert_eq!(rendered.stdout, format!("{body}\n"));
         assert!(rendered.stderr.is_empty(), "{}", rendered.stderr);
     }
 

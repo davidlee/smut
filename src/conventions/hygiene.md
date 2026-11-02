@@ -1,4 +1,7 @@
-# General hygiene
+---
+summary: general structure and relations
+---
+# Conventions: general hygiene
 
 Structure is what makes a store queryable later. These are the habits worth
 forming before there is much to query. They are advice, not a schema: smut

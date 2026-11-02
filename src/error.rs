@@ -4,6 +4,8 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
+use crate::conventions::{Cause, Origin};
+
 /// The brief's success code.
 pub const SUCCESS: u8 = 0;
 
@@ -247,6 +249,11 @@ pub enum StoreError {
         /// How many candidates were spent before giving up.
         attempts: usize,
     },
+    /// A conventions set did not load: a frontmatter refusal, a body that says
+    /// nothing, or a file that is not a set. The origin and the cause travel with
+    /// it, so no diagnostic re-parses a message to find out where a file went wrong
+    /// and none of them claims a store.
+    ArtefactNotLoaded { origin: Origin, cause: Cause },
 }
 
 /// Everything a command can fail with: exactly these two classes, and no third.
@@ -440,6 +447,12 @@ impl fmt::Display for StoreError {
                 "could not find a free entity file name in {attempts} draws: every candidate \
                  was already claimed"
             ),
+            StoreError::ArtefactNotLoaded { origin, cause } => write!(
+                formatter,
+                "{} did not load: {}",
+                origin.path.display(),
+                cause.reason
+            ),
         }
     }
 }
@@ -456,6 +469,8 @@ impl fmt::Display for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::conventions::Layer;
+    use std::path::Path;
 
     fn sample_store_failure() -> StoreError {
         StoreError::FileSystem {
@@ -465,7 +480,31 @@ mod tests {
         }
     }
 
+    /// The path the conventions fixtures are read at.
+    const ARTEFACT_PATH: &str = ".config/smut/conventions/Mine.md";
+
+    /// A conventions set that did not load, at a project-layer path.
+    fn sample_artefact_not_loaded() -> StoreError {
+        StoreError::ArtefactNotLoaded {
+            origin: Origin {
+                layer: Layer::Project,
+                path: PathBuf::from(ARTEFACT_PATH),
+            },
+            cause: Cause {
+                line: Some(2),
+                reason: "frontmatter line 2 declares `title`, but the title is the file's first \
+                         `# ` heading"
+                    .to_owned(),
+            },
+        }
+    }
+
     /// Every refusal the store can raise, one of each variant.
+    ///
+    /// The count is pinned to 13 by [`the_new_refusal_joins_every_inventory`], so
+    /// it moves when a variant is added — and adding one means adding a row here.
+    /// `NoFreshBasename` predates this phase and is still absent from this list,
+    /// which is why the pinned count is one short of the variants the enum holds.
     fn every_store_refusal() -> Vec<StoreError> {
         vec![
             sample_store_failure(),
@@ -509,6 +548,7 @@ mod tests {
             StoreError::InvalidWriteSet {
                 reason: "alpha is both put and removed".to_owned(),
             },
+            sample_artefact_not_loaded(),
         ]
     }
 
@@ -519,7 +559,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 26] = [
+        let cases: [(Error, u8); 27] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -669,6 +709,7 @@ mod tests {
                 INVALID_INPUT,
             ),
             (sample_store_failure().into(), STORE_FAILURE),
+            (sample_artefact_not_loaded().into(), STORE_FAILURE),
         ];
 
         for (error, expected) in cases {
@@ -688,6 +729,43 @@ mod tests {
                 "{message}"
             );
         }
+    }
+
+    #[test]
+    fn the_new_refusal_joins_every_inventory() {
+        let refusal = sample_artefact_not_loaded();
+        let message = refusal.to_string();
+
+        assert!(
+            message.contains(ARTEFACT_PATH),
+            "the refusal names the file's own path: {message}"
+        );
+        assert!(
+            message.contains("did not load"),
+            "the refusal says the set did not load: {message}"
+        );
+        assert_eq!(
+            Error::Store(refusal).exit_code(),
+            STORE_FAILURE,
+            "a set that did not load is a runtime failure"
+        );
+
+        let inventory = every_store_refusal();
+        let held = inventory.iter().any(|refusal| {
+            matches!(
+                refusal,
+                StoreError::ArtefactNotLoaded { origin, cause }
+                    if origin.path == Path::new(ARTEFACT_PATH) && cause.line == Some(2)
+            )
+        });
+
+        assert!(held, "the new refusal is in the inventory, cause and all");
+        assert_eq!(
+            inventory.len(),
+            13,
+            "the count is pinned so a variant added without its row cannot pass: one row per \
+             variant this list carries, which is NoFreshBasename short of the enum"
+        );
     }
 
     #[test]

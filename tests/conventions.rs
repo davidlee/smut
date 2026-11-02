@@ -2,15 +2,18 @@
 //! scenario 5).
 //!
 //! `smut conventions` is pure text: one shipped set, printed as a listing or as
-//! prose, plus a pipeable declaration of the same embedded prose. The tests
-//! below pin the surface a caller can observe — the listing's one line, the
-//! prose's eight items, the refusals' exit code and words, the seed's fixed
-//! public id carried under its structural `smut_id`, and the crate's version —
-//! and the two things the command must *not* do: open
-//! a store, and lose an amendment silently on re-install.
+//! the body below its frontmatter, plus a pipeable declaration of that same
+//! body. The tests below pin the surface a caller can observe — the listing's
+//! one line, the prose's eight items, the refusals' exit code and words, the
+//! seed's fixed public id carried under its structural `smut_id`, its title,
+//! which is the file's own heading, and the crate's version — and the two things
+//! the command must *not* do: open a store, and lose an amendment silently on
+//! re-install.
 //!
-//! The body is asserted against the file the binary embeds, so a second copy of
-//! the prose cannot drift from the one that ships (VA-1).
+//! The body is derived here from the bytes of the file the binary embeds, so a
+//! second copy of the prose cannot drift from the one that ships (VA-1), and the
+//! frontmatter the ship carries is metadata only: nothing the command prints may
+//! reproduce it.
 
 use std::fs;
 use std::io::Write;
@@ -20,10 +23,64 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
-/// The shipped set, as this tree holds it. The seed's `body` is this text, and
-/// the prose `smut conventions hygiene` prints is this text: one copy, printed
-/// twice.
+/// The shipped set's file, as this tree holds it: its frontmatter and its body.
+///
+/// The file is the one copy: [`body`] and [`heading`] derive what the command
+/// prints and declares from these bytes, so the prose cannot drift from the
+/// file that ships (VA-1).
 const EMBEDDED: &str = include_str!("../src/conventions/hygiene.md");
+
+/// The shipped file's body: everything below the closing frontmatter fence,
+/// trailing newlines trimmed and nothing else transformed.
+///
+/// The derivation is the test's own, an independent oracle rather than a call
+/// into the library: a reader that printed the whole file, or that left the
+/// fence on line 1, disagrees with this and reddens on the assertions below. A
+/// file with no frontmatter would have the whole of itself as its body; this
+/// fixture opens one, and the two assertions here are what redden if it stops.
+fn body() -> String {
+    let lines: Vec<&str> = EMBEDDED.split('\n').collect();
+
+    assert_eq!(
+        lines.first(),
+        Some(&"---"),
+        "the shipped fixture opens with a frontmatter fence, so a body sits below one"
+    );
+
+    let closing = lines
+        .iter()
+        .skip(1)
+        .position(|line| *line == "---")
+        .map(|index| index + 1)
+        .expect("the shipped fixture's frontmatter is closed by a second `---` line");
+
+    lines[closing + 1..]
+        .join("\n")
+        .trim_end_matches('\n')
+        .to_owned()
+}
+
+/// The first `# ` heading of the [`body`], prefix stripped: the seed's title.
+fn heading() -> String {
+    body()
+        .lines()
+        .find_map(|line| line.strip_prefix("# "))
+        .expect("the shipped body carries a `# ` heading")
+        .to_owned()
+}
+
+/// The `summary:` value the shipped frontmatter declares, trimmed: the one
+/// thing the listing line says about the set.
+fn summary() -> String {
+    EMBEDDED
+        .split('\n')
+        .skip(1)
+        .take_while(|line| *line != "---")
+        .find_map(|line| line.strip_prefix("summary:"))
+        .expect("the shipped frontmatter declares a summary")
+        .trim()
+        .to_owned()
+}
 
 /// A scratch working directory holding at most one store, removed when dropped.
 ///
@@ -155,19 +212,51 @@ fn the_bare_command_lists_exactly_one_set_on_one_line() {
         "the deferred set is not listed as shipped: {:?}",
         listed.stdout
     );
+    // The whole row, name, two spaces and the summary the shipped file's own
+    // frontmatter declares: a listing that printed the frontmatter, invented a
+    // summary or spaced the columns differently reddens here. It is asserted
+    // last on purpose — an exact row above the four weaker rows would make each
+    // of them unfalsifiable.
+    assert_eq!(
+        listed.stdout,
+        format!("hygiene  {}\n", summary()),
+        "the row is the set's name and its declared summary"
+    );
 }
 
 #[test]
-fn a_named_set_prints_the_embedded_prose_verbatim() {
+fn a_named_set_prints_the_body_verbatim() {
     let scratch = Scratch::new();
 
     let printed = smut(&scratch, &["conventions", "hygiene"]);
 
     assert_eq!(printed.code, 0, "{}", printed.stderr);
     assert_eq!(printed.stderr, "");
+    // The body and the one newline the shell writes: a reader that printed the
+    // whole file reddens here.
     assert_eq!(
-        printed.stdout, EMBEDDED,
-        "the prose is the embedded file, byte for byte"
+        printed.stdout,
+        format!("{}\n", body()),
+        "the prose is the file's body, plus the one newline the binary writes"
+    );
+    // The frontmatter is metadata, and none of it is printed: a reader that
+    // reproduced the fence reddens on all three.
+    assert!(
+        !printed.stdout.contains("summary:"),
+        "the frontmatter's summary is not printed: {:?}",
+        printed.stdout
+    );
+    // The version is the binary layer's, applied after the file is read; a
+    // reader that folded it back into the frontmatter would print this key.
+    assert!(
+        !printed.stdout.contains("version:"),
+        "the declared version is metadata and is not printed: {:?}",
+        printed.stdout
+    );
+    assert!(
+        !printed.stdout.starts_with("---"),
+        "the printed prose does not open with the fence: {:?}",
+        printed.stdout
     );
 
     // The set tells the reader which id a re-install will overwrite, so that id
@@ -180,6 +269,28 @@ fn a_named_set_prints_the_embedded_prose_verbatim() {
     assert!(
         printed.stdout.contains(id),
         "the printed set names the id the seed emits ({id})"
+    );
+}
+
+#[test]
+fn the_seed_title_is_the_heading_verbatim() {
+    let scratch = Scratch::new();
+
+    let declaration = smut(&scratch, &["conventions", "hygiene", "--format", "json"]).json();
+    let title = declaration["title"]
+        .as_str()
+        .expect("the seed carries a title");
+
+    let expected = heading();
+    assert!(
+        !expected.is_empty(),
+        "the shipped body opens with a `# ` heading, so the title has something to be"
+    );
+    // Verbatim: a synthesised `Conventions: ` prefix, a lowercased first letter
+    // or a title read off the filename reddens here.
+    assert_eq!(
+        title, expected,
+        "the title is the file's own heading, character for character"
     );
 }
 
@@ -311,11 +422,15 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
         json!(env!("CARGO_PKG_VERSION")),
         "the seed's version is the crate's, never a pinned release"
     );
-    assert_eq!(seed["title"], json!("Conventions: general hygiene"));
+    assert_eq!(
+        seed["title"],
+        json!(heading()),
+        "the title is the file's heading, not a sentence about it"
+    );
     assert_eq!(
         seed["body"],
-        json!(EMBEDDED.trim_end_matches('\n')),
-        "the body is the embedded prose, not an inline copy of it"
+        json!(body()),
+        "the body is the file below its frontmatter, not an inline copy of it"
     );
     // Structural identity is the `smut_id` member — so an ordinary `id` field
     // here would be data the seed does not carry, not a second spelling of the
@@ -364,7 +479,11 @@ fn the_command_creates_no_store_and_does_not_read_one() {
         "the command never opens a store: {}",
         printed.stderr
     );
-    assert_eq!(printed.stdout, EMBEDDED);
+    assert_eq!(
+        printed.stdout,
+        format!("{}\n", body()),
+        "the command prints the same body with or without a decoy store present"
+    );
 }
 
 // ── EX-5: the prose ships the eight items and the two caveats ────────────────
@@ -536,7 +655,7 @@ fn a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_prev
 
     assert_eq!(
         stored["body"],
-        json!(EMBEDDED.trim_end_matches('\n')),
+        json!(body()),
         "the seeded body replaced the amended one"
     );
     assert_eq!(

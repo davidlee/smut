@@ -249,7 +249,8 @@ Labels and rendering
 Conventions
   Structure advice — types, statuses, one direction per relation, a handful of
   labels — lives in the conventions sets: smut conventions prints them, and a
-  set never validates, never selects and never touches a store.
+  set never validates, never selects and never touches a store. A printed set is
+  the body; the frontmatter is metadata and is not reproduced.
 
 Rendering
   render runs the same selection query does and prints Markdown: a heading from
@@ -488,6 +489,19 @@ mod tests {
         assert!(
             guide().contains("a set never validates, never selects and never touches a store"),
             "the Conventions section points at the command and says what it is not"
+        );
+    }
+
+    #[test]
+    fn the_guide_says_a_printed_set_omits_its_frontmatter() {
+        // The whole sentence, not the word `frontmatter`: that word survives in
+        // other guide text, so a substring assertion on it would pass with this
+        // sentence deleted.
+        assert!(
+            guide().contains(
+                "A printed set is the body; the frontmatter is metadata and is not reproduced"
+            ),
+            "the Conventions section says what the printed set is and leaves the metadata out"
         );
     }
 
