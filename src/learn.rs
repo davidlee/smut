@@ -43,6 +43,7 @@ Commands
   smut get <ID>...                           fetch entities by identity, in your order
   smut delete <ID>...                        remove entities, never their references
   smut query [JSON]                          select entities with a query spec
+  smut q <TOKEN>...                          query as words: roots, filters, flags
   smut render [JSON] [-f|--format markdown]  print a selection as Markdown
               [-t|--heading-field NAME] [-l|--heading-level 1-6]
               [-i|--show-ids] [-s|--show-fields]
@@ -55,7 +56,7 @@ value on stdin when the argument is absent or is '-'. Nothing is read from an
 interactive terminal: with no argument and a terminal attached you get usage
 instead. Trailing input after the JSON value is refused, and so is a duplicate
 key inside one object. Help, version, learn and conventions need no store; the
-others do.
+others, q included, do.
 
 Exit codes
   0  success, including reported missing ids and a truncated result
@@ -105,6 +106,55 @@ Batch responses
   --compact omits \"previous\" everywhere and changes nothing else.
   \"missing\" lists the references still unresolved after the batch; that is a
   report, not a failure, and the batch succeeded.
+
+The short form: smut q
+  One rule carries the whole short form: a bare word is a thing, field=value is
+  a filter, and --word is structure. The hot path therefore has no flags, and
+  the grammar itself invents nothing a shell would eat.
+  A token is classified by its spelling, never by looking at the store:
+    session                a root id, answered in the order written
+    status=open            the field equals the value
+    status!=open           the field differs from the value
+    title~graph            the field contains the value
+    status=open,resolved   the field is one of the comma list
+  The structural half is spelled out where a reader can see it: one flag per
+  promoted specification key, plus four shorthands.
+    --follow F[,F]         follow the outgoing references; any means every field
+    --backlinks F[,F]      follow the incoming references; any means every field
+    --depth N              hops from the roots, default 1; needs a direction
+    --budget N             entity expansions, default 10000; needs a direction
+    --select F[,F]         the fields to return
+    --ids                  return identity only, the recipe's projection
+    --order F[:asc|:desc][,F...]  order the result; the direction defaults to asc
+    --limit N              the result cap, default 100; there is no unlimited spelling
+    --edges                carry the induced edge set without walking anything
+    --has F[,F]            the field exists, the shell-safe $exists true
+    --missing F[,F]        the field does not exist, the shell-safe $exists false
+    --from=ID              append one root; --from is the escape for a hostile id
+  Three character consequences are deliberate. The wildcard is the word any and
+  never *: * would glob before smut saw it. Existence is --has and --missing and
+  never field?: ? would glob. There is no : infix operator, because session:1
+  would silently mean \"field session contains 1\" rather than the id it looks
+  like.
+  Two warts bite here, and they are stated rather than hidden. A value that is a
+  JSON literal is that literal, so done=true is a boolean and priority=3 is a
+  number, and a numeric-looking smut_id compared with = compares a number; --ids,
+  --from=ID and smut query are the escapes. On a string ~ is a substring test, on
+  an array it is exact member equality, and the answer does not say which ran.
+  There is one silence: a field name no entity carries answers empty at exit 0
+  rather than an error, so a typo reads as an answer.
+  What the short form cannot say is not a gap in the store: grouping, $or of
+  groups, $not, regular expressions, nested paths, a field name holding =, ~ or
+  , and an unlimited result are all smut query's: smut query takes the full
+  specification and is the complete surface. smut q adds a short spelling of the
+  hot paths and does not replace it.
+  These are the five queries the short form exists for, each shorter than the
+  JSON it replaces:
+    smut q title~graph
+    smut q IDS status=open --ids
+    smut q session --backlinks part-of --depth 2 --ids
+    smut q type=question status=open --select smut_id,title
+    smut q --has body --order title:desc
 
 Querying
   A specification object accepts ten keys and nothing else. A query of {} returns
@@ -208,14 +258,20 @@ The two-call recipe
   it, not the question. Containment points child -> container: a question names
   the cluster it hangs off, and a cluster names the session. So \"which questions
   hang off this session\" walks the incoming direction, at depth 2 because the
-  questions sit two hops below the session:
+  questions sit two hops below the session. Each call is printed in both
+  spellings, the short form first and the JSON it denotes directly below it:
+    smut q session --backlinks part-of --depth 2 --ids
     smut query '{\"from\":[\"session\"],\"backlinks\":[\"part-of\"],\"depth\":2,\"select\":[\"smut_id\"]}'
   and then filters what that reached, IDS being the smut_id array the first reply
-  returned:
+  returned. Roots are this surface's spelling of the $in filter on identity,
+  answered in the order written; the JSON twin filters in smut_id order, so the
+  two agree on the set they select and not on its order. Both spellings:
+    smut q IDS status=open --ids
     smut query '{\"where\":{\"smut_id\":{\"$in\":IDS},\"status\":\"open\"},\"select\":[\"smut_id\"]}'
   Asking the same thing with follow on part-of is a different question, not a
   wrong answer: the session stores no part-of reference, so the walk goes
   nowhere, returns the session alone, and says nothing about questions:
+    smut q session --follow part-of --depth 2 --ids
     smut query '{\"from\":[\"session\"],\"follow\":[\"part-of\"],\"depth\":2,\"select\":[\"smut_id\"]}'
   The second call is the one that can lie, so the recipe carries a completeness
   guard, and the guard is part of the recipe rather than advice beside it:
@@ -589,9 +645,19 @@ mod tests {
     /// is `IDS` in the second call: the id array the first reply returned.
     #[test]
     fn the_guide_prints_the_examples_the_fixture_executes() {
-        for example in [EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW, EXAMPLE_FILTER] {
+        // Each spelling is pinned in its own shape: the JSON constant as the
+        // argument a caller retypes, and the short form as the whole command
+        // line, because the constant alone would also match the line's tail.
+        for example in [
+            EXAMPLE_TRAVERSE.to_owned(),
+            EXAMPLE_FOLLOW.to_owned(),
+            EXAMPLE_FILTER.to_owned(),
+            format!("smut q {EXAMPLE_TRAVERSE_Q}"),
+            format!("smut q {EXAMPLE_FOLLOW_Q}"),
+            format!("smut q {EXAMPLE_FILTER_Q}"),
+        ] {
             assert!(
-                guide().contains(example),
+                guide().contains(&example),
                 "the guide prints {example} verbatim"
             );
         }
@@ -629,6 +695,284 @@ mod tests {
             .collect();
 
         assert_eq!(taught, KEYS, "the guide's key list is the ten keys");
+    }
+
+    // ── PHASE-03 VT-2: the short form (DEC-034, DEC-040) ─────────────────────
+    //
+    // The pins below read the short-form section's own text rather than the whole
+    // guide: a claim that drifted into the specification chapter would satisfy a
+    // guide-wide substring and leave the section a heading with nothing under it.
+    // Each pin is a whole sentence, a whole whitespace token or a whole printed
+    // line — `--ids` inside a longer flag and `session` inside `session:1` are
+    // exactly the near misses the section exists to warn about.
+
+    /// The heading that opens the short-form section, and the heading that ends
+    /// it: the specification chapter's.
+    const SHORT_FORM_HEADING: &str = "The short form: smut q";
+    const QUERYING_HEADING: &str = "\nQuerying\n";
+
+    /// The short-form section's text, flattened: its heading up to the
+    /// `Querying` heading. A missing heading is a clear failure here rather than
+    /// an index panic in the test that wanted the text.
+    fn short_form() -> String {
+        let end = GUIDE.find(QUERYING_HEADING).unwrap_or_else(|| {
+            panic!("the specification chapter begins at a `Querying` heading of its own")
+        });
+        let start = GUIDE.find(SHORT_FORM_HEADING).unwrap_or_else(|| {
+            panic!("the guide teaches the short form under `{SHORT_FORM_HEADING}`")
+        });
+        assert!(
+            start < end,
+            "the short form is taught before the specification chapter, not inside it"
+        );
+
+        GUIDE[start..end]
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// The sentences of one flattened text, lowercased so a pin compares words
+    /// rather than capitalisation: a clause is pinned inside a sentence, never
+    /// across two of them.
+    fn sentences_of(text: &str) -> Vec<String> {
+        text.split_inclusive(['.', '!', '?'])
+            .map(str::to_lowercase)
+            .collect()
+    }
+
+    /// Whether some sentence of `section` carries `clause` as whole words.
+    fn sentence_carries(section: &str, clause: &str) -> bool {
+        let clause = clause.to_lowercase();
+
+        sentences_of(section)
+            .iter()
+            .any(|sentence| carries(sentence, &clause))
+    }
+
+    #[test]
+    fn the_short_form_is_taught_before_the_specification() {
+        // Placement first: the reader meets the surface in the order they use it,
+        // so the section sits above the specification chapter and not in it.
+        let short_form_at = GUIDE
+            .find(SHORT_FORM_HEADING)
+            .unwrap_or_else(|| panic!("the guide has a `{SHORT_FORM_HEADING}` section"));
+        let querying_at = GUIDE
+            .find(QUERYING_HEADING)
+            .unwrap_or_else(|| panic!("the guide has a `Querying` chapter heading"));
+        assert!(
+            short_form_at < querying_at,
+            "the short form is taught before the specification chapter"
+        );
+
+        let section = short_form();
+        let tokens: Vec<&str> = section.split_whitespace().collect();
+
+        // The one rule, as one sentence: three shapes, one per classification.
+        let rule = "One rule carries the whole short form: a bare word is a thing, field=value is a filter, and --word is structure.";
+        assert!(
+            section.contains(rule),
+            "the section states the whole rule in one sentence: {rule}"
+        );
+
+        // The five token shapes, each a token of its own rather than a fragment
+        // of a longer one.
+        for shape in [
+            "session",
+            "status=open",
+            "status!=open",
+            "title~graph",
+            "status=open,resolved",
+        ] {
+            assert!(
+                tokens.contains(&shape),
+                "the section shows `{shape}` as a token of its own"
+            );
+        }
+
+        // The twelve flags, each a token of its own: a flag taught inside prose
+        // with its own trailing punctuation is not a flag a reader can type.
+        for flag in [
+            "--follow",
+            "--backlinks",
+            "--depth",
+            "--budget",
+            "--select",
+            "--ids",
+            "--order",
+            "--limit",
+            "--edges",
+            "--has",
+            "--missing",
+            "--from",
+        ] {
+            assert!(
+                tokens.contains(&flag),
+                "the section lists `{flag}` as a flag of its own"
+            );
+        }
+
+        // The three character consequences, each pinned as the whole sentence
+        // that gives its reason: the reason is the part a reader remembers.
+        for consequence in [
+            "The wildcard is the word any and never *: * would glob before smut saw it.",
+            "Existence is --has and --missing and never field?: ? would glob.",
+            "There is no : infix operator, because session:1 would silently mean \"field session contains 1\" rather than the id it looks like.",
+        ] {
+            assert!(
+                section.contains(consequence),
+                "the section states the consequence whole: {consequence}"
+            );
+        }
+
+        // The boundary, clause by clause: what the short form cannot say, and
+        // that the specification is the complete surface rather than the old one.
+        for clause in [
+            "What the short form cannot say is not a gap in the store",
+            "smut query takes the full specification and is the complete surface",
+            "smut q adds a short spelling of the hot paths and does not replace it",
+        ] {
+            assert!(
+                sentence_carries(&section, clause),
+                "the section states the boundary: {clause}"
+            );
+        }
+
+        // The five hot-path queries, each a whole line the reader can type.
+        for hot_path in [
+            "smut q title~graph",
+            "smut q IDS status=open --ids",
+            "smut q session --backlinks part-of --depth 2 --ids",
+            "smut q type=question status=open --select smut_id,title",
+            "smut q --has body --order title:desc",
+        ] {
+            assert!(
+                GUIDE.lines().any(|line| line.trim() == hot_path),
+                "the guide prints `{hot_path}` as a line of its own"
+            );
+        }
+    }
+
+    #[test]
+    fn the_short_form_states_the_two_warts_and_the_field_silence() {
+        let section = short_form();
+
+        // Wart one, value typing: a JSON-looking value is that literal, and the
+        // three escapes are named in the same paragraph rather than elsewhere.
+        let value_typing = "A value that is a JSON literal is that literal";
+        assert!(
+            sentence_carries(&section, value_typing),
+            "the section states the value-typing wart: {value_typing}"
+        );
+        for escape in ["--ids", "--from=ID", "smut query"] {
+            assert!(
+                sentence_carries(&section, escape),
+                "the section names `{escape}` as an escape from value typing"
+            );
+        }
+
+        // Wart two, `~`'s two meanings, whole: the answer says nothing about
+        // which one ran.
+        let tilde = "On a string ~ is a substring test, on an array it is exact member equality, and the answer does not say which ran.";
+        assert!(
+            section.contains(tilde),
+            "the section states the two meanings of `~` whole: {tilde}"
+        );
+
+        // And the silence: a field nothing carries answers empty rather than
+        // refusing, because an empty result read as an answer is the trap.
+        let silence = "a field name no entity carries answers empty at exit 0 rather than an error";
+        assert!(
+            sentence_carries(&section, silence),
+            "the section states the field silence: {silence}"
+        );
+    }
+
+    #[test]
+    fn the_json_spelling_sits_one_line_below_its_short_twin() {
+        // The recipe section, not the whole guide: the short-form section above it
+        // prints two of these lines as hot-path examples, and those lines have no
+        // JSON twin under them.
+        let recipe = GUIDE
+            .find("The two-call recipe")
+            .unwrap_or_else(|| panic!("the guide has a `The two-call recipe` section"));
+        let lines: Vec<&str> = GUIDE[recipe..].lines().collect();
+
+        for (short, json) in [
+            (EXAMPLE_TRAVERSE_Q, EXAMPLE_TRAVERSE),
+            (EXAMPLE_FOLLOW_Q, EXAMPLE_FOLLOW),
+            (EXAMPLE_FILTER_Q, EXAMPLE_FILTER),
+        ] {
+            let twin = format!("smut q {short}");
+            let below = format!("smut query '{json}'");
+
+            let at = lines
+                .iter()
+                .position(|line| line.trim() == twin)
+                .unwrap_or_else(|| {
+                    panic!("the guide prints `{twin}` as a line of its own, with its JSON twin under it")
+                });
+            assert_eq!(
+                lines.get(at + 1).map(|line| line.trim()),
+                Some(below.as_str()),
+                "the JSON spelling sits one line below `{twin}`, so the escape is never a page away"
+            );
+
+            // Bareness: the recipe is typed without a quote, because the shell
+            // would otherwise take `*`, `?` or `!` before smut saw them.
+            assert!(
+                !twin.contains(['\'', '"']),
+                "the printed recipe line needs no quote: {twin}"
+            );
+        }
+
+        // Roots versus `$in`, whole: the two spellings agree on the set they
+        // select and say so, because they do not agree on its order.
+        let roots = "Roots are this surface's spelling of the $in filter on identity, answered in the order written; the JSON twin filters in smut_id order, so the two agree on the set they select and not on its order.";
+        assert!(
+            guide().contains(roots),
+            "the guide states the roots-versus-$in agreement and its one difference whole: {roots}"
+        );
+    }
+
+    #[test]
+    fn the_guide_lists_the_short_form_among_the_commands() {
+        // The command block's own line, so `q` is found where a reader looks for
+        // the verbs rather than only inside an example.
+        let listed = GUIDE
+            .lines()
+            .any(|line| line.trim().starts_with("smut q <TOKEN>..."));
+        assert!(
+            listed,
+            "the Commands block lists `smut q <TOKEN>...` as a command of its own"
+        );
+
+        // And the store sentence counts `q` in: a verb that needs a store and is
+        // not in that list is a reader's first failure.
+        let needs_store =
+            "Help, version, learn and conventions need no store; the others, q included, do.";
+        assert!(
+            guide().contains(needs_store),
+            "the guide's store sentence names `q`: {needs_store}"
+        );
+    }
+
+    #[test]
+    fn the_guide_calls_query_the_complete_surface() {
+        let complete = "smut query takes the full specification and is the complete surface";
+        assert!(
+            sentence_carries(&guide(), complete),
+            "the guide calls `smut query` the complete surface: {complete}"
+        );
+
+        // And never the other three words: a reader told `query` is legacy stops
+        // reading the chapter that teaches the keys the short form lacks.
+        for refused in ["legacy", "deprecated", "fallback"] {
+            assert!(
+                !guide().to_lowercase().contains(refused),
+                "the guide never calls `smut query` {refused}"
+            );
+        }
     }
 
     // ── PHASE-02 VT-7: the guide's identity claims ───────────────────────────
@@ -734,6 +1078,22 @@ mod tests {
                 "the recipe's select projects identity by `smut_id`: {example}"
             );
         }
+
+        // The same claim in the short form's spelling, where `--ids` is the
+        // projection: one flag rather than a `select` array of one name.
+        for example in [EXAMPLE_TRAVERSE_Q, EXAMPLE_FOLLOW_Q, EXAMPLE_FILTER_Q] {
+            assert!(
+                example.split_whitespace().any(|token| token == "--ids"),
+                "the short-form recipe projects identity with the whole token `--ids`: {example}"
+            );
+        }
+
+        // And identity as a predicate: bare roots are this surface's spelling of
+        // the `$in` filter on `smut_id`, so the filter example opens with one.
+        assert!(
+            EXAMPLE_FILTER_Q.starts_with("IDS "),
+            "the short-form filter states identity as a bare root: {EXAMPLE_FILTER_Q}"
+        );
     }
 
     #[test]

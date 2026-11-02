@@ -24,7 +24,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
-use smut::learn::{EXAMPLE_FILTER, EXAMPLE_FOLLOW, EXAMPLE_TRAVERSE};
+use smut::learn::{
+    EXAMPLE_FILTER, EXAMPLE_FILTER_Q, EXAMPLE_FOLLOW, EXAMPLE_FOLLOW_Q, EXAMPLE_TRAVERSE,
+    EXAMPLE_TRAVERSE_Q,
+};
 
 /// The committed array, relative to the crate root. It is the only data source
 /// these tests read: no store internals, no second copy.
@@ -185,6 +188,22 @@ impl Declared {
         ran.json()
     }
 
+    /// Runs `smut q` with `line` and returns the whole envelope; a refusal is a
+    /// test failure, not a branch.
+    ///
+    /// The translation is the whole of the short form's front end: the line the
+    /// guide prints splits on whitespace into the token list the verb takes, so
+    /// what this runs is what a reader types.
+    fn q(&self, line: &str) -> Value {
+        let mut arguments = vec!["q"];
+        arguments.extend(line.split_whitespace());
+
+        let ran = smut(&self.scratch, &arguments);
+        assert_eq!(ran.code, 0, "q {line}: {}", ran.stderr);
+
+        ran.json()
+    }
+
     /// The ids a `select: ["smut_id"]` query returned, in result order.
     fn ids(&self, request: &Value) -> Vec<String> {
         ids_of(&self.query(request))
@@ -215,6 +234,19 @@ fn ids_of(envelope: &Value) -> Vec<String> {
                 .to_owned()
         })
         .collect()
+}
+
+/// One id list as an order-free comparison.
+///
+/// Roots are answered in the order written and the JSON twin filters in
+/// `smut_id` order, so the two spellings of a request agree on the set they
+/// select and not on its order — which is the only claim the guide makes for them
+/// (RV-031 F-6), and the only one asserted here.
+fn sorted_ids(ids: &[String]) -> Vec<String> {
+    let mut sorted = ids.to_vec();
+    sorted.sort();
+
+    sorted
 }
 
 /// The first call of the acceptance composition §13.3 scenario 2 names.
@@ -550,6 +582,35 @@ fn filter_over(ids: &[String]) -> Value {
     example(&EXAMPLE_FILTER.replace("IDS", &ids))
 }
 
+/// Whether `id` can be printed as a bare root: a nonempty token that carries no
+/// whitespace and none of the characters the grammar reads as an operator, a list
+/// separator or a JSON operand, and that does not begin with a hyphen.
+fn grammar_safe(id: &str) -> bool {
+    !id.is_empty()
+        && !id.starts_with('-')
+        && !id.chars().any(char::is_whitespace)
+        && !id
+            .chars()
+            .any(|character| matches!(character, ',' | '=' | '~' | '{'))
+}
+
+/// The recipe's second call in the short form's spelling, with the first reply's
+/// ids as the bare roots — the one substitution the short form leaves to the
+/// caller.
+///
+/// A root is typed without a quote, so an id that is not [`grammar_safe`] cannot
+/// be printed here at all: it belongs behind `--from=ID`, which takes any string.
+fn filter_over_words(ids: &[String]) -> String {
+    for id in ids {
+        assert!(
+            grammar_safe(id),
+            "the id {id:?} is not one bare token — an id carrying whitespace, `,`, `=`, `~` or `{{`, or beginning with a hyphen, belongs behind --from=ID rather than printed as a root"
+        );
+    }
+
+    EXAMPLE_FILTER_Q.replace("IDS", &ids.join(" "))
+}
+
 #[test]
 fn the_guide_prints_the_example_this_suite_executes() {
     let declared = Declared::new();
@@ -561,6 +622,102 @@ fn the_guide_prints_the_example_this_suite_executes() {
             "smut learn prints the example verbatim, so the shipped recipe is the tested one: {printed_example}"
         );
     }
+}
+
+#[test]
+fn the_guide_prints_the_token_lines_this_suite_executes() {
+    let declared = Declared::new();
+    let printed = smut(&declared.scratch, &["learn"]).stdout;
+
+    for constant in [EXAMPLE_TRAVERSE_Q, EXAMPLE_FOLLOW_Q, EXAMPLE_FILTER_Q] {
+        let line = format!("smut q {constant}");
+        assert!(
+            printed.lines().any(|twin| twin.trim() == line),
+            "smut learn prints `{line}` as a line of its own, so the shipped recipe is the tested one"
+        );
+
+        // And the line splits into a token list the verb accepts: the printed
+        // words are the argv, with nothing between them to translate. The literal
+        // `IDS` root is a legal empty answer at exit 0, which is why this call is
+        // the proof the split is enough and not a query anyone would ask.
+        declared.q(constant);
+    }
+}
+
+#[test]
+fn the_two_call_recipe_runs_in_both_spellings() {
+    let declared = Declared::new();
+
+    // The first call, typed, against the first call, quoted: one request with two
+    // spellings, so a difference is a difference in the front end and not in the
+    // fixture.
+    let words = declared.q(EXAMPLE_TRAVERSE_Q);
+    let Guarded::Complete(reached) = guarded(&words) else {
+        panic!("the typed walk is whole over the acceptance graph: {words}");
+    };
+    let json = declared.query(&example(EXAMPLE_TRAVERSE));
+    let Guarded::Complete(quoted) = guarded(&json) else {
+        panic!("the quoted walk is whole over the acceptance graph: {json}");
+    };
+    assert!(
+        reached.contains(&"session".to_owned()),
+        "the root is a returned id, so the walk reached something: {reached:?}"
+    );
+    assert_eq!(
+        sorted_ids(&reached),
+        sorted_ids(&quoted),
+        "both spellings select the same ids; roots are answered in the order written \
+         and the JSON twin filters in smut_id order, so only the set is claimed"
+    );
+
+    // The wrong direction, both ways: the session alone, and visibly not the set
+    // above.
+    let words = declared.q(EXAMPLE_FOLLOW_Q);
+    let Guarded::Complete(session) = guarded(&words) else {
+        panic!("the typed wrong direction is a complete walk of nothing: {words}");
+    };
+    let json = declared.query(&example(EXAMPLE_FOLLOW));
+    let Guarded::Complete(quoted) = guarded(&json) else {
+        panic!("the quoted wrong direction is a complete walk of nothing: {json}");
+    };
+    assert_eq!(
+        session,
+        ["session".to_owned()],
+        "follow on part-of from the session returns the session alone: {words}"
+    );
+    assert_eq!(
+        quoted,
+        ["session".to_owned()],
+        "and the JSON twin says the same: {json}"
+    );
+    assert_ne!(
+        sorted_ids(&session),
+        sorted_ids(&reached),
+        "the outgoing direction answers a different question, not the same one"
+    );
+
+    // The second call, both ways: the ids the first call reached, as bare roots
+    // in the short form and as an `$in` array in the JSON one. This is the call
+    // that can lie, so the guard reads both envelopes first.
+    let line = filter_over_words(&reached);
+    let words = declared.q(&line);
+    let Guarded::Complete(open_words) = guarded(&words) else {
+        panic!("the typed filter is whole: {words}");
+    };
+    let json = declared.query(&filter_over(&reached));
+    let Guarded::Complete(open_json) = guarded(&json) else {
+        panic!("the quoted filter is whole: {json}");
+    };
+    assert_eq!(
+        sorted_ids(&open_words),
+        sorted_ids(&open_json),
+        "both spellings of the second call select the same ids: {line}"
+    );
+    assert_eq!(
+        sorted_ids(&open_words),
+        sorted_ids(&OPEN_QUESTIONS.map(String::from)),
+        "the second call answers the eight open questions, whatever the first call's order: {line}"
+    );
 }
 
 #[test]
