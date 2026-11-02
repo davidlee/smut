@@ -191,3 +191,26 @@ the folder untracked.
 7. **Confirmed in place:** the `include_str!` stays (reviewable bytes in the tree), the
    seed emits `smut_id` through `ENTITY_ID`, `Ask` loses its lifetime, and the shipped
    set is parsed by the same reader as a file rather than special-cased.
+
+---
+
+## Baseline drift re-verified at plan stage (2026-11-02)
+
+`doctrine slice research 008` reported the artefact drifted from its baseline (`d3705e7`):
+`slice-008.md` changed and `design.md` was added. Both are the *downstream* artefacts this
+round fed — the design run wrote its outcome back into the scope and produced the design —
+so the drift is chronological, not evidential. The code map was re-checked against the tree
+at `d224dc6` before planning against it:
+
+- every hotspot line count still matches (`src/conventions.rs` 287, `tests/conventions.rs`
+  582, `src/conventions/hygiene.md` 46); `src/` and `tests/conventions.rs` have not changed
+  since `fadc8c4`;
+- both negative greps still return nothing — no `.git` detection and no config-home read
+  exist anywhere in `src/`, so DEC-026/032's machinery is still new code;
+- `src/error.rs` still holds `every_store_refusal()` and the `[(Error, u8); 26]` boundary
+  table, which is what a new refusal class has to join;
+- `tests/readme_example.rs` contains no conventions reference, so the README's two stale
+  paragraphs break no test and stay CHR-001's.
+
+Restamped against the current intent docs on that basis. Nothing in Thread 1 or Thread 2
+was revised: they were checked, and held.

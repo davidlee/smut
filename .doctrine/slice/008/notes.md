@@ -180,3 +180,36 @@ plus this commit. Captured before handover to `/plan`.
 - **RV-029 coverage residue** — the two hedge paragraphs (§5, §6 at revisions 30–31) are
   attested but no pass ran over them.
 - **SL-006** is unblocked by this slice landing: `epistemic-records` returns to `plan`.
+
+## Plan stage (2026-11-02)
+
+Five phases, cut by evidence rather than by file. `plan.toml` is the authored source;
+`plan.md` carries the sequencing rationale, the decisions the design left to the plan, and
+the critical pass. Phase sheets materialised by `doctrine slice phases 008`.
+
+- **PHASE-01 roots** — `Roots`, `project_root`, `user_root`. Pure, additive, green.
+  Carries RV-029 F-17's directory-level half (the walk stops at the repository).
+- **PHASE-02 the reader** — `Layer`/`Origin`/`Cause`/`Set`/`Entry`/`Outcome`, `parse`,
+  `SHIPPED` through the same reader, `Ask` owning its set, one new refusal class at exit 1,
+  `hygiene.md` frontmatter + `Conventions:` heading, one guide line on the frontmatter loss.
+- **PHASE-03 the loader** — `load` + `set_in_force`, written before their consumer on
+  purpose; absent vs unreadable, candidate filter, non-UTF-8 names, sort, kind joined once.
+- **PHASE-04 the surface** — `answer(roots, kind, ask)`, the four-field listing with its four
+  third-field states, the origin-bearing refusals, `main`'s environment read, the guide's
+  layer and exit-clause lines, the store-format clause, and the rewritten spawned suite.
+- **PHASE-05 the seed** — `source`, the three version shapes, body/prose agreement, upsert.
+
+Decisions the plan had to take (recorded in `plan.md` § Decisions taken): `Entry.name` is
+`Option<String>` (`None` only for a non-UTF-8 filename, listed as `<not UTF-8>`); the new
+refusal is `StoreError::ArtefactNotLoaded` and stays inside the two-class taxonomy; the
+unreadable-layer fixture is a path that cannot be read as a directory, with mode 000 as a
+second row, so a root user cannot make it pass; the unknown-name field holds rendered
+clauses and says so; the crate's version is injected in one place.
+
+Research advisory: `slice-008.md` changed and `design.md` appeared after the baseline —
+chronological drift, not evidential. The code map was re-verified at `d224dc6` (line counts,
+both negative greps, the error inventories) and the artefact restamped; a note in
+`research/research.md` records the check.
+
+Carried, untouched: QUE-002, IMP-008, the three reconcile obligations above, RV-029's
+post-pass coverage residue, and README/CHR-001.
