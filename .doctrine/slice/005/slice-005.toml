@@ -1,7 +1,7 @@
 id = 5
 slug = "refusals-that-name-the-right-thing-a-contradiction-refused-and-a-misplaced-operator-explained"
 title = "Refusals that name the right thing — a contradiction refused and a misplaced operator explained"
-status = "proposed"
+status = "plan"
 created = "2026-11-02"
 updated = "2026-11-02"
 tags = []
@@ -9,6 +9,21 @@ tags = []
 [relationships]
 needs = []                      # slice→work hard prerequisite
 after = []                      # slice→work soft sequence: { to, rank }
+
+[[selector]]
+selector = "src/predicate.rs"
+intent = "design-target"
+note = "sec-6: the rule and the top-level $-arm; the variant, Display arm, message test and boundary-table row; the binary-level refusal rows"
+
+[[selector]]
+selector = "src/error.rs"
+intent = "design-target"
+note = "sec-6: the rule and the top-level $-arm; the variant, Display arm, message test and boundary-table row; the binary-level refusal rows"
+
+[[selector]]
+selector = "tests/predicates.rs"
+intent = "design-target"
+note = "sec-6: the rule and the top-level $-arm; the variant, Display arm, message test and boundary-table row; the binary-level refusal rows"
 
 [[relation]]
 label = "references"

@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 30
+slug = "a-predicate-refusal-names-the-defect-and-the-position-and-never-invents-a-field"
+title = "A predicate refusal names the defect and the position, and never invents a field"
+record_kind = "decision"
+status = "proposed"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-005 implements two refusal messages on one parse region. DEC-027 fixed the contradiction refusal mechanism but not its wording; ISS-004 fixed the defect in the top-level `$` message but its proposed cure printed a field name the caller may not have. Message text is a surface: once shipped it is pinned by tests, and the temptation later is to improve it by adding detail rather than by removing ambiguity."
+choice = """The contradiction refusal is ONE `Reject` variant carrying the field and a description string, rendered `field {field} cannot be satisfied: {contradiction}`, with seven short sentences and no epigram. The predicate-level `$` refusal is TWO variants, because one arm served two different defects and no single sentence is true of both: a `$` key naming one of the five operators becomes `MisplacedPredicateOperator`, rendered `predicate operator {operator} belongs inside a field's condition object: {"<field>": {"{operator}": <operand>}}` with the operator interpolated into both slots; a name the language does not define, at either level, keeps `UnknownPredicateOperator` verbatim. Both placeholders are deliberate: no field is invented, and no operand literal is printed, because `$in` takes an array and `$exists` a boolean, so a concrete `"x"` would recommend a shape that is itself refused. `MixedPredicateObject` stays byte-identical."""
+alternatives = ["a typed Contradiction enum rendering the seven cases", " one Reject variant per contradiction case", " DEC-027 epigram in the message", " ISS-004 proposed wording with a concrete status field in the example", " a per-operator operand literal in the suggested shape", " position without a shape example", " a right-and-wrong contrast pair", " one shared sentence for both levels of the $ refusal"]
+rationale = 'A typed enum whose only consumer is one message renderer is wording machinery wearing a type clothes, and the cases are already pinned by one red-first message test each, so the compiler adds redundancy and not protection; one variant also keeps a single Display arm and a single row in the failure boundary table. The epigram is excluded because stderr is one line (`smut: {error}` in src/main.rs) so a parenthetical would ride on every instance forever, and because the epigram belongs in the decision rationale and in the guide sentence IMP-012 owes. The `$` message needs two variants rather than one shared sentence because the same arm is reached from the predicate level and from inside a condition object: a parenthetical about where an operator belongs is false when it already sits inside a condition object, and the shape it recommends would itself be refused there. Splitting lets each sentence be true, keeps the unknown-name half exactly as it was, and costs one variant. Both slots of the suggested shape are placeholders because the operator and its operand vary while the sentence must stay true: printing `{"$in": "x"}` would tell an `$in` caller to write a refused shape, and printing a concrete field name would tell a caller about a field they may not have.'
+consequences = ["Both refusals are pinned by tests", " one of them as a whole rendered line because a substring assertion would pass a message that invented a field name", " rewording either message is a contract change rather than an edit", " no field name is invented anywhere a caller could copy it", " a later reader finds the epigram in DEC-027 and the guide rather than in stderr", " the placeholder shape is not copy-pasteable JSON so the caller supplies the field name", " the condition-level unknown-operator message stays true for a clause used as a condition"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-005"

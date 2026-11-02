@@ -43,19 +43,33 @@ here can proceed regardless.
    DEC-027's own — *a condition that cannot hold is a typo, not a question* — and not
    `MixedPredicateObject`'s "the design gives it no behaviour", which does not apply
    to a conjunction that is merely false.
-2. **The six forms**, and only these: `$exists:false` with any other condition on the
-   field; `$exists:true` with `$exists:false`; `$eq v` with `$ne v`; `$eq v` with
-   `$in` not holding `v`; `$in []`; `$in A` with `$in B` whose intersection is empty.
-   The check reads one field's condition list and nothing else, so `src/predicate.rs`
-   keeps its no-store, no-clock property.
-3. **The top-level `$` message gains position and shape** — it still names the
-   operator (that is true and pinned), and adds where an operator belongs, with the
-   shape to write instead. The field-level `MixedPredicateObject` message is not
-   touched.
-4. **Tests, red first**: one per form; positive controls that `$eq v` with `$in [v]`
-   and `$contains` combinations are *accepted*; and a pin asserting that a
-   contradiction spanning `$and` clauses is **not** refused, so a later reader cannot
-   widen the check by accident.
+2. **The decidable set, stated as a criterion** — not the six-form list this slice was
+   cut with, because design found that list wrong in three places (DEC-027, amended
+   twice). Two of its forms need the same key twice in one object and so cannot be
+   written at all (DEC-006 refuses duplicate keys before a `Value` exists); one
+   decidable neighbour was missing (`$ne v` against an `$in` list whose every member
+   equals `v`); and `$contains` was called undecidable except beside `$eq`, when `$in`
+   also bounds the value. The criterion: the check decides when the conditions bound
+   the field to one value (`$eq v`, so the rest is evaluated on `v`) or to a finite set
+   (`$in S`, so some member must satisfy the rest), plus the two presence facts
+   (`$exists:false` beside anything, and `$in` of nothing). Outside those bounds —
+   `$contains` against a value the request does not bound — nothing is provable. The
+   check reads one field's condition list and nothing else, so `src/predicate.rs` keeps
+   its no-store, no-clock property. It also fires only where the predicate **demands**
+   the field: the root and `And` children, however many `$not`s wrap them, and never
+   inside an `$or` or under an odd number of `$not`s, where the query still has an
+   answer.
+3. **The predicate-level `$` refusal becomes two messages** — a known operator out of
+   place gets its own variant naming the position and a shape with placeholder field
+   *and* operand; an undefined name, at either level, keeps `unknown predicate
+   operator: {operator}` (DEC-030). No field is ever invented, and the field-level
+   `MixedPredicateObject` message is not touched.
+4. **Tests, red first**: one per branch of the rule; positive controls that `$eq v`
+   with `$in [v]` and `$contains` combinations are *accepted*; and a pin asserting
+   that a contradiction spanning `$and` clauses is **not** refused, so a later reader
+   cannot widen the check by accident. Assertions are split by level: the rule at unit
+   level, the sentence in the message test, and exit code, empty stdout and
+   "no store opened" at the binary level.
 5. **Compatibility is free and must stay documented as such**: `where` is a 0.2 key,
    so no 0.1 query can express a predicate and DEC-019's unchanged-0.1-response
    property cannot move.
@@ -69,6 +83,9 @@ here can proceed regardless.
 - **No `kind`-without-`type` advisory.** Delivery work (IMP-011); if ever revived it
   is a `changes[]` entry, never stderr.
 - **No `$and`-spanning analysis.** Out of scope by decision; the pin above says so.
+- **No `$or` analysis.** `$or` contents are never examined, so a one-element `$or`
+  around a contradiction is accepted and empties the query. Closing that one shape
+  alone would imply the rest of `$or` is analysed; the pin makes the choice explicit.
 - **No guide text in this slice.** `learn`'s predicate paragraph is untouched, which
   also means no pin churn inside SL-004's surface. The scoping sentence DEC-027
   obliges ("smut refuses some contradictions, within one field's conditions") ships
@@ -96,15 +113,19 @@ here can proceed regardless.
   same module. Ordering, not avoidance: refusal phase before SL-004's PHASE-02, or a
   rebase. The overlap was invisible from the selectors, which is the lesson recorded in
   RFC-001.
-- **A form may not survive design.** If a form turns out unsound (structural equality
-  on some value shape), drop it rather than widen the check — the subset is a floor
-  for the decision, not a quota.
+- **The six-form list was wrong in three ways, which is why it became a criterion.**
+  Design found two unexpressible forms, a missing decidable neighbour, and then — on
+  review — an over-claimed undecidability (`$contains` beside `$in`). The operator's
+  answer was to state the rule rather than patch the table, and review corrected the
+  rule (DEC-027, amended twice). A later reader must not "restore" the six: two of
+  them describe shapes a caller cannot write.
 - **Message text is a surface.** Choose the wording in design, pin it, and keep
   `MixedPredicateObject`'s message byte-identical.
 
 ## Verification / closure intent
 
-- Red-first per form, green after; the positive controls stay green throughout.
+- Red-first per branch of the rule, green after; the positive controls stay green
+  throughout.
 - The `$and` case pinned as *accepted* (no refusal).
 - Exit 2, message on stderr, no success envelope on stdout.
 - `tests/predicates.rs` and the refusal-message tests in `src/error.rs` pass.

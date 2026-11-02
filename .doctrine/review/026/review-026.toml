@@ -1,0 +1,658 @@
+id    = 26
+slug  = "design-review-of-sl-005"
+title = "design review of SL-005"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Two hostile passes over the materialised design: the drafted design (12 findings, one blocker) and the repairs (8 findings, three majors). Every finding is answered and verified; DEC-027 and DEC-030 carry the decision-level corrections."
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Re-concluded after the reviewing runbook's three discharges (scope, selectors, passes): no section body changed since the pass examined them at revision 34, so the pass still covers the document the run will lock. The discharges were bookkeeping, not design."
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "All twenty findings answered and verified after the route pass; the one post-pass edit rewording sentence 2 tightens a pin the pass examined without changing what it asserts."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-005"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "blocker"
+title = "A contradiction inside `$or` or `$not` is refused though the predicate is satisfiable"
+detail = """The check runs at the end of `parse_field`, which is re-entered for every `$and`/`$or`/`$not` operand. `{"$not":{"status":{"$eq":"open","$ne":"open"}}}` returns the whole store at exit 0 today; an entity satisfies it. `{"$or":[{"f":{"$eq":1,"$ne":1}},{"g":{"$eq":2}}]}` is likewise satisfiable. Refusing either is a false positive and falsifies §2's claim that a refusal can never be wrong about a correct query. Repair: refuse only where the conditions are required (reached through `And` alone), and pin both non-refusals."""
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by the demanded-position table and the $and-spanning pin."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "§2 now states required position: `refusal` walks the AST with a `required` flag, the root is required, `And` children inherit it, `Or` and `Not` break it. §5 gains the pin `a_contradiction_outside_required_position_is_not_refused` with both measured shapes, and DEC-027 records the rule with the probe evidence."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by the demanded-position table and the $and-spanning pin."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "The §4 sentence is installed on a shared `Display` arm and is false at its second call site"
+detail = """`UnknownPredicateOperator` is raised at `src/predicate.rs:72` (predicate level) and `:173` (inside a condition object); `src/error.rs:74-77` says so in its own doc. With the parenthetical, `{"status":{"$regex":"x"}}` reports that `$regex` belongs inside a field's condition object — where it already is — and the shape it recommends is itself always refused. Repair: split the variants so a known operator in the wrong place and an unknown name get different, true sentences."""
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by two whole-line message assertions and the binary row."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """The arm is split. `MisplacedPredicateOperator { operator }` is raised at the predicate level when the name is one of the five operators, and renders `predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": "x"}}`. `UnknownPredicateOperator` keeps its variant, message and both call sites, so the condition-level arm stops claiming an operator belongs where it already is. §4 rewritten; DEC-030 records the split and why one sentence could not be true of both sites."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by two whole-line message assertions and the binary row."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "major"
+title = "`the_refusal_does_not_depend_on_key_order` is tautological"
+detail = """serde_json is built without `preserve_order`, so `Map` is a `BTreeMap` and `{"$eq":1,"$ne":1}` and `{"$ne":1,"$eq":1}` deserialize to the same `Value`. The test compares a pure function to itself and passes for any implementation. Repair: drop the swap; assert the fixed sub-order on a shape whose lexical order differs from §2's (`{"$eq":1,"$ne":1,"$contains":"z"}` must report `$ne`)."""
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by the fixed-order test that fails for a list-order implementation."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """The swap is dropped as tautological (`serde_json`'s map is a `BTreeMap`). The replacement asserts the fixed sub-order on a shape whose lexical order differs: `{"$eq":1,"$ne":1,"$contains":"z"}` must report `$ne`."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by the fixed-order test that fails for a list-order implementation."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "§2 step 4 gives two incompatible rules for choosing the sentence, so a reachable shape is undetermined"
+detail = """`{"$in":["a","b"],"$ne":"b","$contains":"zzz"}` yields sentence 7 under the fixed operator order and sentence 6 under "the condition that excluded the last of them" read over array order — and the latter makes the sentence depend on the caller's array order. Repair: define step 4 as the first operator, in the order `$ne` then `$contains`, whose application leaves no member."""
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by the same fixed-order test plus the seven-row branch table."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """"the condition that excluded the last of them" is deleted. §2 step 4 is now: apply `$ne` to the members, then `$contains` to the survivors; the first application that leaves nothing is the contradiction. Independent of the caller's array order."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by the same fixed-order test plus the seven-row branch table."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "major"
+title = "DEC-030's central guard is not pinned by any named test"
+detail = "§5's binary row asserts stderr contains `$ne` and the shape hint; a message that printed a concrete field name would pass, which is exactly what DEC-030 forbids. Repair: pin the whole rendered line."
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by the whole-line assertion for two operators."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The misplaced-operator assertion is now the whole rendered line, in both §5 and DEC-030's consequences, precisely because a substring would pass a message that invented a field."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by the whole-line assertion for two operators."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "minor"
+title = "§2's sketch names a type the design never defines and §3 argues against"
+detail = "`Option<Contradiction>` versus `contradiction: String`; §6 repeats it. Repair: `Option<String>`."
+disposition = "fix-now"
+response = "Both sketches read `Option<String>`; `Contradiction` is gone."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Both sketches read `Option<String>`; `Contradiction` is gone."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "DEC-030 pins six sentences; the design ships seven"
+detail = "Two binding sources disagree and the design silently picks one. Repair: amend DEC-030 to the seven and record the correction there, not in the design."
+disposition = "fix-now"
+response = "DEC-030 amended to seven sentences, with the count corrected in its prose as well as its facet."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "DEC-030 amended to seven sentences, with the count corrected in its prose as well as its facet."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "minor"
+title = "The duplicate-key rule is attributed to DEC-006, which is the ordering decision"
+detail = 'DEC-001 rule 1 is the authority ("rejects ... duplicate JSON keys ... all exit 2"); `src/input.rs` is the mechanism. The mis-citation is inherited from `src/error.rs:89`. Repair: cite DEC-001 and `src/input.rs`; raise the pre-existing `error.rs` citation as a follow-up.'
+disposition = "fix-now"
+response = "§2 now cites `src/input.rs` for the mechanism and DEC-001 rule 1 for the exit code; DEC-006 is named nowhere as the duplicate-key authority. The pre-existing mis-citation in `src/error.rs:89` is out of this slice's scope and is now CHR-002."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "§2 now cites `src/input.rs` for the mechanism and DEC-001 rule 1 for the exit code; DEC-006 is named nowhere as the duplicate-key authority. The pre-existing mis-citation in `src/error.rs:89` is out of this slice's scope and is now CHR-002."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "minor"
+title = "The pinned §4 sentence drifts from DEC-030's pinned string"
+detail = """"inside a field condition object" versus "inside a field's condition object". Message text is declared a contract surface. Repair: one wording, in both places."""
+disposition = "fix-now"
+response = "One wording everywhere: `inside a field's condition object`, in §4, in DEC-030's facet and in its body."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "One wording everywhere: `inside a field's condition object`, in §4, in DEC-030's facet and in its body."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-10"
+status = "verified"
+severity = "minor"
+title = "The §1 diagram disagrees with §4 about where the `$` check lives"
+detail = "The flowchart hangs the `$` refusal off `spec::parse`; §4 and §6 place the arm in `predicate::parse`. It also draws one `parse_field` box although the function is re-entered for every clause operand — which is what makes finding 1 reachable. Repair: redraw."
+disposition = "fix-now"
+response = "The diagram redrawn: `parse` builds the AST and recurses, the required-position walk sits after it, and the `$` arm hangs off `parse` rather than `spec::parse`, with both variants named."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The diagram redrawn: `parse` builds the AST and recurses, the required-position walk sits after it, and the `$` arm hangs off `parse` rather than `spec::parse`, with both variants named."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-11"
+status = "verified"
+severity = "nit"
+title = '§2 step 3 says "each remaining condition", but no sentence exists for `$exists`'
+detail = "An implementer following the prose literally has nothing to return. Repair: name `$ne`/`$in`/`$contains` explicitly."
+disposition = "fix-now"
+response = "Step 3 names `$ne`/`$in`/`$contains` explicitly and notes that `$exists:true` cannot fail on a present value, so it needs no sentence."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Step 3 names `$ne`/`$in`/`$contains` explicitly and notes that `$exists:true` cannot fail on a present value, so it needs no sentence."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-12"
+status = "verified"
+severity = "nit"
+title = """§5's "§2's table (seven)" is ambiguous, and two pins are listed beside red-first rows"""
+detail = "§2 has a four-row bound table and a seven-row impossibility table; the two non-refusal pins pass with the feature reverted, which should be stated."
+disposition = "fix-now"
+response = "§5 now names the table as the seven-row impossibility table, and marks the three non-refusal cases as pins that pass with the feature absent."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "§5 now names the table as the seven-row impossibility table, and marks the three non-refusal cases as pins that pass with the feature absent."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-13"
+status = "verified"
+severity = "major"
+title = "An `$or` of one disjunct smuggles a contradiction past the walk, and the prose justifies the `$or` rule with a reason that has no referent there"
+detail = '`{"$or":[{"f":{"$eq":1,"$ne":1}}]}` parses, answers `[]` at exit 0. `Or([F]) ≡ F`, so "a false disjunct leaves the others to decide" describes nothing. Resolved by decision rather than by code: `$or` contents are not analysed, and closing the one-element shape alone would imply the rest are. Documented in §7 as a named gap and pinned in §5 (`a_single_disjunct_or_is_not_refused`), so breaking it is a decision and not a cleanup. `{"$or":[]}` staying legal is recorded as part of the same decision.'
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by the single-disjunct-$or pin; breaking it is a decision."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'Decision recorded and gap documented: §7 names it (`$or` contents are not analysed) with the one-element case spelled out, §5 pins `{"$or":[{"f":{"$eq":1,"$ne":1}}]}` as accepted, and DEC-027 states that closing the one-element shape would imply the rest of `$or` is analysed. `{"$or":[]}` legality recorded as part of the same decision.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by the single-disjunct-$or pin; breaking it is a decision."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-14"
+status = "verified"
+severity = "major"
+title = "§2 and DEC-027 state position as `$not` parity, which is false across `$or`"
+detail = '`{"$or":[{"$not":{"$not":{"f":{"$eq":1,"$ne":1}}}},{"g":2}]}` has two `$not`s around the contradiction and is satisfied by any `g: 2` entity, yet the parity shorthand reads as "demanded". The walk is right; the prose was not. §2 now says "the root and `And` children, however many `$not`s wrap them" in the table and states the interruption explicitly, and DEC-027 says "any even number of `$not`s provided no `$or` interrupts the path".'
+disposition = "fix-now"
+response = "Repaired in the design. DEC-027 and §2 now state the $or interruption where the shorthand stood."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Parity shorthand deleted in both places. §2's table row reads "the root and `And` children, however many `$not`s wrap them", the prose states the `$or` interruption with the two-`$not`-inside-`$or` shape as the counterexample, and DEC-027 now says "any even number of `$not`s provided no `$or` interrupts the path"."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. DEC-027 and §2 now state the $or interruption where the shorthand stood."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-15"
+status = "verified"
+severity = "major"
+title = "The misplaced-operator template is unspecified, its single whole-line pin cannot see a slot mismatch, and its operand example is invalid for two of the five operators"
+detail = '(a) §4 now gives the `write!` source with `{operator}` in both slots, and §5 pins two whole lines (`$ne` and `$in`) so a literal shape in the second slot fails. (b) The operand becomes `<operand>`: `{"$in": "x"}` and `{"$exists": "x"}` are themselves refused, so a concrete literal would recommend a second error. DEC-030 records both placeholders and why.'
+disposition = "fix-now"
+response = "Repaired in the design. Pinned by two whole-line assertions covering both interpolation slots."
+route = "control"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§4 carries the `write!` source with `{operator}` in both slots; the operand is now `<operand>` because a literal `"x"` recommends a shape that `$in`/`$exists` would refuse; §5 pins two whole lines (`$ne` and `$in`); DEC-030 records both placeholders and adds "a per-operator operand literal" to its alternatives.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Reopened to attach the route the severe-finding rule requires; the repair itself is unchanged."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "control"
+response = "Repaired in the design. Pinned by two whole-line assertions covering both interpolation slots."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route attached: the repair is guarded by a pinned test."
+
+[[finding]]
+id = "F-16"
+status = "verified"
+severity = "minor"
+title = """§5's pin count is wrong: seven shapes listed, "Six shapes" claimed"""
+detail = 'Now "Seven shapes, one table", with the refused rows marked red-first and the non-refused rows marked as pins.'
+disposition = "fix-now"
+response = '§5 says "Seven shapes, one table".'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§5 says "Seven shapes, one table".'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-17"
+status = "verified"
+severity = "minor"
+title = 'Two tests own the same two non-refusal shapes, and a table containing pins is labelled "red first"'
+detail = 'The standalone pin is gone; the seven-shape table owns those cases and marks which rows are red-first. The remaining pins (`$and`-spanning, single-disjunct `$or`, unbounded `$contains`) are separate tests and each says "pin" in its name.'
+disposition = "fix-now"
+response = 'The standalone non-refusal pin is removed; the seven-shape table owns those rows and marks which are red-first and which are pins. The three remaining pins are separate tests with "pin" in their descriptions.'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = 'The standalone non-refusal pin is removed; the seven-shape table owns those rows and marks which are red-first and which are pins. The three remaining pins are separate tests with "pin" in their descriptions.'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-18"
+status = "verified"
+severity = "minor"
+title = "Under the split, an existing test's stated rule becomes false while the test stays green"
+detail = """`tests/predicates.rs`'s doc on the unknown-operator test says any `$` key other than a clause is an unknown operator. §6 now lists that comment as a reword to "a name the language does not define", with the assertions untouched."""
+disposition = "fix-now"
+response = '§6 lists the comment reword in `tests/predicates.rs` as part of the change, assertions untouched: "a name the language does not define".'
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = '§6 lists the comment reword in `tests/predicates.rs` as part of the change, assertions untouched: "a name the language does not define".'
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-19"
+status = "verified"
+severity = "nit"
+title = "DEC-030 still counts six in `alternatives` after its facet was amended to seven"
+detail = "Both `alternatives` and the body corrected to seven."
+disposition = "fix-now"
+response = "DEC-030's `alternatives` and body both say seven."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "DEC-030's `alternatives` and body both say seven."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+[[finding]]
+id = "F-20"
+status = "verified"
+severity = "nit"
+title = "`Field(..) => None` rests on an unstated invariant, that a `Field` always carries at least one condition"
+detail = "§2 now states it (a value without `$` keys parses to one `Eq`; a `$`-only object yields one condition per key) and §7 lists it among the claims a reviewer can falsify."
+disposition = "fix-now"
+response = "§2 states the invariant (a value without `$` keys parses to one `Eq`; a `$`-only object yields one condition per key), and §7 lists it among the claims a reviewer can falsify."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "§2 states the invariant (a value without `$` keys parses to one `Eq`; a `$`-only object yields one condition per key), and §7 lists it among the claims a reviewer can falsify."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Repair integrated into the design and, where the finding was decision-level, into DEC-027 or DEC-030. Verified against the materialised design at revision 34."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
