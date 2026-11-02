@@ -31,3 +31,13 @@ Two ways to close it, either acceptable:
 Deliberately not absorbed into `SL-008` PHASE-02: the omission predates that phase and
 fixing it is outside its six-file charter. The claim in that phase's own diff line
 (`:763-768`) was corrected there — the message now asserts only what the pin enforces.
+
+## Second site, same class (found in `SL-008` PHASE-02's corrective commit `8503b93`)
+
+`src/error.rs:505-508`, the doc comment on `every_store_refusal()` itself, still says the
+pinned count "moves when a variant is added". That is the same overclaim the assertion message
+made before F-1 corrected it, one screen above the correction: the count does not move when a
+variant is added without a row. Left in place because the disposition scoped F-1 to the
+assertion message and a one-line doc comment was not worth a second worker round-trip — but it
+belongs with this item, since both sites are wrong for the same reason and both are fixed by
+whichever of the two approaches above is taken.

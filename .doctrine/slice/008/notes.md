@@ -114,6 +114,12 @@ having no global options, and the learn exit table being one line.
    resolved name" contradicts that same rule 4. In place: the example row must read
    `shadowed`, and the per-name clause restated to match. (Recorded in detail under
    § Harvest → Produced; listed here so the four obligations read as one set.)
+5. **`design.md:156`, the worked "unknown conventions set" example** — its inner text quotes
+   the diagnostic `frontmatter line 2 is not `key: value``, which PHASE-02 corrected to a
+   sentence true of every input that reaches it ("is not a flat `key: value` line: the key is
+   one word with no space in it, and a `:` follows it"). The example illustrates clause shape
+   rather than exact wording, so this is a staleness fix, not a rule change: update the quoted
+   sentence in place, or drop the quotation and name the class.
 
 ### Design questions the PHASE-02 review raised (RV-030, judgement calls)
 
@@ -573,6 +579,28 @@ extends it. Facts here were observed this session at head `de8cf3d`.
   `NoFreshBasename` is flagged, not fixed.
 - **Left dirty for the seat:** `.doctrine/slice/008/slice-008.toml` (the `in_progress` flip)
   and another writer's untracked `_envrc` / `.doctrine/slice/010/`.
+- **Review — RV-030 over `4015f6a..77444e8`: four findings, no blocker, all `fix-now`,
+  discharged in `8503b93`.** F-1 (`minor`) the inventory pin's message claimed a guarantee it
+  cannot give — 14 `StoreError` variants against 13 rows, `NoFreshBasename` absent since it was
+  introduced; F-2 (`minor`) three assertions sat above an exact equality they could not
+  falsify, the repository's own recorded lesson; F-3 (`nit`) the unterminated-fence class
+  pinned only "reason is non-empty", so `line: None` survived an EX-3 requirement; F-4 (`nit`)
+  a diagnostic told the reader that a `key: value` line was not one. The seat verified all four
+  by reading the corrective diff, not the handback. F-4's fix improves on the suggestion it
+  was raised with — the reviewer's own wording would have been false for the empty-key and
+  no-colon paths that reach the same sentence, so the worker probed all three and worded it
+  true of every one.
+- **The review's own limits, recorded rather than glossed.** The `reviewer` role has no shell:
+  it could not see the commit range and did not run the gate, and it said so instead of
+  assuming them. The seat closed the two material gaps — EX-7 (the prose below the frontmatter
+  is byte-identical to `4015f6a`'s body) and EX-9 (the one dropped test,
+  `a_named_set_prints_the_embedded_prose_verbatim`, has its replacement
+  `a_named_set_prints_the_body_verbatim` carrying the property). Both hold. The gate was
+  re-run at the seat: exit 0, 408/421, zero warnings.
+- **Role collapse, stated plainly:** the seat raised, disposed and verified RV-030's findings
+  because the reviewer could only return prose. The ledger records every turn truthfully, so
+  nothing is hidden — but no party was independent of every step. The independent check on
+  this phase is the audit's pre-close review, which reads RV-030 rather than these notes.
 
 ## Autonomy log
 

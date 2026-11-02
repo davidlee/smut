@@ -10,6 +10,12 @@ raiser    = "raiser"
 responder = "responder"
 rounds_base = 0
 contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Independent per-phase review of SL-008 PHASE-02 over the recorded delta `4015f6a..77444e8` (six owned files, 1033 insertions / 121 deletions), conducted by a fresh `reviewer` child briefed from the code-review skill against EX-1..EX-10, design §1/§3/§7 and RV-029's six claimed discharges, with a hunting list of fence, key, name, line-number, body, inventory, same-reader and panic-path edges plus test honesty and coupling. Four findings raised (2 minor, 2 nit), none a blocker; all four disposed `fix-now`, discharged in `8503b93` and verified by the seat against each finding's stated acceptance. The reviewer had no shell and declared that it could not see the commit range or run the gate; the seat closed the two material consequences itself (EX-7's byte-identical body, EX-9's no-assertion-dropped) and re-ran `just check` green at 408/421 with zero warnings, `verify-vt` PHASE-02 VT-1..VT-5 PASS. Three judgement calls the reviewer declined to call defects (duplicate frontmatter keys, silent frontmatter demotion on `--- `/CRLF/leading blank, asymmetric body trim) are carried to reconcile as design questions rather than patched here; the pre-existing `every_store_refusal()` omission is carried to IMP-019. Note for the audit: raise, dispose and verify were all performed by the seat, because the reviewer returned prose only — the turns are recorded truthfully but no party was independent of every step, which is why the pre-close review should read this ledger rather than trust it."
 
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-008"
@@ -17,7 +23,7 @@ phase = "PHASE-02"
 
 [[finding]]
 id = "F-1"
-status = "answered"
+status = "verified"
 severity = "minor"
 title = "The inventory length pin claims a guarantee it does not give"
 detail = """
@@ -39,9 +45,14 @@ role = "responder"
 disposition = "fix-now"
 response = "Upheld. The message overclaims: the vec pin compares a count to a literal, so a variant added without a row leaves the count unchanged and the test green. Correcting the message to what the pin enforces — a row added without the count moving cannot pass — in a corrective commit against PHASE-02's owned `src/error.rs`. The `NoFreshBasename` row and the 14 count would make the inventory real, but that omission predates this phase and sits outside its six-file charter, so it goes to the backlog as `follow-up` rather than being absorbed here. The `Display` arm remains compiler-enforced by match exhaustiveness, which is the part the message should not have claimed for the vec."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Discharged in `8503b93`. The message now claims only what the pin enforces — a row added without the count moving — and names the shortfall inline ("which is NoFreshBasename short of the enum"), so the comment can no longer be read as a completeness guarantee. Count stays 13 by disposition: the missing row is IMP-019. Verified by reading the diff, not the handback.'
+
 [[finding]]
 id = "F-2"
-status = "answered"
+status = "verified"
 severity = "minor"
 title = "Three assertions in the prose test cannot fail"
 detail = '''
@@ -61,9 +72,14 @@ role = "responder"
 disposition = "fix-now"
 response = "Upheld, and it is the sharper of the two minors: three assertions that no input could falsify are exactly what the plan's own discipline forbids, and the sibling test in the same file already got this right by ordering its exact row last. Reordering, not deleting — the exact equality moves to the end of the test so the three negatives carry evidence again. The untrue comment goes with the reorder."
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `8503b93`. Read the test directly: the four weaker assertions now precede the exact equality, which is last with a comment stating that an exact equality above them would make each unfalsifiable because `body()` derives from the same bytes. All four assertions retained rather than deleted. Each of the three negatives was shown to fail at its own line under a fence-reproducing mutant, so they are evidence now, not tautologies."
+
 [[finding]]
 id = "F-3"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The unterminated-fence class is only pinned as non-empty"
 detail = """
@@ -83,9 +99,14 @@ role = "responder"
 disposition = "fix-now"
 response = """Upheld. EX-3 is explicit that `Cause.line` is `Some` for every line-bearing class and that the sentence names the same line; the unterminated-fence class was the one class where only the reason's non-emptiness was pinned, so the criterion was met in code and unproven in test. Adding both halves (`Some(1)` and "line 1") to bring it level with its siblings."""
 
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Discharged in `8503b93`. Both halves added — `assert_eq!(cause.line, Some(1))` and a `contains("line 1")` — levelling the class with its siblings per EX-3. Both mutants reddened: `line: None` failed the new equality; a substituted sentence with `line: Some(1)` intact failed the new containment. The non-emptiness assertion was kept.'
+
 [[finding]]
 id = "F-4"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The diagnostic says a `key: value` line is not one"
 detail = """
@@ -104,5 +125,10 @@ act = "dispose"
 role = "responder"
 disposition = "fix-now"
 response = "Upheld. The refusal class is right and the sentence lies about the input, which is the one thing a diagnostic may not do. Folding the wording to name the actual defect — the key holds a space — rather than claiming the line has no colon."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """Discharged in `8503b93`, and better than the correction I raised. The reviewer's suggested wording ("the key holds a space") would itself have been false for the empty-key and no-colon inputs that reach the same sentence; the worker probed all three paths and chose wording true of every one — "the key is one word with no space in it, and a `:` follows it" — keeping the line number and the failure class, adding no refusal. The design's worked example at `design.md:156` still quotes the old sentence, which reconcile now owes."""
 # Findings are append-only `[[finding]]` tables, added by `review raise`.
 # Empty here at creation — a fresh review is Active, awaiting the raiser.
