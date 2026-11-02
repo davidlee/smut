@@ -4,8 +4,9 @@
 //! `smut conventions` is pure text: one shipped set, printed as a listing or as
 //! prose, plus a pipeable declaration of the same embedded prose. The tests
 //! below pin the surface a caller can observe — the listing's one line, the
-//! prose's eight items, the refusals' exit code and words, the seed's fixed id
-//! and the crate's version — and the two things the command must *not* do: open
+//! prose's eight items, the refusals' exit code and words, the seed's fixed
+//! public id carried under its structural `smut_id`, and the crate's version —
+//! and the two things the command must *not* do: open
 //! a store, and lose an amendment silently on re-install.
 //!
 //! The body is asserted against the file the binary embeds, so a second copy of
@@ -173,7 +174,9 @@ fn a_named_set_prints_the_embedded_prose_verbatim() {
     // must be the one the seed actually emits: a renamed set whose prose still
     // named the old id would send the reader to an entity nothing updates.
     let seed = smut(&scratch, &["conventions", "hygiene", "--format", "json"]).json();
-    let id = seed["id"].as_str().expect("the seed carries a string id");
+    let id = seed["smut_id"]
+        .as_str()
+        .expect("the seed names its entity in smut_id");
     assert!(
         printed.stdout.contains(id),
         "the printed set names the id the seed emits ({id})"
@@ -301,7 +304,7 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
 
     let seed = printed.json();
 
-    assert_eq!(seed["id"], json!("conventions-hygiene"));
+    assert_eq!(seed["smut_id"], json!("conventions-hygiene"));
     assert_eq!(seed["type"], json!("convention"));
     assert_eq!(
         seed["version"],
@@ -314,10 +317,20 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
         json!(EMBEDDED.trim_end_matches('\n')),
         "the body is the embedded prose, not an inline copy of it"
     );
+    // Structural identity is the `smut_id` member — so an ordinary `id` field
+    // here would be data the seed does not carry, not a second spelling of the
+    // same identity. The key list pins both: five names, and `id` is not one.
+    let fields: Vec<&str> = seed
+        .as_object()
+        .expect("one object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+
     assert_eq!(
-        seed.as_object().expect("one object").len(),
-        5,
-        "the seed supplies exactly id, type, version, title and body: {seed}"
+        fields,
+        ["body", "smut_id", "title", "type", "version"],
+        "the seed supplies exactly smut_id, type, version, title and body: {seed}"
     );
 }
 
@@ -439,6 +452,12 @@ fn the_seed_declares_once_and_a_second_install_updates_the_same_entity() {
     let first = run(&scratch, &["declare"], Some(&seed));
     assert_eq!(first.code, 0, "{}", first.stderr);
     assert_eq!(first.json()["ids"], json!(["conventions-hygiene"]));
+    assert_eq!(
+        first.json()["changes"][0]["smut_id"],
+        json!("conventions-hygiene"),
+        "the receipt's subject is the seed's structural identity: {}",
+        first.stdout
+    );
     assert_eq!(first.json()["changes"][0]["status"], json!("created"));
 
     let second = run(&scratch, &["declare"], Some(&seed));
@@ -457,6 +476,12 @@ fn the_seed_declares_once_and_a_second_install_updates_the_same_entity() {
         1,
         "the fixed id means one entity, however many times the pipe runs"
     );
+    assert_eq!(
+        fetched.json()["objects"][0]["smut_id"],
+        json!("conventions-hygiene"),
+        "the one entity is stored under the seed's structural identity: {}",
+        fetched.stdout
+    );
 }
 
 #[test]
@@ -473,7 +498,7 @@ fn a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_prev
         &scratch,
         &[
             "declare",
-            r#"{"id":"conventions-hygiene","body":"Our house rule: one label per relation.","owner":"ops"}"#,
+            r#"{"smut_id":"conventions-hygiene","body":"Our house rule: one label per relation.","owner":"ops"}"#,
         ],
     );
     assert_eq!(amended.code, 0, "{}", amended.stderr);
@@ -487,6 +512,12 @@ fn a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_prev
     let reply = reinstalled.json();
     let change = &reply["changes"][0];
     assert_eq!(change["status"], json!("updated"));
+    assert_eq!(
+        change["previous"]["smut_id"],
+        json!("conventions-hygiene"),
+        "`previous` is the entity as it stood before the batch, identity included: {}",
+        reinstalled.stdout
+    );
     assert_eq!(
         change["previous"]["body"],
         json!("Our house rule: one label per relation."),
@@ -524,7 +555,10 @@ fn compact_omits_the_previous_body_the_re_install_replaced() {
     assert_eq!(installed.code, 0, "{}", installed.stderr);
     let amended = smut(
         &scratch,
-        &["declare", r#"{"id":"conventions-hygiene","body":"Draft."}"#],
+        &[
+            "declare",
+            r#"{"smut_id":"conventions-hygiene","body":"Draft."}"#,
+        ],
     );
     assert_eq!(amended.code, 0, "{}", amended.stderr);
 

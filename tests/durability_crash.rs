@@ -58,8 +58,15 @@ const BETA_FILE: &str = "Zq7.json";
 /// The uid the hand-built staging fixtures use for the entity the batch adds.
 const STAGED_UID: &str = "Fresh.json";
 
+/// The format version every older build wrote. The version-refusal fixtures name
+/// it literally, so the version they claim an old document declared cannot
+/// follow the constant under test.
+const OLD_FORMAT_VERSION: u64 = 1;
+
+/// One stored entity. The structural identity key is spelled literally so this
+/// file's fixtures state the wire contract a version-2 store owes.
 fn entity(id: &str, body: &str) -> Value {
-    json!({ "id": id, "body": body })
+    json!({ "smut_id": id, "body": body })
 }
 
 fn entity_bytes(value: &Value) -> Vec<u8> {
@@ -201,15 +208,46 @@ fn staged_files() -> Vec<(&'static str, Vec<u8>)> {
     ]
 }
 
-/// The manifest the canonical batch stages, written by hand so the reader is
-/// tested against the format rather than against its own writer.
+/// The manifest the canonical batch stages.
 fn staged_manifest() -> Vec<u8> {
+    manifest_document(MANIFEST_FORMAT_VERSION)
+}
+
+/// The canonical batch's manifest, declaring `format_version`.
+///
+/// Written by hand so the reader is tested against the format rather than
+/// against its own writer, and parameterised by version so an old committed
+/// manifest and a readable one differ in nothing else — which is what makes the
+/// two recovery outcomes a comparison of versions alone.
+fn manifest_document(format_version: u64) -> Vec<u8> {
     serde_json::to_vec(&json!({
-        "format_version": MANIFEST_FORMAT_VERSION,
+        "format_version": format_version,
         "puts": [ALPHA_FILE, STAGED_UID, INDEX_BASENAME],
         "removes": [BETA_FILE],
     }))
     .expect("a manifest")
+}
+
+/// An index document an older build wrote: the seeded mapping, declaring
+/// [`OLD_FORMAT_VERSION`]. Built by hand so the refusal is tested against the
+/// document's declared version rather than against this build's writer.
+fn old_index_document() -> Vec<u8> {
+    serde_json::to_vec(&json!({
+        "format_version": OLD_FORMAT_VERSION,
+        "objects": {"alpha": ALPHA_FILE, "beta": BETA_FILE},
+    }))
+    .expect("an index document")
+}
+
+/// The `format_version` a store document declares.
+fn format_version(bytes: &[u8], document: &str) -> u64 {
+    let parsed: Value = serde_json::from_slice(bytes)
+        .unwrap_or_else(|error| panic!("{document} does not hold JSON: {error}"));
+
+    parsed
+        .get("format_version")
+        .and_then(Value::as_u64)
+        .unwrap_or_else(|| panic!("{document} declares no integer format_version: {parsed}"))
 }
 
 fn write_state(scratch: &Scratch, state: &str, manifest: &[u8], files: &[(&str, Vec<u8>)]) {
@@ -224,6 +262,17 @@ fn write_state(scratch: &Scratch, state: &str, manifest: &[u8], files: &[(&str, 
 
 fn stage_the_batch(scratch: &Scratch, state: &str) {
     write_state(scratch, state, &staged_manifest(), &staged_files());
+}
+
+/// The canonical batch decided and committed, its manifest declaring
+/// `format_version`.
+fn commit_the_batch_at_version(scratch: &Scratch, format_version: u64) {
+    write_state(
+        scratch,
+        COMMIT_STATE,
+        &manifest_document(format_version),
+        &staged_files(),
+    );
 }
 
 /// Publish the batch by hand: the state a store is in once apply has finished.
@@ -414,6 +463,30 @@ fn assert_pre_commit(scratch: &Scratch) {
         scratch.tree(),
         Scratch::seeded().tree(),
         "the store is exactly as it was before the batch"
+    );
+}
+
+/// The published store: every entry under `.smut/` that is not journal state.
+///
+/// Replay effects are asserted on this, separately from what recovery did to the
+/// protocol's own staging directories and temporaries (§5).
+fn published_tree(scratch: &Scratch) -> BTreeMap<String, Vec<u8>> {
+    scratch
+        .tree()
+        .into_iter()
+        .filter(|(key, _)| !key.starts_with("journal."))
+        .collect()
+}
+
+/// The store serves its two entities: the fixture the version gate is tried on is
+/// otherwise readable, so a refusal cannot be a store that was already broken.
+fn assert_readable_store(scratch: &Scratch) {
+    let snapshot = scratch.store().load().expect("an otherwise readable store");
+
+    assert_eq!(
+        snapshot.entities().len(),
+        2,
+        "the seeded store reads as alpha and beta"
     );
 }
 
@@ -1231,6 +1304,207 @@ fn recovery_interrupted__recovery_cleanup_removed() {
         scratch.tree(),
         expected,
         "the next command's recovery converged"
+    );
+}
+
+// ── the version gate: an old committed manifest, and the documents this build
+// writes (EX-3, EX-7, VT-4, VT-6) ──────────────────────────────────────────
+
+/// An old committed manifest is refused by version before a single replayed put
+/// or removal, and the refusal leaves the evidence on disk (§3, STD-002).
+#[test]
+fn old_manifest_not_replayed_by_version() {
+    let scratch = Scratch::seeded();
+    assert_readable_store(&scratch);
+    commit_the_batch_at_version(&scratch, OLD_FORMAT_VERSION);
+
+    let error = scratch
+        .store()
+        .run(&mut Read)
+        .expect_err("an old committed manifest is refused");
+
+    assert_eq!(
+        error.exit_code(),
+        1,
+        "a version refusal is a storage refusal, not a request refusal: {error}"
+    );
+
+    let message = error.to_string();
+
+    assert!(
+        message.contains(MANIFEST_BASENAME),
+        "the refusal names the manifest document: {message}"
+    );
+    assert!(
+        message.contains(&format!("format_version {OLD_FORMAT_VERSION}")),
+        "the refusal names the version the manifest declared: {message}"
+    );
+    assert!(
+        message.contains(&MANIFEST_FORMAT_VERSION.to_string()),
+        "the refusal names the version this build reads: {message}"
+    );
+    assert!(
+        !message.contains("the store index has format_version"),
+        "the gate is the manifest's version, not the index's: {message}"
+    );
+    for basename in [ALPHA_FILE, STAGED_UID, BETA_FILE, INDEX_BASENAME] {
+        assert!(
+            !message.contains(basename),
+            "the refusal is about the manifest's version, not about {basename}: {message}"
+        );
+    }
+
+    // No replay: neither put was published, the removal did not run, and the
+    // index still maps the removed entity.
+    assert_eq!(
+        fs::read(scratch.directory().join(ALPHA_FILE)).expect("alpha's file"),
+        entity_bytes(&entity("alpha", "first")),
+        "the replayed put did not overwrite alpha"
+    );
+    assert!(
+        !scratch.directory().join(STAGED_UID).exists(),
+        "the replayed put was not published under its fresh uid"
+    );
+    assert_eq!(
+        fs::read(scratch.directory().join(BETA_FILE)).expect("beta's file"),
+        entity_bytes(&entity("beta", "second")),
+        "the replayed removal did not delete beta"
+    );
+    assert_eq!(
+        fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the index"),
+        index_bytes(&[("alpha", ALPHA_FILE), ("beta", BETA_FILE)]),
+        "the index the batch would have published was not applied"
+    );
+    assert_eq!(
+        published_tree(&scratch),
+        published_tree(&Scratch::seeded()),
+        "the published store is exactly as it was before the batch"
+    );
+
+    // The decision is still on disk: recovery refused the manifest rather than
+    // discarding the evidence of it.
+    assert!(
+        scratch.directory().join(COMMIT_STATE).is_dir(),
+        "the committed state survives the version refusal"
+    );
+}
+
+/// The control for the case above: the same store and the same staged files,
+/// with a readable manifest, replay through one command. A no-op recovery cannot
+/// satisfy both tests.
+#[test]
+fn readable_manifest_replays() {
+    let scratch = Scratch::seeded();
+    assert_readable_store(&scratch);
+    commit_the_batch_at_version(&scratch, MANIFEST_FORMAT_VERSION);
+
+    let output = scratch
+        .store()
+        .run(&mut Read)
+        .expect("the next command replays a readable committed batch");
+
+    assert_eq!(
+        output, "2\n",
+        "the recovered store serves the recovered command"
+    );
+    assert_whole_batch(&scratch);
+}
+
+/// The documents this build actually writes declare version 2 (EX-7).
+#[test]
+fn the_committed_manifest_and_the_published_index_carry_version_2() {
+    let scratch = Scratch::seeded();
+
+    // A failure after the decision leaves the store's own committed manifest on
+    // disk, so the document read here is the one the commit path wrote.
+    {
+        let _armed = Armed::failing(Boundary::ParentDirectorySynced);
+        scratch
+            .store()
+            .run(&mut Batch::new())
+            .expect_err("the parent fsync fails after the decision");
+    }
+
+    assert_eq!(
+        format_version(
+            &fs::read(
+                scratch
+                    .directory()
+                    .join(COMMIT_STATE)
+                    .join(MANIFEST_BASENAME)
+            )
+            .expect("the committed manifest"),
+            MANIFEST_BASENAME,
+        ),
+        2,
+        "the manifest the commit decided on declares version 2"
+    );
+
+    recover(&scratch);
+
+    assert_eq!(
+        format_version(
+            &fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the published index"),
+            INDEX_BASENAME,
+        ),
+        2,
+        "the index the commit published declares version 2"
+    );
+}
+
+/// An old index is refused by version before any other check can speak (§3, EX-3).
+#[test]
+fn a_version_1_index_is_refused_by_version_before_anything_else() {
+    let scratch = Scratch::seeded();
+    fs::write(
+        scratch.directory().join(INDEX_BASENAME),
+        old_index_document(),
+    )
+    .expect("the old index");
+
+    // Every later check fails too — an entry the index does not explain, and an
+    // entity that disagrees with its mapping — so passing this test means the
+    // version was the first thing refused.
+    fs::write(scratch.directory().join("stray.json"), b"{}").expect("an unexplained entry");
+    fs::write(
+        scratch.directory().join(ALPHA_FILE),
+        entity_bytes(&entity("other", "first")),
+    )
+    .expect("alpha's file");
+
+    let error = scratch
+        .store()
+        .run(&mut Read)
+        .expect_err("an old index is refused");
+
+    assert_eq!(
+        error.exit_code(),
+        1,
+        "an old index is a storage refusal: {error}"
+    );
+
+    let message = error.to_string();
+
+    assert!(
+        message.contains("the store index has format_version") && message.contains("1"),
+        "the refusal names the index's version and the version it found: {message}"
+    );
+    assert!(
+        message.contains("only 2"),
+        "the refusal names the version this build reads: {message}"
+    );
+    assert!(
+        !message.contains("not explained by the index"),
+        "the version gate runs before the unexplained-entry check: {message}"
+    );
+    assert!(
+        !message.contains("holds"),
+        "the version gate runs before the entity disagreement check: {message}"
+    );
+    assert_eq!(
+        fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the index"),
+        old_index_document(),
+        "an old index is refused, never migrated or repaired"
     );
 }
 

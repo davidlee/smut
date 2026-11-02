@@ -25,7 +25,9 @@ fn store(entities: &[Value]) -> Entities {
     entities
         .iter()
         .map(|entity| {
-            let id = entity["id"].as_str().expect("every fixture names its id");
+            let id = entity["smut_id"]
+                .as_str()
+                .expect("every fixture names its smut_id");
             (Id::new(id), entity.clone())
         })
         .collect()
@@ -75,11 +77,11 @@ fn assert_notice_leads(document: &str, notice: &str, body_bytes: &str) {
 fn the_notice_leads_the_document_above_a_body_ending_in_an_unclosed_comment() {
     let store = store(&[
         json!({
-            "id": "hostile",
+            "smut_id": "hostile",
             "title": "Hostile",
             "body": "Kept raw.\n\n<!-- unclosed comment"
         }),
-        json!({"id": "later", "title": "Later", "body": "after"}),
+        json!({"smut_id": "later", "title": "Later", "body": "after"}),
     ]);
 
     let document = rendered(&store, json!({"limit": 1}), &Options::default());
@@ -95,12 +97,12 @@ fn the_notice_leads_the_document_above_a_body_ending_in_an_unclosed_comment() {
 fn the_notice_leads_the_document_above_a_body_ending_in_an_unclosed_fence() {
     let store = store(&[
         json!({
-            "id": "hostile",
+            "smut_id": "hostile",
             "title": "Hostile",
             "body": "Kept raw.\n\n```\nunclosed fence"
         }),
-        json!({"id": "second", "title": "Second", "body": "absorbed"}),
-        json!({"id": "third", "title": "Third", "body": "also absorbed"}),
+        json!({"smut_id": "second", "title": "Second", "body": "absorbed"}),
+        json!({"smut_id": "third", "title": "Third", "body": "also absorbed"}),
     ]);
 
     let document = rendered(&store, json!({"limit": 2}), &Options::default());
@@ -115,8 +117,8 @@ fn the_notice_leads_the_document_above_a_body_ending_in_an_unclosed_fence() {
 #[test]
 fn a_zero_entity_selection_emits_the_missing_notice_and_no_entity_output() {
     let store = store(&[
-        json!({"id": "a", "title": "Alpha", "body": "unselected"}),
-        json!({"id": "b", "title": "Beta", "body": "unselected too"}),
+        json!({"smut_id": "a", "title": "Alpha", "body": "unselected"}),
+        json!({"smut_id": "b", "title": "Beta", "body": "unselected too"}),
     ]);
     let specification = spec::parse(&json!({"from": ["gone", "also-gone"]}))
         .expect("the fixture specification is valid");
@@ -139,13 +141,13 @@ fn a_zero_entity_selection_emits_the_missing_notice_and_no_entity_output() {
 fn a_full_selection_renders_identity_heading_body_and_fields_in_order() {
     let store = store(&[
         json!({
-            "id": "design",
+            "smut_id": "design",
             "title": "Query design",
             "body": "Keep selection small.",
             "type": "question",
             "tags": ["storage"]
         }),
-        json!({"id": "later", "title": "Later"}),
+        json!({"smut_id": "later", "title": "Later"}),
     ]);
     let options = Options {
         show_ids: true,
@@ -168,8 +170,8 @@ fn a_full_selection_renders_identity_heading_body_and_fields_in_order() {
 #[test]
 fn truncation_and_missing_share_one_leading_block() {
     let store = store(&[
-        json!({"id": "a", "title": "Alpha"}),
-        json!({"id": "b", "title": "Beta"}),
+        json!({"smut_id": "a", "title": "Alpha"}),
+        json!({"smut_id": "b", "title": "Beta"}),
     ]);
     let document = rendered(
         &store,
@@ -190,7 +192,11 @@ fn a_dangling_only_result_still_carries_the_notice() {
     // The trigger is truncated **or** a non-empty `missing` **or** a non-empty
     // dangling list: a walk that reported a dangling reference is an incomplete
     // answer even though nothing was omitted from the result.
-    let store = store(&[json!({"id": "root", "title": "Root", "link": {"id": "gone"}})]);
+    let store = store(&[json!({
+        "smut_id": "root",
+        "title": "Root",
+        "link": {"smut_id": "gone"}
+    })]);
 
     let document = rendered(
         &store,
@@ -208,8 +214,8 @@ fn the_notice_orders_truncated_missing_and_dangling_lines() {
     // missing, dangling, and the whole block is asserted as one string so a
     // reordering cannot pass.
     let store = store(&[
-        json!({"id": "root", "title": "Root", "link": {"id": "gone"}}),
-        json!({"id": "other", "title": "Other"}),
+        json!({"smut_id": "root", "title": "Root", "link": {"smut_id": "gone"}}),
+        json!({"smut_id": "other", "title": "Other"}),
     ]);
 
     let document = rendered(
@@ -242,9 +248,9 @@ fn each_dangling_triple_prints_once_in_encounter_order() {
     // Two absent targets in one requested array field are two triples, so two
     // lines, in the order the walk met them.
     let store = store(&[json!({
-        "id": "root",
+        "smut_id": "root",
         "title": "Root",
-        "link": [{"id": "gone-one"}, {"id": "gone-two"}],
+        "link": [{"smut_id": "gone-one"}, {"smut_id": "gone-two"}],
     })]);
 
     let document = rendered(
@@ -269,8 +275,8 @@ fn a_complete_traversal_result_carries_no_notice() {
     // A walk that finished inside its depth bound and found every target is a
     // complete answer, so the document opens with the entity's heading.
     let store = store(&[
-        json!({"id": "root", "title": "Root", "next": {"id": "child"}}),
-        json!({"id": "child", "title": "Child"}),
+        json!({"smut_id": "root", "title": "Root", "next": {"smut_id": "child"}}),
+        json!({"smut_id": "child", "title": "Child"}),
     ]);
 
     let document = rendered(
@@ -306,14 +312,14 @@ fn a_budget_truncated_walk_leads_with_its_reason_and_keeps_every_dangling_line()
     // still queued, and the root's two absent targets are both reported.
     let entities = store(&[
         json!({
-            "id": "root",
+            "smut_id": "root",
             "title": "Root",
-            "kids": [{"id": "left"}, {"id": "right"}],
-            "link": {"id": "gone-one"},
-            "side": {"id": "gone-two"}
+            "kids": [{"smut_id": "left"}, {"smut_id": "right"}],
+            "link": {"smut_id": "gone-one"},
+            "side": {"smut_id": "gone-two"}
         }),
-        json!({"id": "left", "title": "Left"}),
-        json!({"id": "right", "title": "Right"}),
+        json!({"smut_id": "left", "title": "Left"}),
+        json!({"smut_id": "right", "title": "Right"}),
     ]);
 
     let document = rendered(
@@ -349,4 +355,48 @@ fn a_budget_truncated_walk_leads_with_its_reason_and_keeps_every_dangling_line()
         !document.contains("result_limit"),
         "the only reason is the budget: {document:?}"
     );
+}
+
+// ── PHASE-02 VT-8: identity suppression is a mechanism, not a value ─────────
+
+#[test]
+fn an_entity_carrying_both_keys_renders_the_ordinary_id_as_an_attribute() {
+    // The suppression set is the identity constant rather than the spelling: an
+    // entity that carries both `smut_id` and an ordinary `id` is identified by
+    // `smut_id`, so the ordinary `id` is data and renders as one attribute line
+    // while identity stays suppressed. Before the constant moved, this same
+    // fixture suppressed `id` and rendered `smut_id` in its place; the bytes
+    // below are the after side of that record.
+    let store = store(&[json!({
+        "smut_id": "design",
+        "id": "external-7",
+        "title": "Query design",
+        "body": "Keep selection small."
+    })]);
+    let options = Options {
+        show_ids: true,
+        show_fields: true,
+        ..Options::default()
+    };
+
+    let document = rendered(&store, json!({"from": "design"}), &options);
+
+    assert_eq!(
+        document,
+        "`design`\n\n\
+         ## Query design\n\n\
+         Keep selection small.\n\n\
+         - **id:** external-7\n",
+        "the ordinary id is an attribute, and the fenced identity is `design`"
+    );
+
+    // A label is escaped by `escape_label`, so a rendered `smut_id` attribute
+    // would read `- **smut\_id:**`: both spellings are refused, and neither is
+    // the identity line the document already carries.
+    for spelled in ["- **smut_id:**", "- **smut\\_id:**"] {
+        assert!(
+            !document.contains(spelled),
+            "structural identity is suppressed, never an attribute: {document:?}"
+        );
+    }
 }
