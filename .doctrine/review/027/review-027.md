@@ -248,3 +248,26 @@ no drift carried into close with a rationale-shaped excuse.
   chore is actionable without reading this ledger (`dfb14cf`).
 - **ISS-005, IMP-014, IMP-015, IMP-016** — capture-only, unchanged. The originating items
   ISS-004 and IMP-010 are resolved at close, not here.
+
+### Close evidence — the gate, in a tree nobody else was writing
+
+`doctrine check gate` could not be read green in the working tree at close: SL-004's
+PHASE-02 is landing *in the same worktree*, with uncommitted edits to `tests/cli_contract.rs`,
+`src/entity.rs`, `src/store/{index,journal}.rs` and two store test files. At the time of
+close that tree was red on `cargo fmt --check` (an SL-004 file) and on five `entity::` /
+`store::index::` unit tests — none of them SL-005's, none of them a regression this slice
+introduced.
+
+So the gate was run where it belongs: on the closing commit itself, in a detached
+`git worktree` at `d75961c` with no uncommitted work in it, mirroring `justfile`'s `check`
+recipe exactly — `cargo build`, `cargo clippy --all-targets -- -D warnings`,
+`cargo clippy --all-targets --all-features -- -D warnings`, `cargo fmt --check`,
+`cargo test`, `cargo test --features fault-injection`.
+
+**All six green, exit 0.** `--lib` 359 default / 372 fault-injection; `tests/predicates.rs`
+13; `tests/cli_contract.rs` 40; `tests/compatibility.rs` 10; `tests/fixture.rs` 15; the rest
+as recorded in `/tmp/sl005-gate.log`.
+
+The distinction matters for the record: the gate is a property of a commit, and the commit
+being closed is green. The shared tree returns to green when SL-004's phase lands — that is
+SL-004's gate to pass, not a residual of this slice.

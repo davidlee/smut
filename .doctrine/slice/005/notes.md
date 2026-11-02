@@ -358,3 +358,18 @@ Every entry is a decision taken inside the envelope; none widened scope.
   nothing new went to the backlog. One process improvement (cross-phase VT-keyword lifetime) is
   recorded in § Learned and offered to the operator in the handback rather than filed silently.
   Status: **deferred to the seat/operator**.
+
+### Close (2026-11-02)
+
+- **Reconcile applied** (`a78fc57`): `design.md` §1/§2/§4/§5/§6/§7 now describe the shipped
+  rule; `DEC-030`'s body generalisation corrected (the seven pinned sentences untouched —
+  see RV-027's `## Reconciliation Outcome` for why that was a direct edit and not a REV).
+  `doctrine design adopt 5` refuses on a locked run and its refusal **is** the guidance:
+  *"at reconcile, edit design.md directly and do not adopt"*.
+- **CHR-003 closed** (`resolved · fixed`) — all six sentences plus the terminology.
+  **ISS-004** and **IMP-010** closed with it (`resolved · fixed`); they originate SL-005.
+- **Gate at close:** `doctrine check gate` mirrors `just check`; run on the closing commit
+  `d75961c` in a detached worktree with no uncommitted work — **all six green, exit 0**
+  (lib 359 / 372 fault-injection). The shared working tree was red at close because SL-004's
+  PHASE-02 is landing in it; that is SL-004's gate, not this slice's.
+- **SL-005 → `done`** (`2/2` phases, rollup and authored status agree, no `⚠`).
