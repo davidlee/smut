@@ -138,10 +138,28 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` status `plan`, design run locked at revision 36, head `d4f593f`
-plus this commit. Captured before handover to `/plan`.
+**fresh-as-of:** `SL-008` status `ready`, design run `dr-01a19b61` locked at revision 36,
+head `de8cf3d`. Plan authored, hardened by two audit lanes, and the audit's design
+questions taken through `/feedback`. Next stage: implementation (PHASE-01..05), not
+audit.
 
 ### Produced
+
+- **`plan.toml` + `plan.md`** — five phases (roots → reader → loader → surface → seed), 5
+  phase sheets materialised, every VT row carrying a test name or symbol that can only
+  exist after its phase. `plan.md` also carries the per-phase model requirement, the
+  critical pass, and eleven adjudicated design questions.
+- **A fourth reconcile obligation** — `design.md` §5's worked listing contradicts its own
+  third-field rule (its binary row prints a summary where the rule, repeated as DEC-031
+  rule 4, makes it `shadowed`), and §4's "one clause per resolved name" contradicts its
+  own per-file example. Recorded above, with the original three.
+- **Operator ruling** — a known frontmatter key with no value (`summary:`) declares
+  nothing: the field is absent, the listing shows `-`, the seed omits the version
+  (PHASE-02/EX-2). A value continued across lines still fails naming its line.
+- **Memory** `mem_01a19c0604b57ce397b575176682fc97` — harden-plan's audit lanes are
+  read-only agents: brief them to return, never to write files.
+- Research baseline re-verified at `d224dc6` (line counts, both negative greps, the error
+  inventories) and restamped; the advisory's drift was chronological, not evidential.
 
 - **DEC-031** — the set in force is chosen by layer, never by validity; origin printed in the
   listing; the body stays the file's bytes. **DEC-032** — the loader takes its roots as
@@ -288,3 +306,26 @@ adjudicated. Net: **7 upheld, 3 rejected, 1 was this plan's own defect.**
   alone is absent, not malformed — the listing shows `-` and the seed omits the version.
   One branch of PHASE-02/EX-2, two pinned tests; a value continued across lines still
   fails naming its line, which is the mistake worth catching.
+
+## Implementation run
+
+Seeded before handover to `/super-orchestrator`; the seat's own preflight refreshes and
+extends it. Facts here were observed this session at head `de8cf3d`.
+
+- **Gate:** `just check` — build, clippy over both feature configurations with `-D warnings`,
+  `fmt --check`, then the suite twice (default and `--features fault-injection`). A bare
+  `cargo test` is not the gate; a VA row's narrower `cargo` command is evidence of one
+  property, never a substitute.
+- **Toolchain:** `rustc 1.100.0-beta.7`, edition 2024. The suite spawns the real binary via
+  `CARGO_BIN_EXE_smut`; scratch trees go under `std::env::temp_dir()`, never
+  `interview.local/.smut`.
+- **Shared index, right now:** another writer has `README.md`, `.doctrine/backlog/idea/006*`
+  **staged** in the index. Commits must be path-limited *with a pathspec*
+  (`git commit -m … -- <paths>`) or run from paths just added by this run. A bare
+  `git commit` would sweep their work; `git add -A`, amend and reset are out.
+- **Doctrine state:** lifecycle `ready`; `doctrine slice verify-vt 008` is the gate at each
+  phase conclude (0 UNCHECKABLE at handover); phase sheets under
+  `.doctrine/state/slice/008/phases/` are disposable and gitignored.
+- **Design run:** `dr-01a19b61` locked, `review_pass RV-029 STALE` and `changes 1 since the
+  declared baseline` — the known post-pass residue. Advisory, not a gate; do not read it as
+  coverage.
