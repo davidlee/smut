@@ -202,5 +202,63 @@ fresh-as-of: 2026-11-02 · ready · deef11e
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-- Slice status is `ready`; `/phase-plan` expands PHASE-01's runtime sheet just before
-  `/execute`, and the execution order is PHASE-01 → PHASE-04 → PHASE-02 → PHASE-03.
+  - **Design §3 has no row for two comma lists on `=`** *(added in PHASE-01, D4)* —
+    `status=a,b status=c,d` is satisfiable, so the contradiction voice would be false of it;
+    PHASE-01 refuses it in the caller's tokens (`cannot read "status=a,b status=c,d": q
+    carries one = per field; use smut query`) under §2's third bullet. §3 owes the row, and
+    the design-correction count at reconcile is therefore **four**, not three.
+- Slice is `started` and **PHASE-01 is `completed`** (2026-11-03). Next: `/phase-plan` for
+  PHASE-04, then PHASE-02, then PHASE-03 — the array's order, not the ids'.
+
+## Implementation run
+
+### PHASE-01 — the compiler's core (completed 2026-11-03)
+
+Environment facts, so the next phase does not rediscover them:
+
+- **Gate.** `just check` = `cargo build`, `cargo clippy --all-targets -D warnings` (default
+  *and* `--all-features`), `cargo fmt --check`, and `cargo test` in both feature
+  configurations. Warm it is ~2 s and needs no network.
+- **Baseline before this phase** was green — 433 unit tests plus the per-suite counts, clippy
+  and fmt clean — so a red later is this slice's. Green after it: 435.
+- **Other writers' paths.** `README.md`, `src/error.rs` and `.doctrine/slice/008/notes.md`
+  were dirty at the handover and are clean now (SL-008 landed); `.quotient/` and `_envrc` are
+  still untracked and still not ours. Nothing here restaged them (CHR-001).
+- **Research baseline** was restamped, because the drift was `plan.md`/`plan.toml` — the plan
+  artefacts this slice itself added. No thread section was affected.
+- **Files this phase touched:** `src/dsl.rs` (new), `src/lib.rs`, `src/error.rs`,
+  `src/learn.rs`, `tests/dsl.rs` (new). Nothing else was staged.
+
+Decisions taken inside the phase sheet's envelope (reasons in
+`.doctrine/state/slice/010/phases/phase-01.md` § Decisions):
+
+- **D1** — the three `EXAMPLE_*_Q` constants are *declared* in `src/learn.rs` here and
+  *printed* by PHASE-03. PHASE-01's VT-1 cannot compile otherwise, and PHASE-03 EX-4 has
+  `tests/dsl.rs` import the same constant, so the constant is the shared fixture either way.
+- **D2** — `Flags` is declared in full as design §2 prints it; six of its fields are wired by
+  PHASE-04. The struct is the seam, not this phase's output.
+- **D3** — one `Reject::UnreadableToken { token, reason }` covers the malformed *and* the
+  ambiguous token, so every `cannot read "{token}": …` row of §3 is one shape and §6's
+  census stays six variants. The `a=b=c` / `status~a=b` discriminator is the reason string,
+  which is why the plan's third design correction needs no second variant.
+- **D4** — two comma lists on `=` are refused in the caller's tokens, not as a contradiction:
+  an intersection can be non-empty, so the contradiction voice would be false (§2's third
+  bullet). Recorded as the fourth design correction above.
+
+Findings worth keeping:
+
+- **`EXAMPLE_FILTER_Q` is not `Spec`-equal to `EXAMPLE_FILTER`.** Roots land in `from`, while
+  the JSON twin filters `where.smut_id.$in`; only the result set agrees. The equivalence test
+  therefore asserts each line against the JSON *it* denotes, and set agreement stays PHASE-02
+  EX-7's. Comparing the recipe's two spellings Spec-equal would have been a false claim — the
+  same class as `mem.fact.smut.vacuous-negative-assertions`, one level up.
+- **The plan's flag seam is narrower than its prose.** The three recipes need `--backlinks`,
+  `--follow`, `--depth` and `--ids`, so four "PHASE-04" flags are PHASE-01's, and PHASE-04
+  gains behaviour on a declared struct rather than the struct itself. `--depth` already goes
+  through `value()`, so EX-9 is satisfied by construction and only *pinned* by PHASE-04.
+- **The suite bites.** Four mutations were applied, red observed, and reverted: `value()`
+  accepting JSON string literals; the `{` test moved below the operator scan; `$in` repeats
+  voiced as a contradiction; `from` emitted even when empty. The `$exists` collision asserts
+  the variant and the whole sentence, so an overwrite cannot pass it.
+- **`where` key order** is the `BTreeMap`'s, so a compiled line is byte-stable; the equivalence
+  tests compare `Value`s, which is order-insensitive, and determinism is PHASE-04 EX-10's pin.

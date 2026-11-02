@@ -3,4 +3,6 @@ date = "2026-11-02"
 
 [hashes]
 ".doctrine/slice/010/design.md" = "9a1c873a58867a93aa67be9a76781db9c475f0af3185218faa847a7c5f80d895"
+".doctrine/slice/010/plan.md" = "0c1f872221b15c34ae87fe3929cf9187470331f0c1718f50f8e1aa074ec7571f"
+".doctrine/slice/010/plan.toml" = "ac375249f8452f6481d311ff293217bcdc40e325dc40dcb8e3ee76b9684b8c41"
 ".doctrine/slice/010/slice-010.md" = "c374cf51bfcd0ff0db8630a44a48ea45decbc8e7c54050cff324c91177b2e44e"

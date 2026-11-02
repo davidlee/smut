@@ -8,6 +8,7 @@
 pub mod cli;
 pub mod conventions;
 pub mod declare;
+pub mod dsl;
 pub mod entity;
 pub mod error;
 pub mod id;

@@ -101,6 +101,12 @@ phase.
   query`), and a token whose operators differ in kind reports the both-operators
   row (`cannot read "status~a=b": it carries both ~ and =; use smut query …`). §3
   owes the sentence.
+- **§3 has no row for two comma lists on `=`** *(found while executing PHASE-01,
+  sheet decision D4)*. `status=a,b status=c,d` is satisfiable — the two lists may
+  intersect — so the contradiction voice would be false of it; §2's third bullet
+  puts the refusal in the caller's tokens, and PHASE-01 writes it as
+  `cannot read "status=a,b status=c,d": q carries one = per field; use smut query`.
+  §3 owes the row, and the correction count at reconcile is four, not three.
 
 The six reconcile obligations the design and the review already carry — DEC-016's
 amendment, DEC-035's narrowed wording, DEC-037's superseded consequence, IMP-014's

@@ -100,6 +100,20 @@ pub enum Reject {
         /// Which conditions conflict, for the message.
         contradiction: String,
     },
+    /// A `smut q` operand is a JSON specification. Only `smut query` takes one, so
+    /// the token is refused rather than split (DEC-034, DEC-039).
+    JsonOperand,
+    /// A `smut q` token carries structure the short form cannot read: two
+    /// operators, a field name holding one, a comma where the operator takes a
+    /// single value, or a repeat one condition object cannot hold. The token as
+    /// typed travels with the one sentence saying why (DEC-030, DEC-039).
+    UnreadableToken {
+        /// The token, or the pair of tokens, exactly as the caller typed them.
+        token: String,
+        /// What is wrong with it, in one sentence that names no field and no flag
+        /// the caller did not type.
+        reason: String,
+    },
     /// One JSON object in the input gives the same key twice, which would lose
     /// the earlier assignment. Refused as the key is read, before a `Value`
     /// exists (§3.1, DEC-006).
@@ -350,6 +364,14 @@ impl fmt::Display for Reject {
                 formatter,
                 "field {field} cannot be satisfied: {contradiction}"
             ),
+            Reject::JsonOperand => write!(
+                formatter,
+                "q takes field=value tokens, not a JSON specification; use smut query \
+                 for a JSON spec"
+            ),
+            Reject::UnreadableToken { token, reason } => {
+                write!(formatter, "cannot read \"{token}\": {reason}")
+            }
             Reject::DuplicateKey { key } => write!(
                 formatter,
                 "duplicate JSON key: {key}, and one object cannot give a key twice"
@@ -563,7 +585,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 27] = [
+        let cases: [(Error, u8); 29] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -712,6 +734,15 @@ mod tests {
                 .into(),
                 INVALID_INPUT,
             ),
+            (
+                Reject::UnreadableToken {
+                    token: "status~a=b".to_owned(),
+                    reason: "it carries both ~ and =".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (Reject::JsonOperand.into(), INVALID_INPUT),
             (sample_store_failure().into(), STORE_FAILURE),
             (sample_artefact_not_loaded().into(), STORE_FAILURE),
         ];
@@ -981,6 +1012,35 @@ mod tests {
         };
         assert!(dot.to_string().contains("dot"), "{dot}");
         assert!(dot.to_string().contains("markdown"), "{dot}");
+    }
+
+    // Asserted whole (DEC-030): the sentence is the whole migration story, and a
+    // substring assertion would pass a message that named a field or a flag the
+    // caller never typed.
+    #[test]
+    fn a_json_operand_is_answered_with_the_complete_surface() {
+        let refusal = Reject::JsonOperand;
+
+        assert_eq!(
+            refusal.to_string(),
+            "q takes field=value tokens, not a JSON specification; use smut query for a JSON spec"
+        );
+    }
+
+    // Asserted whole, and with both operators interpolated: a message that quoted
+    // one operator and left the other literal would still satisfy a substring pin.
+    #[test]
+    fn an_unreadable_token_is_quoted_with_its_reason() {
+        let refusal = Reject::UnreadableToken {
+            token: "status~a=b".to_owned(),
+            reason: "it carries both ~ and =; use smut query for the same predicate as JSON"
+                .to_owned(),
+        };
+
+        assert_eq!(
+            refusal.to_string(),
+            r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#
+        );
     }
 
     // Asserted whole: the clauses are the listing's information in the listing's

@@ -301,6 +301,21 @@ pub const EXAMPLE_FOLLOW: &str =
 pub const EXAMPLE_FILTER: &str =
     r#"{"where":{"smut_id":{"$in":IDS},"status":"open"},"select":["smut_id"]}"#;
 
+/// [`EXAMPLE_TRAVERSE`] in the short form's spelling, which the guide prints one
+/// line above or below its JSON twin: the root and the condition are bare words,
+/// the traversal and the projection are flags (DEC-034, DEC-040).
+pub const EXAMPLE_TRAVERSE_Q: &str = "session --backlinks part-of --depth 2 --ids";
+
+/// [`EXAMPLE_FOLLOW`] in the short form's spelling — the same request in the other
+/// direction, so the two lines answer different questions and read as a pair.
+pub const EXAMPLE_FOLLOW_Q: &str = "session --follow part-of --depth 2 --ids";
+
+/// [`EXAMPLE_FILTER`] in the short form's spelling, with `IDS` standing for the
+/// first reply's ids as a **space-joined list** — the one substitution the harness
+/// has to learn, since roots are this surface's spelling of the `$in` filter on
+/// identity rather than a `where` of its own.
+pub const EXAMPLE_FILTER_Q: &str = "IDS status=open --ids";
+
 #[cfg(test)]
 mod tests {
     use super::*;
