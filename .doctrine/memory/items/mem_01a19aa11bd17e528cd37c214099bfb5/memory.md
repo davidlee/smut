@@ -19,3 +19,17 @@ grepping the tree before the phase runs, not after.
 
 Corollary for reviewers: a VT mandate is a floor, not evidence of behaviour. A green
 `verify-vt` says the strings are present; only the test run says the behaviour holds.
+
+
+## The same literal can go stale by the plan's own design
+
+A keyword with signal today can be *false by design* tomorrow. SL-005 pinned PHASE-01/VT-2
+on `[(Error, u8); 25]`, and PHASE-02/EX-2 mandated the same array move to 26 — one array
+at two lengths, so the first phase's keyword became unsatisfiable the moment the second
+landed, and `verify-vt` exited 1 on an otherwise fully green, fully complete slice.
+
+A mutable count or literal is only a safe keyword if no later phase of the same plan
+changes it. Otherwise pin something the change *introduces* rather than something it
+*edits*: the variant name, a whole pinned line, a test function name. When the gate goes
+red after the final phase with every test green, check the plan's own cross-phase
+keywords before suspecting the code.
