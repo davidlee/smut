@@ -7,15 +7,15 @@ title = "0.1 references: one predicate, hoisting with label on the containing en
 record_kind = "decision"
 status = "accepted"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
-context = "SL-001 answer to inq-3: is reference one predicate defined once, and what exactly counts as a reference and a relationship label. The brief makes any embedded object with an id an entity node, which both declaration and 0.2's traversal must obey."
-choice = "One reference_id predicate plus scan_refs and extract over it; a single recursive normalisation pass with preorder declaration recording; labels are the containing entitys non-id field name after hoisting; request-time id errors are exit 2 while stored-data id errors are corruption exit 1; scan_refs is non-fallible with a validated-entity precondition."
+context = "SL-001 answer to inq-3: is reference one predicate defined once, and what exactly counts as a reference and a relationship label. The brief makes any embedded object with a `smut_id` an entity node, which both declaration and 0.2's traversal must obey. An ordinary `id` is data at every depth (SL-004, ADR-001)."
+choice = "One reference_id predicate plus scan_refs and extract over it; a single recursive normalisation pass with preorder declaration recording; labels are the containing entity's non-`smut_id` field name after hoisting; request-time identity errors are exit 2 while stored-data identity errors are corruption exit 1, enforced eagerly at load (DEC-021); scan_refs is non-fallible with a validated-entity precondition."
 alternatives = ["iterative fixpoint loop", " label as request path", " scan_refs returning Result and skipping malformed ids", " one error type for request and stored data"]
 rationale = "A single definition is what stops 0.2 from growing a second, divergent notion of a reference; preorder keeps the promised encounter order from depending on recursion order; splitting the error classes keeps exit 2 and exit 1 honest."
-consequences = ["An embedded object carrying id cannot be inline metadata in 0.1 (documented in README and learn); scan_refs must never be called on raw request JSON; declaration order is parent-before-child regardless of finishing order."]
+consequences = ["**An embedded object carrying `smut_id` cannot be inline metadata — that spelling is structural at every depth — while an ordinary `id` may be inline metadata anywhere because it carries no identity meaning.** The old restriction applied to `id` and is withdrawn (SL-004 DEC-021); scan_refs must never be called on raw request JSON; declaration order is parent-before-child regardless of finishing order."]
 decided_by = "operator and agent"
 decided_on = "2026-11-01"
 

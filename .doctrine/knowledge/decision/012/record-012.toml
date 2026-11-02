@@ -7,7 +7,7 @@ title = "Traversal provenance: one conditional `traversal` envelope member"
 record_kind = "decision"
 status = "accepted"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)

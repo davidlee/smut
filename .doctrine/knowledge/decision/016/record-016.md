@@ -1,10 +1,16 @@
 # The two-call idiom's home
 
+Amended 2026-11-02 by SL-004 under ADR-001 (identity is `smut_id`, a reserved
+key in a permissive store) and DEC-025: structural identity is spelled `smut_id`;
+an ordinary `id` is caller data at every depth. Only the passages listed in SL-004
+PHASE-03's amendment proposal (plus RV-028 F-2/F-3) changed; the rationale, durable
+ids and unrelated decisions are retained verbatim.
+
 The normative home is `smut learn`. It is descriptive and version-bound, and a
 release that introduces traversal must teach the composition:
 
 ```
-1. smut query '{"from":"session","backlinks":["part-of"],"depth":2,"select":["id"]}'
+1. smut query '{"from":"session","backlinks":["part-of"],"depth":2,"select":["smut_id"]}'
 2. smut query '{"from":[<ids>],"where":{"status":"open"},"select":["title"]}'
 ```
 
@@ -18,7 +24,7 @@ this entity belongs to, addresses or cites. (The store this release is built
 from carries the inverted example in `finding-smut-18`; copying an example out
 of the store is how the error travels.)
 
-`select: ["id"]` keeps the first call cheap; the second is an ordinary root
+`select: ["smut_id"]` keeps the first call cheap; the second is an ordinary root
 filter because `from` takes an explicit id list. `where` stays roots-only; the
 composition is the answer, not a limitation to route around.
 

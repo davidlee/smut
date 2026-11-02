@@ -2,6 +2,12 @@
 
 Settled with the operator on 2026-11-01.
 
+Amended 2026-11-02 by SL-004 under ADR-001 (identity is `smut_id`, a reserved
+key in a permissive store) and DEC-025: structural identity is spelled `smut_id`;
+an ordinary `id` is caller data at every depth. Only the passages listed in SL-004
+PHASE-03's amendment proposal (plus RV-028 F-2/F-3) changed; the rationale, durable
+ids and unrelated decisions are retained verbatim.
+
 ## The operation algebra
 
 Normalisation yields, **per declared entity, per top-level field**, exactly one
@@ -24,11 +30,11 @@ id combine, which is what makes repeated patches in one batch useful.
 Comparison is against the **normalised** value, which is why the whole request is
 normalised before any conflict is detected. These two declarations coalesce
 rather than conflict, because normalisation extracts the nested declaration and
-replaces it with an id-only reference in both cases:
+replaces it with an identity-only reference in both cases:
 
 ```json
-[{"id":"q","refs":[{"id":"t","label":"x"}]}]
-[{"id":"q","refs":[{"id":"t"}]}, {"id":"t","label":"x"}]
+[{"smut_id":"q","refs":[{"smut_id":"t","label":"x"}]}]
+[{"smut_id":"q","refs":[{"smut_id":"t"}]}, {"smut_id":"t","label":"x"}]
 ```
 
 ## Equality
@@ -56,8 +62,8 @@ Equality is the JSON data model's structural equality — `serde_json::Value`
 - `"DROP"` is a sentinel **only** as a top-level entity field value. Inside
   embedded values and arrays it is ordinary data. A top-level field therefore
   cannot be assigned the literal string `"DROP"` in 0.1.
-- Explicit id plus only `Drop` fields, on an absent entity → **created**, id-only.
-  A bare id-only object never creates anything.
+- Explicit `smut_id` plus only `Drop` fields, on an absent entity → **created**,
+  identity-only. A bare `smut_id`-only object never creates anything.
 - `Drop` of an absent field is a no-op and does not make an entity `updated`.
 - `unchanged` means the normalised patch leaves the entity structurally equal.
 - `previous` is captured once per affected entity from the snapshot taken before

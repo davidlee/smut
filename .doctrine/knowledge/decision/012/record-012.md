@@ -1,5 +1,11 @@
 # Traversal provenance
 
+Amended 2026-11-02 by SL-004 under ADR-001 (identity is `smut_id`, a reserved
+key in a permissive store) and DEC-025: structural identity is spelled `smut_id`;
+an ordinary `id` is caller data at every depth. Only the passages listed in SL-004
+PHASE-03's amendment proposal (plus RV-028 F-2/F-3) changed; the rationale, durable
+ids and unrelated decisions are retained verbatim.
+
 A result that traversed carries what the walk knew. The envelope gains one
 top-level member, `traversal`, present exactly when the request supplies
 `follow` or `backlinks` — either key, even an empty array. A non-traversing
@@ -7,7 +13,7 @@ request keeps 0.1's five keys, so the compatibility pin does not move (DEC-019).
 
 ```json
 {
-  "objects": [{"id": "q-query", "body": "..."}],
+  "objects": [{"smut_id": "q-query", "body": "..."}],
   "missing": [],
   "dangling": [{"source": "smut", "field": "questions", "target": "q-gone"}],
   "truncated": true,
