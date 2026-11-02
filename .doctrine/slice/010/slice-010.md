@@ -82,11 +82,19 @@ Binding constraints inherited, none of which this slice may relax:
    `--missing` (`$exists`), and `--from=ID` as the root escape for an id carrying
    `=`, `~` or a leading `-`.
 4. **Refuse ambiguity; never guess.** A token carrying two operators
-   (`status~a=b`), a duplicate field, a JSON-looking positional
-   (`q '{"where":…}'`), an unknown flag, a value whose comma list means something
-   the spec cannot express (`status!=a,b`), and `--limit all`. Each refusal names
-   the fix *and* the sibling — the JSON-positional refusal ("`q` takes
-   `field=value`; use `smut query` for a JSON spec") is the whole migration story.
+   (`status~a=b`), a JSON-looking positional (`q '{"where":…}'`), an unknown flag,
+   a value whose comma list means something the spec cannot express
+   (`status!=a,b`), and `--limit all`. Each refusal names the fix *and* the
+   sibling — the JSON-positional refusal ("`q` takes `field=value`; use
+   `smut query` for a JSON spec") is the whole migration story — and each is
+   written under **DEC-030**: one line, no epigram, and it names no flag or field
+   the caller did not type.
+   **Repeated conditions on one field are not a DSL refusal** (research F1). The
+   one shape JSON cannot spell — two `=` on the same field — is provably
+   unsatisfiable and is refused as a contradiction in DEC-027/DEC-030's existing
+   voice. Every other repeat (`status=open status!=resolved`) compiles, and
+   `predicate::parse` judges it by demand and decidability, as it already does for
+   JSON callers.
 5. **The human surface may be stricter, in strictness only.** `--depth` or
    `--budget` with no direction is refused, though `spec::parse` accepts and
    ignores it: a human typed it and meant it. The same JSON stays valid — that
@@ -148,6 +156,13 @@ Binding constraints inherited, none of which this slice may relax:
 | `tests/dsl.rs` *(new)* | the compiler's own suite: the worked-examples table as DSL→`Spec` equalities, token hazards, every refusal, and the strictness asymmetry |
 | `tests/cli_contract.rs` | the verb end-to-end: byte-identical envelope against `query`, exit codes, `--` reaching a hyphen-leading id, flags interleaved with conditions, no store created |
 | `tests/compatibility.rs` | untouched — it is the guard that proves the machine surface did not move |
+| `tests/fixture.rs` | the shipped-example harness: `IDS` substitution and a token-list runner beside `Declared::query(&Value)`, so the guide's DSL recipes stay executed (research F2) |
+
+One obligation has no path in this table: **DEC-016** pins the JSON spelling of the
+two-call recipe that `learn` prints and `tests/fixture.rs` executes, so teaching the
+DSL form in the guide obliges an amendment to that decision. SL-008's precedent is to
+record such obligations in `notes.md` and pay them at reconcile; the design should
+name this one rather than discover it at closure.
 
 ## Risks, assumptions and open questions
 
@@ -174,13 +189,17 @@ Binding constraints inherited, none of which this slice may relax:
   two semantics and no signal in the answer is a silent-wrongness class the DSL
   must not deepen by implying "contains" means one thing. `learn` says it, and a
   test pins both behaviours.
-- **R5 — "duplicate field" is stricter than the spec, and the suggested fix is
-  conditional.** The spec *does* allow two operators on one field
-  (`{"status":{"$eq":"open","$ne":"resolved"}}`), so refusing
-  `status=open status!=resolved` is a strictness choice under objective 5 — and
-  the natural message ("write `status=open,resolved` for either") is only correct
-  when *both* conditions are `=`. A mixed pair has no DSL spelling; its refusal
-  must say so and point at `smut query`.
+- **R5 — answered by the research round (F1), not by taste.** DEC-027 already
+  refuses a provably-unsatisfiable field condition list, and DEC-030 has fixed its
+  wording. So the DSL refuses exactly the one shape JSON cannot spell (two `=` on
+  one field, itself unsatisfiable) and compiles every other repeat for the existing
+  mechanism to judge. IDE-006's rule 3 said something stronger, and its suggested
+  cure ("write `status=open,resolved`") is only right when both conditions are `=`
+  — which is why the stronger rule retired rather than being reworded.
+- **R10 — a DSL operator table would be the third copy of the five operators.**
+  `parse_condition` and `parse_predicate` already share the list by hand (IMP-016).
+  Derive the DSL's table from one `Operator` enum or record the third copy
+  deliberately; do not let it arrive by omission.
 - **R6 — silence survives the slice.** Empty results on a garbage field name stay
   exit 0. IDE-006 calls that "loud enough"; RFC-001 calls it Tier 1. Record the
   disagreement and do not let the guide, the design or a phase sheet claim the
@@ -205,7 +224,10 @@ Binding constraints inherited, none of which this slice may relax:
   taxes the hot path. IDE-006's explicit rejection stands either way: `a=b` is
   never resolved as an id because it happens to match one.
 - **OQ3 — value typing.** JSON-scalar-if-parsable (IDE-006's recommendation)
-  versus always-string (R3).
+  versus always-string (R3). Research adds a constraint on the answer: under scalar
+  typing `smut_id=1` compares the *number* 1, and `smut_id` is the one field ADR-001
+  makes structural, so whichever way it goes `--ids` and `--from=1` must be named in
+  the same breath as the wart.
 - **OQ4 — `--brief`:** cut from this slice (proposed) or carried?
 - **OQ5 — `--ids` with `--select`:** refuse, or precedence (R8)?
 - **OQ6 — does `q` appear in the help text's command list and the guide's
@@ -214,6 +236,10 @@ Binding constraints inherited, none of which this slice may relax:
   delivery channel, so a verb the guide omits is a verb nobody finds.
 
 ## Verification and closure intent
+
+*The pre-design round is `.doctrine/slice/010/research/research.md`; its cross-thread
+findings F1–F7 are what revised objective 4, R5 and the affected surface above, and
+design assertions should cite it rather than re-deriving them.*
 
 - **Equivalence is the spine.** Every worked example in IDE-006's table is
   asserted as `dsl(tokens) == spec::parse(json)`, and the end-to-end pair
@@ -224,7 +250,13 @@ Binding constraints inherited, none of which this slice may relax:
 - **Refusals at exit 2, each naming its fix and its sibling**, including the four
   hazards that motivate the grammar: a JSON-looking positional, `--limit all`,
   `status!=a,b`, and `status~a=b`. Every refusal test names the change that
-  reddens it (`mem.fact.smut.vacuous-negative-assertions`).
+  reddens it (`mem.fact.smut.vacuous-negative-assertions`), and no refusal invents a
+  field or a flag the caller did not type (DEC-030).
+- **The contradiction is inherited, not reimplemented:** `smut q status=open
+  status=resolved` is refused as two `=` on one field (unsatisfiable, and
+  inexpressible in JSON), while `smut q status=open status!=resolved` compiles and
+  is refused by `predicate::parse` in DEC-030's pinned sentence — the same line a
+  JSON caller gets.
 - **Strictness asymmetry, proved both ways:** `smut q --depth 2` is refused while
   `smut query '{"depth":2}'` still succeeds — so `q` is stricter *and* the machine
   surface did not narrow.
