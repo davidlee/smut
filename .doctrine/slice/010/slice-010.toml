@@ -1,7 +1,7 @@
 id = 10
 slug = "humane-query-surface"
 title = "A humane query surface — argv is the DSL: the grammar compiles to the ten-key spec and adds no semantics"
-status = "plan"
+status = "ready"
 created = "2026-11-02"
 updated = "2026-11-02"
 tags = ["cli", "ergonomics", "parse", "surface"]
