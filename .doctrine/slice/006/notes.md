@@ -97,3 +97,37 @@ and IMP-017 (installed copies going stale) are the two items that would retire i
 - No phase plan. SL-006's implementation is gated on SL-004 (`smut_id`) and IMP-013
   (the layer loader and the match arm), so a plan now would be a plan for a slice that
   cannot start.
+
+## Harvest
+<!-- single-copy: updated in place each harvest; ids only, never restated content -->
+fresh-as-of: 2026-11-02 · design complete, no phase (implementation gated) · head 920ce82 · no managed design run exists for SL-006
+
+### Produced
+- SL-006 — scope and decision record (`slice-006.md`): ten kinds, nine labels, rules 1–17, the gate table
+- SL-006 — `grammar.md`: the reasoning, the doctrine accounting (§10: 30 of 32 facet fields cross unchanged), the alternatives dropped; marked superseded as the working artefact
+- SL-006 — `epistemic-records.md`: the set text, 177 lines, written against `smut_id`; deliberately in the slice folder, not `src/`
+- SL-006 — `notes.md`: the adversarial pass, eleven findings, three text-changing, two of them defects in this slice's own worked example
+- IMP-017 — an installed conventions copy goes stale and nothing compares its version
+- IDE-004 — no edge attributes; the three possible shapes and the four questions to decide first
+- IDE-005 — a companion actors set; `party` migrates to it, this set keeps only the edge
+- QUE-001 — first-instance evidence appended: has-it, in-substance-a-schema, plus the disposition shift and the on-demand-versus-on-write option space
+- IMP-012 — measured `$contains` shape-dependence appended as a fifth "what the surface cannot do" case
+- IMP-004 — state note pointing at SL-006, with the delta from its §A draft
+- memory `mem_01a19aeaa10b75819dbe007f963f2cfa` — smut field-shape traps
+
+### Learned
+- SL-006 — the vocabulary is doctrine's, not the store's: 7 kinds adopted by name, 3 added (`finding`, `option`, `party`), 1 status added (`dropped`); `source`/`refutation` types, `refutes` edge and `scope` enum dropped
+- SL-006 — `type` is a field, not identity, so promotion in place is expressible here and not in doctrine; therefore a kind prefix is a label and never a discriminator
+- SL-006 — one shape per field, measured: a mixed field changes what `$contains` means per row (substring versus exact element, silently), defeats `$eq`, and makes `order` refuse the field
+- SL-006 — an actor value is a `party` reference, never text; `confidence` (of the datum) and `reliability` (of the report) are distinct and compose
+- SL-006 — the question names its answer, singular, because absence of an own field is a predicate and absence of an incoming reference is not; that inversion is what made the one real store duplicate the fact in `status`
+- SL-006 — the installed seed (`conventions-<name>`, `version`) is already the version stamp; a store-level registry would need merge semantics `declare` does not have
+- SL-006 — the seeded entity's `type: convention` is the mechanism's label, not one of the ten kinds
+- SL-006 — doctrine's edge machinery (roles, degrees, descriptors) has nowhere to live in smut, so a role becomes a label or prose
+
+### Open
+- SL-006 — implementation is gated, in order: SL-004 (`smut_id`) → IMP-013 (layer loader + `conventions` match arm) → one commit that also makes the two `hygiene.md` edits
+- SL-006 — no formal `RV` ledger; the adversarial pass is in-artefact. Owed if the set should ship with a review trail
+- SL-006 — set length 177 lines against hygiene's 46; trim pass undecided (merge rules 5/6 and 7/9, cut statuses doctrine already names well)
+- SL-006 — `concept-maps` decided as a companion set, six rules sketched in `grammar.md` §8, not drafted
+- IMP-004 — preconditions still unmet: 0.2 unpublished (CHR-001), `hygiene` never used on a real store, IMP-013 unimplemented
