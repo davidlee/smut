@@ -1,4 +1,4 @@
-//! The store index: `format_version` 1, public ids mapped to safe basenames.
+//! The store index: `format_version` 2, public ids mapped to safe basenames.
 //!
 //! The index is the only thing that explains a file in `.smut/`, so it is read
 //! strictly (§4.1, §5.2): an unknown format version, a malformed document, a
