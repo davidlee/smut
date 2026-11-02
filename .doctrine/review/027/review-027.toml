@@ -1,0 +1,297 @@
+id    = 27
+slug  = "reconciliation-audit-of-sl-005-refusals-that-name-the-right-thing"
+title = "reconciliation audit of SL-005 — refusals that name the right thing"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "auditor"
+responder = "author"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Reconciliation audit of SL-005 at the audit crossing, over both phases' implementation (7347dff, 9727c1c) in the primary tree at 2470576. Examined: the locked design §1–§7 against shipped behaviour; DEC-027 and DEC-030 as the governing decisions; the plan's EN/EX/VT/VA criteria per phase; RV-026's 20 design findings for discharge (F-1..F-5, F-13..F-15, F-17 re-checked against the code); doctrine slice conformance (3 conformant, 0 undeclared, 0 undelivered); doctrine check gate and the targeted suites; and the phase sheets' VA evidence against the artefacts rather than the narrative. Included a pre-close code review of the accumulated delta (raised on this ledger as F-1..F-3, by an independent reviewer with static verification re-confirmed here). Seven findings: all terminal — one repaired in the audit (stale module doc), three disposed design-wrong onto the reconcile surface (design §4/§5/§6 prose and CHR-003's six sentences), one aligned (the plan keyword corrected in-flight), one pre-existing citation error follow-up to CHR-002, plus the duplicated-operator-set follow-up to IMP-016. No unresolved blocker; no behavioural defect found. New capture-only items: ISS-005, IMP-014, IMP-015, IMP-016."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-005"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "minor"
+title = "tests/predicates.rs's module doc still says two cases run the binary, and the delta made it three"
+detail = """
+Expected: the file's module doc enumerates the cases that spawn the binary and the process-level property each fixes, because it is the only place that explains why some cases run `smut` rather than `spec::parse`.
+
+Observed: tests/predicates.rs:15-17 still reads "The final two cases run the binary, because the two properties they fix — 'the whole request is validated before the store is opened' (EX-6) and 'a valid `where` returns the filtered objects' — are process-level promises." After 9727c1c there are three binary cases: a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened (:550), a_misplaced_operator_is_refused_naming_its_position_and_never_a_field (:643, added by this delta and unmentioned), and a_where_query_through_the_cli_returns_the_filtered_objects (:727). "The final two" now names :643 and :727, so both the positional claim and the property list disagree with the file.
+
+Cost: PHASE-02/EX-5 exists because "a false sentence is not left standing in a selector file"; the phase left one standing directly above its own new test, and a reader who trusts the doc will not know a refusal case spawns the binary.
+
+Found by the pre-close code review; confirmed at raise against the current file."""
+disposition = "fix-now"
+response = """
+Confirmed at the exact lines. "The final two cases run the binary" is false since 9727c1c added a third binary case, and the property list beside it omits the refusal property the new case fixes.
+
+Disposed fix-now rather than follow-up: it is one sentence in a file this slice edited, PHASE-02/EX-5 defined the rule that a false sentence is not left standing in a selector file, and the repair is smaller than the ledger entry describing it. The audit repairs it directly (a doc-comment-only edit on tests/predicates.rs), which reconcile does not own — reconcile writes design/spec prose, not code."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed at the exact lines. "The final two cases run the binary" is false since 9727c1c added a third binary case, and the property list beside it omits the refusal property the new case fixes.
+
+Disposed fix-now rather than follow-up: it is one sentence in a file this slice edited, PHASE-02/EX-5 defined the rule that a false sentence is not left standing in a selector file, and the repair is smaller than the ledger entry describing it. The audit repairs it directly (a doc-comment-only edit on tests/predicates.rs), which reconcile does not own — reconcile writes design/spec prose, not code."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified after repair: b746bac rewrites tests/predicates.rs's module doc to name three binary cases by test-function prefix rather than position, and to list the third property (the refusal's exact stderr line). Doc-comment-only diff; cargo test --test predicates 13 passed after the edit."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The five-operator set is duplicated in two literals whose only coupling is a comment"
+detail = """
+Expected: one source of truth for the closed operator set, or a test that proves the two sites agree for every name the module claims. PHASE-02/EX-1 asserts that the cross-referencing comments mean "a sixth operator cannot be added to one and not the other"; comments cannot enforce that.
+
+Observed: the set is enumerated twice and independently — src/predicate.rs:94, ""$eq" | "$ne" | "$in" | "$exists" | "$contains"", inside the operator if operator.starts_with('$') arm opened at :87; and src/predicate.rs:193-204, parse_condition's five match arms, whose catch-all at :205 raises UnknownPredicateOperator. The only coupling is prose at :88-92 and :189-191. No test reads both: parse_refuses_an_unknown_operator_at_either_level (:543) pins only $foo, $and, $or and $not, and nothing asserts that a name parse_condition accepts is refused as misplaced rather than unknown at the predicate level.
+
+Drift symptom: adding $regex to parse_condition alone makes {"where":{"$regex":"x"}} render "smut: unknown predicate operator: $regex" — a false sentence about a defined operator, the class RV-026 F-2 and F-9 removed at this same seam.
+
+Found by the pre-close code review; both sites confirmed at raise. The reviewer's proposed remedy (a const plus a test) leaves the addition half of the drift class open, which is why the disposition routes to a backlog item rather than an in-audit repair."""
+disposition = "follow-up"
+response = """
+Confirmed: two independent literals, coupled only by a comment, with no test reading both.
+
+Not fixed in this audit, and the reason is not size. The reviewer's remedy (a const consulted by the predicate-level arm plus a test) closes the removal half of the drift class and leaves the addition half open, because parse_condition's arms each carry different operand handling and cannot be driven from a string list. A true single source of truth needs an operator enum with one parser consulted by both sites — a design change to a module SL-005 just settled, on a latent risk with no sixth operator in existence. PHASE-02/EX-1 fixed the two-arm shape deliberately; redesigning it from the audit would be the scope creep the autonomy envelope forbids.
+
+Captured as IMP-016, which states the enum shape and why a const does not close the class. Severity stays minor: the drift symptom is real but needs a future edit to trigger it."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Confirmed: two independent literals, coupled only by a comment, with no test reading both.
+
+Not fixed in this audit, and the reason is not size. The reviewer's remedy (a const consulted by the predicate-level arm plus a test) closes the removal half of the drift class and leaves the addition half open, because parse_condition's arms each carry different operand handling and cannot be driven from a string list. A true single source of truth needs an operator enum with one parser consulted by both sites — a design change to a module SL-005 just settled, on a latent risk with no sixth operator in existence. PHASE-02/EX-1 fixed the two-arm shape deliberately; redesigning it from the audit would be the scope creep the autonomy envelope forbids.
+
+Captured as IMP-016, which states the enum shape and why a const does not close the class. Severity stays minor: the drift symptom is real but needs a future edit to trigger it."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified on the remedy existing: IMP-016 filed, and it states the enum shape (Operator::parse consulted by both sites) plus why a const alone does not close the addition half of the class. Ledger-wise the finding is confirmed, not disputed — the two literals are still in the tree; the disposition is that the fix belongs to IMP-016, not to this slice."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "The no-store assertion cannot observe the ordering it claims, because query never creates a store"
+detail = """
+Expected: tests/predicates.rs:693-696, whose failure message reads "the request is validated before the store is opened, so no store exists", can fail if validation moves after the store step — that is the DEC-004/EX-6 evidence design section 5 and both phase sheets claim it supplies.
+
+Observed: it cannot. The test's only command is smut(&scratch, &["query", specification]) (:671), Query::creates_store() is false (src/cli.rs:121-123), and Store::run therefore returns StoreError::Absent without touching the filesystem whenever the store is absent (src/store/mod.rs:277-284). Under every ordering of spec::parse against store.run, .smut is never created, so !scratch.has_store() passes unconditionally. The same holds for the four contradiction rows added at :635-638 and the pre-existing row at :583-586.
+
+What does carry the ordering: refused.code == 2 (:673-677). A request validated after the store step, against an absent store, exits 1 with "no store at …"; exit 2 rather than 1 is the discriminating assertion.
+
+Cost: the slice's own evidence narrative records EX-6 as stronger than the test can give, and a maintainer who reorders validation against store access while Query::creates_store() stays false sees green.
+
+Found by the pre-close code review; the three source claims were re-read at raise. The defect is in design section 5's attribution of evidential power, not in the assertion itself (which is true, merely non-discriminating)."""
+disposition = "design-wrong"
+response = """
+Confirmed against source: Query::creates_store() is false (src/cli.rs:121-123) and Store::run returns Absent without touching the filesystem when the store is absent (src/store/mod.rs:277-284), so the no-store assertion cannot fail for a query under any ordering.
+
+The assertion itself is not the defect — it is true, and it is the house idiom. The defect is design section 5's binary-level row, which attributes the DEC-004 ordering promise to "the scratch directory holds no store after the refusal"; for a query that promise is carried by exit 2 rather than exit 1. That is a false claim about the evidence in the audit baseline, so the reconcile write surface is design prose, not code.
+
+Reconcile: design section 5's contradiction-row table, the "the scratch directory holds no store after the refusal" row — state that exit 2 (not the absent directory) is the discriminating assertion for a query, because a query never creates a store. The wider idiom across the suite is IMP-015."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed against source: Query::creates_store() is false (src/cli.rs:121-123) and Store::run returns Absent without touching the filesystem when the store is absent (src/store/mod.rs:277-284), so the no-store assertion cannot fail for a query under any ordering.
+
+The assertion itself is not the defect — it is true, and it is the house idiom. The defect is design section 5's binary-level row, which attributes the DEC-004 ordering promise to "the scratch directory holds no store after the refusal"; for a query that promise is carried by exit 2 rather than exit 1. That is a false claim about the evidence in the audit baseline, so the reconcile write surface is design prose, not code.
+
+Reconcile: design section 5's contradiction-row table, the "the scratch directory holds no store after the refusal" row — state that exit 2 (not the absent directory) is the discriminating assertion for a query, because a query never creates a store. The wider idiom across the suite is IMP-015."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified once its reconcile brief entry exists: the Per-slice section now carries the §5 attribution repair (exit 2 as the discriminator for a query; the absent directory as a non-vacuity guard), and IMP-015 carries the stronger test option. The test itself is left untouched in this pass — the assertion is true, merely non-discriminating."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "The locked design still carries six descriptive sentences the implemented rule falsifies (CHR-003)"
+detail = """
+Expected: the design is the contract the implementation is audited against, so its description of the shipped rule should be true of the shipped rule.
+
+Observed: CHR-003 enumerates six sentences that are false of the code at 9727c1c: (1) section 1's diagram label "each Field is judged only when reached through And" — the root Field is judged with no And; (2) section 2's shape and section 6's predicate.rs row say the walk is "called once at the end of parse", which is the recursive-return defect RV-026 F-1 raised — the shipped shape is a private parse_predicate plus a public parse; (3) section 5's binary-level row omits the smut: prefix on the pinned line while the message-level pin beside it is the bare sentence; (4) section 6 says "including the four pins" where section 5 defines three; (5) section 7's "$or contents are not analysed" over-claims — a negated $or hands its children false and restores demand; (6) section 3's "$exists: false beside any other condition" names one operator and no empty list, while DEC-030 asks each sentence to name both. Plus the section-1 "required-position" vs section 2-6 "demanded" terminology split.
+
+The implementation is correct in every one of these cases — the plan implements the right behaviour and the VT/VA evidence is green. The defect is that the design, which is the conformance baseline, describes a different rule from the one shipped. Parked on CHR-003 because the design run is locked (dr-01a19a1e, rev 43) and editing materialised prose would desync its fingerprints.
+
+Surfaced at the audit; the six items are CHR-003's own enumeration, each re-checked against the code at 9727c1c rather than accepted from the backlog body."""
+disposition = "design-wrong"
+response = """
+Confirmed: all six CHR-003 sentences are false of the code at 9727c1c, and the implementation is right in every case. The design is the audit's conformance baseline, so a design that describes a different rule from the one shipped is a design defect, not a code defect.
+
+Disposed design-wrong with a per-slice direct-edit brief entry (design.md sections 1, 2, 3, 5, 6, 7 plus the required-position/demanded terminology), because the audit skill forbids follow-up for spec/governance findings and CHR-003 is a parked sink, not an owner.
+
+One caveat reconcile must resolve rather than assume: the design is under a locked managed run (dr-01a19a1e, rev 43). If the run's own verbs cannot revise materialised prose post-lock, reconcile records the six items against the run's revision path and leaves CHR-003 open with that reason — a stalled reconcile is worse than an honest "not writable here"."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed: all six CHR-003 sentences are false of the code at 9727c1c, and the implementation is right in every case. The design is the audit's conformance baseline, so a design that describes a different rule from the one shipped is a design defect, not a code defect.
+
+Disposed design-wrong with a per-slice direct-edit brief entry (design.md sections 1, 2, 3, 5, 6, 7 plus the required-position/demanded terminology), because the audit skill forbids follow-up for spec/governance findings and CHR-003 is a parked sink, not an owner.
+
+One caveat reconcile must resolve rather than assume: the design is under a locked managed run (dr-01a19a1e, rev 43). If the run's own verbs cannot revise materialised prose post-lock, reconcile records the six items against the run's revision path and leaves CHR-003 open with that reason — a stalled reconcile is worse than an honest "not writable here"."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified once its brief entry exists: six enumerated §1/§2/§3/§5/§6/§7 repairs plus the required-position → demanded terminology, with the locked-run caveat stated rather than assumed away. CHR-003 remains the owning sink until the design genuinely reads true."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "Design section 4's source pointers are stale, and section 6's SL-004 ordering sentence is false as of landing"
+detail = """
+Expected: line references in a locked design resolve to the constructs they name, and a present-tense claim about a neighbouring slice is true when the design is the audit baseline.
+
+Observed: design.md:296-298 cites "the predicate level (src/predicate.rs:72)" and "inside a condition object (:173)". After PHASE-02 the arm opens at :87 and the condition-level refusal is at :205, so both pointers are wrong by ~15 and ~32 lines. Separately, design section 6 (and .doctrine/slice/005/slice-005.toml's ordering risk note) state "SL-004's three phases are all still planned"; SL-004's PHASE-01 completed at da4c404 before this slice's code landed, and its PHASE-02 is in_progress now. The ordering constraint itself held — SL-005 landed first — so this is a dated sentence, not a reversed decision.
+
+Cost: small, and the ordering case is already argued correctly in the notes. Both are the same class of defect: a design that reads as present-tense fact while describing a tree that has moved. Reconcile is the seam where design prose is corrected; section 4 and section 6 are both per-slice direct-edit surfaces."""
+disposition = "design-wrong"
+response = """
+Confirmed: design.md:296-298's pointers now resolve roughly 15 and 32 lines short of the constructs they name, and the "SL-004's three phases are all still planned" sentence in section 6 was already false when SL-005's code landed (SL-004 PHASE-01 completed at da4c404; its PHASE-02 is in_progress now).
+
+The ordering constraint itself held, so this is dated/factual drift in the design, not a reversed decision or a code defect. Per-slice direct edit at reconcile: section 4's two pointers, and section 6's ordering paragraph restated as the constraint plus what actually happened."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed: design.md:296-298's pointers now resolve roughly 15 and 32 lines short of the constructs they name, and the "SL-004's three phases are all still planned" sentence in section 6 was already false when SL-005's code landed (SL-004 PHASE-01 completed at da4c404; its PHASE-02 is in_progress now).
+
+The ordering constraint itself held, so this is dated/factual drift in the design, not a reversed decision or a code defect. Per-slice direct edit at reconcile: section 4's two pointers, and section 6's ordering paragraph restated as the constraint plus what actually happened."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified once its brief entry exists (§4 pointers named by construct instead of line; §6's SL-004 sentence restated as constraint plus outcome). One correction to my own detail, recorded here because the ledger is append-only: the parenthetical claiming slice-005.toml repeats the false sentence is imprecise — a grep shows no SL-004 sentence in that file, and slice-005.md states the ordering constraint correctly. The false present-tense claim is design.md §6 alone."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "minor"
+title = "The approved plan pinned one array at two lengths, making a PHASE-01 verification criterion unsatisfiable by construction"
+detail = """
+Expected: every VT keyword in plan.toml can be satisfied by the tree at the phase boundaries the same plan defines.
+
+Observed: PHASE-01/VT-2 keyed on the literal "[(Error, u8); 25]" in src/error.rs, while PHASE-02/EX-2 mandates that exact array move from 25 to 26 ("plus one boundary-table row with the array length moved from 25 to 26"). One array cannot be both, so the moment PHASE-02 landed, PHASE-01/VT-2 became false and doctrine slice verify-vt 5 exited 1 on an otherwise fully green slice (predicates 13, cli_contract 40, compatibility 10, just check exit 0).
+
+The plan hardening that produced both keywords set them in separate reviews and neither noticed the cross-phase lifetime (plan-harden-a.local.md #22 sets 25, #55 sets 26). Corrected in flight as a one-token keyword edit, 1ebe94e, under the seat's "correcting VT paths/keywords" envelope with the seat's explicit authorisation; the criterion's expects prose ("its boundary-table row … present") remains true. Lesson recorded in mem.fact.doctrine.vt-inert-keywords, which now covers the stale-by-design case as well as the already-present one.
+
+Verified at the audit: verify-vt 5 now reads 7/7 PASS, exit 0 (PHASE-01 VT-1..4, PHASE-02 VT-1..3)."""
+disposition = "aligned"
+response = """
+Confirmed and already remediated. The plan's PHASE-01/VT-2 and PHASE-02/EX-2 did pin one array at 25 and 26; verify-vt exited 1 on a green slice; the keyword was corrected in 1ebe94e as a one-token edit with the seat's explicit authorisation, and the criterion's expects prose is still true.
+
+Aligned rather than follow-up because no durable artefact is now false: plan.toml reads 26, verify-vt reads 7/7 PASS exit 0, and the lesson is recorded in mem.fact.doctrine.vt-inert-keywords (extended with the stale-by-design case). No reconcile write surface either: plan criteria are immutable-append and off-surface for reconcile, and nothing here needs a criterion changed — the correction preserved the criterion's intent.
+
+The residual (the plan-hardening process missed cross-phase keyword lifetime) is a process observation, recorded in the synthesis and offered to the operator; it is not a finding against a shipped artefact."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = """
+Confirmed and already remediated. The plan's PHASE-01/VT-2 and PHASE-02/EX-2 did pin one array at 25 and 26; verify-vt exited 1 on a green slice; the keyword was corrected in 1ebe94e as a one-token edit with the seat's explicit authorisation, and the criterion's expects prose is still true.
+
+Aligned rather than follow-up because no durable artefact is now false: plan.toml reads 26, verify-vt reads 7/7 PASS exit 0, and the lesson is recorded in mem.fact.doctrine.vt-inert-keywords (extended with the stale-by-design case). No reconcile write surface either: plan criteria are immutable-append and off-surface for reconcile, and nothing here needs a criterion changed — the correction preserved the criterion's intent.
+
+The residual (the plan-hardening process missed cross-phase keyword lifetime) is a process observation, recorded in the synthesis and offered to the operator; it is not a finding against a shipped artefact."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: doctrine slice verify-vt 5 reads 7/7 PASS, exit 0 (PHASE-01 VT-1..4, PHASE-02 VT-1..3) at HEAD b746bac, with 1ebe94e's keyword correction in place. The keyword correction is logged in notes.md § Autonomy log and its lesson is in mem.fact.doctrine.vt-inert-keywords."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "nit"
+title = "src/error.rs's DuplicateKey doc cites DEC-006 where DEC-001 rule 1 is the authority (CHR-002)"
+detail = """
+Expected: a source comment that names a governing decision names the one that actually decides.
+
+Observed: src/error.rs's DuplicateKey variant doc says the repeated key is "refused as the key is read, before a Value exists (§3.1, DEC-006)"; the duplicate-key refusal is DEC-001 rule 1. Already tracked as CHR-002, out of this slice's scope, and untouched by the delta — raised here only because RV-026 F-8 promised it would be recorded at this seam, and because the file is one of the slice's three selectors.
+
+Cost: a reader following the citation lands on the wrong decision. No behaviour is affected."""
+disposition = "follow-up"
+response = """
+Confirmed: the DuplicateKey doc cites DEC-006 where DEC-001 rule 1 is the authority. Pre-existing, untouched by this delta, and already owned by CHR-002, which is the correct home — it is a one-comment correction inside SL-004's selector, and SL-004's PHASE-02 is editing src/error.rs right now, so touching that comment from this audit would race a live writer for a nit.
+
+Follow-up is right here rather than design-wrong: the artefact needing the change is source code, which reconcile does not write, and the owning item already exists."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Confirmed: the DuplicateKey doc cites DEC-006 where DEC-001 rule 1 is the authority. Pre-existing, untouched by this delta, and already owned by CHR-002, which is the correct home — it is a one-comment correction inside SL-004's selector, and SL-004's PHASE-02 is editing src/error.rs right now, so touching that comment from this audit would race a live writer for a nit.
+
+Follow-up is right here rather than design-wrong: the artefact needing the change is source code, which reconcile does not write, and the owning item already exists."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Verified: CHR-002 exists, is open, and names exactly this citation error. Nothing in this audit touched src/error.rs's DuplicateKey doc — SL-004's PHASE-02 is editing that file, and a nit is not worth racing a live writer."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

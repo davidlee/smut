@@ -1,0 +1,42 @@
+memory_uid = "mem_01a19ac6c03b7da381fb6dfa6f137ceb"
+memory_key = "mem.fact.smut.vacuous-negative-assertions"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A negative assertion that cannot fail is worse than none — it occupies the evidence slot"
+summary = "`!has_store()` cannot fail for `query` because Query::creates_store() is false; the ordering was proved by exit 2, not the absent directory"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = ["tests/**", "src/**"]
+commands = []
+tags = ["smut", "tests", "review", "evidence"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "fd5ecd11a4af513112f524bcde6b3cbc8086e380"
+ref_name = "refs/heads/main"
+checkout_state_id = "db6d269eb6f843c6194437cd4c0152381c1c5aa3557817fa9ff3cfdd1863cdc7"
+base_commit = "b746bac6d3541dbbbee76d6f4f6e6a9a6066bfa1"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+

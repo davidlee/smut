@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · slice phases 2/2 complete, gates green, `verify-vt` 7/7 PASS · PHASE-02 landed at 9727c1c · base 9727c1c (+docs)
+fresh-as-of: 2026-11-02 · **audit complete** — RV-027 7/7 terminal, concluded `done · await=none`; slice at `reconcile` · phases 2/2 complete, gates green, `verify-vt` 7/7 PASS · code base 9727c1c + audit repair b746bac (+docs)
 
 ### Produced
 
@@ -56,6 +56,59 @@ fresh-as-of: 2026-11-02 · slice phases 2/2 complete, gates green, `verify-vt` 7
   its fingerprints). Also carries the `required-position` vs `demanded` terminology fix.
 - `research/research.md` — baseline re-stamped at plan time with a refresh section; its
   Thread 2 hotspot map is what the three selectors were drawn from.
+
+### Audit (RV-027, 2026-11-02)
+
+Seven findings, all terminal, all confirmed; **no behavioural defect found**. The audit
+surface was the whole delta (`84ff2e0..9727c1c` + `b746bac`), with a pre-close code review by
+an independent reviewer, re-verified here.
+
+- **F-1 (minor, fix-now → repaired)** — `tests/predicates.rs`'s module doc said "the final
+  two cases run the binary" when the delta made three. Repaired by this pass in `b746bac`
+  (doc-comment only; the doc now names the cases by test-function prefix and lists the third
+  property).
+- **F-2 (minor, follow-up → IMP-016)** — the five-operator set is two independent literals
+  (`parse_predicate`'s arm vs `parse_condition`'s arms), coupled only by a comment that
+  PHASE-02/EX-1 credited with a guarantee comments cannot give. Latent: a sixth operator
+  added to one site makes the message lie about a defined operator. The real fix is an
+  `Operator` enum with one parser; a const alone does not close the addition half.
+- **F-3 (minor, design-wrong)** — the `!scratch.has_store()` assertion **cannot fail for a
+  `query`**: `Query::creates_store()` is false (`src/cli.rs:121-123`), so `Store::run`
+  returns `Absent` without touching the filesystem (`src/store/mod.rs:277-284`). The DEC-004
+  ordering is carried by **exit 2**, not by the absent directory. The defect is design §5's
+  attribution of evidential power, not the (true, merely non-discriminating) assertion.
+  Ordering is still validated before store access — proven by `code == 2`. Wider idiom:
+  IMP-015.
+- **F-4 (major, design-wrong)** — CHR-003's six false design sentences, confirmed against the
+  code, plus `required-position` → `demanded`. Behaviour correct; the conformance baseline
+  describes a different rule. Reconcile owns it, with the locked-run caveat stated.
+- **F-5 (minor, design-wrong)** — design §4's `src/predicate.rs:72`/`:173` pointers now miss
+  by ~15/~32 lines; §6's "SL-004's three phases are all still `planned`" was already false
+  when this slice's code landed. The ordering constraint itself held. (Correction recorded
+  on the verify turn: `slice-005.toml` does not repeat that sentence — design §6 only.)
+- **F-6 (minor, aligned)** — the plan pinned one array at 25 (PHASE-01/VT-2) and 26
+  (PHASE-02/EX-2); corrected in `1ebe94e`. Residual is process, not artefact.
+- **F-7 (nit, follow-up → CHR-002)** — `DuplicateKey`'s doc cites DEC-006 for DEC-001 rule 1.
+
+### Learned (audit)
+
+- **A negative assertion that cannot fail is worse than none** — it occupies the evidence
+  slot. `!has_store()` is meaningless for a command whose `creates_store()` is `false`; the
+  discriminating fact was the exit code beside it. Ask of every assertion "what input makes
+  this red?"; if none does, it is documentation, not evidence.
+  (`mem.fact.smut.vacuous-negative-assertions`.)
+- **A locked design is a conformance baseline that can rot.** Three of the five design
+  defects here were prose describing a *different* rule or a *different* tree; none was
+  behaviour. An audit that only checks code against tests misses all three, because the tests
+  agree with the code and the design agrees with neither.
+- **The pre-close code review earned its keep on a 150-line delta**: nine candidates
+  discarded on evidence, three raised, one of them (F-3) invisible to every existing gate.
+
+**Open after the audit:** `CHR-003` (design prose, with the lock caveat), `CHR-002`,
+`ISS-005` (`{"$not":{}}` constant-false at exit 0), `IMP-014` (`Reject` coverage
+hand-maintained), `IMP-015` (`!has_store()` idiom), `IMP-016` (duplicated operator set).
+Reconcile surface: `design.md` §3–§7 and CHR-003's six sentences. DEC-027 and DEC-030 need
+no revision.
 
 ### Learned
 
