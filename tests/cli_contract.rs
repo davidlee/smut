@@ -959,3 +959,205 @@ fn an_accepted_budget_bounds_the_walk_and_an_exact_fit_is_not_truncated() {
         "the depth boundary holds the discovery: {envelope}"
     );
 }
+
+// ── PHASE-01/VT-2: a stored identity must be a nonempty string ───────────────
+
+/// Overwrite the entity file the store's index maps `id` to with `raw`, and
+/// answer with that file's basename — the name every load refusal carries.
+///
+/// The caller declares the store through the CLI first, so what the corruption
+/// breaks is a store the binary itself wrote; only the one file changes, and
+/// only inside the caller's scratch directory.
+fn corrupt_nested_identity(scratch: &Scratch, id: &str, raw: &str) -> String {
+    let index_path = scratch.store().join("index.json");
+    let index: Value = serde_json::from_slice(&fs::read(&index_path).expect("the store's index"))
+        .expect("the index is JSON");
+    let basename = index["objects"][id]
+        .as_str()
+        .unwrap_or_else(|| panic!("the index maps {id} to a basename: {index}"))
+        .to_owned();
+
+    fs::write(scratch.store().join(&basename), raw).expect("the corrupted entity file");
+
+    basename
+}
+
+#[test]
+fn get_refuses_a_stored_identity_that_is_not_a_nonempty_string() {
+    // The entity-node rule holds for stored entities as well as requested ones:
+    // an `id` present below the top level and not a nonempty string is
+    // corruption, never data, so the store refuses to load at all. A corrupt
+    // store is not a user error, hence 1 rather than 2.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"id":"a","title":"Alpha"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let basename = corrupt_nested_identity(
+        &scratch,
+        "a",
+        r#"{"id":"a","title":"Alpha","notes":{"payload":{"id":null}}}"#,
+    );
+
+    let ran = smut(&scratch, &["get", "a"]);
+
+    assert_eq!(
+        ran.code, 1,
+        "a corrupt store is a store failure, not a rejected request: {}",
+        ran.stderr
+    );
+    assert!(
+        ran.stdout.is_empty(),
+        "a refusal prints no envelope at all: {:?}",
+        ran.stdout
+    );
+    assert!(
+        ran.stderr.starts_with("smut: "),
+        "the diagnostic carries the binary's prefix: {:?}",
+        ran.stderr
+    );
+    assert!(
+        ran.stderr.contains(&basename),
+        "the refusal names the file that holds the corruption ({basename}): {:?}",
+        ran.stderr
+    );
+    assert!(
+        ran.stderr
+            .contains(r#"identity at $["notes"]["payload"]["id"] must be a nonempty string"#),
+        "the refusal names the path of the offending id: {:?}",
+        ran.stderr
+    );
+}
+
+#[test]
+fn follow_refuses_a_store_corrupted_outside_the_followed_field() {
+    // The whole store is validated as it is loaded, so a malformation nobody's
+    // traversal reaches still refuses the traversal: `links` is what `follow`
+    // walks, and `notes` is what breaks the load.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"id":"a","links":[{"id":"b"}]}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"Beta"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let basename = corrupt_nested_identity(
+        &scratch,
+        "a",
+        r#"{"id":"a","links":[{"id":"b"}],"notes":{"payload":{"id":null}}}"#,
+    );
+
+    let ran = smut(&scratch, &["query", r#"{"from":["a"],"follow":["links"]}"#]);
+
+    assert_eq!(
+        ran.code, 1,
+        "a corrupt store refuses the traversal: {}",
+        ran.stderr
+    );
+    assert!(
+        ran.stdout.is_empty(),
+        "a refusal prints no envelope at all: {:?}",
+        ran.stdout
+    );
+    assert!(
+        ran.stderr.contains(&basename),
+        "the refusal names the file that holds the corruption ({basename}): {:?}",
+        ran.stderr
+    );
+    assert!(
+        ran.stderr
+            .contains(r#"identity at $["notes"]["payload"]["id"] must be a nonempty string"#),
+        "the refusal names the path of the offending id: {:?}",
+        ran.stderr
+    );
+}
+
+#[test]
+fn follow_over_the_same_graph_uncorrupted_returns_both_entities() {
+    // The control for the refusal above: this graph and this traversal are
+    // healthy, so the refusal is the corruption and not the shape of the walk.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"id":"a","links":[{"id":"b"}]}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    let declared = smut(&scratch, &["declare", r#"{"id":"b","title":"Beta"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let ran = smut(&scratch, &["query", r#"{"from":["a"],"follow":["links"]}"#]);
+
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    assert!(ran.stderr.is_empty(), "{}", ran.stderr);
+
+    let envelope = ran.json();
+    let ids: Vec<&str> = envelope["objects"]
+        .as_array()
+        .expect("an array of entities")
+        .iter()
+        .map(|entity| entity["id"].as_str().expect("every object carries an id"))
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["a", "b"],
+        "the walk reaches the root and the entity its `links` names: {envelope}"
+    );
+}
+
+#[test]
+fn render_refuses_the_same_corrupt_store() {
+    // `render` is a traversal over the same load boundary, so it refuses too,
+    // and prints no text rather than a partial document.
+    let scratch = Scratch::new();
+    let declared = smut(&scratch, &["declare", r#"{"id":"a","title":"Alpha"}"#]);
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    corrupt_nested_identity(
+        &scratch,
+        "a",
+        r#"{"id":"a","title":"Alpha","notes":{"payload":{"id":null}}}"#,
+    );
+
+    let ran = smut(&scratch, &["render", "{}"]);
+
+    assert_eq!(
+        ran.code, 1,
+        "a corrupt store refuses the rendering: {}",
+        ran.stderr
+    );
+    assert!(
+        ran.stdout.is_empty(),
+        "a refusal prints no document at all: {:?}",
+        ran.stdout
+    );
+}
+
+#[test]
+fn a_request_side_malformed_identity_stays_a_user_error() {
+    // The same malformation arriving in a request is the caller's mistake, not
+    // the store's: it is refused before any store access, at exit 2.
+    let scratch = Scratch::new();
+
+    for (declaration, found) in [
+        (r#"{"id":"req-bad","payload":{"id":null}}"#, "null"),
+        (r#"{"id":"req-bad","payload":{"id":[]}}"#, "an array"),
+    ] {
+        let ran = smut(&scratch, &["declare", declaration]);
+
+        assert_eq!(ran.code, 2, "{declaration}: {}", ran.stderr);
+        assert_eq!(
+            ran.stdout, "",
+            "{declaration}: a rejection prints no envelope"
+        );
+        assert!(
+            ran.stderr.contains("invalid entity id"),
+            "{declaration}: the refusal names the identity rule: {}",
+            ran.stderr
+        );
+        assert!(
+            ran.stderr.contains(found),
+            "{declaration}: the refusal names what the id held ({found}): {}",
+            ran.stderr
+        );
+        assert!(
+            ran.stderr.contains("must be a nonempty string"),
+            "{declaration}: the refusal states the rule: {}",
+            ran.stderr
+        );
+    }
+}

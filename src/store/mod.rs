@@ -235,6 +235,8 @@ impl Store {
                 });
             }
 
+            validate_identity_tree(basename, &entity)?;
+
             entities.insert(id.clone(), entity);
         }
 
@@ -507,11 +509,92 @@ fn describe(id: Option<&Value>) -> String {
     }
 }
 
+/// Refuse a loaded entity that `scan_refs` could not read: every object in it
+/// that carries `id` must carry a nonempty string (§3, DEC-005).
+///
+/// This establishes `scan_refs`' precondition — documented there as "a
+/// validated, normalised entity" — once, at the load boundary, instead of
+/// threading a `Result` through a traversal that returns an iterator. A
+/// malformed identity therefore reaches no caller of `scan_refs` at all: it is
+/// refused as `Corrupt`, with the path to the offending member, by the load
+/// that met it. The walk does not check reference targets, repair anything or
+/// treat `id` as data to validate; it asks `reference_id` for the one identity
+/// rule and reports what that rule rejects.
+///
+/// Every object value and every array element is descended into, including
+/// through an object whose own identity is valid, because a nested entity node
+/// is not a leaf. Objects iterate lexically and arrays positionally, so the
+/// first malformed identity is deterministic.
+///
+/// The cost is one linear pass over the value `load` has already parsed: no
+/// second read, no second parse, no clone or re-serialisation of the data, and
+/// one `String` path pushed and truncated along the way.
+fn validate_identity_tree(entry: &str, value: &Value) -> Result<(), StoreError> {
+    let mut path = String::from("$");
+
+    walk_identities(entry, value, &mut path)
+}
+
+/// [`validate_identity_tree`]'s walk, carrying the path to the value it stands
+/// on: one component is pushed on the way down and truncated on the way back
+/// up, so a whole entity costs one `String` however deep it nests.
+fn walk_identities(entry: &str, value: &Value, path: &mut String) -> Result<(), StoreError> {
+    match value {
+        Value::Object(fields) => {
+            if reference_id(value).is_err() {
+                let container = path.len();
+                push_key_component(path, ENTITY_ID);
+                let reason = format!("identity at {path} must be a nonempty string");
+                path.truncate(container);
+
+                return Err(StoreError::Corrupt {
+                    entry: entry.to_owned(),
+                    reason,
+                });
+            }
+
+            for (key, child) in fields {
+                let container = path.len();
+                push_key_component(path, key);
+                walk_identities(entry, child, path)?;
+                path.truncate(container);
+            }
+
+            Ok(())
+        }
+        Value::Array(items) => {
+            for (position, item) in items.iter().enumerate() {
+                let container = path.len();
+                path.push('[');
+                path.push_str(&position.to_string());
+                path.push(']');
+                walk_identities(entry, item, path)?;
+                path.truncate(container);
+            }
+
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Append one object-key component, JSON-quoted, so that dots, brackets, quotes,
+/// backslashes, control characters and the empty key cannot be read as the
+/// notation's own separators.
+fn push_key_component(path: &mut String, key: &str) {
+    path.push('[');
+    path.push_str(&serde_json::to_string(key).expect("a string is always representable as JSON"));
+    path.push(']');
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
 
+    use serde_json::Value;
+
     use super::boundary::{Boundary, Track};
+    use crate::error::StoreError;
 
     fn all_boundaries() -> Vec<Boundary> {
         Boundary::all().collect()
@@ -606,6 +689,248 @@ mod tests {
         assert_eq!(Boundary::from_name("commit_rename"), None);
         assert_eq!(Boundary::from_name(""), None);
     }
+
+    // ── PHASE-01/VT-3/VA-3: the loaded-identity walk ─────────────────────────
+    //
+    // `validate_identity_tree` is the load boundary's identity walk. It is given
+    // an already-parsed entity, asks `crate::entity::reference_id` about every
+    // object it meets, and turns that predicate's `Err` into `StoreError::Corrupt`
+    // naming where the malformed identity sits. The path is `$` followed by one
+    // JSON-quoted bracket component per object key and one numeric component per
+    // array position, ending at the offending object's identity member; the
+    // reason reads exactly `identity at <path> must be a nonempty string`. Every
+    // object value and array element is descended into — including through an
+    // object whose own identity is valid — and scalars are ignored. Objects
+    // iterate lexically and arrays positionally, so the first refusal is
+    // deterministic.
+    //
+    // These tests drive the helper over parsed values only: no store is opened
+    // and nothing touches the filesystem.
+
+    /// The exact refusal a malformed identity earns: `Corrupt` naming the entry
+    /// and the position.
+    fn refusal_reason(fixture: &str) -> String {
+        let value: Value = serde_json::from_str(fixture).expect("the fixture parses");
+
+        match super::validate_identity_tree("Ab3.json", &value)
+            .expect_err("a malformed identity is refused")
+        {
+            StoreError::Corrupt { entry, reason } => {
+                assert_eq!(entry, "Ab3.json", "the refusal names the entity file");
+                reason
+            }
+            other => panic!("a malformed identity is corrupt, not {other}"),
+        }
+    }
+
+    #[test]
+    fn a_parsed_entity_with_a_valid_identity_is_accepted() {
+        let value: Value = serde_json::from_str(r#"{"id":"alpha","body":"a thought"}"#)
+            .expect("the fixture parses");
+
+        assert!(
+            super::validate_identity_tree("Ab3.json", &value).is_ok(),
+            "an entity whose only identity is a nonempty string is a valid tree"
+        );
+    }
+
+    #[test]
+    fn nested_identities_inside_objects_and_arrays_are_accepted() {
+        // Identities at depth, arrays of identity-bearing and identity-free
+        // objects, and scalars beside them: the shapes a load must accept.
+        let value: Value = serde_json::from_str(
+            r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":"deeper"}},"tags":[{"id":"one"},{"name":"two"},{"id":"three","nested":[{"id":"four"},7,"a",null,true]}]}"#,
+        )
+        .expect("the fixture parses");
+
+        assert!(
+            super::validate_identity_tree("Ab3.json", &value).is_ok(),
+            "a tree whose every identity is a nonempty string is valid"
+        );
+    }
+
+    #[test]
+    fn a_whitespace_only_identity_is_still_a_nonempty_string() {
+        for fixture in [r#"{"id":" "}"#, r#"{"id":"alpha","payload":{"id":"\t"}}"#] {
+            let value: Value = serde_json::from_str(fixture).expect("the fixture parses");
+
+            assert!(
+                super::validate_identity_tree("Ab3.json", &value).is_ok(),
+                "'a nonempty string' is the whole rule: {fixture}"
+            );
+        }
+    }
+
+    #[test]
+    fn scalars_below_the_root_are_ignored() {
+        let value: Value = serde_json::from_str(
+            r#"{"id":"alpha","n":1,"f":1.5,"t":true,"z":null,"s":"x","arr":[1,"two",null,false],"deep":[[[{"note":"no identity here"}]]]}"#,
+        )
+        .expect("the fixture parses");
+
+        assert!(
+            super::validate_identity_tree("Ab3.json", &value).is_ok(),
+            "scalars carry no identity, so there is nothing to refuse"
+        );
+    }
+
+    #[test]
+    fn a_malformed_identity_below_the_root_names_its_path_and_the_rule() {
+        // One path, five shapes: the refusal is the same rule whatever stands
+        // where an identity belongs.
+        for identity in ["null", r#""""#, "0", "[]", "{}"] {
+            let fixture = format!(r#"{{"id":"alpha","payload":{{"id":{identity}}}}}"#);
+
+            assert_eq!(
+                refusal_reason(&fixture),
+                r#"identity at $["payload"]["id"] must be a nonempty string"#,
+                "the identity {identity} is malformed"
+            );
+        }
+    }
+
+    #[test]
+    fn an_identity_inside_an_array_reports_its_position() {
+        assert_eq!(
+            refusal_reason(r#"{"id":"alpha","payload":{"tags":["a","b",{"id":""}]}}"#),
+            r#"identity at $["payload"]["tags"][2]["id"] must be a nonempty string"#
+        );
+    }
+
+    #[test]
+    fn the_root_object_is_walked_too() {
+        // `Store::load`'s own root check owns this case in the real loader, but
+        // the walk is handed the root object and validates it like any other.
+        for fixture in [r#"{"id":""}"#, r#"{"id":null}"#] {
+            assert_eq!(
+                refusal_reason(fixture),
+                r#"identity at $["id"] must be a nonempty string"#,
+                "{fixture}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_valid_reference_shaped_object_does_not_stop_the_walk() {
+        // `{"id":"opaque"}` is what `reference_id` reads as an entity node, so
+        // it is the shape a walk could mistake for a leaf. The malformed
+        // identity deeper inside is what must be refused.
+        assert_eq!(
+            refusal_reason(r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":null}}}"#),
+            r#"identity at $["payload"]["meta"]["id"] must be a nonempty string"#
+        );
+    }
+
+    #[test]
+    fn identity_paths_escape_object_keys_and_number_array_positions() {
+        // Each key is a distinct escaping case: a dot, a bracket pair, a double
+        // quote, a backslash, a control character, and the empty key. The six
+        // object components and the numeric array component are pinned verbatim.
+        assert_eq!(
+            refusal_reason(
+                r#"{"id":"alpha",".":{"[x]":{"a\"b":{"a\\b":{"\u0001":{"":[{"id":null}]}}}}}}"#,
+            ),
+            r#"identity at $["."]["[x]"]["a\"b"]["a\\b"]["\u0001"][""][0]["id"] must be a nonempty string"#
+        );
+    }
+
+    #[test]
+    fn the_lexically_first_object_key_reports_the_identity() {
+        // Both members are malformed, and the fixture writes `zzz` first, so only
+        // the map's lexical iteration order can report `aaa`.
+        assert_eq!(
+            refusal_reason(r#"{"id":"alpha","zzz":{"id":""},"aaa":{"id":[]}}"#),
+            r#"identity at $["aaa"]["id"] must be a nonempty string"#
+        );
+    }
+
+    #[test]
+    fn the_earliest_array_position_reports_the_identity() {
+        assert_eq!(
+            refusal_reason(r#"{"id":"alpha","tags":["a",{"id":null},"b",{"id":""}]}"#),
+            r#"identity at $["tags"][1]["id"] must be a nonempty string"#
+        );
+    }
+
+    #[test]
+    fn a_deep_chain_reports_the_whole_traversal_path() {
+        // Forty alternating wrappers: the reported path carries every component
+        // the walk descended through, which a path built along the walk gives and
+        // a subtree rebuilt at the failure would not.
+        let mut fixture = String::from(r#"{"id":null}"#);
+        let mut steps: Vec<&str> = Vec::new();
+        for depth in 0..40 {
+            if depth % 2 == 0 {
+                fixture = format!(r#"{{"n":{fixture}}}"#);
+                steps.push(r#"["n"]"#);
+            } else {
+                fixture = format!("[{fixture}]");
+                steps.push("[0]");
+            }
+        }
+
+        let mut path = String::from("$");
+        for step in steps.iter().rev() {
+            path.push_str(step);
+        }
+        path.push_str(r#"["id"]"#);
+
+        assert_eq!(
+            refusal_reason(&fixture),
+            format!("identity at {path} must be a nonempty string")
+        );
+    }
+
+    #[test]
+    fn the_walk_asks_the_shared_identity_predicate_rather_than_reimplementing_it() {
+        // Each fixture carries its identity at the root, so the predicate and the
+        // walk judge the same object: a walk that kept its own rule would drift
+        // away from `reference_id` on at least one row.
+        let candidates = [
+            r#"{"id":"ok"}"#,
+            r#"{"id":" "}"#,
+            r#"{"id":""}"#,
+            r#"{"id":null}"#,
+            r#"{"id":0}"#,
+            r#"{"id":[]}"#,
+            r#"{"id":{}}"#,
+            "{}",
+            r#"{"other":1}"#,
+        ];
+
+        let mut refused = 0;
+        for fixture in candidates {
+            let value: Value = serde_json::from_str(fixture).expect("the fixture parses");
+            let refused_by_predicate = crate::entity::reference_id(&value).is_err();
+            let refused_by_walk = super::validate_identity_tree("Ab3.json", &value).is_err();
+
+            assert_eq!(refused_by_predicate, refused_by_walk, "{fixture}");
+
+            if refused_by_walk {
+                refused += 1;
+            }
+        }
+
+        assert_eq!(refused, 5, "the table must exercise both answers, not one");
+    }
+
+    #[test]
+    fn a_large_nested_array_of_identity_bearing_objects_is_accepted() {
+        // A blanket refusal, or a walk that gave up after a few levels, fails
+        // here: every identity in this tree is a nonempty string.
+        let items: Vec<String> = (0..200)
+            .map(|index| {
+                format!(r#"{{"id":"e{index}","tags":[{{"id":"t{index}"}},{{"note":"n{index}"}}]}}"#)
+            })
+            .collect();
+        let fixture = format!(r#"{{"id":"alpha","items":[{}]}}"#, items.join(","));
+        let value: Value = serde_json::from_str(&fixture).expect("the fixture parses");
+
+        assert!(
+            super::validate_identity_tree("Ab3.json", &value).is_ok(),
+            "a store-shaped entity with many identity-bearing objects is valid"
+        );
+    }
 }
 
 /// The store directory beside the working directory (§4.1).
@@ -637,7 +962,7 @@ use fs4::{FileExt, TryLockError};
 use serde_json::Value;
 
 use crate::declare::{Entities, WriteSet};
-use crate::entity::ENTITY_ID;
+use crate::entity::{ENTITY_ID, reference_id};
 use crate::error::{Error, Reject, StoreError};
 use crate::store::boundary::Boundary;
 use crate::store::fs as durable;

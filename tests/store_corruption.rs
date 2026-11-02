@@ -2,8 +2,11 @@
 //!
 //! Every corruption the design names is refused with the offending entry named.
 //! Nothing is repaired, an index-less store is never initialised over, and a
-//! symlinked entry is refused rather than followed. A healthy fixture loads in
-//! the same file, so a blanket refusal cannot pass for refusal behaviour.
+//! symlinked entry is refused rather than followed. An identity nested anywhere
+//! below the entity root is validated too: one that is present and not a
+//! nonempty string is refused with its path named, while the root keeps its own
+//! refusal. A healthy fixture loads in the same file, so a blanket refusal
+//! cannot pass for refusal behaviour.
 
 use std::fs;
 use std::path::PathBuf;
@@ -277,4 +280,283 @@ fn a_symlinked_index_is_refused_rather_than_followed() {
     );
     assert!(error.to_string().contains("index.json"), "{error}");
     assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+// ── VT-1: an identity below the root is validated eagerly ────────────────────
+//
+// Every object below the root is asked `reference_id`, all the way down: an
+// identity that is present and is not a nonempty string is corruption, and the
+// refusal names the path of the first one. The path is `$` followed by
+// JSON-quoted bracket components for object keys and numeric ones for array
+// positions. The root keeps its own check and its own refusal, and a store whose
+// nested data is entirely valid still loads.
+
+#[test]
+fn a_nested_identity_under_an_object_is_refused_naming_its_path() {
+    let error = refuse(&[
+        ("index.json", INDEX),
+        ("Ab3.json", r#"{"id":"alpha","payload":{"id":null}}"#),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["payload"]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn a_nested_identity_under_an_array_is_refused_naming_its_position() {
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","payload":{"tags":["a","b",{"id":""}]}}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["payload"]["tags"][2]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+
+    // Element 0 is an object with no identity, so it is descended past without
+    // changing the position the refusal reports.
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","items":[{"name":"first"},{"id":7}]}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["items"][1]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn a_valid_reference_shaped_object_does_not_stop_the_walk() {
+    // `{"id":"opaque"}` is what `reference_id` reads as an entity node, so it is
+    // the shape that could plausibly be treated as a leaf. It must still be
+    // descended into: the malformed identity deeper inside is what is refused.
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":null}}}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["payload"]["meta"]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+
+    // The same below the root, with the valid reference-shaped object at array
+    // position 0 and the malformed identity at position 1: an `id` that is
+    // itself a container is already invalid at the object carrying it, so the
+    // reachable shape is descent past a valid string id.
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","payload":[{"id":"opaque"},{"meta":{"id":[]}}]}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["payload"][1]["meta"]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn an_identity_path_escapes_object_keys_and_numbers_array_positions() {
+    // Each key here is a distinct escaping case: a dot, a bracket pair, a double
+    // quote, a backslash, a control character and the empty key. The path below
+    // pins all six components and one numeric array component verbatim.
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha",".":{"[x]":{"a\"b":{"a\\b":{"\u0001":{"":[{"id":null}]}}}}}}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        error.to_string().contains(
+            r#"identity at $["."]["[x]"]["a\"b"]["a\\b"]["\u0001"][""][0]["id"] must be a nonempty string"#,
+        ),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn the_lexically_first_object_key_reports_the_identity() {
+    // Both members are malformed. The fixture writes `zzz` first, so only the
+    // map's own lexical iteration order can report `aaa`.
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","zzz":{"id":""},"aaa":{"id":[]}}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["aaa"]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn the_earliest_array_position_reports_the_identity() {
+    let error = refuse(&[
+        ("index.json", INDEX),
+        (
+            "Ab3.json",
+            r#"{"id":"alpha","tags":["a",{"id":null},"b",{"id":""}]}"#,
+        ),
+    ]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains(r#"identity at $["tags"][1]["id"] must be a nonempty string"#),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn a_refusal_leaves_the_index_and_entity_bytes_untouched() {
+    let scratch = Scratch::new();
+    scratch.write("index.json", INDEX);
+    scratch.write("Ab3.json", r#"{"id":"alpha","payload":{"id":null}}"#);
+    let index_path = scratch.directory().join("index.json");
+    let entity_path = scratch.directory().join("Ab3.json");
+    let index_before = fs::read(&index_path).expect("the index bytes");
+    let entity_before = fs::read(&entity_path).expect("the entity bytes");
+
+    scratch
+        .store()
+        .load()
+        .expect_err("the malformed nested identity is refused");
+
+    assert_eq!(
+        fs::read(&index_path).expect("the index bytes after the refusal"),
+        index_before,
+        "the refusal repaired nothing in the index"
+    );
+    assert_eq!(
+        fs::read(&entity_path).expect("the entity bytes after the refusal"),
+        entity_before,
+        "the refusal repaired nothing in the entity"
+    );
+    assert_eq!(
+        scratch.listing(),
+        ["Ab3.json", "index.json"],
+        "the refusal wrote nothing"
+    );
+}
+
+#[test]
+fn a_malformed_root_identity_is_still_an_id_disagreement() {
+    let error = refuse(&[
+        ("index.json", INDEX),
+        ("Ab3.json", r#"{"id":null,"body":"a thought"}"#),
+    ]);
+
+    assert!(
+        matches!(error, StoreError::IdDisagreement { .. }),
+        "{error}"
+    );
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        !error.to_string().contains("identity at"),
+        "the root's own check speaks for the root, not the nested rule: {error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn a_non_object_entity_file_is_still_refused_as_not_an_object() {
+    let error = refuse(&[("index.json", INDEX), ("Ab3.json", "[]")]);
+
+    assert!(matches!(error, StoreError::Corrupt { .. }), "{error}");
+    assert!(error.to_string().contains("Ab3.json"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("an entity file holds a JSON object"),
+        "{error}"
+    );
+    assert_eq!(Error::Store(error).exit_code(), 1);
+}
+
+#[test]
+fn a_valid_nested_identity_loads() {
+    let scratch = Scratch::new();
+    scratch.write("index.json", INDEX);
+    scratch.write(
+        "Ab3.json",
+        r#"{"id":"alpha","payload":{"id":"opaque","meta":{"id":"deeper"}}}"#,
+    );
+
+    let snapshot = scratch
+        .store()
+        .load()
+        .expect("every identity below the root is a nonempty string");
+
+    assert_eq!(snapshot.entities().len(), 1);
+    assert_eq!(snapshot.index().len(), 1);
+}
+
+#[test]
+fn a_nested_object_without_an_identity_loads() {
+    let scratch = Scratch::new();
+    scratch.write("index.json", INDEX);
+    scratch.write(
+        "Ab3.json",
+        r#"{"id":"alpha","payload":{"tags":["a","b"],"meta":{"count":3,"flag":true,"none":null}}}"#,
+    );
+
+    let snapshot = scratch
+        .store()
+        .load()
+        .expect("an object without an identity member is ordinary data");
+
+    assert_eq!(snapshot.entities().len(), 1);
 }
