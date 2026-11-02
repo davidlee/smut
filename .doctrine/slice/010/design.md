@@ -1,8 +1,8 @@
 <!-- doctrine:section sec-1 -->
 ## The surface — what a human types
 
-`smut q` takes a query as a line of words. Nothing is quoted, nothing nests, and the shape of
-the line is the shape of the request:
+`smut q` takes a query as a line of words. Nothing is quoted *by the grammar*, nothing nests, and
+the shape of the line is the shape of the request:
 
 ```console
 $ smut q session --backlinks part-of --depth 2 --ids
@@ -31,14 +31,17 @@ smut q session --follow    part-of --depth 2 --ids   # the session, alone
 | `title~graph` | contains | `{"title": {"$contains": "graph"}}` |
 | `status=open,resolved` | one of | `{"status": {"$in": ["open", "resolved"]}}` |
 
-Roots and conditions may be interleaved in any order. Order is significant in exactly two
-places: inside a comma list, and inside `--order`.
+Roots and conditions may be interleaved in any order. Order is significant in exactly three
+places: inside a comma list, inside `--order`, and the roots themselves, which are answered in the
+order they are written — and `--from=ID` appends after them.
 
-A token is classified by looking for operator spellings, and never by looking at the store:
+A token is classified by its own spelling, and never by looking at the store:
 
 ```mermaid
 flowchart TD
-    T["one argv token"] --> Q{"does it carry =, != or ~ ?"}
+    T["one argv token"] --> P{"is the first character { ?"}
+    P -- yes --> J["refused: q takes field=value tokens"]
+    P -- no --> Q{"does it carry =, != or ~ ?"}
     Q -- no --> R["a root id → from[]"]
     Q -- "one" --> C["field and value split at that operator"]
     Q -- "more than one" --> X["refused: name the token, point at smut query"]
@@ -50,6 +53,10 @@ flowchart TD
 The "more than one" branch is what keeps the grammar honest: `status~a=b` is refused rather than
 split at whichever operator the scanner happened to meet first, because either split would be a
 guess and both guesses are silently wrong for somebody.
+
+A token whose first character is `{` is not a root: the only thing a caller means by it is `smut
+query`'s own argument, so it takes the refusal below. An id that really begins with `{` stays
+reachable through `--from=ID`.
 
 ### Flags
 
@@ -74,10 +81,14 @@ stricter in strictness (never in meaning).
 
 ### The characters the grammar may not use
 
-The grammar is designed around one constraint rather than tidied after the fact: **a bare token
-may contain only what the shell will not touch.** `*` would glob, `?` would glob, `$` would
-expand, a leading `!` would expand history, `(` `)` `|` `&` `;` `<` `>` `#` and `` ` `` are all
-shell syntax, and a leading `~` is tilde expansion.
+The grammar is designed around one constraint rather than tidied after the fact: **no spelling the
+grammar invents uses a character the shell acts on.** Root ids and values are the caller's own
+text, so `smut q 'a b'` still needs the shell's quotes and `--from=ID` is where an id beginning
+`{` goes — and the tidy way to pass any id whose text the shell would otherwise touch. What the
+constraint buys is that nothing the grammar *invents* — a wildcard, an existence test, an
+operator — can be eaten or globbed. `*` would glob, `?` would glob, `$` would expand, a leading
+`!` would expand history, `(` `)` `|` `&` `;` `<` `>` `#` and `` ` `` are all shell syntax, and a
+leading `~` is tilde expansion.
 
 Three consequences are deliberate rather than incidental:
 
@@ -135,11 +146,11 @@ pub struct Line<'a> {
     pub flags: Flags,
 }
 
-/// The flags `smut q` accepts: one per promoted specification key, plus three shorthands.
+/// The flags `smut q` accepts: one per promoted specification key, plus four shorthands.
 ///
-/// The numeric and enumeration flags arrive as text rather than as parsed values, so that the
-/// front-end owns the wording of every refusal it can raise. A `u64` field would let clap refuse
-/// `--depth x` in clap's vocabulary, and `--limit` would have to grow a type to keep `all` out.
+/// The numeric and enumeration flags arrive as text, so that no numeric refusal is clap's:
+/// `--depth abc` and `--depth=-1` reach the same specification message, and `--limit all` reaches
+/// the front-end's own.
 #[derive(Clone, Debug, Default)]
 pub struct Flags {
     pub follow: Option<String>,
@@ -174,7 +185,9 @@ front-end must pick one. It parses a value as a JSON **literal** when it is one,
 literal text otherwise:
 
 ```rust
-/// The value a bare token denotes: a JSON literal when the token is one, its own text otherwise.
+/// The value a bare token denotes: a JSON scalar — boolean, number or null — when the token is
+/// one, its own text otherwise. A number compares as a number, so `priority=1.0` equals no stored
+/// integer and no string.
 ///
 /// A JSON *string* literal is deliberately not accepted here. The shell has already removed the
 /// quotes the caller typed, so a token that still looks like a quoted string is one whose quotes
@@ -222,19 +235,21 @@ const EXISTS: &str = "$exists";
 const IN: &str = "$in";
 ```
 
-Two rules govern the merge, and both exist to keep the surface from inventing meaning:
+Three rules govern the merge, and each exists to keep the surface from inventing meaning:
 
-- **One condition per operator per field.** `status=open status=resolved` is refused rather than
-  resolved into `$in`: the specification's condition object has one key per operator, so two `=`
-  are two keys that cannot both exist, and the two values cannot both hold. The refusal names the
-  field and both values, in DEC-030's family (`field status cannot be satisfied: …`). The same
-  rule refuses `status!=a status!=b` and `title~a title~b`, whose JSON spellings are equally
-  impossible.
+- **One condition per operator per field.** The emit target is a condition object with one key per
+  operator, so a field carries at most one `=`, one `!=` and one `~`. An exact repeat collapses
+  into the condition already there: `status=open status=open` is `$eq open`. Two `=` with
+  different values are unsatisfiable for every store and unspellable here, so they are refused in
+  DEC-027/DEC-030's family, naming the field and the operator: `field status cannot be satisfied:
+  $eq is given two different values`.
+- **A repeat the front-end cannot spell is refused in the caller's words.** A second `!=`, a
+  second `~`, and two comma lists are satisfiable, so the contradiction voice would be false of
+  them; they are refused where the token is read, by name of the token typed.
 - **Everything else compiles.** `status=open status!=resolved` becomes
   `{"status": {"$eq": "open", "$ne": "resolved"}}` and travels to `predicate::parse`, which
-  already refuses a provably-unsatisfiable condition list by demand and decidability (DEC-027)
-  and says so in its pinned sentence (DEC-030). The front-end adds no such rule of its own, so a
-  human and a machine that type the same predicate hear the same refusal.
+  refuses a provably-unsatisfiable condition list by demand and decidability (DEC-027) and
+  otherwise answers it.
 
 `where` is built as a `BTreeMap`, so the emitted object has a stable key order: the DSL's output
 is a value a test can compare byte for byte, and `spec::parse`'s own defect selection does not
@@ -242,20 +257,23 @@ depend on token order.
 
 ### Flags
 
-Each flag maps to one specification key, and the three shorthands are the only places the
-front-end adds a small piece of meaning:
+Each flag maps to one specification key, and the four shorthand flags — `--has`, `--missing`,
+`--ids`, `--from` — are the only places the front-end adds a small piece of meaning:
 
 - `--has F` and `--missing F` are `$exists: true` and `$exists: false` conditions, merged into the
   same `where` map as the token conditions — so `--has body status=open` is one predicate.
+  `$exists` obeys the same one-condition-per-operator rule, so `--has status --missing status` is
+  refused rather than overwritten: `field status cannot be satisfied: $exists is given both true
+  and false`.
 - `--ids` is `select: ["smut_id"]`. Named together with `--select` it is refused by name rather
   than resolved by precedence (DEC-041).
 - `--from=ID` appends to `from` after the bare roots, in the only order clap leaves available.
 
 Two strictness rules apply to flags and nowhere else:
 
-- `--depth N` or `--budget N` with no direction is refused: *"--depth needs a direction: add
-  --follow, --backlinks, or drop it"*. The specification accepts and ignores the combination, but
-  a human typed it and meant it.
+- `--depth N` or `--budget N` with no direction is refused, naming the flag that was typed:
+  *"{flag} needs a direction: add --follow, --backlinks, or drop it"*. The specification accepts
+  and ignores the combination, but a human typed it and meant it.
 - `--limit all` is refused, because the parsed `Limit` has no user-reachable unlimited form
   (DEC-001 rule 4) and `get` is the unlimited path.
 
@@ -266,8 +284,9 @@ typed" without the front-end writing a sentence.
 <!-- doctrine:section sec-3 -->
 ## Refusals — what the front-end says when it will not answer
 
-Every refusal on this surface exits 2, writes one line to stderr, and names the thing the caller
-typed. Three rules shape the wording, and all three come from decisions rather than taste:
+Every refusal on this surface exits 2 and names the thing the caller typed; every sentence this
+front-end writes for one is a single line. Three rules shape the wording, and all three come from
+decisions rather than taste:
 
 - **One line, no epigram** (DEC-030). `main` renders `smut: {error}` and nothing else is added, so
   a parenthetical would ride on every instance forever.
@@ -287,33 +306,41 @@ typed. Three rules shape the wording, and all three come from decisions rather t
 | an empty member in a comma list — `status=a,,b` | `cannot read "status=a,,b": a comma list is a list of values, and one is empty` |
 | a comma list on an operator that carries one value — `status!=a,b` | `cannot read "status!=a,b": a comma list means one of them, which != cannot express; write two conditions or use smut query` |
 | two `=` on one field — `status=open status=resolved` | `field status cannot be satisfied: $eq is given two different values` |
-| a positional that looks like a specification | `q takes field=value tokens, not a JSON specification; use smut query for a JSON spec` |
+| a token beginning `{` | `q takes field=value tokens, not a JSON specification; use smut query for a JSON spec` |
 | `--limit all` | `the limit is a positive number and has no unlimited spelling; use smut get to read everything` |
 | `--ids` beside `--select` | `--ids is select smut_id; it cannot also be given --select` |
-| `--depth` or `--budget` with no direction | `--depth needs a direction: add --follow, --backlinks, or drop it` |
+| `--depth` or `--budget` with no direction | `{flag} needs a direction: add --follow, --backlinks, or drop it` |
+| a second `!=` or `~` on one field — `status!=a status!=b` | `cannot read "status!=a status!=b": q carries one != per field; use smut query` |
+| `--has` and `--missing` on one field | `field status cannot be satisfied: $exists is given both true and false` |
+| an empty member in a flag list — `--select a,,b`, `--follow part-of,` | `cannot read "a,,b": a comma list is a list of names, and one is empty` |
+| `any` inside a flag list — `--follow any,part-of` | `cannot read "any,part-of": any is the wildcard, and stands alone` |
+| a direction that is not `asc` or `desc` — `--order title:user` | `cannot read "title:user": a direction is asc or desc` |
 | a field name the DSL cannot address | `cannot read "a=b=c": a field name holding = is outside q's grammar; use smut query` |
 
 The two-`=` row reuses `Reject::ContradictoryFieldConditions`, the variant DEC-027 and DEC-030
 already built: that refusal is one variant carrying a field and a description, and the detecting
 branch supplies the description. Two `=` on one field is provably unsatisfiable for any store —
-two different values cannot both hold — and it is the one contradiction the specification cannot
-even spell, because a JSON condition object has one key per operator. So the front-end feeds the
+two different values cannot both hold — and it is a contradiction the specification cannot even
+spell, because a JSON condition object has one key per operator. So the front-end feeds the
 existing family rather than starting a second one, and the pinned sentence shape is preserved.
 
-Everything else is a new variant, five in all, each with its own message test — there is no
-census over `Reject` to catch a variant that lands without one (IMP-014), so the tests are the
-guard.
+Every other situation is answered by one of six new variants, each with its own message test —
+there is no census over `Reject` to catch a variant that lands without one (IMP-014), so the tests
+are the guard.
 
 ### Raised by clap
 
-Four refusals are clap's, unchanged, and all of them already satisfy the three rules:
+Three of these are clap's own render, unchanged; the fourth is this binary's mapping of clap's
+subcommand error into one sentence, also unchanged — `query` prints the same bytes today and
+DEC-011 forbids reworking them. The one-line rule is theirs to break: clap's render reaches stderr
+verbatim through `InvalidUsage`, so the rule binds the sentences this front-end writes:
 
-| situation | what clap says |
+| situation | what is printed |
 | --- | --- |
 | an unknown flag | `error: unexpected argument '--follo' found` with a suggested correction |
 | a repeated flag | `error: the argument '--follow <FOLLOW>' cannot be used multiple times` |
 | a hyphen-leading token without `--` | `error: unexpected argument '-w' found`, with the tip to use `--` |
-| an unknown subcommand | `error: unrecognized subcommand 'quer'` with the near names |
+| an unknown subcommand | `smut: unknown command: quer` — `cli::answer` maps it to `UnknownCommand`, so no near names print |
 
 The third is the one inaccuracy on the surface: clap splits `-weird-id` into a short-flag cluster
 and reports its first member, so the message names `-w` rather than the token. It is loud, it
@@ -335,10 +362,12 @@ a token should not be answered about a key:
 | `--budget 0` | budget must be a positive integer |
 | `--order title:up` | the front-end refuses this itself, because a direction is its own vocabulary |
 
-The last row is the reason the table is short: the front-end parses the four enumeration-shaped
-flags itself, so what reaches `spec::parse` is already well-formed and can only be out of range.
-Values, however, cannot be checked ahead of the store — a value is whatever was typed — so the
-`spec::parse` boundary stays reachable and its messages stay honest.
+The last row is the reason the table is short: the front-end parses every flag whose value is its
+own vocabulary — `--order`'s direction, `any`, and `--limit all` — so what reaches `spec::parse`
+is well-formed for those keys. The numeric flags still arrive as text, so `--depth abc` is
+refused there too, and what remains is out of range. Values, however, cannot be checked ahead of
+the store — a value is whatever was typed — so the `spec::parse` boundary stays reachable and its
+messages stay honest.
 
 ### What the front-end deliberately does not refuse
 
@@ -355,7 +384,7 @@ Values, however, cannot be checked ahead of the store — a value is whatever wa
 <!-- doctrine:section sec-4 -->
 ## The verb on the command line
 
-`q` is an eleventh variant of the existing clap `Sub` enum, and its argument struct is the
+`q` is an eighth variant of the existing clap `Sub` enum, and its argument struct is the
 smallest thing that can carry the grammar:
 
 ```rust
@@ -446,7 +475,7 @@ The two-call recipe is the guide's spine, and it gains DSL twins rather than bei
 ```console
 $ smut q session --backlinks part-of --depth 2 --ids
 ["q-query","q-other"]
-$ smut q q-query q-other status=open --select title
+$ smut q q-query q-other status=open --ids
 ```
 
 The JSON spelling of the same two calls stays in the guide, one line below, and *both* are
@@ -454,6 +483,9 @@ executed. Keeping the JSON pair means DEC-016's pin stays true until reconcile; 
 adjacent means a reader who outgrows the short form sees the escape without turning a page. The
 recipe's direction sentence and its completeness guard are unchanged — only the spelling of the
 two calls changes, which is exactly the DEC-016 amendment owed at reconcile.
+
+Roots are this surface's spelling of the `$in` filter, answered in the order written; the JSON
+twin filters every id in ID order, so the two agree on the set and the guide says so beside them.
 
 `src/learn.rs` therefore keeps `EXAMPLE_TRAVERSE`, `EXAMPLE_FOLLOW` and `EXAMPLE_FILTER` and gains
 three constants beside them for the DSL forms. Two of the three have no `IDS` placeholder — a walk
@@ -493,7 +525,7 @@ form promotes.
 <!-- doctrine:section sec-6 -->
 ## Code impact
 
-Eight files change; four that a reader might expect to change do not, and the reasons are the
+Eight files change; five that a reader might expect to change do not, and the reasons are the
 useful part.
 
 | path | intended change |
@@ -501,7 +533,7 @@ useful part.
 | `src/dsl.rs` *(new)* | the compiler: `Line`, `Flags`, `compile`, `value`, the operator table, and the DSL's five refusals. One concept, one module, with a `//!` header naming DEC-034 through DEC-041 the way `src/spec.rs` names DEC-011 |
 | `src/lib.rs` | one line: `pub mod dsl;` |
 | `src/cli.rs` | `Sub::Q` with its bare positional and twelve flags; the `Line`/`Flags` construction; one arm that compiles, parses and hands a `Spec` to `Request::Query` |
-| `src/error.rs` | five `Reject` variants and their `Display` arms: a malformed or ambiguous condition, a JSON operand, a missing direction, an unreachable limit, a conflicting selection. The two-`=` case reuses `ContradictoryFieldConditions` |
+| `src/error.rs` | six `Reject` variants and their `Display` arms: a malformed or ambiguous token, a JSON operand, a missing direction, a direction outside `asc`/`desc`, an unreachable limit, a conflicting selection. The two-`=` case reuses `ContradictoryFieldConditions` |
 | `src/learn.rs` | the short-form section; three `EXAMPLE_*_Q` constants beside the JSON ones; the recipe in both spellings; the two warts and the field-silence sentence; the sentence tests that move with the prose |
 | `tests/dsl.rs` *(new)* | the compiler's own suite: the equivalence table, value typing, the merge rules, every refusal, and the determinism of refusal selection |
 | `tests/cli_contract.rs` | the verb end-to-end: interleaved tokens, `--` reaching a hyphen id, byte-identical envelopes against `query`, exit codes, no store created |
@@ -512,8 +544,9 @@ useful part.
 | path | why it does not change |
 | --- | --- |
 | `src/spec.rs` | its public surface is the seam, not a place to widen. The compiler emits an object and calls `parse`; no key, no refusal and no visibility moves (DEC-038) |
-| `src/predicate.rs` | repeated conditions compile and are judged here as they always were. The front-end adds no contradiction rule, so the pinned sentence is reached through the existing path (DEC-039) |
+| `src/predicate.rs` | repeated conditions compile as they always did. The variant and the sentence shape are unchanged, but two detections are now the front-end's — the differing two-`=` and the `$exists` collision — while every other repeated condition is still judged here (DEC-039) |
 | `src/main.rs` | `q` terminates in `Invocation::Request(Request::Query)`, which `main` already dispatches; the only visible difference is a new refusal's `Display`, which `main` renders generically |
+| `src/render_markdown.rs` | the grammar stops at the query verb; render keeps its own operand order and display flags, as the scope's non-goals say |
 | `src/select.rs`, `src/walk.rs`, `src/order.rs` | the pipeline is the pipeline. `q` supplies a `Spec` and reads the envelope it always produced |
 | `docs/store-format.md` | nothing lands inside `.smut/`; STD-001's record is untouched, and no version bump is implied |
 | `README.md` | operator-owned, carrying an in-flight edit no agent may restage (CHR-001). The guide is the documentation surface this slice owns |
@@ -542,7 +575,7 @@ else is a consequence of that, or a property of a refusal.
 | what is proved | how |
 | --- | --- |
 | each guide recipe, word for word | `dsl::compile(tokens, flags)` compared to `spec::parse(json)` for the JSON the guide prints — `Spec` equality, not a re-derived expectation |
-| the whole pipeline agrees | `smut q <line>` and `smut query <json>` run on the same store produce **byte-identical** stdout, for the traversing, the filtering and the `--ids` recipes |
+| the whole pipeline agrees | `smut q <line>` and `smut query <json>` run on the same store produce **byte-identical** stdout, for the traversing and `--ids` recipes; the filtering pair agrees on the selected set |
 | order survives | tokens interleaved with flags arrive in source order; two roots, a condition and a mid-run flag keep their typing order |
 | nothing is invented | a line the DSL cannot express is refused, never coerced into one it can — the two-`=` case is the load-bearing example |
 
@@ -553,8 +586,9 @@ envelope for `q`, that test fails and the reason is legible from its name.
 
 One table, one test per row: `true`/`false` are booleans, `3` and `-2` numbers, `null` a null,
 `007` and `v1.2` and `open,resolved` strings, and a token containing literal quote characters
-stays verbatim (the refinement §2 flags). `status=null` and `--missing status` are asserted to be
-*different* requests, since that pair is the one a reader is most likely to conflate.
+stays verbatim (the refinement §2 flags). `1.0` and `1e3` are numbers, and equal no stored
+integer. `status=null` and `--missing status` are asserted to be *different* requests, since that
+pair is the one a reader is most likely to conflate.
 
 ### Refusals
 
@@ -570,11 +604,13 @@ enumeration is the guard and is written out rather than implied.
 | `status=` | exit 0 — the empty string is a legal value, and this is the row that proves the refusal above is narrow |
 | `status=a,,b` | exit 2, names the empty member |
 | `status!=a,b` | exit 2, says `!=` takes one value |
-| `status=open status=resolved` | exit 2, `field status cannot be satisfied`, both values named |
-| `status=open status!=resolved` | exit 2 from `predicate::parse`, not from the front-end — the same line a JSON caller gets |
+| `status=open status=resolved` | exit 2, `field status cannot be satisfied`, the operator named, and no operand |
+| `status=open status!=open` | exit 2 from `predicate::parse`, not from the front-end — the same line a JSON caller gets |
+| `status=open status!=resolved` | exit 0, the envelope its query twin produces |
 | `q '{"where":{…}}'` | exit 2, and the message names `smut query` |
 | `--limit all` | exit 2, names `get` |
 | `--ids --select title` | exit 2, names both flags |
+| `--depth abc` | exit 2, depth must be a nonnegative integer |
 | `--depth 2` alone | exit 2; and `query '{"depth":2}'` still exits 0 — the strictness asymmetry proved in both directions |
 | `--order title:up` | exit 2, refused by the front-end rather than by the specification |
 
@@ -582,7 +618,7 @@ enumeration is the guard and is written out rather than implied.
 
 - **`tests/compatibility.rs` is untouched and green.** The 0.1 and 0.2 pins are the proof that the
   machine surface did not move, and the diff shows the file was not edited.
-- **`query`'s refusals are unchanged.** The four tables in §3 are the front-end's; a `query` line
+- **`query`'s refusals are unchanged.** The three tables in §3 are the front-end's; a `query` line
   that was refused before is refused with the same bytes after.
 - **The guide's JSON examples still run.** `tests/fixture.rs` keeps its `&Value` path and its
   three JSON constants, and the fixture suite asserts the printed JSON recipe still reaches the
@@ -604,8 +640,8 @@ and its users' bug reports irreproducible.
 `a_line_of_words_equals_the_specification_it_denotes` · `the_two_call_recipe_reads_the_same_both_ways`
 · `tokens_keep_their_order_around_flags` · `a_value_is_a_json_literal_only_when_it_is_one` ·
 `a_quoted_looking_token_keeps_its_quotes` · `null_and_missing_are_different_requests` ·
-`two_equals_on_one_field_is_a_contradiction_not_an_in_list` · `a_same_field_contradiction_speaks_the_specifications_sentence`
-· `every_refusal_names_what_was_typed_and_never_a_field_it_invented` · `depth_without_a_direction_is_refused_while_the_specification_accepts_it`
-· `ids_and_select_cannot_both_be_asked_for` · `q_creates_no_store_and_a_declare_beside_it_does` ·
-`the_compatibility_pins_did_not_move`
+`two_equals_on_one_field_is_a_contradiction_not_an_in_list` · `a_same_value_contradiction_speaks_the_specifications_sentence`
+· `every_refusal_names_what_was_typed_and_never_a_field_it_invented` · `the_same_two_defects_refuse_the_same_one_every_time`
+· `depth_without_a_direction_is_refused_while_the_specification_accepts_it`
+· `ids_and_select_cannot_both_be_asked_for` · `q_creates_no_store_and_a_declare_beside_it_does`
 
