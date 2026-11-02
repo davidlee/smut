@@ -95,6 +95,20 @@ The normalisation is order-only, so the round trip is checkable: declared into a
 empty directory, the array creates 66 entities and a full `query` reads back an
 array structurally identical to this file.
 
+## Adaptation for the identity break
+
+The array was adapted once, after the normalisation above, spelling-only: 223
+object keys `id` -> `smut_id`, because ADR-001 made `smut_id` the structural
+identity key. Every id value, ordinary field, numeric literal, array position and
+the 66-entity count is unchanged, and the inverse rename of the committed array
+is byte-identical to the array as first committed (blob `f5b29de6`); a
+type-strict structural comparison rejects both an altered value and a reordered
+array. The rules above therefore hold as written, reading `smut_id` wherever they
+say `id`: the array is still sorted by identity, still identity-first per entity.
+Nothing else in this record moved. The source-snapshot facts, the counts and the
+privacy ruling with its quotation are as they were, and the historical
+quotations the array carries still read in their original spelling.
+
 ## Counts of the committed array
 
 Measured from `entities.json` itself when it was committed (SL-002 PHASE-04), not

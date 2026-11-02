@@ -1,14 +1,14 @@
 # The smut store format
 
 This document describes the on-disk format of a `smut` store, version
-`format_version` **1** — unchanged since the 0.1 build — and is the home of
-the durability promise: the protocol below is what that promise rests on.
+`format_version` **2**, and is the home of the durability promise: the protocol
+below is what that promise rests on.
 
-`format_version` appears in two documents — the store index and each journal
-manifest — and neither accepts a version this build does not read. An unknown
-`format_version` is exit 1. **There is no migration path, and no repair
-path at any point:** every inconsistency listed under [Corruption](#corruption)
-is refused, never reconstructed.
+`format_version` appears in two versioned documents — the store index and each
+journal manifest — and both are checked: neither accepts a version this build
+does not read. An unknown `format_version` is exit 1. **There is no migration
+path, and no repair path at any point:** every inconsistency listed under
+[Corruption](#corruption) is refused, never reconstructed.
 
 Everything here is stated for a Linux filesystem with working `flock` and
 `fsync`. See [Portability](#portability) for what is not promised.
@@ -46,20 +46,28 @@ protocol's temporaries are entries the store expects to find there; a
 corruption. Any other entry must be one the index maps, and an entry that is not
 is corruption (see [Corruption](#corruption)).
 
+### Conventions live outside the store
+
+The store layout reserves nothing for conventions. Sets live under
+`.config/smut/conventions/` — in the project root, in the user config home, or in
+the shipped binary (DEC-026, DEC-028) — and never inside the store: nothing under
+`.smut/` is read back as a convention set. A set declared into a store is an
+ordinary stored entity, a record of advice given.
+
 ## The index
 
 `index.json` maps public ids to the basenames that hold them:
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "objects": {
     "smut": "Ab3xKqMsmwQgzx6nfOhc2.json"
   }
 }
 ```
 
-- `format_version` is the integer `1`.
+- `format_version` is the integer `2`.
 - `objects` maps each public id to one safe basename. An id appears once.
 - Basenames are single path components: no separator, not `.` or `..`, not one
   of the reserved names, not in the `.tmp` namespace. The rule holds on read and
@@ -73,9 +81,13 @@ deleted: an entity's public id never appears in a path.
 
 ## Entity files
 
-An entity file holds the **complete** entity, including its public id. `select`
+An entity file holds the **complete** entity, including its `smut_id`. `select`
 never narrows what is persisted, so a query's projection has no effect on what is
 written.
+
+`smut_id` is the entity's identity. An ordinary `id` is caller data at any depth:
+it is stored, queried, projected and rendered like any other field, and the store
+never reads it as identity.
 
 ## The journal manifest
 
@@ -83,7 +95,7 @@ written.
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "puts": [
     "Ab3xKqMsmwQgzx6nfOhc2.json",
     "index.json"
@@ -103,14 +115,16 @@ write set always has the same shape and no member's absence ever means
 
 ## Canonical bytes
 
-Entity files are serialised by one wrapper: the entity root puts `id` first and
-its remaining keys lexical, embedded ordinary objects are all-lexical, and
-arrays keep their order. Documents without an entity root — the index, the
-manifest — are all-lexical. The rule is structural, not positional: the same
-wrapper serialises command output, so a projected entity inside a response's
-`objects` array names `id` first exactly as its file does. Only an object that
-is not an entity node is all-lexical. Serialising and then re-parsing to arrange keys is
-never done, because a parsed value erases the ordering a wrapper imposed.
+Entity files are serialised by one wrapper: the entity root puts `smut_id` first
+and its remaining keys lexical, embedded ordinary objects are all-lexical, and
+arrays keep their order. An entity carrying both `smut_id` and an ordinary `id`
+puts `smut_id` first and leaves `id` among the lexical keys. Documents without an
+entity root — the index, the manifest — are all-lexical. The rule is structural,
+not positional: the same wrapper serialises command output, so a projected entity
+inside a response's `objects` array names `smut_id` first exactly as its file
+does. Only an object that is not an entity node is all-lexical. Serialising and
+then re-parsing to arrange keys is never done, because a parsed value erases the
+ordering a wrapper imposed.
 
 Two byte forms, deliberately different:
 
@@ -240,20 +254,80 @@ publishes no index of its own.
 ## Corruption
 
 A malformed index, a missing indexed file, a duplicated path mapping, an
-id/content disagreement, an unsafe basename, a symlinked entry, an unknown
-format version and an unexplained entry in `.smut/` are each an explicit
-inconsistency error, reported on stderr, naming the entry where the entry is the
-evidence, with exit 1. A few, as the build prints them:
+identity/content disagreement, an unsafe basename, a symlinked entry, an unknown
+format version, a malformed nested identity and an unexplained entry in `.smut/`
+are each an explicit inconsistency error, reported on stderr, naming the entry
+where the entry is the evidence, with exit 1. A few, as the build prints them:
 
 ```
-smut: the store index has format_version 2, and this build reads only 1
+smut: the store index has format_version 1, and this build reads only 2
 smut: index.json is not a valid store entry: malformed JSON: expected ident at line 1 column 2
 smut: O3f_kqMsmwQgzx6nfOhc2.json is not a valid store entry: the index maps it, and the file is not there
-smut: the entity file O3f_kqMsmwQgzx6nfOhc2.json holds id "b", and the index maps it to a
+smut: the entity file O3f_kqMsmwQgzx6nfOhc2.json holds "b" under smut_id, and the index maps it to a
+smut: the entity file O3f_kqMsmwQgzx6nfOhc2.json holds nothing under smut_id, and the index maps it to a
+smut: O3f_kqMsmwQgzx6nfOhc2.json is not a valid store entry: identity at $["payload"]["tags"][2]["smut_id"] must be a nonempty string
 smut: unexpected entry in the store: stray.json is not explained by the index, and is never adopted or repaired
 smut: the store entry Zq7pR4KsmwQgzx6nfOhc2.json is a symlink, and the store never follows one
 smut: more than one journal state is present (journal.commit, journal.prepare), and recovery never guesses which one to apply
+smut: invalid smut_id: a number, and smut_id must be a nonempty string
 ```
+
+Only the last line is not corruption: a malformed *request* identity is a usage
+error at exit 2, while a malformed *stored* identity is corruption at exit 1. No
+refusal here prints a success envelope.
+
+### Nested identity is corruption
+
+An entity file is valid only if **every object in it that carries `smut_id`
+carries a nonempty string there**. `null`, an empty string, a number, an array or
+an object under a nested `smut_id` is corruption, refused with exit 1 and never
+repaired. An ordinary `id` holding any of those values is valid data: it is never
+validated as identity, at any depth.
+
+The check is eager, at load, over the whole parsed entity: `get`, traversal and
+`render` all refuse a file whose malformed `smut_id` sits under a field the
+traversal would not follow. `scan_refs` — the reference scan behind traversal and
+the change receipt — therefore only ever sees a validated entity, and its internal
+assertion is unreachable from a loaded store:
+
+```text
+scan_refs requires a validated entity: a `smut_id` that is not a nonempty string is corruption
+```
+
+### The diagnostic path
+
+A nested-identity refusal names the offending member, not merely the file or the
+object that holds it. The notation starts at a `$` root marker and adds one
+component per step:
+
+- `["<key>"]` for an object key, JSON-string-escaped — so a dot, a bracket, a
+  quote, a backslash, a control character or the empty key cannot be read as one
+  of the notation's own separators;
+- `[<index>]` for an array position.
+
+Objects are traversed lexically and arrays positionally, so the first failure in
+an entity is deterministic: `$["payload"]["tags"][2]["smut_id"]` is the third
+element of `payload.tags`. The notation is a diagnostic only, never query syntax.
+
+### The version break
+
+Version 1 is not read. A version-1 index is refused by version, at exit 1 — the
+first line of the block above — and a version-1 journal manifest is refused the
+same way **before any staged put or removal is replayed**: the manifest's version
+is the first thing a `commit` state's validation checks, so a manifest this build
+does not read publishes no byte. The manifest's refusal is:
+
+```
+smut: manifest.json is not a valid store entry: format_version 1 is not the version this build reads (2)
+```
+
+Recovery's own bookkeeping — discarding a `prepare` state, removing protocol
+temporaries — still happens first, as it does for any command.
+
+Recovery still runs before validation: a crashed-but-recoverable store is
+recovered before it is judged, so an interrupted version-2 store recovers and
+serves. What is not offered is a way to carry a version-1 store across: no
+migration, no compatibility reader, no repair path.
 
 ### What is never adopted
 

@@ -287,7 +287,7 @@ fn the_worked_example_ends_with_a_0_2_traversal() {
         .as_array()
         .expect("the envelope carries an objects array")
         .iter()
-        .map(|object| object["id"].as_str().expect("every object has an id"))
+        .map(|object| object["smut_id"].as_str().expect("every object has an id"))
         .collect();
 
     assert_eq!(ids, ["smut"], "the walk returns the source entity alone");
@@ -327,7 +327,7 @@ fn the_console_block_carries_the_whole_0_2_example() {
     assert_eq!(
         filtered_envelope["objects"],
         json!([{
-            "id": "q-query",
+            "smut_id": "q-query",
             "body": "Use bounded traversal and simple predicates.",
             "status": "resolved",
             "title": "Query design",
