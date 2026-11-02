@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · PHASE-02 completed (code tip 14f6a7d, range 00bc823..14f6a7d) · PHASE-03 next
+fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..24682b2 + the rollup commit) · all three phases implemented · **audit next**
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -28,6 +28,12 @@ fresh-as-of: 2026-11-02 · PHASE-02 completed (code tip 14f6a7d, range 00bc823..
   notation, the guide's identity teaching, the brief in place, and the executed README fence;
   ~40 new behaviour tests across seven VT homes (cli_contract +10, durability +14, entity +4,
   learn +7, render +1, store_corruption +4, conventions +0)
+- SL-004 PHASE-03 — `.doctrine/slice/004/decision-amendments.md`: the six-decision
+  amendment proposal (per-record facet/prose mapping, DEC-005's withdrawal + DEC-021
+  citation + `Reject` signature correction); an independently repeated evidence set
+  (format-2 lifecycle, version-1 index refusal, version-1 manifest no-replay against
+  a readable control, RV-022 F-3 re-run, fixture equivalence from blob `f5b29de6`,
+  residual classification 1091→65, gate 370/383)
 
 ### Learned
 - DEC-020 — identity constant and per-surface pins
@@ -56,17 +62,39 @@ fresh-as-of: 2026-11-02 · PHASE-02 completed (code tip 14f6a7d, range 00bc823..
   patch is 10/10 lines inside `:119`-`:146` and the operator's prose stayed uncommitted
 - SL-004 — formatting-preserving key renames need a string-aware scanner, not `sed`: the fixture's
   body prose mentions the word id and the structural keys are only the object keys
+- SL-004 — a hand-built recovery fixture must stage the **index** inside the commit
+  batch (last), exactly as the canonical batch does. Omitting it publishes entity
+  files against a stale index and the store refuses with "unexpected entry … is not
+  explained by the index" — a fixture defect that reads like a recovery defect
+- SL-004 — `DEC-002` and `DEC-012` carry no identity spelling in *any* facet field:
+  their `id` occurrences are container names and id values, which design §4 keeps.
+  The amendment proposal therefore records "no facet change" for those two rather
+  than inventing a uniform-looking edit
+- SL-004 — the jail has no `python3`; probes use `jq` (with `jq -S` for structural
+  comparison, which keeps `1` distinct from `1.0`) and `node`
 
 ### Open
-- SL-004 — PHASE-03 next: the six targeted decision amendments and the integrated evidence
-  handoff; do not begin it from this run
-- SL-004 — README.md's surrounding 0.2 prose still describes the old key (`"id"` at lines 16,
-  73, 77, 249, 252) and its never-executed fences show old declarations. It is the operator's
-  write scope (CHR-001), untouched by this slice; flag it for them rather than sweeping it
+- **SL-004 — formal audit is the next action, and it must not be closure.** The three
+  phases are implemented and committed; the audit consumes
+  `.doctrine/slice/004/decision-amendments.md` and writes the reconciliation brief.
+  `/reconcile` then lands the six record amendments; `/close` follows that
+- **SL-004 — the audit must dispose of the `src/predicate.rs` selector gap.** Its 8-line
+  inline-test respell (`{"id":"a"}` → `{"smut_id":"a"}`) landed in a file design §4's
+  code-impact table never listed; `slice conformance` reports it undeclared. Not a
+  defect — a design-selector gap. Do not retro-fit the locked design
+- **SL-004 — README.md's surrounding prose is the operator's and still teaches the old
+  key** (`"id"` at lines 16, 73, 77, 249, 252; never-executed fences show old
+  declarations). Lines 247-250 state the exact claim DEC-005 reverses — "An embedded
+  object carrying `id` is a reference, not metadata… there is no way to store inline
+  metadata under a field named `id`". Out of this slice's write scope (CHR-001): flag
+  it and let the operator land it; the audit should record it as unresolved work, not
+  as a slice miss
 - SL-004 — the brief's line 89 says "ID/content disagreement" as the prose name of the
   index/entity condition; it is identity shorthand, not the old key, but a later editorial
   pass could say "identity/content"
-- SL-004 — formal audit and the six-decision reconciliation handoff (PHASE-03)
+- SL-004 — the amendment proposal's DEC-010 item restates the documentation *contract*
+  (README sharp edge, format version 2). The README bullet it proposes is not an edit
+  permission: reconcile edits the record, CHR-001 edits the prose
 - RV-025 — 8 minor + 2 nit answered, none contested; not verified, no route required
 - Doctrine — design status reports `review_pass RV-025 STALE` on a locked run whose content matches its watermark and whose cache is current (projection quirk, not a gate)
 
@@ -929,3 +957,155 @@ commits sit outside it and are not hidden inside the phase's row.
   writer's `.doctrine`-only work, were never staged by this run, and no source path is in
   them (verified); they therefore ride inside `00bc823..14f6a7d` and appear in
   `slice conformance`'s undeclared cell exactly as this slice's rules require.
+
+### PHASE-03 autonomy entries (sub-orchestrator seat)
+
+- **PHASE-03 · probes run by the seat, no worker spawned.** Decided. The phase's
+  deliverable *is* independent observation: `VA-2` says "run fresh CLI lifecycle and
+  refusal probes … independently" and the charter says "do not transcribe the seat's or
+  PHASE-02's results". A worker's handback would insert a transcription layer between
+  the command and the evidence table, and there was no source change needing a
+  red/green delegation. Cost: the seat's own context, not a worker run.
+- **PHASE-03 · `just check` started before anything else.** Decided. The gate is the
+  long pole and no probe can influence it; starting it in the phase's first minute and
+  reading it at the end is what made the 30-minute charter feasible.
+- **PHASE-03 · the amendment proposal committed before the notes rollup.** Decided.
+  The harness's wall clock has killed one run of this slice; the proposal is the
+  phase's least reproducible artefact and the notes are its most repeatable, so the
+  proposal landed as its own commit first (`24682b2`).
+- **PHASE-03 · no decision record edited, no audit begun.** Decided, per charter and
+  design §4. The proposal is a durable slice artefact
+  (`.doctrine/slice/004/decision-amendments.md`) handed to `/reconcile`; the six
+  records still read exactly as they did at `963a788`.
+- **PHASE-03 · DEC-002 and DEC-012 recorded as "no facet change".** Decided. Their
+  facet fields contain no identity spelling — the `id` occurrences are container
+  names (`ids`, `depths`, `edges`, `frontier`) and id values, which design §4 keeps.
+  Inventing a facet edit for uniformity would be a false amendment.
+- **PHASE-03 · the malformed-manifest control fixture repaired, not reinterpreted.**
+  Observed, then decided. My first control omitted `index.json` from the manifest's
+  `puts`, so the replay published two entity files against a stale index and the
+  loader refused with "unexpected entry … is not explained by the index". That is a
+  fixture defect, so the batch was rebuilt to stage the index last (as the durability
+  suite's canonical batch does) rather than reported as a product finding. The
+  corrected pair discriminates: 1 → refusal with zero replay, 2 → whole replay.
+- **PHASE-03 · no new knowledge record minted.** Deferred. The durable lessons (a
+  hand-built recovery fixture must stage the index inside the batch; no `python3` in
+  this jail, use `jq`; DEC-002/012 carry no identity spelling in their facets) are in
+  this file's `### Learned` and the phase sheet. The audit may promote any of them.
+- **PHASE-03 · the README prose finding and the `src/predicate.rs` selector gap left
+  open, in writing.** Decided. Both are outside this phase's authority: the README is
+  CHR-001's write scope and the design is locked. They are in `### Open` as unresolved
+  work for the operator and the audit, not silently dropped.
+
+### PHASE-03 — 2026-11-02 (sub-orchestrator seat) — **completed**
+
+**Shipped.** No source change — the phase is the evidence and handoff phase, and the
+probes found no defect to fix. Two deliverables:
+
+1. `.doctrine/slice/004/decision-amendments.md` (commit `24682b2`) — the per-record
+   amendment proposal for **DEC-002, DEC-005, DEC-007, DEC-010, DEC-012, DEC-016**.
+   Every "current" passage was read from the record's facet *and* prose tier with
+   `doctrine show` on 2026-11-02, not from the design table or an earlier paraphrase.
+   Shape: per record a facet table (field · current verbatim · proposed · changed or
+   retained) and a prose table anchored by section heading, then an explicit
+   *retained* list of the rationale and consequences that do not move, then the dated
+   ADR-001/SL-004 amendment note. Two hard requirements are discharged or refused
+   precisely:
+   - **DEC-005 is proposed as a withdrawal, not a respelling.** Its *Documented
+     consequence* ("An embedded object carrying `id` cannot be inline metadata in
+     0.1…") and its *What counts* rule ("A `Value::Object` with a member `id`…") are
+     replaced by a rule that keeps `smut_id` reserved at every depth and states the
+     converse — an ordinary `id` **is** data and may be inline metadata — with a
+     DEC-021 citation for the loader enforcement. Its quoted signature is corrected
+     from `Result<Option<&str>, Error>` to `Result<Option<&str>, Reject>`, which is
+     what `src/entity.rs:32` returns.
+   - **DEC-007, DEC-010, DEC-016** move to `smut_id` / version 2 in their facet wording
+     and prose; **DEC-002 and DEC-012** move only in their examples, because no facet
+     field in either names the identity member — their `id` occurrences are container
+     names and id values, which design §4 keeps.
+2. The independently repeated evidence set below, with the seat's and PHASE-02's
+   results not transcribed.
+
+**Gate (this run, on the implementation tree).** `just check` **exit 0**, 0 failures,
+0 ignored, 0 warnings: build, both clippy configs at `-D warnings`, `cargo fmt
+--check`, then default tests (lib **370**; cli_contract 50, compatibility 10,
+concurrency 4, conventions 14, durability 0, fixture 15, predicates 13,
+readme_example 5, render 11, roundtrip 4, selection 8, store_corruption 27, traversal
+34, doctests 0) and `--features fault-injection` (lib **383**, durability_crash
+**48**, every other suite identical). `doctrine slice verify-vt 4`: PHASE-01 VT-1..3
+and PHASE-02 VT-1..8 **all PASS** — source presence only, recorded separately from
+the behavioural probes, because it cannot prove any probe ran.
+
+**Lifecycle probes (fresh scratch stores, `target/debug/smut`, no live store).**
+
+| Probe | Result | Exit |
+| --- | --- | --- |
+| fresh format 2: `declare` p1 with `id:"legacy-7"` at the root and `id` values at depth (7, `"deep-tag"`, `null`, `[1,2]`) | created; index `format_version` **2**; stored file names `smut_id` first and keeps every `id` verbatim, including `"id": null` and `"id": [1,2]` | 0 |
+| `get`, `query where id=="legacy-7"`, `query where smut_id=="p1"`, `select:["smut_id"]` | ordinary `id` is data and selectable; identity selects; identity-only projection returns `[{"smut_id":"p1"}]` | 0 each |
+| `query where id=="p1"` (identity under the old spelling) | `"objects":[]` — a field no entity carries fails nobody; no error | 0 |
+| `render` / `render --show-fields` | ordinary `id` renders as `- **id:** legacy-7`; `smut_id` suppressed | 0 |
+| `delete` then `query` | `{"deleted":["p1"],"missing":[]}` then `"missing":["p1"]` | 0 |
+| version-1 index (`jq '.format_version = 1'`) → `get` / `query` | `smut: the store index has format_version 1, and this build reads only 2`, empty stdout, index bytes unchanged (`md5sum -c`) | **1** / **1** |
+| version-1 committed manifest (puts incl. a fresh uid **and `index.json`**, one removal) → `get alpha` | `smut: manifest.json is not a valid store entry: format_version 1 is not the version this build reads (2)`; all three published documents byte-identical after the refusal; `journal.commit/` retains the evidence | **1** |
+| the same store and staged files, manifest `format_version: 2` | replayed whole: alpha → `"changed"`, `Fresh.json` published, beta removed, index now lists alpha+gamma | **0** |
+| RV-022 F-3 re-run: nested `tags[1].smut_id` hand-edited to `null` → `get root` (field not followed) | `smut: w10eP…c.json is not a valid store entry: identity at $["tags"][1]["smut_id"] must be a nonempty string`, empty stdout | **1** |
+| same corrupt store → `query follow ["kids"]`, and `render` | identical refusal; entity and index bytes unchanged | **1** / **1** |
+| no-panic check on the corrupt store | exit 1, not 101 or 134 | 1 |
+| control: identity restored | both objects, `depths {k1:1,root:0}`, one edge, `frontier ["k1"]` | 0 |
+| seed's `IdDisagreement` re-derived | `the entity file … holds "other" under smut_id, and the index maps it to mapped` | 1 |
+| mapped file with **no** identity member | `the entity file … holds nothing under smut_id, and the index maps it to mapped` — `describe()`'s absent arm is `nothing` and `docs/store-format.md:267` quotes this sentence | 1 |
+| invalid identity in a *request* (`declare [{"smut_id":null}]`) | `invalid smut_id: null, and smut_id must be a nonempty string`; the store is not created | **2** |
+
+The version-1 control is a genuine discrimination, not a no-op fixture: the same
+store and the same staged bytes give a version refusal at 1 and a complete replay at
+2. (First attempt omitted `index.json` from the manifest's `puts` and the replay
+published against a stale index; that is a fixture defect, corrected by staging the
+index last as the durability suite's canonical batch does. Recorded so the first
+result is not read as a recovery defect.)
+
+**Fixture equivalence, repeated from the recorded original.** Baseline
+`tests/fixtures/interview/entities.json` at revision `2470576` is blob
+`f5b29de67b5f539be018c72c5e88c3bd0f301a93` (75 147 bytes; content sha1
+`4637754f0be58979b3081385854ae3377c51a6e5`), **66** entities, **0** `smut_id`,
+**223** `"id"`. Read with `git cat-file blob`; the committed fixture today is 66
+entities / 223 `smut_id` / **0** `"id"`. `sed 's/"smut_id":/"id":/g'` over the
+committed fixture is **byte-identical** to that blob (`cmp` silent, sha1 equal), and
+`jq -S` canonicalisations compare equal. Both negative controls fire on the same
+procedure: an altered `title` and a swapped array pair each differ under `cmp` *and*
+under the structural comparison, and 66 entities survive the swap. `[{"a":1}]` vs
+`[{"a":1.0}]` stay distinct under the canonicaliser, so the comparison keeps `1`
+≠ `1.0`. No second fixture was committed.
+
+**Residual `id` classification, from the repo-wide count.** `rg -o '"id"' -g
+'!target/**' | wc -l` = **65** (pre-phase baseline re-measured at **1091**; the
+slice body's 984 and the review's 974 predate SL-005). By meaning: ordinary payload
+data under test **54** (cli_contract 28, entity 13, store_corruption 12, render 1);
+arbitrary member in a non-entity fixture **2** (`src/input.rs`); operator prose
+outside this slice's scope **5** (`README.md` 16, 73, 77, 249, 252); historical
+product prose keeps the *word* id with **0** structural keys; missed structural use
+**0**. The six decisions' pending reconciliation targets are a separate ledger
+(`.doctrine/knowledge/decision/002,005,007,010,012,016`, mapped in the amendment
+proposal, not counted as residual defect). Wire spelling in production: exactly one
+non-test occurrence, `src/entity.rs:17` `ENTITY_ID`, plus `src/learn.rs:271/277/284`,
+which state the spelling in guide examples rather than emit it.
+
+**Decisions.** (1) The probes were run by the seat rather than delegated: evidence
+that must be *independently repeated* is not evidence if it arrives through a
+worker's handback, and with no source change there was no red/green cycle to
+delegate. (2) `just check` was started in the phase's first minute and read at the
+end, so the long pole ran underneath the probe and authoring work. (3) The
+amendment proposal is a committed slice artefact, never a record edit; `/reconcile`
+remains the only writer of the six records. (4) DEC-002 and DEC-012 are recorded as
+having **no facet change** rather than given a uniform-looking invented one.
+
+**Range and registry.** Own commit `24682b2` (the amendment proposal) plus the
+rollup commit this section lands in; first own commit's parent is `963a788` (the
+seat's PHASE-02 review), so the registry range is `963a788..<rollup tip>` and no
+foreign commit sits inside it. `doctrine slice verify-vt 4` re-run after completion
+and the recorded delta; `doctrine slice conformance 4` read at the terminus.
+
+**Workers and cost.** None spawned. Wall clock was dominated by the one `just check`
+run and the seven-surface authoring of the proposal; the probes are sub-second
+against the warm `target/` and scratch stores. The 30-minute charter clock was the
+binding constraint, which is why the amendment proposal was committed as its own
+slice before the notes rollup.
