@@ -55,3 +55,23 @@ unverified.
   (exact fence shape), or the harness is deliberately widened with a reason.
 - No declaration or response example contradicts the shipped binary at 0.2.
 - `cargo publish` for 0.2 runs on a README that has been read against the binary.
+
+## Closing
+
+Resolved `done`. Each Done-when bullet, and what it rests on:
+
+- **Examples execute.** `cargo test --test readme_example` is 9/9; every `console`
+  block in the page is a transcript, and each one runs against the built binary and
+  matches its recorded output. The fence question was settled without widening the
+  harness: the two blocks under `## Getting smut` are `sh` because they are not
+  transcripts (`cargo install smut` is not a `smut` invocation), and the harness's
+  refusal of ` ``` console ` stays as the guard CHR-001 asked for.
+- **Nothing contradicts the binary.** The transcripts are the contradiction test —
+  editing a recorded output without re-running the example fails there, so no
+  example can drift silently.
+- **0.2 is published.** crates.io carries 0.2.2, the version this tree is
+  (operator-confirmed), so `cargo install smut` above "one self-contained binary" is
+  a true sentence and the page carries no release paragraph to keep honest.
+
+The RV-017 guard lapsed when the registry caught up with the tree; the re-arm
+trigger recorded under Progress stands.
