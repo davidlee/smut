@@ -78,3 +78,38 @@ kept as the prior, not as the answer.
 ## Harvest
 
 Nothing yielded yet — the slice is in design. Collected at close.
+
+## Critical pass before drafting (informal, 2026-11-02)
+
+An independent read-only review — a second agent, given the scope, this file, the research
+artefact, the three decisions, the ten resolved inquiries and the code they claim things
+about — returned ten findings. All ten were upheld on the evidence; three changed a
+decision, and three became obligations owed to another stage.
+
+| # | finding | disposition |
+| --- | --- | --- |
+| 1 | DEC-028's "a malformed file never breaks the other layers" contradicts DEC-031's precedence-by-layer, and is wider than either promise | **upheld** → DEC-031 records the collision; DEC-028's clause owes an **in-place revision at reconcile** |
+| 2 | the design never said *where* resolution happens: parse-time (making `cli::parse` impure) or after it | **upheld → DEC-032 amended**: `parse` stays pure and returns the question; the binary resolves it where it computes the store root. Mirrors `Request` |
+| 3 | a shadowed set is visible but unaddressable — no command can print or seed the loser | **upheld → DEC-031 amended**: stated as deliberate, with the listing's path as the workaround; layer-qualified names would change the seed's fixed id, so that is its own decision |
+| 4 | the listing's path form was unspecified, and it decides whether tests can assert anything stable | **partly upheld**: the row prints the file's own path (absolute for a file layer — the row's job is to let a reader open it); the seed's `source` is layer-relative `conventions/<name>.md`, identical for all layers. Rejected the proposal to print root-relative paths in rows: a row saying `conventions/hygiene.md` cannot tell you *which* project |
+| 5 | unreadable and non-UTF-8 files must be rows, not panics — `include_str!` only guarantees UTF-8 for the shipped layer | **upheld → DEC-033 amended** and DEC-031 rule 5 extended: read and decode failure are the same class as parse failure. A symlinked `.md` resolves through the link and is not a failure |
+| 6 | `title_of` mangles an author's heading (`Conventions: ` + lowercased first letter) | **upheld → DEC-031**: the seed's `title` is the heading verbatim; the shipped file's own heading carries the `Conventions:` prefix. Deletes the transformation instead of special-casing it |
+| 7 | two seed fields were undefined for a file set: `summary`, and `version` when the author declares none | **upheld → DEC-031**: `summary` is not a seed field; `version` is omitted rather than claiming the crate's |
+| 8 | `smut conventions NAME > file.md` no longer round-trips once prose is the body | **upheld → DEC-031**: the command is a printer, not a round-trip; the suite asserts "the body", never a regeneration |
+| 9 | DEC-026's cost paragraph and DEC-017's "a file plus a match arm" go stale, and neither is superseded | **upheld** → reconcile obligations below |
+| 10 | "a set's identity is its origin" overclaims, since the stored id stays layer-blind | **upheld → DEC-031**: narrowed to display and resolution identity; the stored id stays `conventions-<name>` |
+
+What the reviewer verified independently and found correct: every load-bearing research
+claim — the byte-identity assertions, the absence of git-root and config-home reading, the
+`Reject→2 / Store→1` map, the cfg-gated `fault-injection` subprocess as the only one, `Cli`
+having no global options, and the learn exit table being one line.
+
+### Obligations owed at reconcile
+
+1. **DEC-028** — narrow "a malformed file never breaks the other layers" to listing and
+   loading, not name resolution. In-place revision (the repo's practice, as in DEC-025 and
+   REV-002).
+2. **DEC-026** — its cost paragraph still promises "a set header naming its own file",
+   which DEC-031 declined. Amend the clause to point at the listing.
+3. **DEC-017** — the sentence about adding a later set being "a file plus a match arm" is no
+   longer how sets arrive; check and amend if it still reads as mechanism.

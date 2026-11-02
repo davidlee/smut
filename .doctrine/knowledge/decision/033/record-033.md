@@ -6,10 +6,10 @@ The exit table is a documented contract, printed by `smut learn` and pinned by t
     1  no store, or the store could not be read or written
     2  invalid input or usage
 
-A layered loader puts a third kind of failure into a command that had none: a set file
-that exists and cannot be loaded. The caller typed a valid command, so exit 2 would blame
-them for someone else's file; and the store is not involved, so exit 1's existing sentence
-does not cover it either.
+A layered loader puts a third kind of failure into a command that had none: a set file that
+exists and cannot be loaded. The caller typed a valid command, so exit 2 would blame them
+for someone else's file; and the store is not involved, so exit 1's existing sentence does
+not cover it either.
 
 ## The rule
 
@@ -17,8 +17,9 @@ does not cover it either.
 supplied — an unknown set name, an unknown `--format`, `--format json` without a name —
 because those are retryable by reading the diagnostic. Exit 1 covers what the environment
 supplied and the caller cannot fix by typing differently: an unreadable layer directory, a
-set whose frontmatter is unparseable, a frontmatter key the format derives elsewhere. The
-diagnostic names the layer, the path and — where there is one — the line.
+file that cannot be opened or decoded, frontmatter that cannot be parsed, a frontmatter key
+the format derives elsewhere. The diagnostic names the layer, the path and — where there is
+one — the line.
 
 The sentence `smut learn` prints for 1 is widened to say so:
 
@@ -37,8 +38,10 @@ and receives none: that is a failed command, not a report.
 
 - `Error` gains a third variant rather than pretending a set lives in a store. Nothing in
   the diagnostic may say "store" about a file that is only advice.
+- The exit-1 class covers **read and decode failure as well as parse failure**, so a set
+  file that is not UTF-8 is a row or a refusal with a reason, never a panic.
 - Three behaviours need tests that can go red: the listing of a broken set at 0, the
   name-refusal of that same set at 1 with its path, and the unchanged exit 2 for a name
-  that resolves to nothing at all.
+  that resolves to nothing.
 - DEC-004's ordering survives: reading advice is not reading a store, and the step-1
   filesystem read does not create, lock or recover anything.

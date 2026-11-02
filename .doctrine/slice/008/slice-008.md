@@ -146,11 +146,11 @@ Two consequences the scope did not anticipate: the listing now has **one row per
   never merge, and the shadowed one is visible rather than absent.
 - One reader: the embedded bytes and a file with identical bytes resolve to the same
   entry; the shipped set is not a special case in the code.
-- Isolation: an unparseable frontmatter, an unreadable directory and a derived
-  frontmatter key each list their layer, path and one-line reason, and none of them
-  prevents another layer from answering. A broken *project* set still wins its name and
-  shadows the user's (DEC-031), which is the one case where isolation and precedence
-  pull in opposite directions and the tested answer is precedence.
+- Isolation: an unparseable frontmatter, an unreadable directory, a file that is not
+  UTF-8 and a derived frontmatter key each list their layer, path and one-line reason, and
+  none of them prevents another layer from answering. A broken *project* set still wins its
+  name and shadows the user's (DEC-031), which is the one case where isolation and
+  precedence pull in opposite directions and the tested answer is precedence.
 - Refusal: an unknown name at exit 2 lists every resolved name with its origin; the
   broken file among them is refused by name at exit 1 with its path and line; a listing
   that reports it exits 0 (DEC-033).
@@ -186,4 +186,8 @@ gate on the deferred `epistemic-records` set.
   this slice, and it must not be pinned before the loader has layers.
 - **CHR-001** — the README paragraphs describing the compiled-in set.
 - **QUE-002** — the environment override's name, what it names and its rank.
+- **Reconcile** — three governance amendments the design created and deliberately did not
+  make: DEC-028's malformed-file clause (isolation is about listing and loading, not name
+  resolution), DEC-026's "set header naming its own file" cost sentence, and DEC-017's
+  "a file plus a match arm". Recorded in `notes.md` § Obligations owed at reconcile.
 - **SL-006** — unblocked by this slice; `epistemic-records` moves back into reach.
