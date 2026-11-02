@@ -1,8 +1,9 @@
 # IMP-013: Conventions are compiled in: a project or a user cannot add, override or trade a set
 
 **Design settled — this is now an implementation brief.** The mechanism is DEC-026
-(where sets live, how they resolve) and DEC-028 (what a set file is and what the
-loader does with it). One call remains before code: the name.
+(where sets live, how they resolve), DEC-028 (what a set file is and what the loader
+does with it) and DEC-029 (the name). Nothing is open except a flag that belongs to
+IMP-008.
 
 ## The problem, unchanged
 
@@ -55,17 +56,12 @@ addressing grammar pinned and implemented later.
 7. **Loader generic over declaration kind**, so a future artefact kind reuses the
    ladder rather than re-deriving it (see § If typed schemas arrive).
 
-## What is still open
+## What is parked
 
-- **The name.** Recommendation: **keep `conventions`** — it is the word that marks
-  advice-not-enforcement, which is the axis a schema future tests, and it costs zero
-  churn (`learn`'s section and its pin, this file's siblings, the
-  `conventions-<name>` id prefix, `type: "convention"`, the leaf directory). `recipe`
-  is disqualified by collision with the guide's "two-call recipe" (twelve mentions and
-  a section heading); `practice` reads as a verb phrase; `advice` hedges equally well
-  and is a rename for no gain. **Not yet recorded as a decision — one word from the
-  operator closes it.** Reopen only if schemas arrive and the vocabulary needs a
-  finer distinction.
+- **The name is settled** (DEC-029): `conventions` spans the command, the leaf
+directory, the `type: "convention"` seeded entity and the `conventions-<name>` id
+  prefix, and it is the word that marks advice-not-enforcement. Reopen only if
+  schemas arrive and the vocabulary needs a finer distinction.
 - **The `--with-conventions` flag** (IMP-008) is downstream and must not be pinned
   before this lands: a flag naming a set means something different once resolution
   has layers.

@@ -1,0 +1,47 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 29
+slug = "the-concept-keeps-the-name-conventions-every-alternative-costs-a-rename-and-buys-less-than-it-costs"
+title = "The concept keeps the name `conventions`: every alternative costs a rename and buys less than it costs"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["conventions", "naming"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = 'Layering (DEC-026) and the file form (DEC-028) were settled while the concept name was left open, because the name has to span four surfaces at once: the command, the leaf directory under .config/smut/, the seeded entity type ("convention"), and the seed id prefix (conventions-<name>). Candidates raised were read, magazine, trope, recipe and keeping conventions. The question that decides how the name must hedge is whether user-definable typed schemas arrive later.'
+choice = 'Keep conventions. The command stays smut conventions, the leaf directory stays .config/smut/conventions/, the seeded entity type stays "convention" and the seed id prefix stays conventions-<name>.'
+alternatives = ["recipe (disqualified by collision with the guide two-call recipe)", " read (collides with the store-reading verbs)", " magazine and trope (charming but unrecoverable in --help)", " practice (reads as a verb phrase)", " advice (hedges equally well but is a rename for no gain)"]
+rationale = "Conventions is already the word for agreed practice rather than enforcement, which is exactly the axis a schema future tests: conventions beside a later schemas reads correctly on sight. Every alternative weakens that marking or collides with an existing term, and each costs a rename across the command, the leaf directory, learn text and its pin, DEC-017 and DEC-026 vocabulary, the entity type and the id prefix. The objection that it is the only plural noun among actions does not survive contact with real CLIs, which carry noun subcommands routinely."
+consequences = ["The four surfaces stay aligned and nothing is renamed while nothing has shipped on disk; reopening the name now costs nothing and after users have files under .config/smut/conventions it costs a migration", " so the reopen trigger is explicit: only if schemas arrive and the vocabulary needs a finer distinction than advice-versus-enforcement"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "settles the name the implementation brief was blocked on"
+target = "IMP-013"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "the file form this name labels"
+target = "DEC-028"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "closes the naming half of RFC-001 open question 6"
+target = "RFC-001"
