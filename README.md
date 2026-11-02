@@ -25,6 +25,19 @@ smut learn
 
 They'll love it.
 
+There's also a flake, if that floats your boat:
+
+```nix
+inputs = {
+  smut = {
+    url = "github:davidlee/smut";
+    inputs.nixpkgs.follows = "nixpkgs";
+  }
+};
+
+# packages = [ inputs.smut.packages.${system}.smut ];
+```
+
 ## Take a peek
 
 An entity is a JSON object. Name an entity with `smut_id`;
