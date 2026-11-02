@@ -641,3 +641,215 @@ the guide
     );
     assert_eq!(transcripts[1].heading, "Next section");
 }
+
+// ── the README's diagram ────────────────────────────────────────────────────
+
+/// The bodies of the fences whose info string is exactly `info`, with the `## `
+/// heading each sits under. The same heading rule as [`transcripts`], so a
+/// diagram and its section's commands can be matched by name.
+fn fenced_with_heading(readme: &str, info: &str) -> Vec<(String, String)> {
+    let mut found: Vec<(String, String)> = Vec::new();
+    let mut heading = String::new();
+    let mut open: Option<String> = None;
+    let mut body = String::new();
+
+    for line in readme.lines() {
+        let trimmed = line.trim();
+
+        if let Some(kind) = open.take() {
+            if trimmed.starts_with("```") {
+                if kind == info {
+                    found.push((heading.clone(), body.clone()));
+                }
+
+                continue;
+            }
+
+            body.push_str(line);
+            body.push('\n');
+            open = Some(kind);
+
+            continue;
+        }
+
+        if trimmed.starts_with("```") {
+            open = Some(trimmed.trim_start_matches('`').to_owned());
+            body.clear();
+
+            continue;
+        }
+
+        if let Some(text) = trimmed.strip_prefix("## ") {
+            heading = text.trim().to_owned();
+        }
+    }
+
+    found
+}
+
+/// Mermaid reads `#` as the start of an entity code, so it is escaped first: the
+/// codes this emits would otherwise be escaped again.
+fn escaped(label: &str) -> String {
+    label.replace('#', "#35;").replace('"', "#quot;")
+}
+
+/// An edge label is delimited by `|`, which its quoted sibling tolerates — the
+/// reason the exporter needs two escape functions and not one.
+fn escaped_pipe(label: &str) -> String {
+    escaped(label).replace('|', "#124;")
+}
+
+/// The projection the README's `jq` program performs, in Rust: generated symbols
+/// in result order, a title for each label, and mermaid's two escape contexts.
+///
+/// This is the pin; the `jq` block is the illustration. Where `jq` is installed
+/// the test runs that program too and requires the two to agree, so a program
+/// that stopped drawing what the README says it draws fails here as well.
+fn project(envelope: &Value) -> String {
+    use std::collections::BTreeMap;
+
+    let objects = envelope["objects"]
+        .as_array()
+        .unwrap_or_else(|| panic!("an envelope carries objects: {envelope}"));
+    let symbol: BTreeMap<&str, String> = objects
+        .iter()
+        .enumerate()
+        .map(|(index, object)| {
+            let id = object["smut_id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("a returned object carries its id: {object}"));
+
+            (id, format!("n{index}"))
+        })
+        .collect();
+
+    let mut lines = vec!["flowchart LR".to_owned()];
+
+    for object in objects {
+        let id = object["smut_id"].as_str().expect("checked above");
+        let label = object["title"].as_str().unwrap_or(id);
+
+        lines.push(format!("  {}[\"{}\"]", symbol[id], escaped(label)));
+    }
+
+    let edges = envelope["traversal"]["edges"]
+        .as_array()
+        .unwrap_or_else(|| panic!("a graph envelope carries edges: {envelope}"));
+
+    for edge in edges {
+        let field = edge["field"].as_str().expect("an edge names its field");
+
+        lines.push(format!(
+            "  {} -->|{}| {}",
+            symbol[edge["source"].as_str().expect("an edge names its source")],
+            escaped_pipe(field),
+            symbol[edge["target"].as_str().expect("an edge names its target")]
+        ));
+    }
+
+    lines.join("\n")
+}
+
+/// The README's own exporter run over `envelope`; `None` when `jq` is not
+/// installed, which leaves the diagram pinned but the illustration unrun.
+fn readme_exporter(envelope: &Value) -> Option<String> {
+    let program = fenced_with_heading(README, "jq").first()?.1.clone();
+
+    let mut child = Command::new("jq")
+        .arg("-r")
+        .arg(&program)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+
+    let mut stdin = child.stdin.take()?;
+    stdin.write_all(envelope.to_string().as_bytes()).ok()?;
+    drop(stdin);
+
+    let output = child.wait_with_output().ok()?;
+
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// A diagram is the easiest example in this file to drift, because a wrong one
+/// still renders. CHR-001's lesson was that an example nothing executes rots, so
+/// the drawing is pinned to the envelope recorded above it rather than to the pen
+/// that drew it — and, where `jq` is installed, to the README's program as well.
+#[test]
+fn the_mermaid_diagram_is_the_projection_of_the_recorded_envelope() {
+    let diagrams = fenced_with_heading(README, "mermaid");
+    assert_eq!(diagrams.len(), 1, "the README draws one graph");
+
+    let (heading, diagram) = &diagrams[0];
+    let section = transcripts(README)
+        .into_iter()
+        .find(|transcript| &transcript.heading == heading)
+        .unwrap_or_else(|| panic!("the diagram's section `{heading}` carries commands"));
+    let recorded = section
+        .steps
+        .last()
+        .expect("a transcript has steps")
+        .output
+        .clone();
+    let envelope: Value = serde_json::from_str(&recorded)
+        .unwrap_or_else(|_| panic!("the last reply is a graph envelope: {recorded}"));
+
+    let projected = project(&envelope);
+
+    assert_eq!(
+        diagram.trim_end(),
+        projected,
+        "the diagram is the projection of the last reply in its own section"
+    );
+
+    if let Some(from_jq) = readme_exporter(&envelope) {
+        assert_eq!(
+            from_jq.trim_end(),
+            projected,
+            "the README's jq program and this test's projection have drifted"
+        );
+    }
+}
+
+/// The README's exporter claims *two* escape contexts and its worked example now
+/// reaches one of them (`#`). A claim about escaping that no example reaches is a
+/// claim nothing checks, so a synthetic envelope reaches all three characters and
+/// the README's own program has to agree with the projection about each.
+#[test]
+fn the_readme_exporter_escapes_both_label_contexts() {
+    let envelope = json!({
+        "objects": [
+            {"smut_id": "a", "title": "A \"quoted\" #1"},
+            {"smut_id": "b"}
+        ],
+        "traversal": {"edges": [{"field": "x|y", "source": "a", "target": "b"}]}
+    });
+
+    let projected = project(&envelope);
+
+    assert!(
+        projected.contains(r#"n0["A #quot;quoted#quot; #35;1"]"#),
+        "a node label escapes `\"` and `#`, `#` first: {projected}"
+    );
+    assert!(
+        projected.contains(r#"n1["b"]"#),
+        "an object with no title falls back to its id: {projected}"
+    );
+    assert!(
+        projected.contains("-->|x#124;y|"),
+        "an edge label escapes the delimiter its sibling tolerates: {projected}"
+    );
+
+    if let Some(from_jq) = readme_exporter(&envelope) {
+        assert_eq!(
+            from_jq.trim_end(),
+            projected,
+            "the README's jq program escapes differently from the projection"
+        );
+    }
+}

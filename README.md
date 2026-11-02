@@ -270,41 +270,67 @@ traversal that follows nothing, so the reply carries the edge set and nothing wa
 expanded:
 
 ```console
-$ smut declare '[{"smut_id":"hub","title":"Hub","children":[{"smut_id":"leaf","title":"Leaf"},{"smut_id":"stem","title":"Stem","up":{"smut_id":"hub"}}]}]'
+$ smut declare '[{"smut_id":"hub","title":"Hub","children":[{"smut_id":"leaf","title":"Leaf #2"},{"smut_id":"stem","title":"Stem","up":{"smut_id":"hub"}}]}]'
 {"changes":[{"smut_id":"hub","previous":null,"status":"created"},{"smut_id":"leaf","previous":null,"status":"created"},{"smut_id":"stem","previous":null,"status":"created"}],"ids":["hub"],"missing":[]}
 $ smut query '{"where":{"title":{"$in":["Hub","Stem"]}},"edges":true,"select":["title"]}'
 {"dangling":[],"missing":[],"objects":[{"smut_id":"hub","title":"Hub"},{"smut_id":"stem","title":"Stem"}],"traversal":{"depths":{"hub":0,"stem":0},"edges":[{"field":"children","source":"hub","target":"stem"},{"field":"up","source":"stem","target":"hub"}],"frontier":[]},"truncated":false,"truncation_reasons":[]}
+$ smut query '{"edges":true,"select":["smut_id","title"]}'
+{"dangling":[],"missing":[],"objects":[{"smut_id":"hub","title":"Hub"},{"smut_id":"leaf","title":"Leaf #2"},{"smut_id":"stem","title":"Stem"}],"traversal":{"depths":{"hub":0,"leaf":0,"stem":0},"edges":[{"field":"children","source":"hub","target":"leaf"},{"field":"children","source":"hub","target":"stem"},{"field":"up","source":"stem","target":"hub"}],"frontier":[]},"truncated":false,"truncation_reasons":[]}
 ```
 
-Two edges, pointing opposite ways, because that is how the store holds them:
-`hub` lists `stem` as a child and `stem` names `hub` as its container. The edge
-set reports what is stored and infers nothing from which direction anyone walked.
-Nothing was walked at all — every `depths` entry is `0`, `frontier` is empty,
-and no `budget` was spent — and the edges are still there because they are
-derived from the returned objects, not from the walk.
+Two things in the second reply. The edges point opposite ways because that is how
+the store holds them — `hub` lists `stem` as a child and `stem` names `hub` as its
+container — so the edge set reports what is stored and infers nothing from which
+direction anyone walked. And nothing was walked: every `depths` entry is `0`,
+`frontier` is empty, no `budget` was spent. The edges are derived from the
+returned objects, not from the walk, which is why they survive a `select` that
+hides the reference field.
 
-That is the whole external-rendering story, and it costs one line of shell: the
-reply already carries `{source, field, target}` triples, so anything that draws
-arrows draws the graph `smut` would.
+That is the whole external-rendering story — the reply already carries
+`{source, field, target}` triples, oriented and deduplicated — so the exporter is
+one `jq` program, and it is spelled out here rather than described. Two things in
+it are not obvious, and both are comments rather than traps:
 
-```sh
-$ smut query '{"where":{"title":{"$in":["Hub","Stem"]}},"edges":true}' \
-  | jq -r '.traversal.edges[] | "  \(.source) -->|\(.field)| \(.target)"'
-  hub -->|children| stem
-  stem -->|up| hub
+```jq
+# Symbols are generated, never ids: an id is opaque data that may hold any
+# character, so pasting one into the graph would hand a payload the syntax.
+#
+# Two escape functions, not one, because mermaid has two label contexts. `#`
+# starts an entity code, so a stored `#` must become `#35;` *before* `"` becomes
+# `#quot;` — otherwise the codes this emits get escaped again. And `|` delimits
+# an edge label while being ordinary text inside a quoted node label.
+def esc:     gsub("#"; "#35;") | gsub("\""; "#quot;");
+def escpipe: esc | gsub("\\|"; "#124;");
+
+.objects as $objs
+| ($objs | to_entries | map({key: .value.smut_id, value: "n\(.key)"}) | from_entries) as $sym
+| [ "flowchart LR",
+    ( $objs[] | "  \($sym[.smut_id])[\"\((.title // .smut_id) | esc)\"]" ),
+    ( .traversal.edges[] | "  \($sym[.source]) -->|\(.field | escpipe)| \($sym[.target])" ) ]
+| .[]
 ```
 
-Which is the format `mermaid` reads, from a store that has no renderer at all.
-Note the node symbols: they are generated, never the ids. An id is opaque data
-that may hold any character, so a converter that pasted one into the graph would
-hand a payload the syntax — the same rule `smut render --format mermaid` will
-follow in 1.0.
+It needs `objects` and `edges` from the **same** envelope, because `edges` carries
+ids and a diagram wants titles — that is why the third query above keeps `title`
+in `select`. Narrower, and every edge survives while every node degrades to an
+id: connectivity comes from the stored entity, presentation from the projection.
+Run over that store, the program draws:
 
 ```mermaid
-graph TD
-  n0["Hub"] -->|children| n1["Stem"]
-  n1 -->|up| n0
+flowchart LR
+  n0["Hub"]
+  n1["Leaf #35;2"]
+  n2["Stem"]
+  n0 -->|children| n1
+  n0 -->|children| n2
+  n2 -->|up| n0
 ```
+
+What no program can recover from `edges` alone: the picture is cut by `limit`
+along with `objects` and says nothing about it, and a dangling reference is not
+an edge, so a broken link looks like no link. Both are readable in the envelope,
+and a drawing has no room for either — which is the reason the renderer inside
+`smut` has to keep saying it.
 
 ## Sharp edges
 
