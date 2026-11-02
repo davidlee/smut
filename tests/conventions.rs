@@ -212,15 +212,16 @@ fn the_bare_command_lists_exactly_one_set_on_one_line() {
         "the deferred set is not listed as shipped: {:?}",
         listed.stdout
     );
-    // The whole row, name, two spaces and the summary the shipped file's own
-    // frontmatter declares: a listing that printed the frontmatter, invented a
-    // summary or spaced the columns differently reddens here. It is asserted
+    // The whole row, name, layer, the summary the shipped file's own frontmatter
+    // declares, and the leaf path the bytes are embedded under, two spaces
+    // apart: a listing that printed the frontmatter, invented a summary, dropped
+    // the layer or spaced the columns differently reddens here. It is asserted
     // last on purpose — an exact row above the four weaker rows would make each
     // of them unfalsifiable.
     assert_eq!(
         listed.stdout,
-        format!("hygiene  {}\n", summary()),
-        "the row is the set's name and its declared summary"
+        format!("hygiene  binary  {}  conventions/hygiene.md\n", summary()),
+        "the row is the set's name, its layer, its declared summary and its own path"
     );
 }
 

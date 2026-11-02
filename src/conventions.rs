@@ -651,24 +651,57 @@ fn sort_layer(entries: &mut [Entry]) {
     });
 }
 
-/// The listing of any entries: one line per entry, two columns two spaces apart
-/// — the name, then the set's summary, a dash when it declares none, or the cause
-/// it did not load.
-fn listing_of(entries: &[Entry]) -> String {
+/// The listing of `entries`: one row per entry, four fields two spaces apart and
+/// one newline per row — the name (or `<not UTF-8>`), the layer, a verdict, and
+/// the file's own path.
+///
+/// The rows are in the order the slice is given, because that order is the
+/// loader's and it is the precedence story: [`load`] hands the layers over
+/// nearest first and each layer by name, so the first row for a name is the
+/// advice in force. This function never sorts.
+///
+/// The verdict is one of four states, in a fixed precedence so that no two of
+/// them can claim one row:
+///
+/// 1. `did not load: <reason>` when the entry failed. It **wins over the shadow**:
+///    a broken file behind a working one states why it is broken, because that is
+///    what the reader can act on, and the demotion is not the whole story.
+/// 2. `shadowed` when the entry loaded but an *earlier* one carries its name.
+///    Shadowing is positional, not a parse outcome: entries arrive nearest layer
+///    first, so an earlier same-named entry means a nearer layer holds the name —
+///    and the binary row is not exempt, because the rule is about position and
+///    not about which layer the bytes came from.
+/// 3. the set's `summary` when it loaded, is not shadowed, and declares one.
+/// 4. `-` when it loaded, is not shadowed, and declares none.
+///
+/// A `name` of `None` is not text and can match nothing, so it is never
+/// shadowed; the failure it is listed under is state 1.
+pub fn listing(entries: &[Entry]) -> String {
     let mut listing = String::new();
 
-    for entry in entries {
+    for (position, entry) in entries.iter().enumerate() {
         let name = entry.name.as_deref().unwrap_or("<not UTF-8>");
+        let layer = entry.origin.layer;
 
-        match &entry.outcome {
+        let verdict = match &entry.outcome {
+            Outcome::Failed(cause) => format!("did not load: {}", cause.reason),
             Outcome::Loaded(set) => {
-                let summary = set.summary.as_deref().unwrap_or("-");
-                listing.push_str(&format!("{name}  {summary}\n"));
+                let shadowed = entries[..position]
+                    .iter()
+                    .any(|earlier| earlier.name.is_some() && earlier.name == entry.name);
+
+                if shadowed {
+                    "shadowed".to_owned()
+                } else {
+                    set.summary.clone().unwrap_or_else(|| "-".to_owned())
+                }
             }
-            Outcome::Failed(cause) => {
-                listing.push_str(&format!("{name}  did not load: {}\n", cause.reason));
-            }
-        }
+        };
+
+        listing.push_str(&format!(
+            "{name}  {layer}  {verdict}  {}\n",
+            entry.origin.path.display()
+        ));
     }
 
     listing
@@ -717,15 +750,10 @@ pub fn resolve(name: Option<&str>, format: Option<&str>) -> Result<Ask, Error> {
 /// declaration for a seed. Pure function of the [`Ask`]; nothing is read.
 pub fn answer(ask: Ask) -> String {
     match ask {
-        Ask::List => listing(),
+        Ask::List => listing(&binary_layer(SHIPPED_KIND)),
         Ask::Prose(set) => format!("{}\n", set.body),
         Ask::Seed(set) => entity::serialise(&seed(&set), Form::Stdout),
     }
-}
-
-/// The listing of the sets this binary ships: one line each, and nothing else.
-pub fn listing() -> String {
-    listing_of(&binary_layer(SHIPPED_KIND))
 }
 
 /// One set's seed: an ordinary entity declaration. The fields are supplied with
@@ -823,11 +851,20 @@ mod tests {
 
     #[test]
     fn the_listing_holds_one_line_per_shipped_set() {
-        let listing = listing();
+        let listing = listing(&binary_layer(SHIPPED_KIND));
+        let summary = shipped_hygiene()
+            .summary
+            .expect("the shipped set declares a summary");
 
         assert_eq!(listing.lines().count(), SHIPPED.len(), "{listing}");
-        assert!(listing.starts_with("hygiene  "), "{listing}");
+        assert!(listing.starts_with("hygiene  binary  "), "{listing}");
         assert!(listing.ends_with('\n'), "the shell writes one newline");
+        assert_eq!(
+            listing,
+            format!("hygiene  binary  {summary}  conventions/hygiene.md\n"),
+            "one shipped set is one four-field row: its name, its layer, its summary and \
+             the path its bytes are embedded under"
+        );
     }
 
     #[test]
@@ -1664,16 +1701,254 @@ mod tests {
             }),
         };
 
-        let rendered = listing_of(&[entry]);
+        let rendered = listing(&[entry]);
 
         assert_eq!(
-            rendered, "Mine  -\n",
-            "two columns two spaces apart, the dash for an absent summary, one newline"
+            rendered, "Mine  project  -  /scratch/sets/Mine.md\n",
+            "four columns two spaces apart, the dash for an absent summary, one newline"
         );
         assert_eq!(
             rendered.matches('\n').count(),
             1,
             "one set is one line: {rendered}"
+        );
+    }
+
+    // The dash is the *in-force* state, not merely "declares no summary": the
+    // twin below it carries a name an earlier entry already has, so it stands in
+    // a shadow and prints `shadowed` although it declares a summary of its own.
+    #[test]
+    fn an_in_force_set_without_a_summary_lists_with_a_dash() {
+        let in_force = Entry {
+            name: Some("Mine".to_owned()),
+            origin: project_origin("/scratch/sets/Mine.md"),
+            outcome: Outcome::Loaded(Set {
+                name: "Mine".to_owned(),
+                title: "Mine".to_owned(),
+                summary: None,
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+        let shadowed = Entry {
+            name: Some("Mine".to_owned()),
+            origin: Origin {
+                layer: Layer::User,
+                path: PathBuf::from("/scratch/config/smut/conventions/Mine.md"),
+            },
+            outcome: Outcome::Loaded(Set {
+                name: "Mine".to_owned(),
+                title: "Mine".to_owned(),
+                summary: Some("the user layer's advice".to_owned()),
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+
+        let rendered = listing(&[in_force, shadowed]);
+
+        assert_eq!(
+            rendered,
+            "Mine  project  -  /scratch/sets/Mine.md\n\
+             Mine  user  shadowed  /scratch/config/smut/conventions/Mine.md\n",
+            "the in-force set's row is the dash and the twin behind it is shadowed, so the \
+             dash is the in-force state and not the no-summary state alone"
+        );
+    }
+
+    // `load` hands the entries over layer-major, by name within a layer; the
+    // listing renders that order and never re-sorts. A renderer that sorted by
+    // name across layers moves the user `Alpha` up beside the project one.
+    #[test]
+    fn the_listing_is_layer_major_then_by_name() {
+        let summary = shipped_hygiene()
+            .summary
+            .expect("the shipped set declares a summary");
+        let binary = binary_layer(SHIPPED_KIND)
+            .into_iter()
+            .next()
+            .expect("the binary layer ships one set");
+
+        let rendered = listing(&[
+            Entry {
+                name: Some("Alpha".to_owned()),
+                origin: project_origin("/scratch/project/Alpha.md"),
+                outcome: Outcome::Loaded(Set {
+                    name: "Alpha".to_owned(),
+                    title: "Alpha".to_owned(),
+                    summary: Some("the project layer's alpha".to_owned()),
+                    version: None,
+                    body: "Alpha.".to_owned(),
+                }),
+            },
+            Entry {
+                name: Some("Mine".to_owned()),
+                origin: project_origin("/scratch/project/Mine.md"),
+                outcome: Outcome::Loaded(Set {
+                    name: "Mine".to_owned(),
+                    title: "Mine".to_owned(),
+                    summary: None,
+                    version: None,
+                    body: "Mine.".to_owned(),
+                }),
+            },
+            Entry {
+                name: Some("Alpha".to_owned()),
+                origin: Origin {
+                    layer: Layer::User,
+                    path: PathBuf::from("/scratch/user/Alpha.md"),
+                },
+                outcome: Outcome::Loaded(Set {
+                    name: "Alpha".to_owned(),
+                    title: "Alpha".to_owned(),
+                    summary: Some("the user layer's alpha".to_owned()),
+                    version: None,
+                    body: "Alpha.".to_owned(),
+                }),
+            },
+            binary,
+        ]);
+
+        assert_eq!(
+            rendered,
+            format!(
+                "Alpha  project  the project layer's alpha  /scratch/project/Alpha.md\n\
+                 Mine  project  -  /scratch/project/Mine.md\n\
+                 Alpha  user  shadowed  /scratch/user/Alpha.md\n\
+                 hygiene  binary  {summary}  conventions/hygiene.md\n"
+            ),
+            "the rows are the order the slice was given, never a sort of it"
+        );
+    }
+
+    // The rule is about position, not about layer, so the shipped row is not
+    // exempt: a nearer file with the same name demotes it too.
+    #[test]
+    fn the_binary_row_is_shadowed_by_a_nearer_file() {
+        let nearer = Entry {
+            name: Some("hygiene".to_owned()),
+            origin: project_origin("/scratch/sets/hygiene.md"),
+            outcome: Outcome::Loaded(Set {
+                name: "hygiene".to_owned(),
+                title: "Hygiene".to_owned(),
+                summary: Some("our house rules".to_owned()),
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+        let binary = binary_layer(SHIPPED_KIND)
+            .into_iter()
+            .next()
+            .expect("the binary layer ships one set");
+
+        let rendered = listing(&[nearer, binary]);
+
+        let row = rendered
+            .lines()
+            .nth(1)
+            .expect("the binary entry is the second row");
+
+        assert_eq!(
+            row.split("  ").nth(2),
+            Some("shadowed"),
+            "a nearer file with the shipped set's name demotes the shipped row: {rendered}"
+        );
+        assert_eq!(
+            row, "hygiene  binary  shadowed  conventions/hygiene.md",
+            "the shipped row keeps its layer and its own embedded path while it is demoted"
+        );
+    }
+
+    // RV-029 F-11's row: a broken file behind a working one states why it did
+    // not load, because the demotion is not the whole story.
+    #[test]
+    fn a_failed_row_beats_shadowed() {
+        let in_force = Entry {
+            name: Some("hygiene".to_owned()),
+            origin: project_origin("/scratch/sets/hygiene.md"),
+            outcome: Outcome::Loaded(Set {
+                name: "hygiene".to_owned(),
+                title: "Hygiene".to_owned(),
+                summary: Some("our house rules".to_owned()),
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+        let reason = "the file is not UTF-8 text: /scratch/config/smut/conventions/hygiene.md";
+        let broken = Entry {
+            name: Some("hygiene".to_owned()),
+            origin: Origin {
+                layer: Layer::User,
+                path: PathBuf::from("/scratch/config/smut/conventions/hygiene.md"),
+            },
+            outcome: Outcome::Failed(Cause {
+                line: None,
+                reason: reason.to_owned(),
+            }),
+        };
+
+        let rendered = listing(&[in_force, broken]);
+
+        let row = rendered
+            .lines()
+            .nth(1)
+            .expect("the failed entry is the second row");
+
+        assert_eq!(
+            row.split("  ").nth(2),
+            Some(format!("did not load: {reason}").as_str()),
+            "the failure states its reason, not only its demotion: {rendered}"
+        );
+        assert_ne!(
+            row.split("  ").nth(2),
+            Some("shadowed"),
+            "the reason wins over the demotion: {rendered}"
+        );
+        assert_eq!(
+            row,
+            format!(
+                "hygiene  user  did not load: {reason}  \
+                 /scratch/config/smut/conventions/hygiene.md"
+            ),
+            "the failed row is name, layer, reason and its own path"
+        );
+    }
+
+    // The path column is the entry's own `Path`, rendered: absolute for a file,
+    // the embedded leaf for the binary. A renderer that derived a `String` from
+    // the name reddens on the first row, one that rewrote the root on the second.
+    #[test]
+    fn the_path_column_is_absolute_for_a_file_and_a_leaf_for_the_binary() {
+        let file = Entry {
+            name: Some("Mine".to_owned()),
+            origin: project_origin("/scratch/sets/Mine.md"),
+            outcome: Outcome::Loaded(Set {
+                name: "Mine".to_owned(),
+                title: "Mine".to_owned(),
+                summary: None,
+                version: None,
+                body: "Advice.".to_owned(),
+            }),
+        };
+        let binary = binary_layer(SHIPPED_KIND)
+            .into_iter()
+            .next()
+            .expect("the binary layer ships one set");
+        let summary = shipped_hygiene()
+            .summary
+            .expect("the shipped set declares a summary");
+
+        let rendered = listing(&[file, binary]);
+
+        assert_eq!(
+            rendered.lines().next(),
+            Some("Mine  project  -  /scratch/sets/Mine.md"),
+            "a file's row ends in its own absolute path: {rendered}"
+        );
+        assert_eq!(
+            rendered.lines().nth(1),
+            Some(format!("hygiene  binary  {summary}  conventions/hygiene.md").as_str()),
+            "the binary's own path is the leaf the bytes are embedded under: {rendered}"
         );
     }
 
