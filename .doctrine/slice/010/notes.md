@@ -126,12 +126,18 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · exploring · 04d3480
+fresh-as-of: 2026-11-02 · drafting · f1f2a9b
 
 ### Produced
 
 - `research/research.md` — two threads, cross-thread findings F1–F7, design-input deltas
-  D1–D7. Findings F1 and F2 revise the scope's objective 4 and add an obligation.
+  D1–D7, plus `raw/spike-clap-argv.md` (the twelve-case clap evidence).
+- **DEC-034 … DEC-041** — one settled decision per inquiry: the verb, value typing, bare
+  roots and the escape, the grammar inside clap's derive, the emit-for-`spec::parse` seam,
+  refusing only what JSON cannot spell, what the guide teaches, `--ids`/`--select`.
+- `.doctrine/slice/010/design.md` — seven sections (surface, compiler, refusals, the verb,
+  the guide, code impact, verification), materialised at revision 25.
+- Eight `design-target` selectors, matching §6 exactly.
 
 ### Learned
 
@@ -139,16 +145,28 @@ fresh-as-of: 2026-11-02 · exploring · 04d3480
   wanted to invent; the rule shrinks rather than gets reworded (F1).
 - The guide's recipes are pinned three ways — prose decision, `EXAMPLE_*` constants, and
   an executed test — so teaching a new spelling is a decision amendment (F2).
-- clap's exposure is narrower than the scope claimed: `=`, `!`, `~` are ordinary
-  positional content; the untried thing is unbounded positionals interleaved with flags.
-- **The spike settled it: clap 4.6.7 carries the whole grammar with a bare
-  `Vec<String>` and no attributes.** The danger is not failure but the *silent*
-  alternatives — `trailing_var_arg` and `allow_hyphen_values` both misparse with exit 0,
-  and the second leaks `--` into the tokens. DEC-008 survives untouched; the spike is
-  evidence for a decision, not a change to one.
+- **clap 4.6.7 carries the whole grammar with a bare `Vec<String>` and no attributes.**
+  The danger is not failure but the *silent* alternatives: `trailing_var_arg` and
+  `allow_hyphen_values` both misparse with exit 0, and the second leaks `--` into the
+  tokens. DEC-008 survives untouched.
+- clap already refuses a repeated scalar flag by name at exit 2, so the front-end needs no
+  repeated-flag rule — the residual disclosed at sufficiency acceptance closed by evidence.
+- `smut q` with nothing at all is `query {}`, which the specification already defines as
+  legal, so the front-end has no no-query refusal to write.
 
 ### Open
 
-- inq-1 … inq-8 (declared, unanswered). inq-4 has its evidence; the rest are open.
-- Both exploring gate acts are outstanding: `governance-confirmed` and `graph-reviewed`,
-  awaiting the operator's plain replies.
+- **The review pass has not run.** The run is at `drafting`, forward to `reviewing` ready;
+  entering it opens this pass's RV ledger. No `review_policy` is declared yet — the choice
+  (formal hostile pass versus straight to plan) sits with the operator.
+- **Obligations owed at reconcile** (none may be paid mid-slice):
+  - DEC-016 — amend to name the DSL spelling of the two-call recipe; the guide keeps both
+    spellings executed until then.
+  - DEC-035 — its "JSON scalar" wording is narrowed by design §2, which excludes JSON
+    *string* literals so a value is never unquoted twice.
+  - DEC-037 — its "no-query refusal belongs to this layer" consequence is superseded: the
+    layer would own it, and §3 decides not to have one.
+  - IMP-014 — five new `Reject` variants land with no census to catch a missing one.
+  - IMP-016 — the DSL's operator table is a third site that names the five operators.
+- Slice status is still `design`; the lifecycle move to `plan` follows the design locking, not
+  the drafting stage.
