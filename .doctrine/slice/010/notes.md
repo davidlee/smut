@@ -177,6 +177,17 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   `tests/fixture.rs`'s token-list runner (`Declared::q`, the grammar-safe `IDS`
   substitution) executing the traversing, follow and filtering recipes in both
   spellings. Delta recorded (`f26f923..cd69acd`); `verify-vt` PASS for VT-1/VT-2.
+- **VH-1 — verified by the operator** against a real store (`zmux.local/.smut`,
+  gitignored): the five hot-path lines typed from `smut learn` with no quotes, each
+  exit 0. Store-specific substitutions: root `s-zmux`, `status=closed`. Verified
+  along the way: `title~Handoff` is byte-identical to its `smut query` twin, and the
+  direction pair behaves as designed (`--follow part-of` from `s-zmux` → the session
+  alone; `--backlinks part-of` → 53 inbound entities).
+- **`readme-examples.md`** — the README `q` section proposed for reconcile: the
+  placement, the missing `smut q` row in the `Commands` table, a reproducible
+  six-entity fixture, eight examples with exact verified transcripts, and the two
+  limits (a structural operand on an array; cross-field `$or`) each shown with its
+  JSON escape.
 
 ### Learned
 
@@ -307,13 +318,19 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   `doctrine slice verify-vt 10` reports every VT PASS (PHASE-01…04). The lifecycle is
   deliberately **not** moved to `audit` — that is the seat's call, and audit is not
   this run's charter.
-- **VH-1 is pending** (a human terminal gate, not claimable here): type the five hot-path
-  queries from the guide without a quote — `smut q title~graph`; `smut q IDS status=open
-  --ids`; `smut q session --backlinks part-of --depth 2 --ids`; `smut q type=question
-  status=open --select smut_id,title`; `smut q --has body --order title:desc` — against a
-  populated store, `IDS` being the first call's id list.
+- **VH-1 is a pass** (operator, 2026-11-03): the five hot-path lines typed from the
+  guide without a quote against a real store — all exit 0. Store-specific spellings:
+  root `s-zmux`, questions converged to `status=closed`, `title~Handoff` rather than
+  `~graph` (no title carries "graph", and `~` is case-sensitive).
+- **README material is owed to reconcile**, written but not paid:
+  `.doctrine/slice/010/readme-examples.md` carries the proposed `## Querying, quickly`
+  section with verified transcripts, plus two findings for that edit — the
+  `Commands` table (README:178) has **no `smut q` row**, and the specification-keys
+  paragraph owes one sentence saying `q` compiles to the same specification. README
+  is operator-owned (CHR-001) and was not touched.
 - **Next:** the seat decides on audit. Nothing in SL-010's implementation is open; the
-  five design corrections and the six reconcile obligations above are audit/reconcile's.
+  five design corrections and the six reconcile obligations above are audit/reconcile's,
+  and the README section is the seventh reconcile item.
 
 ## Implementation run
 
@@ -351,6 +368,14 @@ moved since:
   and strictness rules, and every message test.
 - **Charter order** is the plan array: PHASE-04 → PHASE-02 → PHASE-03. Ids are
   append-only; the split seam is not the sequence.
+- **A foreign commit landed mid-run.** `c8c2e7b` (*"quotient"*, author David Lee at
+  09:36) committed `.quotient/` and `backlog/improvement/021` while PHASE-03 was in
+  progress. It is **not** this slice's work: it never touched a design-target path,
+  every phase's delta was recorded from its own commits (`f5c6f27..bb6a9d2`,
+  `ea8dacb..d20a84f`, `f26f923..cd69acd`), and all three land after or before it, not
+  across it. It does appear in `doctrine slice conformance 10`'s **undeclared** cell
+  (14 paths now), which is where a foreign commit inside the slice's span is visible —
+  audit should read that cell as metadata plus that commit, not as slice drift.
 
 ### PHASE-01 — the compiler's core (completed 2026-11-03)
 
@@ -629,6 +654,10 @@ stamp, so no range fallback was needed), and `doctrine slice verify-vt 10` repor
 Seat-level envelope decisions, one line each: phase · decision · reason ·
 (decided / deferred / escalated).
 
+Bullets are grouped by phase, and each charter appended its own block, so the
+phase order below is not the execution order — the charters ran PHASE-04 →
+PHASE-02 → PHASE-03, and the `Seat` block closes the run.
+
 - **PHASE-03 · the hot-path table prints the five lines and no character counts,
   decided.** IDE-006's lengths were re-measured (18/28/50/55/36) to confirm the
   table rather than copied; a printed figure is a claim that drifts, so the guide
@@ -653,18 +682,6 @@ Seat-level envelope decisions, one line each: phase · decision · reason ·
 - **PHASE-03 · nothing else left the envelope.** No escalation, no backlog
   deferral, no design drift, no source edit outside `src/learn.rs` and
   `tests/fixture.rs`; `.quotient/` and `_envrc` untouched.
-- **Seat · audit entry left to the operator, deferred.** All four phases are
-  complete and every VT is green, but VH-1 is a human act and the charter loop
-  stops before audit. Reason: the skill's boundary, and recording an audit start
-  before the human closure gate would overstate the evidence. The operator gets
-  the five-query script and the `doctrine slice status 10 audit` decision.
-- **Seat · the guide's “The hot path therefore has no flags” left unchanged,
-  deferred to audit.** It is design §1's own sentence, copied faithfully; read
-  literally the next paragraph's flag table contradicts it, read as “the bare
-  filter query needs no flags” it is true and the following sentence supports it.
-  Reason: the design owns the wording and this is not provably false, so it is an
-  audit question rather than a phase edit — a candidate sixth correction if audit
-  judges the literal reading the one a reader takes.
 
 - **PHASE-04 · F1 ruled decided.** `--depth abc`, `--depth=-1` and `--budget 0`
   reach the specification's sentence only with a direction present, because
@@ -701,3 +718,24 @@ Seat-level envelope decisions, one line each: phase · decision · reason ·
 - **PHASE-02 · nothing else left the envelope.** No escalation, no backlog deferral,
   no design drift, no source edit outside `src/cli.rs` and `tests/cli_contract.rs`;
   `src/dsl.rs` untouched, `.quotient/` and `_envrc` untouched.
+- **Seat · VH-1 recorded on the operator's word.** The operator ran the five hot-path
+  lines against a real store and reported *"VH-1 is a pass"*; that reply is the basis
+  for the record in PHASE-03's sheet and notes. Reason: a VH criterion is a human act,
+  and the record is the agent's truthful account of theirs, not an inference from the
+  child's sanity run.
+- **Seat · the audit entry stays the operator's call, deferred.** Implementation is
+  complete and every VT is green, but the charter loop stops before audit. Reason: the
+  skill's boundary; the next move is `doctrine slice status 10 audit`, which the
+  operator has not yet asked for.
+- **Seat · the guide's “The hot path therefore has no flags” left unchanged,
+  deferred to audit.** It is design §1's own sentence, copied faithfully; read
+  literally the next paragraph's flag table contradicts it, read as “the bare
+  filter query needs no flags” it is true and the following sentence supports it.
+  Reason: the design owns the wording and this is not provably false, so it is an
+  audit question rather than a phase edit — a candidate sixth correction if audit
+  judges the literal reading the one a reader takes.
+- **Seat · README material captured, not edited.** The operator asked for examples for
+  a future README section; `readme-examples.md` records the proposed placement, a
+  reproducible fixture and eight verified transcripts, including two limit examples.
+  Reason: `README.md` is operator-owned (CHR-001), and paying it now would put an
+  unreviewed edit on a file another writer holds.
