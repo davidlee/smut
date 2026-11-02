@@ -34,16 +34,20 @@ unverified.
   below, and `cargo install smut` is not one. They are `sh` now, as the pre-0.2
   build block was. With the parser no longer aborting on them, every remaining
   transcript runs and matches its recorded output: 9 of 10 tests pass.
-- **The release paragraph is still missing, so the over-claim guard is red.**
-  `the_readme_names_the_published_release_beside_this_tree` fails because the page
-  now names no version at all, while `cargo install smut` sits directly above
-  "That'll get you one self-contained binary" — false while crates.io carries
-  0.1.1. The paragraph that said this plainly is in `git show 09708c8:README.md`
-  (`## Install`). Restoring it is the operator's prose, not an agent's edit.
-- **Its version literal moved with the bump.** `tests/readme_example.rs` now looks
-  for `smut 0.2.2`, matching `tests/cli_contract.rs` (9abe6a5). The literal is right
-  and the test still fails, which is the correct state: the sentence it asks for
-  does not exist yet.
+- **The release paragraph is not missing after all.** crates.io carries 0.2.2, the
+  same version this tree is, so `cargo install smut` above "That'll get you one
+  self-contained binary" is simply true and the page owes no qualification.
+  `the_readme_names_the_published_release_beside_this_tree` asserted the earlier
+  arrangement — published 0.1.1, an unpublished tree at 0.2.1, a paragraph naming
+  both — and could only be satisfied now by writing a distinction that no longer
+  exists, so it is retired. Its own literal had moved with the bump first (9abe6a5,
+  c0b526d), which is how the staleness became visible.
+- **The guard lapses, the risk does not.** RV-017's failure mode — over-claiming in
+  composition while no single sentence is false — returns the moment a bump outruns
+  crates.io: the page would again promise an install of a version the registry does
+  not carry, and no offline test can see the registry. Re-arm it when the next
+  unpublished bump lands, as a version-consistency test over whatever the page names
+  or a checklist line before publish.
 
 ## Done when
 
