@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · PHASE-01 completed (commit d7b6daa) · PT-02 next, gated on SL-005
+fresh-as-of: 2026-11-02 · PHASE-02 completed (code tip 14f6a7d, range 00bc823..14f6a7d) · PHASE-03 next
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -22,6 +22,12 @@ fresh-as-of: 2026-11-02 · PHASE-01 completed (commit d7b6daa) · PT-02 next, ga
 - SL-004 PHASE-01 — `validate_identity_tree` + `walk_identities` in `src/store/mod.rs`, the
   bracketed identity-path notation and its pending-PHASE-02 doc material; 31 new tests across
   `tests/store_corruption.rs` (11), `tests/cli_contract.rs` (6) and the inline walk suite (14)
+- SL-004 PHASE-02 — the format break itself: `ENTITY_ID` = `smut_id`, both versions 2, ordinary
+  `id` as data, four diagnostic spellings, the spelling-only fixture (223 keys) with inverse
+  equivalence evidence, the version-2 format document with the corruption rule and path
+  notation, the guide's identity teaching, the brief in place, and the executed README fence;
+  ~40 new behaviour tests across seven VT homes (cli_contract +10, durability +14, entity +4,
+  learn +7, render +1, store_corruption +4, conventions +0)
 
 ### Learned
 - DEC-020 — identity constant and per-surface pins
@@ -40,14 +46,26 @@ fresh-as-of: 2026-11-02 · PHASE-01 completed (commit d7b6daa) · PT-02 next, ga
   object iteration is free and the walk needs no sorting for deterministic first failure
 - SL-004 — a private helper's TDD red is a compile error (`E0425`); it is still red for the
   intended reason when it names the missing symbol and `cargo build` stays clean
+- SL-004 — a wire-key rename must move the version fixtures and the key together or the red is
+  masked: the first `store_corruption` red after the version literal moved was the version gate,
+  not the identity contract, so the constants landed first and the identity reds were then
+  observed for their own reason
+- SL-004 — `git commit -- <path>` commits the *working-tree* file and ignores a partially staged
+  index; staging one hunk of a file another writer has dirty requires `git update-index
+  --cacheinfo` (or `git apply --cached`) plus a pathless `--amend`. Verified: the README commit's
+  patch is 10/10 lines inside `:119`-`:146` and the operator's prose stayed uncommitted
+- SL-004 — formatting-preserving key renames need a string-aware scanner, not `sed`: the fixture's
+  body prose mentions the word id and the structural keys are only the object keys
 
 ### Open
-- SL-004 — PHASE-02 next, but chartered only after SL-005's refusal phase lands (shared
-  `src/error.rs`, `after: SL-005`); both PHASE-02 operator gates (EN-3, EN-4) are now recorded
-- SL-004 — PHASE-02 must carry PHASE-01's pending doc material: the nested-identity corruption
-  rule, the `$["key"][0]` notation and the worked diagnostic respelled to `smut_id`
-- SL-004 — PHASE-02 respells PHASE-01's literal `"id"` fixtures (`tests/store_corruption.rs`,
-  `tests/cli_contract.rs`, the inline walk suite) — a reviewed act, not a search-and-replace
+- SL-004 — PHASE-03 next: the six targeted decision amendments and the integrated evidence
+  handoff; do not begin it from this run
+- SL-004 — README.md's surrounding 0.2 prose still describes the old key (`"id"` at lines 16,
+  73, 77, 249, 252) and its never-executed fences show old declarations. It is the operator's
+  write scope (CHR-001), untouched by this slice; flag it for them rather than sweeping it
+- SL-004 — the brief's line 89 says "ID/content disagreement" as the prose name of the
+  index/entity condition; it is identity shorthand, not the old key, but a later editorial
+  pass could say "identity/content"
 - SL-004 — formal audit and the six-decision reconciliation handoff (PHASE-03)
 - RV-025 — 8 minor + 2 nit answered, none contested; not verified, no route required
 - Doctrine — design status reports `review_pass RV-025 STALE` on a locked run whose content matches its watermark and whose cache is current (projection quirk, not a gate)
@@ -692,3 +710,158 @@ interfere; the gap is that one edited file was outside the code-impact contract.
   ends there with a checkpoint. Reason: PHASE-02/EN-5 binds PHASE-02's entrance on
   SL-005's refusal phase landing in the shared `src/error.rs`; charting PHASE-02
   now would either breach EN-5 or force a rebase nobody has scoped.
+
+### PHASE-02 — 2026-11-02 (sub-orchestrator seat) — **completed**
+
+**Shipped.** `ENTITY_ID` keeps its name and takes the wire value `smut_id`; the two
+production raw literals are routed through it (`src/declare.rs`'s change-receipt
+subject, `src/conventions.rs`'s seed) and no production code spells the wire key
+anywhere else — after the sweep, production `"smut_id"` occurrences are exactly the
+constant (`src/entity.rs:17`) plus the guide's prose/examples, which state the
+spelling rather than emit it (EX-1's deliberate exception). `FORMAT_VERSION` and
+`MANIFEST_FORMAT_VERSION` are both 2; every store-building version literal is 2 and
+every old-version fixture names 1 explicitly, including `tests/traversal.rs`'s
+rebuilt index and `tests/store_corruption.rs`'s unknown-version case (now 3).
+Ordinary `id` is data at every depth; `smut_id` is the identity. No module, alias,
+shim, migration, dual reader, repair path, new dependency or error variant.
+
+**Diagnostics settled (EX-9, quoted verbatim in `docs/store-format.md`):**
+- `invalid smut_id: {found}, and smut_id must be a nonempty string` (`Reject::InvalidId`, exit 2)
+- `the entity file {entry} holds {found} under smut_id, and the index maps it to {key}`
+  (`StoreError::IdDisagreement`; `found` is the JSON value or `nothing`, so the absent
+  case reads `holds nothing under smut_id`; `describe()`'s absent text is `nothing`)
+- `identity at $["payload"]["tags"][2]["smut_id"] must be a nonempty string` (nested
+  corruption, exit 1; unchanged wording, path component moves with the key)
+- `scan_refs requires a validated entity: a `smut_id` that is not a nonempty string is corruption`
+  (internal assertion, unreachable from a loaded store)
+- `the store index has format_version 1, and this build reads only 2` (index gate, exit 1)
+- manifest gate: `manifest.json is not a valid store entry: format_version 1 is not the
+  version this build reads (2)`, refused before any staged put/removal replays.
+
+**Fixture (EX-4/VA-1).** `tests/fixtures/interview/entities.json` was rewritten
+spelling-only by a string-aware key rename: **223** object keys `id` → `smut_id`, no
+value, ordinary field, numeric form or array position touched. Evidence: the original
+at `2470576` is blob `f5b29de67b5f539be018c72c5e88c3bd0f301a93` (66 entities, 0
+pre-existing `smut_id` keys, so the inverse map is unambiguous); the inverse-renamed
+array is **byte-identical** to that blob and serde_json-structurally equal; a
+temporary (uncommitted) harness rejected an altered value and a reordered array under
+the same comparison, preserved array order, and separately proved the comparator keeps
+`1` distinct from `1.0` (the fixture itself carries no JSON numbers outside strings,
+so there was no numeric representation to preserve). `tests/fixture.rs`'s `CLUSTERS`
+re-derived against the adapted array: the same five ids, which are the array's identity
+order of the five `type: cluster` entities; the eight open questions, the over-cap
+graph, the budget/frontier and the two-call recipe all re-checked and unchanged.
+
+**Red → green, per home** (each red observed before its implementation, and the
+observed failure is the contract, not a compile error):
+
+| Home | Red observed | Green |
+| --- | --- | --- |
+| VT-1 `src/entity.rs` | 4 fail: `ENTITY_ID` `"id"` vs `"smut_id"`; canonical bytes `{"id":...}` first; `reference_id({"id":"data"})` = `Ok(Some)` | `cargo test --lib entity::` 36 passed, 0 failed |
+| VT-2 `tests/cli_contract.rs` | 10 fail: root ordinary id became the entity id, depth values refused, receipt subject `"id"`, old-spelling `where` returned rows, DROP on data, containers | 50 passed, 0 failed |
+| VT-3 `tests/store_corruption.rs` | first red at the version fixture (23 fail, INDEX said 2 while the build read 1); after the constant move, 15 fail on the identity contract (`IdDisagreement` on `smut_id` roots, ordinary-id data refused) | 27 passed, 0 failed |
+| VT-4/VT-6 `tests/durability_crash.rs` | baseline `staged_manifest()` carried version 1 and replayed (a v1 manifest was accepted pre-bump); after the identity move the v1 fixture was refused while the v2 control replayed — the pair discriminates | 48 passed, 0 failed (`--features fault-injection`) |
+| VT-5 `tests/conventions.rs` | 5 fail: seed carried `"id"`, receipt/stored/re-install expectations old key | 14 passed, 0 failed |
+| VT-7 `src/learn.rs` | 7 prose pins fail, each naming the missing claim | `cargo test --lib learn::` 24 passed, 0 failed |
+| VT-8 `tests/render.rs` | 6 fail: `smut_id` rendered as an attribute, ordinary `id` suppressed | 11 passed, 0 failed |
+| fixture/traversal | `fixture` 10 fail, `traversal` 29 fail on the old key | 15 and 34 passed |
+
+**Gate.** `just check` **exit 0** after the documents landed: build, both clippy configs
+`-D warnings`, `cargo fmt --check`, default tests (370 lib + 10, 50, 10, 4, 14, 0, 15,
+13, 5, 11, 4, 8, 27, 34, 0) and `--features fault-injection` (383 lib + 10, 50, 10, 4,
+14, 48, 15, 13, 5, 11, 4, 8, 27, 34, 0); 0 failures, 0 ignored, 0 warnings. Baseline
+was 359/372 lib and 40 `cli_contract`; nothing was removed or weakened. Scratch
+lifecycle spot-check: declare with ordinary `id` data at depth (null, number, array,
+object), `get`/`query` exit 0, `where` on ordinary data and on `smut_id` both exit 0,
+old-spelling `where` empty at exit 0, `select:["smut_id"]` identity alone, `DROP` on
+ordinary `id`, index `format_version` 2, delete — all as specified.
+
+**Residual `id` classification (EX-6/VA-2), from the 1091 baseline to 65.**
+- *Ordinary payload data under test* (the deliberate new cases): `tests/cli_contract.rs`
+  28, `tests/store_corruption.rs` 12, `src/entity.rs` 13, `tests/render.rs` 1 — ids
+  with null/empty/number/array/object values, mixed `id`+`smut_id` objects, `where`
+  and `order` and `select` on `id` as data, `DROP` on `id`.
+- *Arbitrary member in a non-entity fixture*: `src/input.rs` 2 (object-ordering and
+  duplicate-key fixtures where the member is not identity).
+- *Operator-owned prose, outside this slice's write scope*: `README.md` 5 (lines 16,
+  73, 77, 249, 252) — the 0.2 rewrite and its never-executed ```` ``` console ````
+  blocks; left untouched, now stale about the key. Flagged, not fixed.
+- *Internal vocabulary and values*: `Id`, `Change.id`, map keys, basenames, `ids`,
+  `deleted`, `missing`, `frontier`, `depths`, `edges[].source/.target`,
+  `dangling[].source/.target` — retained by design; they name values/containers,
+  never the JSON identity member.
+- *Historical product prose*: the fixture bodies and the brief's narrative keep the
+  word id where it describes past behaviour; the 223 structural keys are gone.
+Every other occurrence was a missed structural use and was converted; no occurrence
+is banned, and `rg` shows no production raw `"id"` key at all.
+
+**Decisions/deviations.** (1) `IdDisagreement`'s sentence was restructured to
+`holds {found} under smut_id` with `describe()`'s absent arm reading `nothing`, because
+respelling in place produced `holds smut_id no smut_id`; both still name the key and the
+entry/key. (2) Two test names that asserted an old JSON-key claim were renamed
+(`smut_id_is_an_ordinary_order_field`, `project_gives_smut_id_only_for_an_empty_select…`)
+rather than left saying something false. (3) `tests/store_corruption.rs` gained
+`ENTITY_UNDER_EITHER_KEY`, a fixture carrying both keys so the version gate is the only
+defect in the version-refusal test. (4) The `render` mechanism needed no code change —
+suppression was already keyed on the constant — so EX-10 is pinned by test and
+before/after bytes only. (5) The README commit initially staged the whole working-tree
+file (the operator's rewrite included); it was caught before any push and **amended**
+to a fence-only patch built from `HEAD`'s README plus the regenerated transcript, so
+the commit's patch is 10/10 lines inside `:119`-`:146` and the operator's prose is
+still uncommitted and unmodified. Recorded because it is a process miss, not a
+source change.
+
+**Workers and cost.** Thirteen native pi `worker` children, serial, main worktree, no
+worktrees, no Quotient, inherited model configuration: four red-contract test runs
+(entity+cli, store_corruption, durability, conventions/render/learn pins), two
+implementation runs (entity, declare), two surface runs (conventions+error,
+store/journal/index+lib sweep), two test sweeps (public suites, fixture+traversal),
+and three document runs (learn+provenance, store-format, brief) plus the README fence.
+No worker failure and no model substitution; one run was cut by the supervising
+harness's wall clock after its edits had landed and was resumed by adopting the
+partial diff. Wall time dominated by three `just check` runs and the document
+verification probes.
+
+**Range.** Own commits: `3e9f173` (identity core + both versions), `7d6391b` (public
+suites), `b50861c` (corruption/conventions/render/recovery contract homes), `658e76e`
+(fixture + re-derived assertions), `04d7424` (README fence only), `14f6a7d`
+(documents + guide + provenance). First own commit's parent is `00bc823` (SL-005's
+close), so the registry range is `00bc823..14f6a7d`; SL-005's `dfb14cf..00bc823`
+commits sit outside it and are not hidden inside the phase's row.
+- **PHASE-02 · version constants land before the identity constant.** Decided. The first
+  `store_corruption` red after the version fixture moved to 2 was the version gate on every
+  test, which masked the identity contract. Moving both constants to 2 first made the
+  identity cases fail for their own reason (`IdDisagreement` on `smut_id` roots, ordinary-id
+  data refused), so each VT's red is attributable. Reason: a red for the wrong reason is not
+  evidence. No test was changed to obtain it.
+- **PHASE-02 · `IdDisagreement` sentence restructured; `describe()`'s absent arm is `nothing`.**
+  Decided. A literal respell produced `holds smut_id no smut_id`; the message is now
+  `the entity file {entry} holds {found} under smut_id, and the index maps it to {key}` with
+  `found` = the JSON value or `nothing`. Reason: EX-9 mandates the key be named and the
+  entry/key be named; the absent case must read as English. Recorded as a wording decision
+  inside EX-9's mandate, not a design change.
+- **PHASE-02 · two test names renamed where they asserted an old JSON-key claim.** Decided.
+  `an_id_is_an_ordinary_order_field` and `project_gives_id_only_…` would have been false after
+  the key moved; they now name `smut_id` and assert the same behaviour. Reason: a passing test
+  with a false name is worse than a renamed one; no assertion changed.
+- **PHASE-02 · fixture rewritten by a string-aware key scanner, formatting preserved.**
+  Decided. The alternative (parse and re-serialise) would have destroyed the file's formatting
+  and made the diff unreadable against DEC-024's "spelling-only". The scanner rewrites only
+  object keys, leaving body prose that mentions the word id intact; inverse rename is
+  byte-identical to the recorded blob.
+- **PHASE-02 · the README commit was amended to a fence-only patch.** Decided, self-caught.
+  The first commit with `-- README.md` committed the working-tree file, which is the operator's
+  0.2 rewrite plus the new fence — a boundary breach. Before any push, `HEAD` was amended to
+  `HEAD`'s README with only the fence replaced (built via `git hash-object` +
+  `git update-index --cacheinfo` + pathless `--amend`), so the commit's patch is 10/10 lines
+  inside `:119`-`:146` and the operator's prose is again uncommitted. Logged because the first
+  attempt was wrong, not because the outcome is.
+- **PHASE-02 · README's surrounding prose stays stale.** Deferred. It names `"id"` in five
+  places and its never-executed fences show old declarations; it is CHR-001's write scope and
+  this slice may not sweep, stage or revert it. Flagged in Harvest/Open for the operator.
+- **PHASE-02 · `src/input.rs`'s two `{"id": …}` fixtures left as data.** Decided. They are
+  object-ordering/duplicate-key fixtures whose member is arbitrary, not an entity node; keeping
+  `id` there adds ordinary-data coverage and asserts nothing about identity.
+- **PHASE-02 · document worker verified every quoted diagnostic in a scratch store.** Decided.
+  EX-9/STD-001 make the worked diagnostics contractual, so each line in `docs/store-format.md`
+  was triggered against this build rather than transcribed from code.
