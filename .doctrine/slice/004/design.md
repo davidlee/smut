@@ -248,10 +248,12 @@ build's committed manifest from being replayed, and within one version a payload
 a stricter loader refuses is still published. No test can observe a tightening
 that forgets the bump.
 
-The store layout reserves nothing for conventions: sets live under
-`.config/smut/conventions/` in the project, user or binary layer (DEC-026,
-DEC-028) and never inside `.smut/`, so a
-version-2 format document must not imply a home the layout does not have.
+The store layout reserves nothing for conventions: nothing inside `.smut/` is
+read back as a set. `.config/smut/conventions/` in the project, user and binary
+layers is DEC-026/028's decided home for the layered loader IMP-013 tracks; the
+shipped binary embeds its one set. A version-2 format document must state the
+reservation without implying a home the layout does not have, or a reader the
+binary does not have.
 
 This sequence shows the retained recovery-before-load boundary:
 
@@ -307,6 +309,7 @@ the list as permission to refactor.
 | `src/conventions.rs` | Emit the fixed-id convention declaration using `ENTITY_ID`; update its tests/comments without changing seed ids or content |
 | `src/store/**` | Set index and manifest format versions to 2; add the private recursive loaded-identity validator; respell `describe()`'s absent-identity text; retain root checks and recovery ordering; update format-bearing tests |
 | `src/walk.rs`, `src/select.rs` | Verify shared identity consumers and update structural examples/fixtures; keep algorithms and internal ids-as-values unchanged |
+| `src/predicate.rs` | Field predicates only — no identity read. Update the inline fixtures that name structural identity; keep the operator grammar unchanged |
 | `src/order.rs` | Verify no identity key enters ordering (ordering is over internal `Id` values, not JSON members) and update its inline fixtures |
 | `src/render_markdown.rs` | Retain the mechanism: identity display remains keyed on `ENTITY_ID`, so an ordinary `id` renders as an ordinary attribute and `smut_id` is the suppressed identity. Pin the new output; update identity/reference examples |
 | `src/cli.rs` | Update structural examples/tests; retain grammar, flags and generation policy |

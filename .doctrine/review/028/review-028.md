@@ -247,3 +247,116 @@ no undeclared slice-owned source path; every binding record states `smut_id` as
 the structural key and version 2 as the format; the six decisions carry dated
 amendments with their rationale and ids intact; no file inside `.smut/` is claimed
 as a conventions home. Then `/close`.
+
+## Reconciliation Outcome
+
+Performed 2026-11-02 against the brief above, on the user's agreement ("agree").
+Every finding was already terminal; nothing was re-dispositioned.
+
+### Direct edits applied
+
+- **Selector registry** — `doctrine slice selector add 4 src/predicate.rs --intent
+  design-target` (finding F-1, the load-bearing change). `doctrine slice conformance
+  4` now reads `src/predicate.rs ⟵ src/predicate.rs` under **conformant**.
+- **`design.md` §4** — new row: `src/predicate.rs | Field predicates only — no
+  identity read. Update the inline fixtures that name structural identity; keep the
+  operator grammar unchanged` (F-1's human mirror).
+- **`design.md` §3** — the conventions sentence re-timed: the layout reservation
+  stays, `.config/smut/conventions/` is named as DEC-026/028's decided home for the
+  loader IMP-013 tracks, and the shipped binary's one embedded set is stated (F-6).
+- **`docs/store-format.md` § Conventions live outside the store** — the same
+  correction in the record's own voice (F-6, STD-001).
+- **`smut-implementation-brief.org`** — "ID/content disagreement" →
+  "identity/content disagreement" (F-8).
+- **`src/store/index.rs:1`** — repaired during the audit pass, not here (F-5);
+  gate re-run afterwards.
+
+**Procedural correction.** The brief told reconcile to `doctrine design adopt 4`
+after editing `design.md`. The engine refuses: *"run is locked; adopt refuses. …
+at reconcile, edit design.md directly and do not adopt"*. The design was edited
+directly, per the engine's own guidance. The run's `review_pass RV-025 STALE`
+advisory stands and is an optimisation signal, not a gate.
+
+### REVs completed
+
+- **REV-002** (`reconcile-sl-004`) — `done`, one `[[change]]` row: `modify STD-001`,
+  landed by hand after apply surfaced it. STD-001's canonical-bytes parenthetical
+  now says `smut_id`-first; the trigger column, rationale, scope and every other row
+  are unchanged (covers finding F-4). Narrative and before/after in
+  `revision-002.md`.
+
+### Knowledge surface (not REV-targetable)
+
+The six decision records were amended through `doctrine knowledge edit` — facet and
+prose in the same act, each carrying the dated SL-004/ADR-001/DEC-025 note. The REV
+engine's target set excludes a DEC (REV-001's precedent), so this is the sanctioned
+route:
+
+- **DEC-002** — coalescing example pair → `smut_id`; the created/identity-only
+  consequence. Facet unchanged (no identity spelling in any field).
+- **DEC-005** — the withdrawal: `id` may be inline metadata, `smut_id` is the
+  reservation; facet `context`/`choice`/`consequences`; `reference_id` return type
+  corrected `Error` → `Reject`; `What counts`, declaration/reference, labels, both
+  examples, the error-class table and the documented consequence rewritten.
+- **DEC-007** — facet `choice`, **`title`** (`smut_id`-first canonical order), the
+  Envelope bullets, canonical ordering, **first rejected alternative**, the
+  serialisation clarification (covers F-2). The `slug` is **tolerated** —
+  `doctrine knowledge edit` has no slug field — and the record's own note says so.
+- **DEC-010** — `choice` replaced as the **full** field text including the leading
+  README clause (F-3), `consequences`, the README sharp edge, the version-2
+  store-format description, the closing refusal sentence and the learn paragraph.
+- **DEC-012** — one envelope example key; facet unchanged.
+- **DEC-016** — facet `choice`; the recipe's `select: ["smut_id"]` in both places.
+
+Verified after the writes: no `carrying \`id\``, `member \`id\``, `\`id\`-first`,
+`non-\`id\``, `{"id"`-as-identity or `format_version: 1` claim remains in any of the
+six records; the only surviving `id` mentions are the withdrawal sentence itself
+and value/container vocabulary.
+
+### Withdrawn / tolerated
+
+- **F-7 — follow-up, not written here.** CHR-001 owns the README's surrounding
+  prose. The committed file still teaches the reversed rule; the operator's in-flight
+  rewrite already corrects it, so the remaining work is landing it (and keeping the
+  ` ```console ` fence shape the harness matches).
+- **DEC-007's slug** — tolerated as an immutable identifier, rationale recorded in
+  the record.
+
+### Conformance note
+
+`doctrine slice conformance 4` now reports `src/predicate.rs` conformant and no
+slice-owned undeclared source path. Its **six undelivered** rows are the decision
+records: those edits land after the last completed phase's recorded `code_start`/
+`code_end` range, and no completed phase may be re-opened to absorb them. The
+selectors are satisfied by the work; the cell is a registry-range artefact, not
+unfinished scope.
+
+Reconcile pass complete — handoff to `/close`.
+
+### Gate state at this commit — red, for a reason outside this slice
+
+`just check` at `4fecf9a` ("readme and such", the operator's commit on top of the
+audit) fails three tests in `tests/readme_example.rs`
+(`the_console_block_carries_the_whole_0_2_example`,
+`every_readme_transcript_runs_and_prints_what_it_records`,
+`the_worked_example_ends_with_a_0_2_traversal`), all at
+`tests/readme_example.rs:232`:
+
+```
+the command line has balanced quotes: smut declare '
+```
+
+`README.md:53` opens a `$ smut declare '` command whose JSON continues on
+following lines; the rewritten harness runs one console line at a time and asserts
+balanced quotes. Isolated in a detached worktree at `4fecf9a`, so it is the
+committed tree and not a dirty-worktree artefact. Every other suite is green at that
+tree: 370 lib and 383 `--features fault-injection`, zero warnings, build/clippy/fmt
+clean.
+
+This is not SL-004's code, prose or gate: the slice's own tree was green at
+`64e5f4b` and again at `58612ca`, and the reconcile writes here touch no Rust and no
+README. It is the operator's README rewrite and its harness meeting a multi-line
+console command — the surface CHR-001 owns. Recorded rather than repaired: the
+working tree must not sweep or rewrite that prose. `/close` will want a green gate,
+so this wants resolving first (a one-line README change, or multi-line continuation
+in the harness).

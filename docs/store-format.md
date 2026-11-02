@@ -48,11 +48,11 @@ is corruption (see [Corruption](#corruption)).
 
 ### Conventions live outside the store
 
-The store layout reserves nothing for conventions. Sets live under
-`.config/smut/conventions/` — in the project root, in the user config home, or in
-the shipped binary (DEC-026, DEC-028) — and never inside the store: nothing under
-`.smut/` is read back as a convention set. A set declared into a store is an
-ordinary stored entity, a record of advice given.
+The store layout reserves nothing for conventions: nothing under `.smut/` is read
+back as a convention set. `.config/smut/conventions/` in the project root, the user
+config home and the shipped binary is DEC-026/028's decided home for the layered
+loader tracked by IMP-013; the binary shipped today embeds its one set. A set
+declared into a store is an ordinary stored entity, a record of advice given.
 
 ## The index
 

@@ -115,6 +115,11 @@ selector = ".doctrine/knowledge/decision/016/record-016.*"
 intent = "design-target"
 note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
+[[selector]]
+selector = "src/predicate.rs"
+intent = "design-target"
+note = "SL-004 audit RV-028 F-1: field predicates only — no identity read; the inline fixtures that name structural identity were respelled with the key. Added at reconcile."
+
 [[relation]]
 label = "governed_by"
 target = "ADR-001"
