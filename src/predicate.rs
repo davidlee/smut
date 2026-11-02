@@ -85,8 +85,20 @@ fn parse_predicate(value: &Value) -> Result<Predicate, Reject> {
             "$or" => clauses.push(Predicate::Or(parse_all("$or", value)?)),
             "$not" => clauses.push(parse_not(value)?),
             operator if operator.starts_with('$') => {
-                return Err(Reject::UnknownPredicateOperator {
-                    operator: operator.to_owned(),
+                // `parse_condition` defines exactly these five operators. One of
+                // them here names a defined operator in the wrong position, which
+                // is a different defect from a name the language does not define.
+                // The other arm and `parse_condition` share this list: a sixth
+                // operator must be added to both together.
+                return Err(match operator {
+                    "$eq" | "$ne" | "$in" | "$exists" | "$contains" => {
+                        Reject::MisplacedPredicateOperator {
+                            operator: operator.to_owned(),
+                        }
+                    }
+                    _ => Reject::UnknownPredicateOperator {
+                        operator: operator.to_owned(),
+                    },
                 });
             }
             field => clauses.push(parse_field(field, value)?),
@@ -173,6 +185,10 @@ fn parse_field(field: &str, value: &Value) -> Result<Predicate, Reject> {
 /// Parses one operator inside a field condition. The three clauses are
 /// predicate-level keys, so inside a condition object they are unknown
 /// operators.
+///
+/// The five operator names accepted here are the same five `parse_predicate`
+/// refuses as *misplaced* when they appear at the predicate level; a sixth
+/// operator has to be added to both arms together.
 fn parse_condition(operator: &str, operand: &Value) -> Result<Condition, Reject> {
     match operator {
         "$eq" => Ok(Condition::Eq(operand.clone())),
@@ -525,9 +541,10 @@ mod tests {
 
     #[test]
     fn parse_refuses_an_unknown_operator_at_either_level() {
-        // §6.2: at the predicate level any `$` key but the three clauses is an
-        // unknown operator, and so is any condition-level key but the five
-        // operators — the clauses included, because a clause is not an operator.
+        // §6.2: a name the language does not define is unknown at either level —
+        // `$foo` at the predicate level, and the three clauses inside a condition
+        // object, because a clause is not an operator. The five operators out of
+        // place at the predicate level are refused as misplaced, not unknown.
         for (input, operator) in [
             (json!({"$foo": 1}), "$foo"),
             (json!({"x": {"$foo": 1}}), "$foo"),

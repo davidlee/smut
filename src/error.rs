@@ -76,6 +76,12 @@ pub enum Reject {
         /// The operator's name.
         operator: String,
     },
+    /// A predicate operator that is defined sits in the predicate's own object
+    /// rather than inside a field's condition object, so its position is wrong.
+    MisplacedPredicateOperator {
+        /// The operator's name.
+        operator: String,
+    },
     /// A predicate operator that is defined carries an operand of the wrong
     /// shape.
     InvalidPredicateValue {
@@ -318,6 +324,11 @@ impl fmt::Display for Reject {
             Reject::UnknownPredicateOperator { operator } => {
                 write!(formatter, "unknown predicate operator: {operator}")
             }
+            Reject::MisplacedPredicateOperator { operator } => write!(
+                formatter,
+                "predicate operator {operator} belongs inside a field's condition object: \
+                 {{\"<field>\": {{\"{operator}\": <operand>}}}}"
+            ),
             Reject::InvalidPredicateValue { operator, expected } => {
                 write!(formatter, "{operator} must be {expected}")
             }
@@ -508,7 +519,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 25] = [
+        let cases: [(Error, u8); 26] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -571,6 +582,13 @@ mod tests {
             (
                 Reject::UnknownPredicateOperator {
                     operator: "$foo".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::MisplacedPredicateOperator {
+                    operator: "$ne".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -788,6 +806,26 @@ mod tests {
             operator: "$foo".to_owned(),
         };
         assert!(operator.to_string().contains("$foo"), "{operator}");
+
+        // Asserted whole for two operators: the operator is interpolated into both
+        // slots of the suggested shape, so a message naming one operator in the
+        // frame and leaving the other slot literal would fail here. Raw strings
+        // keep the pinned sentence byte-exact.
+        let misplaced_ne = Reject::MisplacedPredicateOperator {
+            operator: "$ne".to_owned(),
+        };
+        assert_eq!(
+            misplaced_ne.to_string(),
+            r#"predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": <operand>}}"#
+        );
+
+        let misplaced_in = Reject::MisplacedPredicateOperator {
+            operator: "$in".to_owned(),
+        };
+        assert_eq!(
+            misplaced_in.to_string(),
+            r#"predicate operator $in belongs inside a field's condition object: {"<field>": {"$in": <operand>}}"#
+        );
 
         let operand = Reject::InvalidPredicateValue {
             operator: "$in".to_owned(),

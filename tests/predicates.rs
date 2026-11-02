@@ -325,10 +325,11 @@ fn an_in_or_exists_operand_of_the_wrong_shape_is_refused() {
 
 #[test]
 fn an_unknown_operator_and_a_clause_inside_a_field_condition_are_refused() {
-    // §6.2: at the predicate level any `$` key other than `$and`/`$or`/`$not` is
-    // an unknown operator; at the condition level all three clauses are unknown
-    // operators, because a clause is not a field operator. Both refusals name
-    // the key that caused them.
+    // §6.2: a `$` key the language does not define is an unknown operator at
+    // either level — `$foo` at the predicate level, and all three clauses inside a
+    // condition object, because a clause is not a field operator. The five
+    // operators out of place at the predicate level are a different refusal:
+    // misplaced, not unknown. Both refusals name the key that caused them.
     //
     // Discharged by `sibling_keys_and_nested_not_hold_conjunctively`, which
     // accepts and computes all three clauses at the predicate level, and by
@@ -636,6 +637,90 @@ fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() 
             "the contradiction is decided before the store is opened: {specification}"
         );
     }
+}
+
+#[test]
+fn a_misplaced_operator_is_refused_naming_its_position_and_never_a_field() {
+    // DEC-030 / design §4: a `$` key that names one of the five operators is not
+    // unknown — it is in the wrong place, and the refusal says where it belongs
+    // without inventing a field the caller may not have.
+    //
+    // Asserted as the whole line, not a substring: a message that printed a
+    // concrete field name, or a literal operand, would still satisfy `contains`.
+    // Raw strings keep the pinned sentence byte-exact.
+    let scratch = Scratch::new();
+
+    let misplaced = [
+        (
+            r#"{"where":{"$ne":"x"}}"#,
+            r#"smut: predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": <operand>}}"#,
+        ),
+        (
+            r#"{"where":{"$in":["x"]}}"#,
+            r#"smut: predicate operator $in belongs inside a field's condition object: {"<field>": {"$in": <operand>}}"#,
+        ),
+        // The same operator beside a real field: the sentence describes where an
+        // operator belongs, so it must not name `status`.
+        (
+            r#"{"where":{"status":"open","$ne":"x"}}"#,
+            r#"smut: predicate operator $ne belongs inside a field's condition object: {"<field>": {"$ne": <operand>}}"#,
+        ),
+    ];
+
+    for (specification, expected) in misplaced {
+        let refused = smut(&scratch, &["query", specification]);
+
+        assert_eq!(
+            refused.code, 2,
+            "a misplaced operator is exit 2 for {specification}: {}",
+            refused.stderr
+        );
+        assert_eq!(
+            refused.stdout, "",
+            "a refusal never prints an envelope: {specification}"
+        );
+        assert_eq!(
+            refused.stderr.lines().collect::<Vec<_>>(),
+            [expected],
+            "stderr is the whole pinned line and nothing else for {specification}: {:?}",
+            refused.stderr
+        );
+        assert!(
+            !refused.stderr.contains("status") && !refused.stderr.contains(r#""x""#),
+            "no concrete field name and no operand literal for {specification}: {}",
+            refused.stderr
+        );
+        assert!(
+            !scratch.has_store(),
+            "the request is validated before the store is opened, so no store exists: {specification}"
+        );
+    }
+
+    // The unknown-name sentence is unchanged at this level and pinned whole: the
+    // existing `$foo` assertions are variant equality or substrings. `unknown` is
+    // a name the language does not define, which is a different defect.
+    let unknown = smut(&scratch, &["query", r#"{"where":{"$foo":1}}"#]);
+
+    assert_eq!(
+        unknown.code, 2,
+        "an unknown name is exit 2: {}",
+        unknown.stderr
+    );
+    assert_eq!(
+        unknown.stdout, "",
+        "a refusal never prints an envelope: {:?}",
+        unknown.stdout
+    );
+    assert_eq!(
+        unknown.stderr.lines().collect::<Vec<_>>(),
+        [r#"smut: unknown predicate operator: $foo"#],
+        "the unknown-name line is unchanged: {:?}",
+        unknown.stderr
+    );
+    assert!(
+        !scratch.has_store(),
+        "the unknown-name refusal also precedes the store"
+    );
 }
 
 #[test]
