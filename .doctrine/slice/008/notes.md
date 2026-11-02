@@ -329,3 +329,25 @@ extends it. Facts here were observed this session at head `de8cf3d`.
 - **Design run:** `dr-01a19b61` locked, `review_pass RV-029 STALE` and `changes 1 since the
   declared baseline` — the known post-pass residue. Advisory, not a gate; do not read it as
   coverage.
+
+### Seat preflight — observed at `c9b979e`
+
+- **Baseline gate is green.** `just check` at `c9b979e` exits 0 with no warnings: build, two
+  clippy configurations, `fmt --check`, then the suite twice — 379 lib tests on default
+  features and 392 under `--features fault-injection`. No known failures, no jail-only
+  failures. A red gate from here is a regression.
+- **Toolchain confirmed present:** `rustc`/`cargo` 1.100.0-beta.7, `just` 1.58.0. `just
+  --dry-run check` confirms the six gate steps; `gate`/`prove` alias `check`, so a phase's
+  cadence-name gate is the same non-mutating sequence.
+- **Roster:** custom `sub-orchestrator` (nested spawn allowed), `capsule-orchestrator`,
+  `capsule-worker`. Builtin `worker`, `delegate`, `scout`, `researcher`, `reviewer`, `oracle`,
+  `evidence-auditor` are available to children as their `allowedAgents`.
+- **Model posture:** `subagents` carries no `defaultModel` and every `agentOverrides` entry is
+  empty, so children inherit the seat's model — `llm-gateway/deepseek-flash`, thinking high.
+  PHASE-01 and PHASE-05 are chartered on that inherited setting. PHASE-02/03/04 are the
+  frontier-shaped phases and are **held pending an operator pin**; the skill forbids the seat
+  from switching a model on its own initiative.
+- **Lifecycle ownership:** the sub-orchestrator owns `doctrine slice phase … --status` inside
+  its charter (skill), so the seat does not pre-flip `PHASE-01`; each charter is briefed to
+  flip its own phase to `in_progress` on entry and `completed` only once criteria, tests and
+  the commit exist.
