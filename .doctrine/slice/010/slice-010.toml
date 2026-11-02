@@ -12,18 +12,18 @@ after = [{ to = "SL-008", rank = 0 }]                      # slice→work soft s
 
 [[selector]]
 selector = "src/dsl.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "src/lib.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "src/cli.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "src/main.rs"
@@ -32,13 +32,13 @@ note = "the humane surface: new compiler module, the clap verb, the DSL refusal 
 
 [[selector]]
 selector = "src/error.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "src/learn.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "src/spec.rs"
@@ -47,18 +47,23 @@ note = "the humane surface: new compiler module, the clap verb, the DSL refusal 
 
 [[selector]]
 selector = "tests/dsl.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "tests/cli_contract.rs"
-intent = "scope-relevant"
-note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[selector]]
 selector = "tests/compatibility.rs"
 intent = "scope-relevant"
 note = "the humane surface: new compiler module, the clap verb, the DSL refusal vocabulary, the guide, and the two suites that prove equivalence"
+
+[[selector]]
+selector = "tests/fixture.rs"
+intent = "design-target"
+note = "sec-6 Code impact: the files this design commits to changing"
 
 [[relation]]
 label = "references"
