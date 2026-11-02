@@ -213,3 +213,45 @@ both negative greps, the error inventories) and the artefact restamped; a note i
 
 Carried, untouched: QUE-002, IMP-008, the three reconcile obligations above, RV-029's
 post-pass coverage residue, and README/CHR-001.
+
+## Plan hardening (2026-11-02)
+
+Two independent audit lanes — A obligation coverage (145 rows), B implementation surface —
+then one integrator. Ledger and both lane reports are gitignored local files in this folder
+(`plan.harden-ledger.local.md`, `plan.coverage-audit.local.md`,
+`plan.surface-review.local.md`); this paragraph is the durable summary.
+
+**Upheld and folded in (40 of 49 findings, 2 blockers, 12 majors):**
+
+- **The project layer's `.config/smut` segment was assigned to nobody.** §2's two functions
+  cannot join it (`project_root` returns the repository, `user_root` returns
+  `<config-home>/smut`), §6's `load` joins only `<kind>`, and DEC-026/§5/§7 all require it.
+  As written the loader would have read `<repo>/conventions/`. Both lanes found it
+  independently. Fixed by `Roots::under`, one function and one pinned unit test in
+  PHASE-01/EX-3, with the walk-up row that would have caught it now gated.
+- **`src/main.rs` is compile-forced in PHASE-02, not PHASE-04** — its in-process test
+  asserts `conventions::HYGIENE.prose` and `HYGIENE` retires there. Owned by PHASE-02/EX-10
+  so the phase can end green; the move to the spawned suite stays PHASE-04's.
+- **`dispatch` was missing** from the roots-threading list; it is the function every
+  in-process test calls, so roots computed there would read a developer's `$HOME`.
+- **A keyword that is already present is not a gate.** Seven were satisfied before their
+  phase (including `every_store_refusal`, which nothing length-pins — the criterion now
+  requires that assertion). All replaced with test names or symbols that can only exist
+  after the phase; §7's "preserved behaviour" list and four §7 process rows are now gated.
+- Seed `source` transcribed as `<kind>/<name>.md` where `seed(set)` has no kind; the set's
+  name derivation homeless; the not-UTF-8 *content* reason mis-worded; the fourth column's
+  absoluteness; the guide's hand-wrapped `const` making sentence keywords wrap-fragile;
+  `just check` versus bare `cargo test`; `$TMPDIR` fixtures; `Layer`'s printing; the three
+  refusal inventories; the `tests/fixture.rs` disposition. All now in criteria.
+
+**Eleven design questions owed to /feedback**, each answered in the plan by the reading the
+design's own rules make least wrong and named in the criterion that carries it —
+`plan.md` § Design questions owed to /feedback. The ones that matter: §2 never assigns the
+`.config/smut` segment; §5's worked listing contradicts its own third-field rule (its binary
+row prints a summary where the rule says `shadowed`); §6's `parse` never says where the row's
+name comes from though §3 needs a non-UTF-8 filename reported before any read; an unreadable
+layer *directory* has no `Origin` for §6's one new variant; `seed(set)` has no `kind`.
+
+Rejected with evidence (7): `From<Reject> for Error` already makes the `?` compile;
+`&[&Set; 1]` coerces; shadowed-unaddressability and `Entry.name: Option<String>` are settled;
+no other suite runs `conventions`; one cosmetic test rename.
