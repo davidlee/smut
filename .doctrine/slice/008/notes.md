@@ -823,6 +823,56 @@ engine's own answer applies: they ride along into `slice conformance`'s undeclar
 they are visible. The narrower `9829de0..cfae50f` was rejected because it would have left
 `1ced7c8` — the commit discharging this phase's review — attributed to nobody.
 
+### PHASE-04 — attempt 1 died on provider balance; a concurrent run did the work
+
+**Charter 4 never ran.** Launched at 01:31, it failed on its first model call with
+`litellm.BadRequestError … Insufficient Balance` for the inherited `llm-gateway/deepseek-flash`.
+Zero turns of work, zero cost. Per the skill this is a concrete blocker and **not** permission to
+change model configuration, so it was reported rather than worked around.
+
+**PHASE-04 was then implemented by a concurrent jailed agent**, commits `b6cf47c` → `d1f0700`
+between 02:08 and 02:26: the unknown-set refusal's rendered clauses, the listing's four fields
+and four states, `answer` + `roots()` + the environment read in one place, the spawned layered
+rows, the failure classes and both roots, and the CLI help sentence. `PHASE-04` was flipped
+`in_progress` by that run and left there.
+
+**State inherited, verified at `8386aeb`:** gate green (444 default), `verify-vt` PHASE-04
+VT-1/VT-2/VT-3 PASS. Remaining against the criteria:
+
+- **VT-4 FAIL — EX-6's guide sentences are absent.** `src/learn.rs` has neither
+  `fn the_guide_states_where_a_set_is_found` nor `fn the_guide_exit_table_names_an_unloadable_set`,
+  so both the layer sentence and DEC-033's exit-table clause are still owed, as whole-sentence
+  assertions against the reassembled paragraph.
+- **VT-5 FAIL — `docs/store-format.md` still lacks the clause.** The keyword `may supply more` is
+  genuinely absent, so the file still claims the binary is the only source.
+- **VT-6 UNATTRIBUTABLE, not absent** — `src/cli.rs:686` carries
+  `fn the_conventions_help_does_not_claim_the_set_is_embedded`. It reads `UNATTRIBUTABLE` only
+  because PHASE-04 has no recorded delta; attribution is by registry, not by the file on disk.
+  Same for VT-5's file once the clause lands.
+
+So PHASE-04 is a small tail, not a phase: two guide sentences and their tests, one store-format
+clause, a recorded delta, then the review.
+
+### The SL-010 collision — and a brittleness that was ours
+
+SL-010 landed ten commits in this window and touched `src/cli.rs`, `src/conventions.rs`,
+`src/error.rs`, `src/learn.rs`, `src/main.rs`, `tests/conventions.rs` — every file PHASE-04 owns.
+Its own code lives in `src/dsl.rs`, `src/lib.rs`, `tests/dsl.rs`, `tests/cli_contract.rs`,
+`tests/fixture.rs`; the shared files carry both slices' work and the gate is green over both.
+
+One real casualty: **PHASE-02's VT-3 went FAIL.** SL-010 added six refusal variants
+(`MissingDirection`, `UnknownDirection`, `UnreadableToken`, `JsonOperand`, `ConflictingSelection`,
+`UnreachableLimit`), moving the boundary table from `[(Error, u8); 27]` to `[…; 33]` — and VT-3
+pinned the literal `27`.
+
+That is our brittleness, not their error. A criterion that pins a count another slice owns will
+break every time that slice adds a refusal, and the break says nothing about this slice's code.
+**Fixed by dropping the literal from the keyword** — `[(Error, u8);` — so the criterion asserts
+the boundary table's shape while the *test* keeps pinning whatever count it must. Re-pinning to
+33 was rejected: it would buy one green run and rearm the same trap for the next slice.
+PHASE-02 is back to five-for-five. Lesson worth carrying out of this slice: **a VT keyword is a
+presence check on a fact, never on a number a neighbour owns.**
+
 ## Autonomy log
 
 - **PHASE-03 attempt 2 — the gap attempt 1 died carrying, stated in full and ruled.** Two
