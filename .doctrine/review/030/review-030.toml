@@ -1,0 +1,108 @@
+id    = 30
+slug  = "phase-02-reader-independent-code-and-correctness-review-over-4015f6a77444e8"
+title = "PHASE-02 reader — independent code and correctness review over 4015f6a..77444e8"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-008"
+phase = "PHASE-02"
+
+[[finding]]
+id = "F-1"
+status = "answered"
+severity = "minor"
+title = "The inventory length pin claims a guarantee it does not give"
+detail = """
+`src/error.rs:763-768`. The message says "the count is pinned so a variant added without its row cannot pass". That is false: `StoreError` holds 14 variants (`:160-257`, including `NoFreshBasename` at `:248`), the vec holds 13 (`:508-556`), and a variant added with no row leaves `len() == 13` and the test green. The pin fires only when a row is added without moving the count — the inverse of the claim. The same diff's own comment (`:506-507`) admits the list is short of the enum. The `Display` arm at `:450` is compiler-enforced by match exhaustiveness; the vec is not.
+
+Smallest acceptable correction: reword the message to what the pin actually enforces ("a row added without the count moving cannot pass"). Adding the `NoFreshBasename` row and pinning 14 is the better fix but repairs a pre-existing omission, so it is deferred to the backlog rather than absorbed here.
+
+Raised from the independent review run `4afab753` over `4015f6a..77444e8`."""
+disposition = "fix-now"
+response = "Upheld. The message overclaims: the vec pin compares a count to a literal, so a variant added without a row leaves the count unchanged and the test green. Correcting the message to what the pin enforces — a row added without the count moving cannot pass — in a corrective commit against PHASE-02's owned `src/error.rs`. The `NoFreshBasename` row and the 14 count would make the inventory real, but that omission predates this phase and sits outside its six-file charter, so it goes to the backlog as `follow-up` rather than being absorbed here. The `Display` arm remains compiler-enforced by match exhaustiveness, which is the part the message should not have claimed for the vec."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld. The message overclaims: the vec pin compares a count to a literal, so a variant added without a row leaves the count unchanged and the test green. Correcting the message to what the pin enforces — a row added without the count moving cannot pass — in a corrective commit against PHASE-02's owned `src/error.rs`. The `NoFreshBasename` row and the 14 count would make the inventory real, but that omission predates this phase and sits outside its six-file charter, so it goes to the backlog as `follow-up` rather than being absorbed here. The `Display` arm remains compiler-enforced by match exhaustiveness, which is the part the message should not have claimed for the vec."
+
+[[finding]]
+id = "F-2"
+status = "answered"
+severity = "minor"
+title = "Three assertions in the prose test cannot fail"
+detail = '''
+`tests/conventions.rs:244-260`. `!contains("summary:")`, `!contains("version:")` and `!starts_with("---")` all sit *after* `assert_eq!(printed.stdout, format!("{}\n", body()))` at `:237-241`, and `body()` is derived from the same `EMBEDDED` bytes, so it contains none of those strings and no leading `---`. Once the equality passes, all three are tautologies: no mutation of the reader reddens them without also reddening the equality two lines above. The comment at `:242-243` ("a reader that reproduced the fence reddens on all three") is therefore untrue. This is the repository's own recorded lesson, and the sibling test in the same file orders its exact row last (`:215-224`) for precisely this reason.
+
+Smallest acceptable correction: move the exact equality to the end of the test so the three negatives carry evidence, or delete the three.'''
+disposition = "fix-now"
+response = "Upheld, and it is the sharper of the two minors: three assertions that no input could falsify are exactly what the plan's own discipline forbids, and the sibling test in the same file already got this right by ordering its exact row last. Reordering, not deleting — the exact equality moves to the end of the test so the three negatives carry evidence again. The untrue comment goes with the reorder."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld, and it is the sharper of the two minors: three assertions that no input could falsify are exactly what the plan's own discipline forbids, and the sibling test in the same file already got this right by ordering its exact row last. Reordering, not deleting — the exact equality moves to the end of the test so the three negatives carry evidence again. The untrue comment goes with the reorder."
+
+[[finding]]
+id = "F-3"
+status = "answered"
+severity = "nit"
+title = "The unterminated-fence class is only pinned as non-empty"
+detail = """
+`src/conventions.rs:1149-1160`. `fn an_unterminated_fence_is_malformed` asserts `!cause.reason.is_empty()` and nothing more. A mutant setting `line: None` on that branch, or substituting any other non-empty sentence, stays green — while EX-3 requires `Cause.line` to be `Some` for every line-bearing class, and every sibling class pins both halves (`:1128-1144`, `:1162-1180`).
+
+Smallest acceptable correction: add `assert_eq!(cause.line, Some(1))` and a `contains("line 1")` assertion."""
+disposition = "fix-now"
+response = """Upheld. EX-3 is explicit that `Cause.line` is `Some` for every line-bearing class and that the sentence names the same line; the unterminated-fence class was the one class where only the reason's non-emptiness was pinned, so the criterion was met in code and unproven in test. Adding both halves (`Some(1)` and "line 1") to bring it level with its siblings."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """Upheld. EX-3 is explicit that `Cause.line` is `Some` for every line-bearing class and that the sentence names the same line; the unterminated-fence class was the one class where only the reason's non-emptiness was pinned, so the criterion was met in code and unproven in test. Adding both halves (`Some(1)` and "line 1") to bring it level with its siblings."""
+
+[[finding]]
+id = "F-4"
+status = "answered"
+severity = "nit"
+title = "The diagnostic says a `key: value` line is not one"
+detail = """
+`src/conventions.rs:302-313`. `foo bar: baz` has a colon, so `split_once` succeeds; the key then fails the whitespace test and is refused through `not_key_value(number)`, whose sentence reads "frontmatter line N is not `key: value`". The refusal is right and the sentence is false — it misdescribes the input to the person debugging it.
+
+Smallest acceptable correction: fold the wording, e.g. "is not a flat `key: value` line: the key holds a space", or give the whitespace-in-key class its own sentence."""
+disposition = "fix-now"
+response = "Upheld. The refusal class is right and the sentence lies about the input, which is the one thing a diagnostic may not do. Folding the wording to name the actual defect — the key holds a space — rather than claiming the line has no colon."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld. The refusal class is right and the sentence lies about the input, which is the one thing a diagnostic may not do. Folding the wording to name the actual defect — the key holds a space — rather than claiming the line has no colon."
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
