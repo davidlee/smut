@@ -30,21 +30,31 @@ ranking — **delivery** (the cure for IMP-011, the top-ranked finding) and
 
 ### Delivery (Wave 1)
 
+**These are sketches of reach, not a specification.** The operator offered them as
+illustrations and has since set the mechanics aside: what is decided is that advice
+reaches an author through this surface, not by which arguments. The pieces below
+are therefore candidates, and the last one waits on IMP-013.
+
 - **Strengthen the guide's own recommendation.** `learn` already ends with a
   `Conventions` section (`src/learn.rs:218`) describing the sets as advice. Turn it
   from a description into a recommendation: the habits that make the store
-  queryable later, and the reason `type` heads the list.
-- **`smut learn --with-conventions hygiene`** — one call that delivers the guide
-  *and* the named set, so an `AGENTS.md` can encode a single invocation. Read as
-  "print both", not "select the set instead of the guide"; if the intent is the
-  latter, say so before it is built.
+  queryable later, and the reason `type` heads the list. **Does not wait on
+  anything.**
 - **`smut learn <section>`** — retrieve one section by name (`labels`, `traversal`,
   `querying`). The names already exist as headings; the work is making them
   addressable, not naming anything new.
+- **A flag, shape undecided.** `smut learn --with-conventions NAME` was the
+  illustration: one call that delivers the guide *and* the named set, so an
+  `AGENTS.md` can encode a single invocation. It cannot be specified until IMP-013
+  settles whether sets resolve across `$PWD/.smut/conventions/`,
+  `~/.config/smut/conventions/` and the binary — a flag that hardcodes a set name
+  would be wrong the moment layering exists. Decide the loader first.
 - **Nothing lands in a response envelope.** Conventions stay out of `declare` and
-  `query` replies. The single open edge case — a stderr warning when a declaration
-  carries `kind` but no `type` — is a contract question (a successful command
-  writing to stderr), owned by IMP-011 and IMP-012, not by this item.
+  `query` replies. The one edge case raised — a stderr warning when a declaration
+  carries `kind` but no `type` — came with the same illustrations and is not a
+  proposal; the fact worth keeping is that it would contradict a success-path
+  `stderr is empty` pin, so it is IMP-011/IMP-012's contract question, not this
+  item's work.
 
 Consequences to plan for, not discover:
 
@@ -53,9 +63,9 @@ Consequences to plan for, not discover:
   `the_guide_points_at_smut_conventions_once`, which deliberately pins the pointer
   *sentence* rather than the phrase). Re-cut those pins with a comment saying what
   changed and why — the DEC-019 precedent for re-cutting a compatibility pin.
-- **A flag and a positional argument on one command** need one grammar: does
-  `learn --with-conventions hygiene` honour `--with-conventions` alone, or also
-  accept a section name beside it? Pick one and pin it.
+- **A flag and a positional argument on one command** would need one grammar —
+  does the flag stand alone, or does it also accept a section name beside it? That
+  question is deferred with the flag itself (below), not answered here.
 
 ### Legibility (later)
 
@@ -117,7 +127,9 @@ re-reading has not fixed the problem.
 IMP-007 (`smut render` short flags) is the other CLI-surface tidy from the same
 period; no dependency either way. IMP-009 (the envelope's six members) is *why*
 the guide gets re-read: if the response surface is regrouped, this item's value
-drops and its sections change.
+drops and its sections change. IMP-013 (user and project conventions) gates the
+flag: a `--with-conventions NAME` that hardcodes a set name would be wrong the
+moment layered resolution exists, so the footer and section names ship first.
 
 ## Provenance
 

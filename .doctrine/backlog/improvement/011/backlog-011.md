@@ -68,7 +68,8 @@ job outranks the legibility one.
   broke both. The convention says nothing about a second classification axis. One
   line — `type` is the class; anything else is a field with its own name — would
   have prevented it.
-- **The stderr edge case is a contract decision, not a tweak.** A success-path
+- **The stderr edge case was illustrative** (operator, 2026-11-02), and is
+  recorded here only because the constraint outlives the idea. A success-path
   warning would break a widespread pin: `stderr.is_empty()` is asserted on
   success in nine places, including the shared `assert_one_json_line` harness
   (`tests/compatibility.rs:85`) that most contract tests route through. The

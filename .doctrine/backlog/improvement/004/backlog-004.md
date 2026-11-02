@@ -91,3 +91,12 @@ first decides whether §A's table is the right artefact at all.
 Trigger: after 0.2 ships and the `hygiene` set has been used on real stores; the
 operator's own use is the evidence that settled the last set of questions, and it
 is the only evidence this one should lean on.
+
+## F. A later possibility that would absorb this item
+
+IMP-013 (user and project conventions, layered over the shipped sets) may make this
+item's premise obsolete: if a project can ship a domain set, `epistemic-records`
+becomes the *shipped example* of a domain set rather than a special case the binary
+owns. That does not retire the content questions in §A–§E; it changes who answers
+them and how the answer ships. IMP-013 decides which, and nothing here must precede
+it.

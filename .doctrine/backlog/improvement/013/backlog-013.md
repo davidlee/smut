@@ -1,0 +1,122 @@
+# IMP-013: Conventions are compiled in: a project or a user cannot add, override or trade a set
+
+Today the whole mechanism is a `const`: `SETS: [&Set; 1]` in `src/conventions.rs`,
+one embedded `HYGIENE` set, and `seed()` emitting it as a declaration under the
+fixed id `conventions-hygiene`. Nothing about it is reachable from outside the
+binary. A user cannot add a set, override the shipped one, or hand a set to another
+project.
+
+That matters more than it looks, because conventions are the only mechanism smut
+has for making a *store* queryable later. The three-store exercise behind RFC-001
+measured 0 of 3 independently briefed authors following the one rule that decides
+whether `where` works at all (IMP-011: give every entity `type`). Advice compiled
+into a binary reaches an author only if they run the command and choose to read it.
+Advice that ships *with the project*, in the directory the project already owns,
+arrives with the work.
+
+## The shape this is reaching for
+
+Three layers, local wins:
+
+1. `$PWD/.smut/conventions/` — the project's own sets, travelling with the store
+2. `~/.config/smut/conventions/` — the user's
+3. the binary — what ships
+
+so a set can be overridden deliberately, and traded by copying a file.
+
+The invariant worth stating as a design goal: **the shipped set is not special.**
+It is a set in the same form, found through the same loader, and it loses to a local
+one like any other. "Define our own conventions the way users define theirs" is the
+point, not a side effect.
+
+## What already exists
+
+- `smut conventions [NAME]` takes a name and refuses an unknown one by name.
+- `conventions NAME --format json` already emits a set **as a declaration** — the
+  export half of trading is built, and the seed round-trip (declare under
+  `conventions-hygiene`, re-run replaces rather than duplicates) proves the form is
+  storable.
+- The guide already holds the right posture, and a pin holds it: a set "never
+  validates, never selects and never touches a store".
+
+So this is a loader plus a naming rule, not a new concept.
+
+## Questions the design has to answer
+
+1. **Precedence and shadowing.** Local-wins is the obvious rule; the question is
+   what a shadowed set does. Silent shadowing plus a listing that shows origin is
+   the cheapest honest answer; a refusal ("`hygiene` is shipped and also present in
+   this project — say which") is the loudest. Either way the *listing* must show
+   which layer each name came from, because a reader has to be able to tell where a
+   rule they are following came from.
+2. **Identity.** The fixed `conventions-hygiene` id is what makes re-installing an
+   update rather than a duplicate. With layers, two same-named sets collide on one
+   id; the scheme has to become per-layer, or per-(layer, name), and the seed's
+   replacement semantics have to survive it.
+3. **Trust and authority.** A set under `.smut/conventions/` is advice a project
+   wrote — the same standing as anything else stored there, which the guide already
+   calls data and not instruction. But it is the one file whose content an agent is
+   expected to *follow*, so the standing should be stated rather than inherited: a
+   project set is advice the operator chose to have read, never a schema, never
+   authority over the store's contents. Whether a user-scope set under XDG carries
+   more weight than a project one — it is the user's own statement — should be
+   decided, not left to whoever writes the loader first.
+4. **Malformed text.** Sets become files. A malformed one must not break the verb
+   for the other layers: refuse by name and origin, keep the rest working. On-disk
+   form is open — the embedded set is prose today and `--format json` emits a
+   declaration, so the declaration is the obvious candidate, but prose is what a
+   human edits.
+5. **The name.** `conventions` is the only plural noun among actions (`declare`,
+   `get`, `query`, `render`, `learn`), and if sets become tradeable vocabulary the
+   name carries more weight. Sketches raised and none chosen: `read`, `magazine`,
+   `trope`. A verb naming the *act* (`read`) collides with the store-reading verbs;
+   a content name (`conventions`, `house-style`, `advice`) keeps it a noun. A rename
+   is cheap now and expensive once users have files on disk.
+
+## Relation to what is already decided
+
+DEC-017 (accepted) settled the 0.2 mechanism in exactly the opposite direction: one
+embedded set, printed; `--format json` emits one entity with a fixed id so a
+re-install upserts; "adding a later set is a file plus a match arm"; and "the binary
+never reads it back". Layered loading moves three of those consequences while
+leaving the principles intact:
+
+| DEC-017 consequence | under a loader |
+| --- | --- |
+| a new set costs a file plus a match arm | a new set costs a file; the match arm is the thing being designed away |
+| fixed id, one per set | must become per-layer or per-(layer, name), and the upsert semantics must survive it |
+| the binary never reads a set back | still true of the *store's* copy — a seeded entity stays inert. It becomes false only for **source files** under the conventions path, which are a different artefact. Keep the distinction explicit or the two will be conflated |
+
+What DEC-017 does *not* move: printed, never validated, never auto-selected, never
+read back from the store, the store may amend its own copy but the seeded body is
+replaced on re-install. Those are the properties that make a set advice rather than
+a schema, and they are the reason this item can be permissive too.
+
+So this is not a contradiction of DEC-017 so much as a later mechanism decision
+that needs to record itself: expect a new DEC (or an amendment naming the
+consequences above) when the loader is designed.
+
+## Neighbours
+
+- **IMP-004** (the `epistemic-records` second set) may be absorbed by this: if a
+  project can ship a domain set, that set becomes the shipped *example* rather than
+  a special case. This item decides which; IMP-004 should not be built first.
+- **IMP-008** (delivery through the `learn` surface) is downstream: with layers, a
+  footer or flag should point at a *resolved* set rather than a hardcoded name, so
+  the loader's shape decides the flag's shape.
+- **IMP-011** (the discriminator) is the finding this mechanism exists to cure at
+  organisation scale: a project that ships its own conventions can require `type` of
+  its own agents in a way a binary never can.
+
+## Status
+
+`design-deferred`. Nothing here blocks Wave 1. But it sits *before* the point where
+IMP-008's `--with-conventions` grammar is pinned, because that flag's whole meaning
+depends on whether sets can be layered and resolved.
+
+## Provenance
+
+Operator inclination of 2026-11-02 ("it should be trivially easy for users to trade
+custom schemas, and conventions for using them, as well as to override the built-in
+conventions"), recorded in RFC-001 § Outcome. The reading of `src/conventions.rs`,
+the DEC-017 comparison, the existing export half and the pins are this repo's.
