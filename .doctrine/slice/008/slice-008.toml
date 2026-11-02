@@ -12,8 +12,8 @@ after = []                      # slice→work soft sequence: { to, rank }
 
 [[selector]]
 selector = "src/conventions.rs"
-intent = "scope-relevant"
-note = "the loader, the resolution types, the listing, the seed — a rewrite, not an extension"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "src/conventions/**"
@@ -22,29 +22,38 @@ note = "hygiene.md's text does not change; its header becomes metadata the reade
 
 [[selector]]
 selector = "src/cli.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "src/main.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "src/error.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "src/learn.rs"
-intent = "scope-relevant"
-note = "only so the guide stops implying the sets are the binary's alone"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "tests/conventions.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[selector]]
 selector = "docs/store-format.md"
-intent = "scope-relevant"
-note = "one clause only: the binary no longer embeds its one set alone (STD-001)"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
+
+[[selector]]
+selector = "src/conventions/hygiene.md"
+intent = "design-target"
+note = "the touch-set sec-6 commits to"
 
 [[relation]]
 label = "references"
