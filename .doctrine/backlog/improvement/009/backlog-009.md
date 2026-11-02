@@ -40,6 +40,13 @@ the object that says so — only a side map the caller must consult. The earlier
 framing (six members with related meanings) is not wrong; it is the *second*
 problem, and the first one has a cheaper cure.
 
+**Correction (2026-11-02).** The information was never missing: a root is exactly
+the object whose `depths[id]` is `0`. Those seven answers subtracted the root by
+hand because the convention is unstated and out of band — a teaching gap, which is
+the same class as this project's top-ranked finding (advice unheard, not data
+absent). That demotes the cure from "add a member" to "state the rule", and it is
+the reason option 1 below is now deferred rather than argued.
+
 ## This is a contract move, not a tidy
 
 - **DEC-019 (accepted)** is explicit: non-traversing envelopes keep exactly the
@@ -57,14 +64,29 @@ problem, and the first one has a cheaper cure.
 
 ## Options, not a proposal
 
-Status is `design-deferred` for the *restructure*. The first option is not
-questionable and does not depend on the rest:
+Status is `design-deferred` for the *restructure* and for the first option, which
+was argued as the cheap half and is now deferred instead:
 
-1. **Name the roots — additive, no DEC-019 decision.** `traversal.roots`, or a
-   top-level `roots` appearing only on a traversing response, listing the ids the
-   walk started from. It removes the measured cost above, it is invisible to the
-   0.1 pin, and it needs no taxonomy anyone has to agree on. Everything else here
-   becomes optional once this lands.
+1. **State the convention before naming the roots.** One sentence in the guide's
+   envelope paragraph — `depths` keys every returned object and `0` marks a root —
+   is the whole measured cure (see the correction above). A `traversal.roots`
+   member is the fallback if that sentence does not take, and two measured hazards
+   make it less obviously good than it looked:
+   - **roots can be the whole store.** `follow` with `from` absent makes every
+     entity a root, so an uncut `roots` duplicates the entire result, and cutting
+     it by `limit` makes provenance lie. `frontier` is the precedent for an uncut
+     array, but it is one hop past the result, not the store.
+   - **`order` + `limit` can cut the root out of `objects` entirely.** Measured:
+     `objects` `[q1,q2]` with no depth-0 entry at all, `truncated: true,
+     result_limit`. A cut `roots` would then be empty and an uncut one would
+     disagree with `objects` — a second thing to reconcile exactly where the guard
+     already says "stop and answer partially".
+
+   If it is ever added it goes **inside `traversal`, never top-level**: the
+   traversing response's key set is pinned to "the five 0.1 members plus exactly one
+   conditional member" (`tests/compatibility.rs`), which is the property DEC-019
+   exists to protect, and only the two exact envelope literals in
+   `tests/fixture.rs` would need re-cutting for an inner member.
 2. **Keep the shape; carry the taxonomy in the guide.** Cheapest of the rest, and
    the friction mostly stands. IMP-008's section selector lowers the cost of the
    re-read the reporter actually avoided, which may be enough on its own.
