@@ -1,0 +1,43 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 31
+slug = "sets-in-force-are-chosen-by-layer-and-named-by-origin"
+title = "The conventions set in force is chosen by layer and named by its origin — and its body stays the file's own bytes"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["config", "conventions", "surface"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "DEC-026 promised origin printing plus a set header naming its own file. DEC-028 made a set's bytes load-bearing: the seed's body is the file's text. The two promises collide, and research recorded the collision as the sharpest thing the implementation would hit."
+choice = "Keep the bytes and move the origin. Precedence is by layer and never by validity; a set's identity is its origin and every listing row names layer and file; printed prose is the body — the file without its frontmatter — with no banner or footer; a shadowed set stays visible marked shadowed; a failed set is a row carrying its path and one-line reason and refuses by name when asked for."
+alternatives = ["injecting a header line naming the file into printed prose per DEC-026's original wording", "printing the origin to stderr alongside unchanged prose", "making validity a tie-breaker so a broken project set falls back to the user set", "refusing the whole command when any layer holds a broken set"]
+rationale = "A fallback whose trigger is a parse failure in a nearer file makes the advice a caller gets depend on something they cannot see. Keeping the body identical to the file preserves the property that a seeded store record and its source diff clean, which is what makes the file the durable copy rather than an aspiration. The origin still reaches the reader, in the one command whose job is to say what exists."
+consequences = ["the listing changes shape from one row per set to one row per file with layer and path", "smut conventions NAME prints the body without frontmatter so a set file's metadata never appears as prose", "the .config-in-a-repository confusion loses its second cure and depends on the reader running the listing", "a broken project set shadows a working user set and must be tested as doing so"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+target = "DEC-026"
+
+[[relation]]
+label = "references"
+role = "concerns"
+target = "DEC-028"
+
+[[relation]]
+label = "shapes"
+target = "SL-008"

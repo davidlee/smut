@@ -29,6 +29,11 @@ mechanism.
 
 ### Open questions
 
+Answered during the run — all ten inquiries resolved at revision 11 with a disposition.
+The durable answers are DEC-031, DEC-032, DEC-033 and QUE-002; the design detail is
+carried by the sections. The leans below are what was recorded *before* inquiring and are
+kept as the prior, not as the answer.
+
 | id | question | lean |
 | --- | --- | --- |
 | inq-1 | What does one resolved set carry, and what shape makes three layers one mechanism rather than three loaders? | one record per file: name, summary, version, source path, layer, body, and a loaded-or-reason outcome |

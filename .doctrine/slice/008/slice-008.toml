@@ -41,6 +41,11 @@ note = "only so the guide stops implying the sets are the binary's alone"
 selector = "tests/conventions.rs"
 intent = "scope-relevant"
 
+[[selector]]
+selector = "docs/store-format.md"
+intent = "scope-relevant"
+note = "one clause only: the binary no longer embeds its one set alone (STD-001)"
+
 [[relation]]
 label = "references"
 role = "originates_from"

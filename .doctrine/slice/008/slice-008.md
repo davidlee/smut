@@ -65,8 +65,9 @@ it. The identity gate cleared with SL-004 (`86460d4`), and 0.2.1 is released
   becomes a schema. A malformed *set file* is isolated and reported; a stored entity
   is still whatever was stored.
 - **Any file inside `.smut/`.** The store's layout stays owned by
-  `docs/store-format.md` under STD-001, which already disclaims conventions; that
-  document needs no change.
+  `docs/store-format.md` under STD-001 and does not change. One clause *in* that file
+  ("the binary shipped today embeds its one set") is amended at landing, because
+  STD-001 makes it the store format's only record and it would otherwise be false.
 - **The set's content.** `epistemic-records` is SL-006; this slice makes it
   shippable, not correct.
 - **README prose.** CHR-001 owns the README rewrite before publish, and two of its
@@ -80,12 +81,13 @@ it. The identity gate cleared with SL-004 (`86460d4`), and 0.2.1 is released
 | path | what changes |
 | --- | --- |
 | `src/conventions.rs` | rewritten: root discovery, the file reader, layer resolution, the listing, the seed |
-| `src/conventions/` | `hygiene.md` unchanged as text; its header is now metadata the reader parses |
+| `src/conventions/` | `hygiene.md` gains flat frontmatter carrying its summary (DEC-028); its version stays injected from the crate; the body below the frontmatter is the prose that prints |
 | `src/cli.rs` | `Invocation::Conventions(Ask)` — `resolve` runs in DEC-004's step 1 and now reads the filesystem |
 | `src/main.rs` | the dispatch arm: which root the loader is handed, and where a load failure is reported |
 | `src/error.rs` | the refusal vocabulary: a set that did not load, a derived frontmatter key, an origin-bearing unknown name |
-| `src/learn.rs` | the grammar lines and the sentence that says a set needs no store — still true, but it must not also imply the sets are only the binary's |
-| `tests/conventions.rs` | the argument order and the scratch directories the loader needs |
+| `src/learn.rs` | the grammar lines, the exit table's clause for a set that could not be loaded (DEC-033), and the sentence that says a set needs no store — still true, but it must not also imply the sets are only the binary's |
+| `tests/conventions.rs` | rewritten against the layered surface: a fake config home, a nested cwd under a repository, layer precedence, shadowing, a broken set at both exits, and no unfalsifiable no-store assertion |
+| `docs/store-format.md` | one clause (49-56): the binary no longer "embeds its one set" alone |
 | `tests/fixture.rs` | reused temp-dir helpers, if any exist worth sharing |
 
 ## Risks, assumptions and open questions
@@ -111,37 +113,59 @@ it. The identity gate cleared with SL-004 (`86460d4`), and 0.2.1 is released
   the loader; the binary is the only place that reads the environment.
 - **A1 — no new dependency.** The frontmatter is two flat keys; it is hand-parsed, as
   the store's own documents are, not given a YAML or TOML parser.
-- **OQ-1 — the environment override.** DEC-026's choice includes one ("an environment
-  override points at one config deliberately") and names no surface for it. Naming a
-  variable is a compatibility commitment, so the default is to defer it to a recorded
-  follow-up unless it falls out of the root plumbing for free.
-- **OQ-2 — how the origin reaches the prose reader.** DEC-026's cure for
-  `.config`-in-a-repository is "origin printing plus a set header naming its own
-  file". Whether the printed prose carries an injected header line (bytes differ from
-  the file) or the origin appears in the listing and on shadowing only (bytes stay the
-  file) is undecided and must be — printing a set cannot silently differ from the
-  file an author edits.
-- **OQ-3 — where shadowing is announced.** "Reported as shadowing" is decided;
-  the channel is not. Listing row, prose footer, or stderr. Whatever is chosen must
-  not make prose output non-deterministic for a caller piping it into `declare`.
+- **A2 — the origin reaches the reader through the listing.** DEC-026's "a set header
+  naming its own file" and DEC-028's byte-identity cannot both hold, and DEC-031 keeps
+  the bytes: printed prose is the body, never a banner, so a seeded entity and its
+  source file diff clean. Shadowing is announced in the listing too.
+- **A3 — the environment override is deferred** (QUE-002). DEC-026 names a mechanism and
+  no surface, and the loader taking its roots as parameters (DEC-032) removes the last
+  case where a test needed one.
+
+### Settled by the design run
+
+- **DEC-031** — the set in force is chosen by layer, never by validity; a set's identity
+  is its origin; the body stays the file's bytes; a shadowed set stays visible; a broken
+  set is a row. Exit codes are DEC-033's.
+- **DEC-032** — the loader is a pure function over its three roots. The project root is
+  the nearest ancestor holding a `.git` entry of either kind, else the cwd with no
+  walk-up; the user root is `$XDG_CONFIG_HOME` else `$HOME/.config`; an unresolvable user
+  root is an absent layer, not an error; only the binary reads the environment.
+- **DEC-033** — exit 2 for what the caller typed (an unknown name, an unknown format),
+  exit 1 for what the filesystem supplied (unreadable directory, unparseable
+  frontmatter, a derived key), and a listing that reports a broken set exits 0.
+- **QUE-002** — the environment override's name, what it names, and its rank, left open
+  deliberately.
+
+Two consequences the scope did not anticipate: the listing now has **one row per file**
+(name, layer, summary-or-verdict, path) rather than one per set, and `smut conventions
+<name>` stops printing a file's frontmatter because frontmatter is metadata.
 
 ## Verification and closure intent
 
 - Precedence: a project set beats a user set beats the shipped one, same-named sets
   never merge, and the shadowed one is visible rather than absent.
 - One reader: the embedded bytes and a file with identical bytes resolve to the same
-  `Set`; the shipped set is not a special case in the code.
-- Isolation: an unparseable frontmatter, a missing file, an unreadable directory and
-  a derived key each list their layer, path and one-line reason, and none of them
-  prevents another layer from answering.
-- Refusal: an unknown name lists every resolved name with its origin, and the
-  malformed file among them.
-- Seed: fixed `smut_id`, `source` relative to the layer root, author-declared
-  `version` for a file set, crate version for the shipped one, and re-declaring still
-  reports the body it replaced under `previous`.
-- No store: `smut conventions` creates, locks, recovers and validates nothing
-  (VA-1), which now needs proving with a file-backed loader rather than by
-  construction.
+  entry; the shipped set is not a special case in the code.
+- Isolation: an unparseable frontmatter, an unreadable directory and a derived
+  frontmatter key each list their layer, path and one-line reason, and none of them
+  prevents another layer from answering. A broken *project* set still wins its name and
+  shadows the user's (DEC-031), which is the one case where isolation and precedence
+  pull in opposite directions and the tested answer is precedence.
+- Refusal: an unknown name at exit 2 lists every resolved name with its origin; the
+  broken file among them is refused by name at exit 1 with its path and line; a listing
+  that reports it exits 0 (DEC-033).
+- Seed: fixed `smut_id`, `source` naming the file relative to its layer root, the
+  author's `version` for a file set and the crate's for the shipped one, and
+  re-declaring still reports the body it replaced under `previous`. The seed's `body` is
+  the file's own bytes, which is what the listed prose prints (DEC-031).
+- Two roots: a cwd nested inside a repository reads the repository's sets while
+  `smut declare` writes a store beside the cwd (DEC-004); the disagreement is tested, not
+  smoothed.
+- No store: `smut conventions` creates, locks, recovers and validates nothing (VA-1) —
+  asserted by pairing it with a store command that fails in the same directory, never by
+  a bare absence check that no input could falsify.
+- Every assertion names the change that reddens it. This suite is deliberately rewritten,
+  so the discrimination discipline is the evidence, not the diff.
 - Closure is the gate, not the feature: SL-006 can move to `plan` once a project can
   ship a set and see which layer it read.
 
@@ -151,13 +175,15 @@ Turn the compiled-in conventions set into three structurally identical layers �
 in the project's `.config/smut/conventions/`, one in the user's, and the binary's
 embedded set — resolved by one loader, with the listing and the refusals printing
 which layer each set came from so a mis-placed or unreadable file is diagnosed rather
-than silently lost. The design is DEC-026 and DEC-028; this slice is their
-implementation and the last gate on the deferred `epistemic-records` set.
+than silently lost. DEC-026 and DEC-028 are the mechanism; DEC-031, DEC-032 and DEC-033
+are what the design settled, and DEC-033's exit line — what the caller typed is 2, what
+the filesystem supplied is 1 — is the part a caller sees. This slice is also the last
+gate on the deferred `epistemic-records` set.
 
 ## Follow-Ups
 
 - **IMP-008** — the section selector and the `--with-conventions` flag: downstream of
   this slice, and it must not be pinned before the loader has layers.
 - **CHR-001** — the README paragraphs describing the compiled-in set.
-- **OQ-1** — the environment override, if deferred here.
+- **QUE-002** — the environment override's name, what it names and its rank.
 - **SL-006** — unblocked by this slice; `epistemic-records` moves back into reach.

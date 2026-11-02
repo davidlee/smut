@@ -1,0 +1,43 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 32
+slug = "the-loader-takes-its-roots-as-parameters"
+title = "The set loader takes its roots as parameters: the project root is the nearest .git and the user layer is the config home — only the binary reads the environment"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["cli", "config", "conventions"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "DEC-026 named three roots and DEC-028 bounded the walk-up at the git root without saying which code decides which directory those roots are. The binary already derives a store root from the current directory under DEC-004, and the conventions suite spawns the binary with the parent environment inherited."
+choice = "The loader is a pure function over its three roots and reads nothing. The binary resolves them once: the project root is the nearest ancestor holding a .git entry of either kind, falling back to the current directory with no walk-up when there is no repository; the user root is XDG_CONFIG_HOME when set and non-empty, else HOME/.config; and a user layer that resolves to nothing is absent rather than an error. No environment override ships in this slice."
+alternatives = ["reading HOME and the current directory inside the loader itself", "shelling out to git rev-parse --show-toplevel for the project root", "shipping DEC-026's environment override now under an invented variable name", "walking up to the filesystem root when no repository is found", "failing the command when no config home resolves"]
+rationale = "A pure resolver keeps the environment out of the layer that must be testable, and the suite's inherited environment means an ambient read would make a developer's own ~/.config change what tests observe while a clean container stayed green. Deriving the project root from a .git entry keeps a dependency-free binary free of a PATH dependency and a subprocess, and a worktree's .git file answers the only question the loader asks."
+consequences = ["the loader's roots become explicit arguments and the suite controls them with a current directory and an environment rather than the developer's real home", "the process now derives two roots and they can disagree in a subdirectory — documented and tested rather than smoothed", "an environment override remains recorded as an open question rather than invented", "no new dependency and no subprocess"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+target = "DEC-026"
+
+[[relation]]
+label = "references"
+role = "concerns"
+target = "DEC-004"
+
+[[relation]]
+label = "shapes"
+target = "SL-008"

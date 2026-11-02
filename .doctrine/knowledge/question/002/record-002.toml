@@ -1,0 +1,36 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 2
+slug = "which-environment-variable-points-at-one-config-home"
+title = "Which environment variable should point smut at one conventions config home, and what does it name?"
+record_kind = "question"
+status = "open"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["config", "conventions"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+question = "Which environment variable should point smut at one conventions config home, and does it name a config home, a set directory, or a layer root — and where does it rank against the project and user layers?"
+why_matters = "DEC-026 chose an environment override without naming its surface. A monorepo keeping sets in one shared checkout and a dotfiles owner keeping sets outside ~/.config both need it, and a variable cannot be renamed later without breaking whoever used it. Its rank decides whether an override can beat a project's own sets, which is the difference between sharing and debugging."
+answer      = ""
+answered_by = ""
+answered_on = ""
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+target = "DEC-026"
+
+[[relation]]
+label = "shapes"
+target = "SL-008"
