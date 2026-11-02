@@ -126,7 +126,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · ready · deef11e
+fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
 
 ### Produced
 
@@ -143,6 +143,12 @@ fresh-as-of: 2026-11-02 · ready · deef11e
 - `.doctrine/slice/010/plan.toml` + `plan.md` — three phases, every routed finding transcribed
   into the criterion that settles it; phase sheets materialised under `.doctrine/state/`.
 - Eleven `design-target` and `scope-relevant` selectors, matching design §6.
+- **PHASE-01** (`1fb66de`) — `src/dsl.rs` (the compiler: `Line`, `Flags`, `compile`,
+  `value`, `OPERATORS`, `Where`), `tests/dsl.rs` (13 tests), `Reject::{JsonOperand,
+  UnreadableToken}` with their whole-line tests, and the three `EXAMPLE_*_Q` constants in
+  `src/learn.rs` (declared here, printed by PHASE-03). Evidence and the run's environment
+  facts: `notes.md` § Implementation run. Runtime sheet:
+  `state/slice/010/phases/phase-01.md` § Outcome.
 
 ### Learned
 
@@ -158,6 +164,15 @@ fresh-as-of: 2026-11-02 · ready · deef11e
   repeated-flag rule — the residual disclosed at sufficiency acceptance closed by evidence.
 - `smut q` with nothing at all is `query {}`, which the specification already defines as
   legal, so the front-end has no no-query refusal to write.
+- **A recipe's two spellings need not be `Spec`-equal.** Roots compile to `from` while the
+  JSON filter twin is `where.smut_id.$in`: only the result set agrees, so the equivalence
+  test asserts each line against the JSON *it* denotes and set agreement is PHASE-02's
+  (PHASE-01 A5).
+- **The plan's flag seam was narrower than its prose.** The guide's recipes force
+  `--backlinks`, `--follow`, `--depth` and `--ids` into PHASE-01, and `--depth` already runs
+  through `value()` — so PHASE-04's numeric-flag criterion is pinned, not built. `Flags` is
+  declared in full; six fields are PHASE-04's to wire, and `dsl::members()` is the single
+  comma splitter the list rule must attach to.
 
 ### What the hostile pass taught (RV-031)
 
@@ -180,8 +195,8 @@ fresh-as-of: 2026-11-02 · ready · deef11e
   `plan.toml`; an integrator settled every blocking and material finding. PHASE-01 split at the
   words/flags seam into `PHASE-01` and an appended `PHASE-04` (execution order is array order, so
   the id sequence is deliberately non-monotonic). Nothing about the design is open.
-- **Corrections owed to the locked design** (found by the hardening audits; pinned in `plan.md`'s
-  "Corrections owed to the design", unpaid here):
+- **Corrections owed to the locked design** (three found by the hardening audits, one in
+  PHASE-01; all pinned in `plan.md`'s "Corrections owed to the design", unpaid here):
   - Design §4's struct block prints `#[arg(value_name = "TOKEN")]` on the positional while its
     prose, its observation table and DEC-037 all say the positional carries no attribute. The
     prose is the decision; the block owes the deletion.
@@ -190,6 +205,11 @@ fresh-as-of: 2026-11-02 · ready · deef11e
   - Design §3's rows 1 and 15 both fire on §1's "more than one operator" branch with different
     sentences and no discriminator. The plan discriminates by kind (two `=` reports the
     field-name row; differing kinds report the both-operators row); §3 owes the sentence.
+  - *(added in PHASE-01, sheet decision D4)* Design §3 has no row for two comma lists on
+    `=`. `status=a,b status=c,d` is satisfiable — the lists may intersect — so the
+    contradiction voice would be false; the refusal is in the caller's tokens
+    (`cannot read "status=a,b status=c,d": q carries one = per field; use smut query`) under
+    §2's third bullet, and §3 owes the row.
 - **Obligations owed at reconcile** (none may be paid mid-slice):
   - DEC-016 — amend to name the DSL spelling of the two-call recipe; the guide keeps both
     spellings executed until then.
@@ -202,11 +222,6 @@ fresh-as-of: 2026-11-02 · ready · deef11e
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-  - **Design §3 has no row for two comma lists on `=`** *(added in PHASE-01, D4)* —
-    `status=a,b status=c,d` is satisfiable, so the contradiction voice would be false of it;
-    PHASE-01 refuses it in the caller's tokens (`cannot read "status=a,b status=c,d": q
-    carries one = per field; use smut query`) under §2's third bullet. §3 owes the row, and
-    the design-correction count at reconcile is therefore **four**, not three.
 - Slice is `started` and **PHASE-01 is `completed`** (2026-11-03). Next: `/phase-plan` for
   PHASE-04, then PHASE-02, then PHASE-03 — the array's order, not the ids'.
 
