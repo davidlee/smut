@@ -584,6 +584,58 @@ fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() 
             "the request is validated before the store is opened, so no store exists: {specification}"
         );
     }
+
+    // A field whose conditions cannot all hold is one more refusal (DEC-027).
+    // A predicate composed at runtime can reach one — an `$in` list that a
+    // derivation left empty is the common shape — and now gets exit 2 where it
+    // used to get an empty result; `from: []` remains the documented spelling
+    // for an intentional empty result.
+    let contradictory = [
+        (
+            r#"{"where":{"status":{"$in":[]}}}"#,
+            "$in is given an empty list",
+        ),
+        (
+            r#"{"where":{"status":{"$eq":"open","$ne":"open"}}}"#,
+            "$eq and $ne are given the same value",
+        ),
+        (
+            r#"{"where":{"status":{"$ne":"open","$in":["open"]}}}"#,
+            "$ne contradicts every value $in lists",
+        ),
+        (
+            r#"{"where":{"status":{"$contains":"zzz","$in":["open"]}}}"#,
+            "$contains is not satisfied by any value $in lists",
+        ),
+    ];
+
+    for (specification, contradiction) in contradictory {
+        let refused = smut(&scratch, &["query", specification]);
+
+        assert_eq!(
+            refused.code, 2,
+            "an unsatisfiable field is exit 2 for {specification}: {}",
+            refused.stderr
+        );
+        assert_eq!(
+            refused.stdout, "",
+            "a refusal never prints an envelope: {specification}"
+        );
+        assert!(
+            refused.stderr.contains("field status cannot be satisfied"),
+            "the refusal names the field and the reason for {specification}: {}",
+            refused.stderr
+        );
+        assert!(
+            refused.stderr.contains(contradiction),
+            "the refusal names `{contradiction}` for {specification}: {}",
+            refused.stderr
+        );
+        assert!(
+            !scratch.has_store(),
+            "the contradiction is decided before the store is opened: {specification}"
+        );
+    }
 }
 
 #[test]

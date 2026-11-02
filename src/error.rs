@@ -84,6 +84,14 @@ pub enum Reject {
         /// What that operator accepts, for the message.
         expected: String,
     },
+    /// One field's conditions cannot all hold, so no entity can satisfy this
+    /// predicate. Provable from the condition list alone.
+    ContradictoryFieldConditions {
+        /// The field whose conditions conflict.
+        field: String,
+        /// Which conditions conflict, for the message.
+        contradiction: String,
+    },
     /// One JSON object in the input gives the same key twice, which would lose
     /// the earlier assignment. Refused as the key is read, before a `Value`
     /// exists (§3.1, DEC-006).
@@ -313,6 +321,13 @@ impl fmt::Display for Reject {
             Reject::InvalidPredicateValue { operator, expected } => {
                 write!(formatter, "{operator} must be {expected}")
             }
+            Reject::ContradictoryFieldConditions {
+                field,
+                contradiction,
+            } => write!(
+                formatter,
+                "field {field} cannot be satisfied: {contradiction}"
+            ),
             Reject::DuplicateKey { key } => write!(
                 formatter,
                 "duplicate JSON key: {key}, and one object cannot give a key twice"
@@ -493,7 +508,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 24] = [
+        let cases: [(Error, u8); 25] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -564,6 +579,14 @@ mod tests {
                 Reject::InvalidPredicateValue {
                     operator: "$in".to_owned(),
                     expected: "an array of values".to_owned(),
+                }
+                .into(),
+                INVALID_INPUT,
+            ),
+            (
+                Reject::ContradictoryFieldConditions {
+                    field: "meta".to_owned(),
+                    contradiction: "$in is given an empty list".to_owned(),
                 }
                 .into(),
                 INVALID_INPUT,
@@ -772,6 +795,17 @@ mod tests {
         };
         assert!(operand.to_string().contains("$in"), "{operand}");
         assert!(operand.to_string().contains("array"), "{operand}");
+
+        // Asserted whole: a message that dropped the field name or the clause
+        // would still satisfy a substring assertion.
+        let contradiction = Reject::ContradictoryFieldConditions {
+            field: "status".to_owned(),
+            contradiction: "$eq and $ne are given the same value".to_owned(),
+        };
+        assert_eq!(
+            contradiction.to_string(),
+            "field status cannot be satisfied: $eq and $ne are given the same value"
+        );
 
         let unknown = Reject::UnknownSpecificationKey {
             key: "sort".to_owned(),

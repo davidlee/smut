@@ -55,8 +55,24 @@ pub enum Condition {
 ///
 /// Keys are examined in the object's own (lexical) order, and sibling keys are
 /// ANDed, so a `where` object with more than one defect always reports the same
-/// one.
+/// one. Once the AST is built, a field whose conditions cannot all hold is
+/// refused — but only where the predicate demands that field (§2).
 pub fn parse(value: &Value) -> Result<Predicate, Reject> {
+    let predicate = parse_predicate(value)?;
+
+    match refusal(&predicate, true) {
+        Some(refusal) => Err(refusal),
+        None => Ok(predicate),
+    }
+}
+
+/// Builds one predicate object's AST, recursing through the clauses.
+///
+/// The contradiction check is deliberately not here: this function re-enters
+/// itself for every clause operand, so a check at its end would run once per
+/// operand — and one of those operands is not demanded. [`parse`] is the single
+/// external ingress, and it calls [`refusal`] once over the finished AST.
+fn parse_predicate(value: &Value) -> Result<Predicate, Reject> {
     let members = value
         .as_object()
         .ok_or_else(|| invalid("where", "a predicate object"))?;
@@ -100,7 +116,7 @@ fn parse_all(operator: &str, value: &Value) -> Result<Vec<Predicate>, Reject> {
                 return Err(invalid_predicate(operator, EXPECTED));
             }
 
-            parse(item)
+            parse_predicate(item)
         })
         .collect()
 }
@@ -113,7 +129,7 @@ fn parse_not(value: &Value) -> Result<Predicate, Reject> {
         return Err(invalid_predicate(OPERATOR, "a predicate object"));
     }
 
-    Ok(Predicate::Not(Box::new(parse(value)?)))
+    Ok(Predicate::Not(Box::new(parse_predicate(value)?)))
 }
 
 /// Parses one field's value into its conditions (§6.2's disambiguation rule).
@@ -187,6 +203,121 @@ fn invalid_predicate(operator: &str, expected: &str) -> Reject {
     Reject::InvalidPredicateValue {
         operator: operator.to_owned(),
         expected: expected.to_owned(),
+    }
+}
+
+/// Returns the contradiction that makes one field's conditions impossible, or
+/// `None` when some value satisfies them all (§2).
+///
+/// Reads only the condition list, and decides every case by evaluating
+/// [`Condition::holds`] — the same evaluation the query uses — so a refusal
+/// cannot disagree with the query it refuses. The steps are fixed, so the
+/// sentence does not depend on the object's key order or on the caller's `$in`
+/// array order: the first branch that fires names it.
+fn contradiction(conditions: &[Condition]) -> Option<String> {
+    // 1. No value is a member of nothing.
+    if conditions
+        .iter()
+        .any(|condition| matches!(condition, Condition::In(values) if values.is_empty()))
+    {
+        return Some("$in is given an empty list".to_owned());
+    }
+
+    // 2. Absence beside anything else cannot hold: `$exists:false` requires the
+    //    field absent, and every other condition requires it present.
+    if conditions.len() > 1
+        && conditions
+            .iter()
+            .any(|condition| matches!(condition, Condition::Exists(false)))
+    {
+        return Some("$exists: false beside any other condition".to_owned());
+    }
+
+    // 3. `$eq` pins the field to one value, so the rest is decided by evaluating
+    //    it, in the fixed `$ne`, `$in`, `$contains` order. `$exists:true` cannot
+    //    fail on a present value, so it needs no sentence.
+    if let Some(pinned) = conditions.iter().find_map(|condition| match condition {
+        Condition::Eq(value) => Some(value),
+        _ => None,
+    }) {
+        let failed = |operator: fn(&Condition) -> bool| {
+            conditions
+                .iter()
+                .any(|condition| operator(condition) && !condition.holds(Some(pinned)))
+        };
+
+        if failed(|condition| matches!(condition, Condition::Ne(_))) {
+            return Some("$eq and $ne are given the same value".to_owned());
+        }
+
+        if failed(|condition| matches!(condition, Condition::In(_))) {
+            return Some("$in does not list the $eq value".to_owned());
+        }
+
+        if failed(|condition| matches!(condition, Condition::Contains(_))) {
+            return Some("$contains is not satisfied by the $eq value".to_owned());
+        }
+
+        return None;
+    }
+
+    // 4. `$in` bounds the field to a finite set, so some member of it must
+    //    survive the remaining conditions. With neither `$eq` nor `$in` the
+    //    field is unbounded and nothing is provable — `$contains` included.
+    let members = conditions.iter().find_map(|condition| match condition {
+        Condition::In(values) => Some(values),
+        _ => None,
+    })?;
+
+    let excluded = conditions.iter().find_map(|condition| match condition {
+        Condition::Ne(value) => Some(value),
+        _ => None,
+    });
+
+    let survives = |member: &Value| excluded.is_none_or(|excluded| member != excluded);
+
+    if excluded.is_some() && !members.iter().any(survives) {
+        return Some("$ne contradicts every value $in lists".to_owned());
+    }
+
+    for condition in conditions {
+        if matches!(condition, Condition::Contains(_))
+            && !members
+                .iter()
+                .filter(|member| survives(member))
+                .any(|member| condition.holds(Some(member)))
+        {
+            return Some("$contains is not satisfied by any value $in lists".to_owned());
+        }
+    }
+
+    None
+}
+
+/// Walks the parsed predicate carrying whether it must hold, and judges a
+/// [`Predicate::Field`] only where it is demanded (§2).
+///
+/// Demand is propagated, never inferred from `$not` parity: `And` passes it to
+/// every child, `Not` flips it, and `Or` determines its children only when the
+/// `Or` itself must not hold — so a false disjunct is left to the others.
+fn refusal(predicate: &Predicate, demanded: bool) -> Option<Reject> {
+    match predicate {
+        Predicate::Field(field, conditions) if demanded => {
+            contradiction(conditions).map(|contradiction| Reject::ContradictoryFieldConditions {
+                field: field.clone(),
+                contradiction,
+            })
+        }
+        Predicate::Field(..) => None,
+        Predicate::And(children) if demanded => {
+            children.iter().find_map(|child| refusal(child, true))
+        }
+        Predicate::And(_) => None,
+        Predicate::Or(children) if !demanded => {
+            children.iter().find_map(|child| refusal(child, false))
+        }
+        Predicate::Or(_) => None,
+        Predicate::Not(inner) => refusal(inner, !demanded),
     }
 }
 
@@ -518,5 +649,233 @@ mod tests {
             assert!(!field("f", vec![Condition::Exists(true)]).holds(&entity));
             assert!(Predicate::And(Vec::new()).holds(&entity));
         }
+    }
+
+    /// One condition object per reachable branch of §2, with the `contradiction`
+    /// sentence §3 pins for it.
+    fn contradiction_branches() -> impl Iterator<Item = (Value, &'static str)> {
+        [
+            (json!({ "$in": [] }), "$in is given an empty list"),
+            (
+                json!({ "$exists": false, "$eq": "open" }),
+                "$exists: false beside any other condition",
+            ),
+            (
+                json!({ "$eq": "open", "$ne": "open" }),
+                "$eq and $ne are given the same value",
+            ),
+            (
+                json!({ "$eq": "open", "$in": ["closed"] }),
+                "$in does not list the $eq value",
+            ),
+            (
+                json!({ "$eq": "open", "$contains": "zzz" }),
+                "$contains is not satisfied by the $eq value",
+            ),
+            (
+                json!({ "$ne": "open", "$in": ["open"] }),
+                "$ne contradicts every value $in lists",
+            ),
+            (
+                json!({ "$contains": "zzz", "$in": ["open"] }),
+                "$contains is not satisfied by any value $in lists",
+            ),
+        ]
+        .into_iter()
+    }
+
+    #[test]
+    fn parse_refuses_a_contradiction_naming_the_field_and_the_reason() {
+        // §3: one sentence per branch, pinned text — a contract, not wording.
+        //
+        // A caller composing a predicate at runtime from variables can now
+        // synthesise a contradiction and get exit 2 where it previously got an
+        // empty result; a computed `$in` list that happens to be empty is the
+        // common shape. `from: []` remains the documented spelling for an
+        // intentional empty result (DEC-027, §7).
+        for (conditions, contradiction) in contradiction_branches() {
+            let input = json!({ "status": conditions });
+
+            assert_eq!(
+                refused(input.clone()),
+                Reject::ContradictoryFieldConditions {
+                    field: "status".to_owned(),
+                    contradiction: contradiction.to_owned(),
+                },
+                "{input}"
+            );
+        }
+
+        // The field is named once, by the frame, and the reason once, by the
+        // clause: the whole rendered refusal.
+        assert_eq!(
+            refused(json!({ "status": { "$eq": 1, "$ne": 1 } })).to_string(),
+            "field status cannot be satisfied: $eq and $ne are given the same value"
+        );
+    }
+
+    #[test]
+    fn a_contradiction_is_refused_only_where_it_is_demanded() {
+        // §2: demand is propagated, not counted. A conjunct must hold if the
+        // `And` must, `Not` flips demand, and an `Or` reaches its children only
+        // when it must not hold.
+        let contradiction = || json!({ "status": { "$eq": "open", "$ne": "open" } });
+        let sentence = "$eq and $ne are given the same value";
+
+        for input in [
+            // The root is demanded.
+            contradiction(),
+            // `And` passes demand down.
+            json!({ "$and": [contradiction()] }),
+            // Two `$not`s restore demand.
+            json!({ "$not": { "$not": contradiction() } }),
+        ] {
+            assert_eq!(
+                refused(input.clone()),
+                Reject::ContradictoryFieldConditions {
+                    field: "status".to_owned(),
+                    contradiction: sentence.to_owned(),
+                },
+                "{input}"
+            );
+        }
+
+        for input in [
+            // One `$not`: a false inner predicate makes `$not` true.
+            json!({ "$not": contradiction() }),
+            // A must-hold `$or` still has its other disjuncts to decide.
+            json!({ "$or": [contradiction()] }),
+            // A `$not` over an `And` leaves the conjuncts undemanded.
+            json!({ "$not": { "$and": [contradiction()] } }),
+            // A `$not` over a must-hold `$or` reaches the `Or` demanded false,
+            // and an `Or` that must not hold hands its children `false`.
+            json!({ "$not": { "$or": [contradiction()] } }),
+        ] {
+            parse(&input).expect("the predicate has an answer, so it is not refused");
+        }
+    }
+
+    #[test]
+    fn parse_accepts_satisfiable_combinations() {
+        // §5's positive controls: each would fail if the rule were widened.
+        for conditions in [
+            json!({ "$eq": 1, "$in": [1] }),
+            json!({ "$eq": "open", "$contains": "pen" }),
+            json!({ "$ne": 1, "$in": [2] }),
+            json!({ "$exists": true, "$eq": 1 }),
+            json!({ "$contains": "pen" }),
+            json!({ "$in": ["open"], "$contains": "pen" }),
+            json!({ "$ne": 1 }),
+        ] {
+            let input = json!({ "f": conditions });
+
+            parse(&input).expect("some value satisfies these conditions");
+        }
+
+        // §2 step 2 refuses `$exists:false` *beside* another condition, and
+        // that "beside" is the whole rule: alone, it is satisfied by every
+        // entity without the field.
+        parse(&json!({ "f": { "$exists": false } })).expect("absence is satisfiable");
+    }
+
+    #[test]
+    fn the_sentence_is_chosen_by_the_fixed_order() {
+        // §2 fixes the order — `$in []`, `$exists:false`, then `$eq` deciding
+        // `$ne`, `$in`, `$contains`, else `$in` deciding `$ne` then `$contains`.
+        // The object's keys are lexical (`serde_json` keeps a `BTreeMap`), so a
+        // list-order implementation would reach `$contains` before `$ne` here.
+        for (conditions, contradiction) in [
+            (
+                json!({ "$eq": 1, "$ne": 1, "$contains": "z" }),
+                "$eq and $ne are given the same value",
+            ),
+            // `$contains` before `$in` would report the wrong step-3 branch.
+            (
+                json!({ "$eq": "a", "$in": ["b"], "$contains": "zzz" }),
+                "$in does not list the $eq value",
+            ),
+            // Step 4 applies `$ne` before `$contains`.
+            (
+                json!({ "$in": ["a"], "$ne": "a", "$contains": "zzz" }),
+                "$ne contradicts every value $in lists",
+            ),
+            (
+                json!({ "$in": ["a"], "$ne": "b", "$contains": "zzz" }),
+                "$contains is not satisfied by any value $in lists",
+            ),
+            // The same `$in` list in both array orders: the sentence depends on
+            // neither the caller's order nor the object's key order.
+            (
+                json!({ "$in": ["a", "b"], "$contains": "zzz" }),
+                "$contains is not satisfied by any value $in lists",
+            ),
+            (
+                json!({ "$in": ["b", "a"], "$contains": "zzz" }),
+                "$contains is not satisfied by any value $in lists",
+            ),
+            // Cross-step precedence: step 1 before step 2 before step 3.
+            (
+                json!({ "$in": [], "$exists": false }),
+                "$in is given an empty list",
+            ),
+            (
+                json!({ "$eq": 1, "$ne": 1, "$exists": false }),
+                "$exists: false beside any other condition",
+            ),
+            // Evaluation, not a second semantics: `1` and `1.0` are distinct
+            // under `serde_json` equality, so the `$in` list does not hold the
+            // pinned value — and the integer list beside it does.
+            (
+                json!({ "$eq": 1, "$in": [1.0] }),
+                "$in does not list the $eq value",
+            ),
+        ] {
+            let input = json!({ "status": conditions });
+
+            assert_eq!(
+                refused(input.clone()),
+                Reject::ContradictoryFieldConditions {
+                    field: "status".to_owned(),
+                    contradiction: contradiction.to_owned(),
+                },
+                "{input}"
+            );
+        }
+
+        parse(&json!({ "status": { "$eq": 1, "$in": [1] } }))
+            .expect("the integer list holds the pinned value");
+    }
+
+    #[test]
+    fn a_contradiction_spanning_and_clauses_is_not_refused() {
+        // A pin. §2 checks one field's condition list, so a contradiction split
+        // across `$and` clauses is out of scope by decision (DEC-027).
+        // Breaking this test is a decision, not a cleanup.
+        parse(&json!({ "$and": [{ "f": { "$eq": 1 } }, { "f": { "$ne": 1 } }] }))
+            .expect("the check is inside one field's list by construction");
+    }
+
+    #[test]
+    fn a_single_disjunct_or_is_not_refused() {
+        // A pin. A must-hold `$or` stops the walk, so its disjuncts are not
+        // analysed and this shape — which does empty the query — is accepted.
+        // Closing it alone would imply the rest of `$or` is analysed (§7), and
+        // `{"$or": []}` staying legal (false, selecting nothing) is part of the
+        // same decision. Breaking this test is a decision, not a cleanup.
+        parse(&json!({ "$or": [{ "f": { "$eq": 1, "$ne": 1 } }] }))
+            .expect("a must-hold `$or` stops the walk");
+        parse(&json!({ "$or": [] })).expect("an empty `$or` is false, and legal");
+    }
+
+    #[test]
+    fn an_unbounded_contains_is_not_refused() {
+        // A pin. `$contains` over a value the request does not bound has no
+        // finite answer, so it is the one shape the rule cannot decide; the test
+        // says it is a limit, not an oversight (§7, DEC-027).
+        // Breaking this test is a decision, not a cleanup.
+        parse(&json!({ "f": { "$contains": "zzz" } }))
+            .expect("an unbounded `$contains` is not provable either way");
+        parse(&json!({ "f": { "$contains": "zzz", "$ne": 1 } }))
+            .expect("`$ne` does not bound the field to a value");
     }
 }
