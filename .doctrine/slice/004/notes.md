@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · **reconcile complete** — RV-028 reconciled (REV-002 done, six decisions amended, selector + design + documents); next route `/close` · code base `64e5f4b` + audit repair `58612ca` + harness fix `37dda01` · gate green at `37dda01` (read in a detached worktree; the live tree is mid-SL-007)
+fresh-as-of: 2026-11-02 · **closed** — SL-004 `done`, 3/3 phases, rollup agrees · audit RV-028 (8/8 terminal) and reconcile (REV-002 `done`) both landed · gate green at `37dda01`, and HEAD differs from it only in `.doctrine` markdown
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -162,6 +162,33 @@ carries both resolutions; STD-002 exists and the slice discharges it by example)
   location sentence is written against it (F-6)
 - Doctrine — design status reports `review_pass RV-025 STALE` and `changes 1 since the
   declared baseline` on a locked run; advisory, not a gate
+
+### Close (2026-11-02)
+
+Closed after `/audit` and `/reconcile`. The rollup agrees (3/3 phases, no blocked,
+anomalous or untracked phase), RV-028 reads `done · await=none` with eight terminal
+findings, and REV-002 is `done` with its `modify STD-001` row landed.
+
+- **Gate.** `just check` at `37dda01` — exit 0, zero warnings, 370 lib and 383
+  `--features fault-injection`. HEAD (`8e5e3b0`) differs from that commit only in
+  `.doctrine` markdown, so the result covers the closing tree. The live working tree
+  was **not** readable as a gate at close: SL-007 had `src/cli.rs`, `src/learn.rs`,
+  `src/spec.rs`, `src/walk.rs` and `tests/traversal.rs` dirty and unformatted
+  (operator-owned, untouched).
+- **Originating items.** ISS-002 and IMP-005 both `resolved · fixed` — the rename
+  frees a caller's own `id` at every depth, and the loader refuses a malformed
+  stored `smut_id` at exit 1 with the file and the path instead of panicking.
+  ISS-003 stays open by direction (its contract is settled separately); IDE-002
+  stays deferred, not resolved.
+- **Durable findings.** Four memories: a proposal's coverage claim is not coverage;
+  a knowledge slug has no edit path; a locked design run refuses `design adopt`;
+  facet array setters split on commas. Nothing else was harvested — the rest is
+  slice prose already in this file.
+- **Carried, deliberately.** RV-024 (six major, three minor, one nit) and RV-025
+  (eight minor, two nit) remain `active` with findings their own passes left open;
+  neither carries an unresolved blocker, so neither gated closure. DEC-007's
+  `consequences` facet is still two fragments of one sentence — a comma-split
+  artefact with no verb route to repair it.
 
 ## Working mode (operator)
 

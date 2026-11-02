@@ -5,10 +5,10 @@ id = 5
 slug = "store-loader-refuses-a-malformed-nested-id-instead-of-letting-a-traversal-read-panic"
 title = "Store loader refuses a malformed nested id instead of letting a traversal read panic"
 kind = "improvement"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "resolved"
+resolution = "fixed"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = []
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role
