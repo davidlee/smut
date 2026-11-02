@@ -126,7 +126,8 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
+fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 completed
+· bb6a9d2
 
 ### Produced
 
@@ -149,6 +150,15 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
   `src/learn.rs` (declared here, printed by PHASE-03). Evidence and the run's environment
   facts: `notes.md` § Implementation run. Runtime sheet:
   `state/slice/010/phases/phase-01.md` § Outcome.
+- **PHASE-04** (`bb6a9d2`) — the rest of the flag surface in `src/dsl.rs` (all twelve
+  flags keyed in the design table's fixed order, `members()` the single splitter with
+  the empty-member and `any` rules, `--order`'s direction, `--from=ID` appended after
+  the roots), `Reject::{MissingDirection, UnknownDirection, UnreachableLimit,
+  ConflictingSelection}` with whole-line tests (the catalogue is now design §6's six),
+  and six tests in `tests/dsl.rs` — the VT-3 refusal census, flag keys, list rule,
+  determinism/bytes, and the `Reddens`-comment guard. Evidence: `notes.md` §
+  Implementation run; runtime sheet `state/slice/010/phases/phase-04.md` § Outcome.
+  Delta recorded with `doctrine slice record-delta`.
 
 ### Learned
 
@@ -173,6 +183,25 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
   through `value()` — so PHASE-04's numeric-flag criterion is pinned, not built. `Flags` is
   declared in full; six fields are PHASE-04's to wire, and `dsl::members()` is the single
   comma splitter the list rule must attach to.
+- **A strictness rule and a specification sentence can both be right and still not be
+  reachable together.** `--depth abc` reaches `depth must be a nonnegative integer` only
+  beside `--follow`/`--backlinks`, because `--depth`/`--budget` with no direction is refused
+  first. The design's §3/§7 illustrations omit the direction; PHASE-02's numeric rows must
+  carry one (`--depth abc --follow any`), and the omission is a fifth design correction.
+- **`--edges` is not a direction.** The design's sentence offers only `--follow` and
+  `--backlinks`, and an edge set follows nothing, so `--edges --depth 2` is refused like
+  `--depth 2` alone.
+- **`--from` is one id, not a list.** It is the escape for hostile ids, so a comma is its
+  own text; the list rule is seven consumers, not eight, and only `--from=` is refused
+  (with EX-6's empty-member clause naming the flag).
+- **A "each row names what reddens it" criterion can be a test, not a habit.**
+  `each_refusal_test_names_the_change_that_reddens_it` scans `include_str!("dsl.rs")`,
+  reddened on three PHASE-01 refusal tests that lacked the comment, and now guards the
+  convention; the negative control for each message is therefore itself checked.
+- **`equals()` cannot carry a row the specification must refuse.** The helper asserts
+  `spec::parse` accepts the denotation, so `--depth abc` is compared with `object()`
+  directly — a test helper that asserts a precondition will reject the rows that exist to
+  break it.
 
 ### What the hostile pass taught (RV-031)
 
@@ -210,6 +239,11 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
     contradiction voice would be false; the refusal is in the caller's tokens
     (`cannot read "status=a,b status=c,d": q carries one = per field; use smut query`) under
     §2's third bullet, and §3 owes the row.
+  - *(added in PHASE-04, sheet finding F1)* Design §3's specification-refusal rows for
+    `--depth=-1`/`--depth abc` and §7's `--depth abc` row say the specification's sentence
+    is the one a caller sees, but §2's strictness rule refuses `--depth`/`--budget` with no
+    direction first. The sentence is reachable only with `--follow`/`--backlinks` present;
+    §3 and §7 owe the precondition (or a direction in the example).
 - **Obligations owed at reconcile** (none may be paid mid-slice):
   - DEC-016 — amend to name the DSL spelling of the two-call recipe; the guide keeps both
     spellings executed until then.
@@ -222,8 +256,9 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de
   - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
     status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
     answered. The decision's *rule* stands; only that sentence needs correcting.
-- Slice is `started` and **PHASE-01 is `completed`** (2026-11-03). Next: `/phase-plan` for
-  PHASE-04, then PHASE-02, then PHASE-03 — the array's order, not the ids'.
+- Slice is `started`; **PHASE-01 and PHASE-04 are `completed`** (2026-11-03). Next:
+  `/phase-plan` for PHASE-02 — its numeric rows (EX-5/VT-3) must name a direction, per
+  PHASE-04 finding F1 — then PHASE-03. The array's order, not the ids'.
 
 ## Implementation run
 
@@ -312,3 +347,59 @@ Findings worth keeping:
   the variant and the whole sentence, so an overwrite cannot pass it.
 - **`where` key order** is the `BTreeMap`'s, so a compiled line is byte-stable; the equivalence
   tests compare `Value`s, which is order-insensitive, and determinism is PHASE-04 EX-10's pin.
+
+### PHASE-04 — the flag and refusal vocabulary (completed 2026-11-03)
+
+Commit `bb6a9d2` on the three owned paths only; `doctrine slice record-delta 10
+PHASE-04 --commit bb6a9d2` recorded; phase flipped `completed`. `doctrine slice
+verify-vt 10` reports PHASE-04 VT-3 and VT-4 PASS.
+
+- **Gate.** `just check` exit 0: `cargo build`; `cargo clippy --all-targets -D warnings`
+  and `--all-features` clean; `cargo fmt --check` clean; `cargo test` green — 439 lib
+  tests in the default configuration and 452 with `--features fault-injection`,
+  `tests/dsl.rs` 19/19. Baseline at `f5c6f27` was 435 lib / 13 dsl; the four new
+  `error.rs` message tests and the six new `dsl.rs` tests account for the delta. No
+  known failures; nothing was skipped.
+- **What landed.** `src/dsl.rs`: all twelve flags read in the design table's fixed
+  order and keyed (`follow`/`backlinks` with `any` → `"*"`, `depth`/`budget` through
+  `value()` and requiring a direction, `select`, `ids`, `order` with an explicit
+  `asc` default, `limit`, `edges`, `has`, `missing`, `from` appended after the bare
+  roots); `members()` is still the single splitter and now carries the empty-member
+  rule (`ListKind::Values` for `=`, `Names` for flags); a comma on `!=`/`~` is
+  refused before the value is read; `--from` is one id and keeps its commas.
+  `src/error.rs`: `MissingDirection { flag }`, `UnknownDirection { entry }`,
+  `UnreachableLimit`, `ConflictingSelection`, their whole-line `Display` tests, and
+  the exit-code census grown 29 → 33. `tests/dsl.rs`: `a_flag_sets_the_key_it_names`,
+  `a_list_flag_is_a_list_and_an_empty_one_is_refused`,
+  `every_refusal_names_what_was_typed_and_never_a_field_it_invented` (the §3 census
+  plus A-D1 and EX-6's empty-flag rows), `the_same_two_defects_refuse_the_same_one_every_time`,
+  `each_refusal_test_names_the_change_that_reddens_it`,
+  `numeric_flags_are_read_by_the_same_value_rule_as_a_token`.
+- **Decisions** (full text in the runtime sheet § Decisions): D1 the four variant
+  names; D2 `--order` spells the default direction in the emitted entry; D3 the
+  `--select`/`--ids` conflict is checked before the list is read; D4 empty members
+  before `any`; D5 `--edges` is not a direction; D6 the `Reddens` guard is a
+  meta-test over the suite's source; D7 `--from` is one id; D8 the spec-sentence
+  rows need a direction.
+- **Findings.**
+  - **F1 (cross-phase) — PHASE-02's numeric rows need a direction.** PHASE-02
+    EX-5/VT-3 name `--depth abc`, `--depth=-1` and `--budget 0` as reaching the
+    specification's sentence, but with this phase's rule they are refused first by
+    `MissingDirection`. They reach `spec::parse` beside `--follow`/`--backlinks`
+    (`--depth abc --follow any`); `--limit 0` needs no direction. Both phases'
+    criteria hold with the direction present; design §3/§7 omit it, so a fifth
+    correction is owed and PHASE-02's sheet must carry the direction.
+  - **F2.** `--edges` is not a direction: the design's sentence offers only
+    `--follow`/`--backlinks`, and an edge set follows nothing.
+  - **F3.** The `Reddens` meta-test reddened on three PHASE-01 refusal tests that
+    lacked the comment; comments were added and no assertion changed, so the guard
+    is not vacuous.
+  - **F4.** `equals()` asserts its denotation parses, so a row whose point is that
+    the specification refuses it must compare `object()` directly.
+- **Notable worker misses / measured shape.** No implementation miss needed a
+  rebrief. One test-authoring error was caught at review and fixed by the
+  orchestrator: `--depth abc` was first routed through `equals()`, which would
+  have failed after green because that denotation cannot parse (F4). Five native
+  `worker` runs: two red steps (vocabulary sentences, flag surface) and two green
+  steps (variants, compiler), plus one planning-free test brief; no model or
+  provider was changed.
