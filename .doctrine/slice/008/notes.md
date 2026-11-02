@@ -352,6 +352,33 @@ extends it. Facts here were observed this session at head `de8cf3d`.
   flip its own phase to `in_progress` on entry and `completed` only once criteria, tests and
   the commit exist.
 
+### Review cadence — operator direction, 2026-11-02
+
+- **A code/correctness review runs over PHASE-03 after its gate goes green** — "in any case",
+  which means regardless of how clean the charter's self-report is. Operator direction, taken
+  at charter 1.
+- **Mechanism:** `/code-review` at its per-phase moment, landing on the RV ledger — a review
+  on `SL-008` scoped to `PHASE-03` (`doctrine review new --facet code-review --target
+  SL-008@PHASE-03`), primed from the slice selectors, findings raised with honest severity,
+  disposed before the phase concludes. Not prose in a handback: the finding must outlive the
+  conversation and be queryable at audit.
+- **Independence:** a fresh child reviews. Not the charter that wrote the code, and not the
+  seat re-litigating the diff — the seat's job is to raise what the reviewer returns and
+  decide dispositions.
+- **Sequencing, so "before the phase concludes" stays true:** charter 3 ends at *green gate on
+  a committed* `src/conventions.rs` and deliberately leaves `PHASE-03` `in_progress`. Review →
+  fix-now corrections land while the tree is hot → only then `completed`, then charter 4.
+- **Review target is a commit range, not a file.** `src/conventions.rs` carries PHASE-01, -02
+  and -03 changes, so the seat records the pre-PHASE-03 oid at charter time and the reviewer is
+  handed that range; a review of the whole file would re-raise P1/P2 as if they were new work.
+- **PHASE-02 and PHASE-04 get the same cadence.** This is the code-review skill's own default
+  at a below-adherence-bar model tier — which the inherit ruling made universal — and P2/P4 are
+  the frontier-shaped phases. PHASE-01 and PHASE-05 stay discretionary: both are small and P1's
+  trap is pinned by a named test. Logged by the seat as verification ownership (envelope:
+  decide, log, continue), not as a change to the plan or design.
+- **Severity honesty applies both ways** — `minors`/`nits` are dispositioned `follow-up` to the
+  backlog rather than repaired inside the phase, and a clean review is reported as clean.
+
 ## Autonomy log
 
 - **PHASE-01..05 — model envelope: inherit, all five. Operator ruling, not the seat's.**
