@@ -21,4 +21,5 @@ CI does not build the package. Every input is publicly fetchable (`ipetkov/crane
 beta three ways: the devshell, the crane build, and the CI runner resolving
 `rust-toolchain.toml`'s `channel = "beta"`. One channel, three consumers, no drift.
 
-Not run: `nix flake check` (the same derivation, entered as a check).
+`nix flake check` too, and silent after dropping the bogus `follows` and switching to
+`stdenv.hostPlatform.isLinux`.

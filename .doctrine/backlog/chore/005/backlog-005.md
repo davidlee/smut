@@ -97,8 +97,8 @@ channel they come from: the build gets `toolchainFor` bare, the shell gets
 `(toolchainFor pkgs).override { extensions = …; }`, and `rustc` in both is the same
 compiler.
 
-Not run: `nix flake check` — the same derivation, entered as a check. Nothing else in
-this chore is unlooked-at.
+`nix flake check` as well, and silent once the two warnings below were cleared. Every
+command this chore named has now been run by someone.
 
 ## Unverified-by-construction
 
