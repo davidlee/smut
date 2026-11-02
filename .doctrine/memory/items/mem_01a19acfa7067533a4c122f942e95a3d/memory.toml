@@ -1,0 +1,42 @@
+memory_uid = "mem_01a19acfa7067533a4c122f942e95a3d"
+memory_key = "mem.fact.doctrine.locked-design-run-at-reconcile"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A locked design run is corrected by editing design.md directly at reconcile — `design adopt` refuses, and that refusal is the guidance"
+summary = "`doctrine design adopt` refuses on a locked run: 'at reconcile, edit design.md directly and do not adopt' — so reconcile's direct edit is the prescribed posture, not a workaround"
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "design-run", "reconcile"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "335b0f216aa3a4c8f360deab9ec4246b786c07b5"
+ref_name = "refs/heads/main"
+checkout_state_id = "c75e29b52419a619026f74cc0b268be72a73141f9e0c02c938473772db47cfac"
+base_commit = "42b2e742cbb401d7f40f3c36e69f390b1311b8a5"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
