@@ -7,6 +7,11 @@
 //! nonempty string is refused with its path named, while the root keeps its own
 //! refusal. A healthy fixture loads in the same file, so a blanket refusal
 //! cannot pass for refusal behaviour.
+//!
+//! The malformed identities below are spelled with the literal key `"id"`
+//! instead of going through `ENTITY_ID`. That is deliberate: the semantic target
+//! stays visible in the diff, so PHASE-02's respell of the key is a reviewed act
+//! rather than an invisible search-and-replace.
 
 use std::fs;
 use std::path::PathBuf;

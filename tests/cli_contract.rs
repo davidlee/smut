@@ -961,6 +961,8 @@ fn an_accepted_budget_bounds_the_walk_and_an_exact_fit_is_not_truncated() {
 }
 
 // ── PHASE-01/VT-2: a stored identity must be a nonempty string ───────────────
+// The malformed_stored_identity refusals below cover both traversals — `get`
+// and `follow` — while the same shape arriving in a request stays a user error.
 
 /// Overwrite the entity file the store's index maps `id` to with `raw`, and
 /// answer with that file's basename — the name every load refusal carries.
@@ -983,7 +985,7 @@ fn corrupt_nested_identity(scratch: &Scratch, id: &str, raw: &str) -> String {
 }
 
 #[test]
-fn get_refuses_a_stored_identity_that_is_not_a_nonempty_string() {
+fn get_refuses_malformed_stored_identity_with_its_path() {
     // The entity-node rule holds for stored entities as well as requested ones:
     // an `id` present below the top level and not a nonempty string is
     // corruption, never data, so the store refuses to load at all. A corrupt
@@ -1029,7 +1031,7 @@ fn get_refuses_a_stored_identity_that_is_not_a_nonempty_string() {
 }
 
 #[test]
-fn follow_refuses_a_store_corrupted_outside_the_followed_field() {
+fn follow_refuses_malformed_stored_identity_outside_the_followed_field() {
     // The whole store is validated as it is loaded, so a malformation nobody's
     // traversal reaches still refuses the traversal: `links` is what `follow`
     // walks, and `notes` is what breaks the load.
