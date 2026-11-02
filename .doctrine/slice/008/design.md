@@ -5,169 +5,198 @@ A **set** is loaded advice:
 
     Set { name, title, summary: Option<String>, version: Option<String>, body }
 
-`name` is the filename stem for a file set and `hygiene` for the shipped one. `title` is
-the file's first level-1 heading, verbatim, falling back to `name`. `summary` and `version`
-are the frontmatter's two keys and are absent when the file omits them. `body` is the file's
-text below the frontmatter — the bytes that print — with trailing newlines trimmed so the
-shell's single newline is the only one.
+`name` is the filename stem for a file set and `hygiene` for the shipped one. `title` is the
+file's first level-1 heading, verbatim, falling back to `name`. `summary` and `version` are
+the frontmatter's two keys and are absent when the file omits them. `body` is the file's text
+below the frontmatter with trailing newlines trimmed; printing adds back exactly one.
 
 An **entry** is one file's outcome:
 
     Entry { name, origin, outcome }
-    Origin { layer: Layer, path: PathBuf }        // path is the file's own path
+    Origin { layer: Layer, path: PathBuf }        // the file's own path
     Layer  { Project, User, Binary }
-    Outcome { Loaded(Set), Failed(reason: String) }
+    Outcome { Loaded(Set), Failed(Cause) }
+    Cause  { line: Option<usize>, reason: String }
 
-The unit of storage and of listing is the **file**, not the name, because a name can exist
-at three layers and a listing that dropped the losers would be lying about what is on disk.
+`Cause` is a type rather than a formatted string because the line number has to survive into
+the refusal: the error variant carries the same `Cause`, so nothing re-parses a message to
+find out where a file went wrong.
+
+The unit of storage and of listing is the **file**, not the name, because a name can exist at
+three layers and a listing that dropped the losers would misrepresent what is on disk.
 Resolution is a view over the entry list, computed per name (`set_in_force`), and it is the
 only place precedence appears.
 
 `Layer` decides precedence and prints as `project`, `user`, `binary`. The binary layer's
-`Origin.path` is the embedded file name, `conventions/<name>.md` — the same string every
-layer reports as `source`, so the shipped set is described in the same terms as a file
-without pretending to be one.
+`Origin.path` is `conventions/<name>.md` — the same string every layer reports as `source`,
+so the shipped set is described in the same terms as a file without pretending to be one.
+
+A file whose **name is not UTF-8** never becomes an `Entry` with a name: it is a failed row
+whose reason says so. A `String` is never derived from a lossy conversion, and nothing in the
+loader unwraps.
 
 <!-- doctrine:section sec-2 -->
 ## Finding the roots
 
-Three roots, resolved once, in the binary. The loader receives them.
+Three roots, resolved once, in the binary. The loader receives them and reads no environment.
 
-**Project root.** From the current directory, walk up; the first ancestor holding a `.git`
-entry is the root. A `.git` **directory** is a clone; a `.git` **file** (`gitdir: …`) is a
-worktree or a submodule, and either answers the only question being asked — *is this a
-repository?* When the walk reaches the filesystem root without one, the project root is the
-current directory itself and there is no walk-up (DEC-028).
+**Project root.** From the current directory, walk up; the first ancestor whose `.git` entry
+is a **directory** or a **regular file** is the root — a clone, or a worktree or submodule
+(`.git` as a `gitdir:` file), and either answers the only question being asked: *is this a
+repository?* Any other kind of `.git` entry (a dangling symlink, a socket, a broken link to
+nothing) is not a repository and the walk continues. When the walk reaches the filesystem
+root without one, the project root is the current directory and there is no walk-up
+(DEC-028).
 
-    project_root(start: &Path) -> PathBuf     // pure over the filesystem, no environment
+    project_root(start: &Path) -> PathBuf        // walks the filesystem, reads no environment
 
-Nothing shells out to `git`. The binary has no subprocess in its shipped path today, and a
-PATH dependency plus a process spawn to answer a `stat`-shaped question is a poor trade. A
-broken `.git` entry is treated as absent; a `.git` entry that is neither file nor directory
-is not a repository.
+Nothing shells out to `git`: the binary has no subprocess in its shipped path today, and a
+PATH dependency plus a process spawn to answer a `stat`-shaped question is a poor trade.
 
-**User root.** `$XDG_CONFIG_HOME` when set and non-empty, else `$HOME/.config`; a config
-home yields `<config-home>/smut/`. When neither variable resolves — a container with no
-home — there is no user root and the user layer is simply absent. That is not an error: the
-project and binary layers still answer, and failing a read-only command for want of a home
-directory would be a worse outcome than a layer that is not there.
+**User root.** `$XDG_CONFIG_HOME` when set and non-empty, else `$HOME/.config`. Either way the
+layer root is `<config-home>/smut`, and when neither variable resolves — a container with no
+home — there is no user root and the user layer is simply absent. Not an error: the project
+and binary layers still answer, and failing a read-only command for want of a home directory
+would be worse than a layer that is not there.
 
     user_root(config_home: Option<&Path>, home: Option<&Path>) -> Option<PathBuf>
 
-Both functions are pure over values handed to them. **`main` is the only code that reads the
-environment**, which is what keeps the suite from inheriting a developer's real
-`~/.config/smut/` (DEC-032).
+**The two roots a layer is read from** are therefore the `…/smut` directories and nothing
+deeper:
+
+    Roots { project: PathBuf, user: Option<PathBuf> }
+
+The declaration-kind segment is joined **exactly once**, inside `load` — `<root>/<kind>/` —
+so no caller can join it twice and no root carries a kind.
+
+Both functions are pure over values handed to them. **The binary is the only code that reads
+the environment**, and that is enforced by shape rather than by discipline: `execute` takes
+the roots as a parameter, so the in-process unit tests pass their own and never see a
+developer's `~/.config/smut/` (DEC-032).
 
 **Two roots in one process.** The store stays at `<cwd>/.smut` (DEC-004) while the sets walk
 up, so a cwd inside a repository and not at its root reads the repository's sets and writes
-its own store. That disagreement is intended — a store is data placed deliberately, advice
-is policy belonging to the project — and it is tested rather than documented away.
+its own store. That disagreement is intended — a store is data placed deliberately, advice is
+policy belonging to the project — and it is tested rather than documented away.
 
 <!-- doctrine:section sec-3 -->
 ## Reading one set file
 
-A **candidate** in `<layer>/smut/conventions/` is a regular file whose extension is `.md` and
-whose name does not begin with a dot. Directories, other extensions and dotfiles are not
-sets: they are not listed and not reported, because a directory the user controls should not
-produce noise. A symlinked `.md` resolves through the link and is an ordinary set.
+A **candidate** in `<root>/<kind>/` is a regular file whose extension is `.md` and whose name
+does not begin with a dot. Directories, other extensions and dotfiles are not sets: not
+listed, not reported, because a directory the user controls should not produce noise. A
+symlinked `.md` resolves through the link and is an ordinary set.
 
-The name is the stem, exactly as written — case preserved. Name resolution is exact-match;
-two files differing only by case are two different sets, which is what a case-sensitive
-filesystem means and is not worth smoothing.
-
-**Frontmatter** is optional, delimited, and flat:
-
-    ---
-    summary: general structure and relations
-    version: 1.2
-    ---
-
-    # General hygiene
-    …
+**Frontmatter** exists only when the file's **first line is exactly `---`** and a later line is
+exactly `---`. Inside the fence, blank lines are skipped and every other line must be
+`key: value`; outside it, `---` is a Markdown horizontal rule and not a fence at all.
 
 | key | class | behaviour |
 | --- | --- | --- |
-| `summary` | known | becomes the set's summary (the listing's third column) |
-| `version` | known | becomes the set's version (the seed's `version`) |
-| `title`, `name`, `id`, `type` | derived | **refused by name**, with the message saying where each fact comes from |
+| `summary` | known | the set's summary (the listing's third column) |
+| `version` | known | the set's version (the seed's `version`) |
+| `title`, `name`, `id`, `type` | derived | **refused by name**, each with its own sentence saying where that fact comes from |
 | anything else | unknown | **ignored**, so a set written for a later smut still loads |
-| a line that is not `key: value` | unparseable | refused, naming the line |
-| an opening `---` with no closing `---` | unterminated | refused |
 
 Frontmatter is never printed as prose, never addressable and never seeded into a body.
 
 **Title and body.** The first line beginning `# ` is the title, verbatim, falling back to the
-name. The body is everything after the frontmatter, with trailing newlines trimmed: what
-prints is the body plus the shell's one newline. Nothing transforms an author's title — the
-shipped set's own heading reads `# Conventions: general hygiene` so the prefix a reader sees
-in a store is the file's choice, not a rewrite in code.
+name. The body is everything after the frontmatter with trailing newlines trimmed. Nothing
+transforms an author's title — the shipped set's own heading reads
+`# Conventions: general hygiene`, so the prefix a reader sees in a store is the file's choice,
+not a rewrite in code.
 
-**The shipped set** is read by the same function over the same bytes, embedded with
-`include_str!`. Its `summary` comes from its own frontmatter, and its `version` is injected
-from the crate, which is what DEC-028 says the shipped set's version is.
+**Printing.** `answer` returns `body` followed by **exactly one `'\n'`**, and the binary writes
+what it is given, verbatim — there is no shell newline to rely on. So
+`smut conventions hygiene > hygiene.md` produces a file that ends in one newline; it loses the
+frontmatter, which is the accepted trade (DEC-031).
 
-**Failure is a reasoned row, never a panic.** Five ways a file lets the reader down — cannot
-be opened, cannot be read, is not UTF-8, has an unterminated fence, has an unparseable or
-derived key — all become `Outcome::Failed` carrying one line that names the problem and, where
-there is one, the line number. The store loader's discipline (fail clean and loud, SL-004) is
-the precedent: an unreadable advice file must not take the process down.
+**The shipped set** goes through the same reader over the same bytes, embedded with
+`include_str!`. Its summary comes from its own frontmatter; its version is the crate's,
+applied by `load` after `parse` because a byte reader knows nothing about releases.
+
+**A failure is a reasoned row, never a panic.** The vocabulary is closed and small:
+
+| class | reason |
+| --- | --- |
+| cannot be opened or read | the I/O error's own words, with the path |
+| not UTF-8 | the file is not UTF-8 text |
+| **empty body** | *a set that says nothing is a mistake, not advice* (DEC-028) — a frontmatter-only or empty file |
+| malformed frontmatter | an unparseable line, an unterminated fence, or a derived key — naming the line where there is one |
+| the filename is not UTF-8 | reported before any read, so no lossy `String` is ever produced |
+
+The store loader's discipline (fail clean and loud, SL-004) is the precedent: unreadable
+advice must never take the process down.
 
 <!-- doctrine:section sec-4 -->
 ## Which set is in force
 
-Resolution is by name over the entry list, in layer order: **project, then user, then
-binary**. The first entry for a name is the set in force; everything after it is shadowed.
+Resolution is by name over the entry list, in layer order: **project, then user, then binary**.
+The first entry for a name is the set in force; everything after it is shadowed.
 
 **Validity is not a tie-breaker.** A project `hygiene.md` that fails to load still wins the
 name `hygiene`; the user's working copy is not silently promoted. The alternative — falling
 through to the next layer when a nearer file is broken — makes the advice a caller receives
-depend on a parse outcome they cannot see, and turns "which file is broken" into "which
+depend on a parse outcome they cannot see, and collapses "which file is broken" into "which
 file is in force", two questions that must stay apart (DEC-031).
 
-The consequence is deliberate and must be visible: with a corrupt project set and a good user
-set, asking for `hygiene` refuses. The refusal names the project file, its path and its
-reason, which is the whole diagnosis; the user's copy is still listed as `shadowed`, so
-nothing about the state is hidden.
+The consequence is deliberate and visible: with a corrupt project set and a good user set,
+asking for `hygiene` refuses, naming the project file, its path and its reason — which is the
+whole diagnosis — while the user's copy is still listed as `shadowed`. Nothing about the state
+is hidden.
 
 **A shadowed set is unaddressable.** Resolution stops at the winner, and the seed's id is
-`conventions-<name>` with no layer (DEC-017), so there is no command that prints or seeds the
-loser. The workaround is the listing's path: read the file. Layer-qualified names would have
-to change the fixed id and are their own decision.
+`conventions-<name>` with no layer (DEC-017), so no command prints or seeds the loser. The
+workaround is the listing's path: read the file. Layer-qualified names would have to change
+the fixed id and are their own decision.
 
-**An unknown name** is any name no entry carries. The refusal lists every resolved name with
-its origin, failed entries included with their reason, in the listing's order — the refusal is
-the listing, said in one sentence.
+**An unknown name** is a name no entry carries. Its refusal renders in the listing's order, one
+clause per resolved name, joined by `; `:
 
-**A name whose winner failed** is not unknown: it is broken. Exit 1, with the reason. The
-line between the two is DEC-033's: what the caller typed is theirs to fix, what the
-filesystem supplied is not.
+    unknown conventions set <name>; the sets are: hygiene (project); hygiene (user); mine (user, did not load: frontmatter line 2 is not `key: value`)
+
+`name (layer)` for a loaded or shadowed set, `name (layer, did not load: <reason>)` for a
+failed one — the same information as the listing, in the same order, so a caller can retry
+from the message alone. Exit 2, because the caller typed a name that resolves to nothing.
+
+**A name whose winner failed** is not unknown: it is broken. Refused by name at exit 1 with the
+path and reason. The line between the two is DEC-033's — what the caller typed is theirs to
+fix, what the filesystem supplied is not.
 
 <!-- doctrine:section sec-5 -->
 ## What each command prints
 
-**The listing** — `smut conventions` — is one row per *file*, layer-major, then by name
-within a layer:
+**The listing** — `smut conventions` — is one row per *file*, layer-major, then by name within
+a layer:
 
     hygiene  project  general structure and relations  /repo/.config/smut/conventions/hygiene.md
     hygiene  user     shadowed                        /home/d/.config/smut/conventions/hygiene.md
-    mine     user     my own house rules              /home/d/.config/smut/conventions/mine.md
+    mine     user     -                               /home/d/.config/smut/conventions/mine.md
     hygiene  binary   general structure and relations  conventions/hygiene.md
 
-Four fields, two spaces between them, one row per line. The third field is the summary when
-the file loaded and is in no shadow; `shadowed` when a nearer layer holds the same name; and
-`did not load: <reason>` when it failed. The fourth is the file's own path — absolute for a
-file layer, because a row's job is to let a reader open it, and `conventions/<name>.md` for
-the binary, because that is what "its own path" means for embedded bytes.
+Four fields, two spaces between them, one row per line. The third field is:
+
+- the **summary**, when the file loaded and is in no shadow;
+- **`-`** when it loaded and is in force but declares no summary — the first set most people
+  write is a bare markdown file, and it must have a row;
+- **`shadowed`** when a nearer layer holds the same name;
+- **`did not load: <reason>`** when it failed — and this **wins over `shadowed`**, so a broken
+  user file behind a working project file still prints its reason rather than only its
+  demotion (DEC-031 rule 5).
+
+The fourth field is the file's own path: absolute for a file layer, because a row's job is to
+let a reader open it, and `conventions/<name>.md` for the binary, because that is what "its own
+path" means for embedded bytes.
 
 Layer-major ordering is the precedence story written down: the first row for any name is the
-advice in force. The listing **exits 0** even when it reports a broken file: a report whose
-content is a problem is still a successful report, the same way a query's reported missing
-ids are (DEC-033).
+advice in force. The listing **exits 0** even when it reports a broken file — a report whose
+content is a problem is still a successful report, as a query's reported missing ids are
+(DEC-033).
 
-**The prose** — `smut conventions <name>` — is the body and nothing else: no banner, no
-heading injected, no footer, no frontmatter. A caller piping it anywhere gets the file's own
-text. It is *not* a round trip: redirecting it back into a set file loses the frontmatter, and
-that is accepted (DEC-031).
+**The prose** — `smut conventions <name>` — is the body followed by exactly one newline:
+no banner, no injected heading, no footer, no frontmatter. A caller piping it anywhere gets the
+file's own text. It is *not* a round trip: redirecting it into a set file loses the frontmatter
+(DEC-031).
 
 **The seed** — `smut conventions <name> --format json` — is one declaration:
 
@@ -177,85 +206,106 @@ that is accepted (DEC-031).
              or absent when a file declares none
     source   conventions/<name>.md   the file relative to its layer root
     title    the file's first heading, verbatim
-    body     the file's bytes below the frontmatter, trailing newlines trimmed
+    body     the file's text below the frontmatter, trailing newlines trimmed
 
 `smut_id` prints first and the rest lexically, as every declaration does. Declaring it is an
 upsert: a second install reports the body it replaced under `previous`, unchanged from today.
 
-**Exit codes.** 0 for success, including a listing that reports a broken file. 2 for what
-the caller typed: an unknown set name, an unknown `--format`, `--format json` with no name.
-1 for what the filesystem supplied: an unreadable layer directory, a file that cannot be
-opened or decoded, unparseable or derived frontmatter — and asking by name for a set whose
-winner failed. `smut learn`'s exit table gains the clause `or a conventions set could not be
-loaded`.
+**Exit codes.** 0 for success, including a listing that reports a broken file. 2 for what the
+caller typed: an unknown set name, an unknown `--format`, `--format json` with no name. 1 for
+what the filesystem supplied: a layer directory that **exists and cannot be read**, a file that
+cannot be opened or decoded, unparseable or derived frontmatter — and asking by name for a set
+whose winner failed. A directory that is simply **absent** is not an error: it has no entries
+and produces no row, which is the state of every project that has not opted in. `smut learn`'s
+exit table gains the clause `or a conventions set could not be loaded`.
 
 <!-- doctrine:section sec-6 -->
 ## Code impact
 
-**`src/conventions.rs`** is rewritten around the types in §1: `Layer`, `Origin`, `Set`,
-`Entry`, `Outcome`, `Roots`, and the ships-one-set constant becoming a slice of
+**`src/conventions.rs`** is rewritten around the types in §1: `Layer`, `Origin`, `Cause`,
+`Set`, `Entry`, `Outcome`, `Roots`, with the ships-one-set constant becoming a slice of
 `(name, bytes)` pairs — today one entry, `("hygiene", include_str!("conventions/hygiene.md"))`.
-The pure half:
+The split, with the signatures the plan will be held to:
 
     project_root(start: &Path) -> PathBuf
     user_root(config_home: Option<&Path>, home: Option<&Path>) -> Option<PathBuf>
-    parse(bytes: &str, origin: Origin) -> Outcome          // frontmatter, title, body
-    load(roots: &Roots) -> Vec<Entry>                      // the only I/O in the module
+    parse(bytes: &str, origin: Origin) -> Outcome          // pure: frontmatter, title, body
+    load(roots: &Roots, kind: &str) -> Result<Vec<Entry>, Error>
     set_in_force(entries: &[Entry], name: &str) -> Option<&Entry>
     listing(entries: &[Entry]) -> String
     seed(set: &Set) -> Value
 
-`Ask` becomes the *question*, owned and resolvable without I/O: `List`, `Prose { name }`,
-`Seed { name }`. `Answer` is either the text or the refusal, and `answer(roots, ask) -> Result<String, Error>` is the one entry point the binary calls. `HYGIENE`, `SETS`, the
-`&'static` lifetime and `title_of`'s transformation all go.
+`load` owns every filesystem read and everything the reader cannot know: it joins `<kind>` once,
+skips an absent layer silently, sorts each layer's entries by name (a directory's order is
+arbitrary, and the listing is the diagnostic), applies the crate's version to the binary layer
+after `parse`, and concatenates the layers in precedence order. It returns a `Result` because
+an existing-but-unreadable directory is exit 1, and a failure class with no channel is a
+failure class that becomes silence. `parse` stays a reader of bytes; a byte reader that knows
+release numbers is not a reader.
+
+`Ask` becomes the *question*, owned and answerable without I/O: `List`, `Prose { name }`,
+`Seed { name }`. `answer(roots, kind, ask) -> Result<String, Error>` is the single entry point
+the binary calls. `HYGIENE`, `SETS`, the `&'static` lifetime and `title_of`'s transformation all
+go.
 
 **`src/cli.rs`** changes only in construction: `Sub::Conventions { name, format }` still
-validates the flag before the operand (DEC-008) and now builds `Ask` from strings. `parse`
-touches no filesystem, so its unit tests stay as they are.
+validates the flag before the operand (DEC-008) and builds `Ask` from strings. `parse` touches
+no filesystem, so its unit tests stay as they are.
 
 **`src/main.rs`** gains the environment reads — `XDG_CONFIG_HOME`, `home_dir()` — and the
-current directory it already computes, then calls the loader where it calls `Store::in_directory`:
+current directory it already computes, and its `execute` takes the roots as a parameter:
 
-    Invocation::Conventions(ask) => conventions::answer(&roots()?, ask)
+    execute(arguments, stdin_is_terminal, stdin, &roots)   // main computes roots; tests pass theirs
 
-**`src/error.rs`** gains one variant carrying the refusal (origin, path, optional line,
-reason) whose `exit_code` is 1, so no diagnostic about a set claims a store. The existing
-`UnknownConvention` keeps exit 2 and its shape, gaining origins in its rendered lists.
+so `execute` stays in-process testable without touching the developer's home, and the
+`dispatch_of` unit test that today asserts on `conventions::HYGIENE` moves to the spawned suite.
 
-**`src/conventions/hygiene.md`** gains frontmatter with its `summary`, and its heading
-becomes `# Conventions: general hygiene`; its body is otherwise untouched.
+**`src/error.rs`** gains one variant holding `Origin` and `Cause`, whose `exit_code` is 1, so no
+diagnostic about a set claims a store. `UnknownConvention` keeps exit 2 and gains the
+origin-bearing rendering of §4.
+
+**`src/conventions/hygiene.md`** gains frontmatter with its `summary`, and its heading becomes
+`# Conventions: general hygiene`; its body is otherwise untouched.
 
 **`src/learn.rs`** gains the exit-table clause and one sentence in the Conventions section
 saying a set is found in the project, then the user config home, then the binary.
 
-**`tests/conventions.rs`** is rewritten: `Scratch` gains a repository marker and a config
-home, and the spawn helper clears and sets the environment it needs instead of inheriting it.
+**`tests/conventions.rs`** is rewritten: `Scratch` gains a repository marker and a config home,
+and the spawn helper clears and sets the environment it needs instead of inheriting it.
 
 **`docs/store-format.md`** gains one amended clause: the binary is no longer the only source.
 
 <!-- doctrine:section sec-7 -->
 ## Verification
 
-Each property names the test that can go red. Nothing here asserts an absence that no input
-could falsify — the discipline is the memory `mem_01a19ac6c03b7da381fb6dfa6f137ceb` about
-assertions occupying an evidence slot.
+Each property names the test that can go red. Nothing here asserts an absence no input could
+falsify — the discipline is the memory `mem_01a19ac6c03b7da381fb6dfa6f137ceb` about assertions
+occupying an evidence slot.
 
 | property | the test that reddens |
 | --- | --- |
-| project beats user beats binary | the same name written with three different bodies at three layers; the project body prints |
+| project beats user beats binary | the same name with three different bodies at three layers; the project body prints |
 | the user layer is really read | a set that exists *only* in the scratch config home resolves and prints |
 | the walk-up happens | cwd = `repo/sub/dir/`, the set at `repo/.config/smut/conventions/`; it resolves |
 | a worktree counts as a repository | `.git` as a *file* at the fake root; the set resolves |
-| no repository means cwd, no walk-up | a scratch outside any repo whose own `.config/...` resolves, and whose parent's does not |
+| **the walk stops at the repository** | a fake home holding `hygiene.md`, a repository inside it, `XDG_CONFIG_HOME` elsewhere, cwd in the repo: no row may report that set as `project` |
+| no repository means cwd, no walk-up | a scratch outside any repo whose own `.config/…` resolves and whose parent's does not |
 | a broken project set shadows a good user set | corrupt project file + valid user file → refusal at 1 naming the project path; the user row still says `shadowed` |
-| the listing reports and succeeds | same fixture, listing exits 0 and carries `did not load:` with the reason |
-| frontmatter is not prose | a file with `summary:`/`version:`; printed prose starts at the body's first line |
-| derived keys are refused by name | `title:` in frontmatter → exit 1, message names the heading as its source |
+| **a failed file behind a working one still reports its reason** | valid project file + corrupt user file → the user row says `did not load:`, not `shadowed` |
+| the listing reports and succeeds | the fixture above; listing exits 0 and carries `did not load:` with the reason |
+| an absent layer is not an error | a scratch with no `.config/smut/conventions/` anywhere and a clean home: listing exits 0, one row |
+| an unreadable layer is exit 1 | a `conventions/` directory with mode 000: exit 1, path named |
+| **a set with no summary lists with `-`** | a bare markdown file, no frontmatter: row's third field is `-` |
+| frontmatter is not prose | a file with `summary:`/`version:`; printed prose is `body` + one newline, byte for byte |
+| **the body and the seed agree** | `prose == body + "\n"` and `seed["body"] == body`, asserted together |
+| **all four derived keys are refused by name** | `title:`, `name:`, `id:`, `type:` each exit 1 with its own source sentence |
 | unknown keys are ignored | `future-key: x` loads normally |
-| non-UTF-8 is a reasoned row | write invalid bytes; the listing names it and exits 0 |
+| an empty body is malformed | frontmatter only, and an empty file: both rows say a set that says nothing is a mistake |
+| a non-UTF-8 file and a non-UTF-8 name | invalid bytes in the content, and in the filename: reasoned rows, no panic |
 | the seed is fixed and origin-bearing | `smut_id`, `source`, `version`, title verbatim, body equal to the file minus frontmatter |
+| **the shipped set is not special** | the same bytes as a file and as the embedded set resolve to equal entries apart from layer and origin |
 | a second install still upserts | declare twice; `previous` reports the amended body |
-| no store is created | pair the command with `get` in the same directory, which must fail for want of a store — the pairing is what discriminates |
+| no store is created | `!scratch.store().exists()` after the command, *and* the paired `get` failing with its absent-store message — both, because the message is what discriminates a created-and-valid store from a created-and-corrupt one |
 | the two roots disagree on purpose | cwd in a subdirectory: `conventions` resolves the repo's set, `get` fails at exit 1 for the local store |
 
 **Preserved behaviour** that must stay green without a rewrite: an unknown name at exit 2,

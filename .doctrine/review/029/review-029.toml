@@ -1,0 +1,504 @@
+id    = 29
+slug  = "design-review-of-sl-008"
+title = "design review of SL-008"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Adversarial pass over the seven drafted sections of design.md at revision 21: every load-bearing claim verified against the code and the governing decisions, 20 findings raised across all seven sections (nine major, eleven minor), all disposed fix-now and verified after the sections were revised and re-materialised (revision 25). The pass also confirmed the research artefact's code claims independently."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-008"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Failed(reason:String) cannot carry the line number the refusal variant and DEC-033 require; Cause is needed as a type."
+detail = "Found by the adversarial pass over the drafted design (sec-1's section). Resolution applied in the same review round: Failed(Cause) with Cause{line,reason}; the error variant holds the same Cause so nothing re-parses a message."
+disposition = "fix-now"
+response = "Failed(Cause) with Cause{line,reason}; the error variant holds the same Cause so nothing re-parses a message."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Failed(Cause) with Cause{line,reason}; the error variant holds the same Cause so nothing re-parses a message."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "A non-UTF-8 filename has no defined outcome and invites a lossy String or an unwrap."
+detail = "Found by the adversarial pass over the drafted design (sec-2's section). Resolution applied in the same review round: A non-UTF-8 name is a failed row reported before any read; nothing unwraps."
+disposition = "fix-now"
+response = "A non-UTF-8 name is a failed row reported before any read; nothing unwraps."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "A non-UTF-8 name is a failed row reported before any read; nothing unwraps."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "major"
+title = "main reading the environment does not protect the crate's in-process unit tests, which would read a developer's real ~/.config/smut."
+detail = "Found by the adversarial pass over the drafted design (sec-3's section). Resolution applied in the same review round: execute takes the roots as a parameter; main computes them and the in-process tests pass their own."
+disposition = "fix-now"
+response = "execute takes the roots as a parameter; main computes them and the in-process tests pass their own."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "execute takes the roots as a parameter; main computes them and the in-process tests pass their own."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "The .git predicate was defined by two sentences that disagree once symlinks exist, and a broken entry case was named but never defined."
+detail = "Found by the adversarial pass over the drafted design (sec-4's section). Resolution applied in the same review round: One predicate: metadata is a directory or a regular file; anything else is not a repository."
+disposition = "fix-now"
+response = "One predicate: metadata is a directory or a regular file; anything else is not a repository."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "One predicate: metadata is a directory or a regular file; anything else is not a repository."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "The layer-root suffix could be joined twice, since user_root returned a smut root while the reader looked in smut/conventions."
+detail = "Found by the adversarial pass over the drafted design (sec-5's section). Resolution applied in the same review round: Roots holds the two .. /smut roots; the kind segment is joined exactly once inside load."
+disposition = "fix-now"
+response = "Roots holds the two .. /smut roots; the kind segment is joined exactly once inside load."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Roots holds the two .. /smut roots; the kind segment is joined exactly once inside load."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "major"
+title = "DEC-028's empty-body malformed class was dropped, so a frontmatter-only file would load as advice that says nothing."
+detail = "Found by the adversarial pass over the drafted design (sec-6's section). Resolution applied in the same review round: The empty body is a named failure class with DEC-028's own reason; the class list is closed and counted."
+disposition = "fix-now"
+response = "The empty body is a named failure class with DEC-028's own reason; the class list is closed and counted."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The empty body is a named failure class with DEC-028's own reason; the class list is closed and counted."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "major"
+title = "Printed prose was described as body plus the shell's newline, but the binary writes verbatim and no shell adds one."
+detail = "Found by the adversarial pass over the drafted design (sec-7's section). Resolution applied in the same review round: answer returns body plus exactly one newline; the seed keeps the trimmed body."
+disposition = "fix-now"
+response = "answer returns body plus exactly one newline; the seed keeps the trimmed body."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "answer returns body plus exactly one newline; the seed keeps the trimmed body."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "minor"
+title = "The frontmatter fence's position was unspecified and a blank line inside it would have been refused as unparseable."
+detail = "Found by the adversarial pass over the drafted design (sec-8's section). Resolution applied in the same review round: Frontmatter exists only when line 1 is exactly --- and a later line is exactly ---; blank lines inside are skipped."
+disposition = "fix-now"
+response = "Frontmatter exists only when line 1 is exactly --- and a later line is exactly ---; blank lines inside are skipped."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Frontmatter exists only when line 1 is exactly --- and a later line is exactly ---; blank lines inside are skipped."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "minor"
+title = "The unknown-name refusal was described as the listing in one sentence, which no rendering can implement or test."
+detail = "Found by the adversarial pass over the drafted design (sec-9's section). Resolution applied in the same review round: Pinned: one clause per resolved name, name (layer) or name (layer, did not load: reason), joined by a semicolon."
+disposition = "fix-now"
+response = "Pinned: one clause per resolved name, name (layer) or name (layer, did not load: reason), joined by a semicolon."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Pinned: one clause per resolved name, name (layer) or name (layer, did not load: reason), joined by a semicolon."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-10"
+status = "verified"
+severity = "major"
+title = "A loaded in-force set with no summary had no third-column value, which is every hand-written set without frontmatter."
+detail = "Found by the adversarial pass over the drafted design (sec-10's section). Resolution applied in the same review round: The third field is - when a set is in force and declares no summary."
+disposition = "fix-now"
+response = "The third field is - when a set is in force and declares no summary."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The third field is - when a set is in force and declares no summary."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-11"
+status = "verified"
+severity = "major"
+title = "Failed and shadowed had no precedence, so a broken file behind a working one could lose its reason."
+detail = "Found by the adversarial pass over the drafted design (sec-11's section). Resolution applied in the same review round: did not load: wins over shadowed; the mirrored fixture is a verification row."
+disposition = "fix-now"
+response = "did not load: wins over shadowed; the mirrored fixture is a verification row."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "did not load: wins over shadowed; the mirrored fixture is a verification row."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-12"
+status = "verified"
+severity = "major"
+title = "An absent layer directory read as unreadable, making the command fail in every project that has not opted in."
+detail = "Found by the adversarial pass over the drafted design (sec-12's section). Resolution applied in the same review round: An absent directory is not an error; only an existing-and-unreadable one is exit 1."
+disposition = "fix-now"
+response = "An absent directory is not an error; only an existing-and-unreadable one is exit 1."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "An absent directory is not an error; only an existing-and-unreadable one is exit 1."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-13"
+status = "verified"
+severity = "major"
+title = "load returned Vec and so could not carry the unreadable-directory exit-1 class the same document promises."
+detail = "Found by the adversarial pass over the drafted design (sec-13's section). Resolution applied in the same review round: load returns Result<Vec<Entry>, Error> and the directory failure returns before any listing is rendered."
+disposition = "fix-now"
+response = "load returns Result<Vec<Entry>, Error> and the directory failure returns before any listing is rendered."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "load returns Result<Vec<Entry>, Error> and the directory failure returns before any listing is rendered."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-14"
+status = "verified"
+severity = "major"
+title = "The loader was not generic over declaration kind, dropping DEC-026's stated reason for the ladder and slice objective 7."
+detail = "Found by the adversarial pass over the drafted design (sec-14's section). Resolution applied in the same review round: load takes a kind and joins it once; Roots carries no kind."
+disposition = "fix-now"
+response = "load takes a kind and joins it once; Roots carries no kind."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "load takes a kind and joins it once; Roots carries no kind."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-15"
+status = "verified"
+severity = "minor"
+title = "parse had no parameter for the shipped set's injected version, leaving the injection point unstated."
+detail = "Found by the adversarial pass over the drafted design (sec-15's section). Resolution applied in the same review round: load applies the crate's version to the binary layer after parse; parse stays a reader of bytes."
+disposition = "fix-now"
+response = "load applies the crate's version to the binary layer after parse; parse stays a reader of bytes."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "load applies the crate's version to the binary layer after parse; parse stays a reader of bytes."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-16"
+status = "verified"
+severity = "minor"
+title = "Nothing sorted within a layer although the listing's order is defined and read_dir order is arbitrary."
+detail = "Found by the adversarial pass over the drafted design (sec-16's section). Resolution applied in the same review round: load sorts each layer by name before concatenating the layers."
+disposition = "fix-now"
+response = "load sorts each layer by name before concatenating the layers."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "load sorts each layer by name before concatenating the layers."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-17"
+status = "verified"
+severity = "major"
+title = "No row asserted that the walk stops at the repository, which is the property protecting every developer's home from being read as project policy."
+detail = "Found by the adversarial pass over the drafted design (sec-17's section). Resolution applied in the same review round: A row with a fake home, a repository inside it and a set that must never be reported as project."
+disposition = "fix-now"
+response = "A row with a fake home, a repository inside it and a set that must never be reported as project."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "A row with a fake home, a repository inside it and a set that must never be reported as project."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-18"
+status = "verified"
+severity = "minor"
+title = "The no-store row could not go red, since get exits 1 for an absent and a corrupt store alike."
+detail = "Found by the adversarial pass over the drafted design (sec-18's section). Resolution applied in the same review round: Keep the existence assertion and add the absent-store diagnostic, so the row discriminates."
+disposition = "fix-now"
+response = "Keep the existence assertion and add the absent-store diagnostic, so the row discriminates."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Keep the existence assertion and add the absent-store diagnostic, so the row discriminates."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-19"
+status = "verified"
+severity = "minor"
+title = "The strongest prose assertion was replaced by a weaker one, so a lost trailing newline or an appended footer would stay green."
+detail = "Found by the adversarial pass over the drafted design (sec-19's section). Resolution applied in the same review round: Byte-equality both ways: prose equals body plus one newline, and the seed's body equals the body."
+disposition = "fix-now"
+response = "Byte-equality both ways: prose equals body plus one newline, and the seed's body equals the body."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Byte-equality both ways: prose equals body plus one newline, and the seed's body equals the body."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding]]
+id = "F-20"
+status = "verified"
+severity = "minor"
+title = "Three of the four derived-key refusals and the identical-bytes one-reader property had no row."
+detail = "Found by the adversarial pass over the drafted design (sec-20's section). Resolution applied in the same review round: The derived-key row iterates all four keys with their sources; a row asserts embedded and file bytes resolve equally."
+disposition = "fix-now"
+response = "The derived-key row iterates all four keys with their sources; a row asserts embedded and file bytes resolve equally."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "The derived-key row iterates all four keys with their sources; a row asserts embedded and file bytes resolve equally."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

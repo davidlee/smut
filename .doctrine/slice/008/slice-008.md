@@ -166,6 +166,22 @@ Two consequences the scope did not anticipate: the listing now has **one row per
   a bare absence check that no input could falsify.
 - Every assertion names the change that reddens it. This suite is deliberately rewritten,
   so the discrimination discipline is the evidence, not the diff.
+- The adversarial review added four properties the intent above did not reach: an **absent**
+  layer directory is not an error while an existing-but-unreadable one is exit 1; a set with
+  an **empty body** is malformed rather than advice that says nothing; a loaded in-force set
+  that declares no summary lists with `-`, and `did not load:` beats `shadowed`; and the
+  walk-up must be proved to **stop at the repository**, never adopting a fake home's set as
+  project policy.
+
+### Review round
+
+One adversarial pass (RV-029, twenty findings, all disposed fix-now and verified) over the
+seven drafted sections. It changed the design rather than confirming it: `Cause` replaced a
+flat reason string so the line number survives into the refusal; `load` returns `Result`
+because an unreadable directory has no other channel and takes the declaration kind it was
+supposed to be generic over; `execute` takes the roots it needs so the in-process unit tests
+never read the operator's real config home; and the printed prose is defined as the body plus
+exactly one newline, because the binary writes verbatim and no shell adds one.
 - Closure is the gate, not the feature: SL-006 can move to `plan` once a project can
   ship a set and see which layer it read.
 
