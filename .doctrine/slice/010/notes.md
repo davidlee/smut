@@ -599,6 +599,31 @@ stamp, so no range fallback was needed), and `doctrine slice verify-vt 10` repor
   from the guide at a terminal, without a quote. The exact script is in § Open and
   the handback.
 
+### Seat verification — run closed at 4/4 (2026-11-03)
+
+- **Charters.** Three fresh sub-orchestrators, serial, one phase each:
+  PHASE-04 → PHASE-02 → PHASE-03 (the plan array's order). Each ran `/phase-plan`
+  on its own runtime sheet, then `/execute` red/green.
+- **Commits.** `bb6a9d2` PHASE-04 · `372b312`+`d20a84f` PHASE-02 · `cd69acd`
+  PHASE-03, with notes/harvest commits after each (`5f3ef39`, `f26f923`,
+  `fabc633`) and the seat's two (`ea8dacb` F1 ruling, this one).
+- **Deltas.** All four phases have a recorded boundary in
+  `state/slice/010/boundaries.toml`, `provenance = solo`.
+- **VT.** `doctrine slice verify-vt 10` — every VT PASS across PHASE-01/02/03/04.
+  PHASE-02's and PHASE-03's rows resolved from UNATTRIBUTABLE once their deltas
+  were recorded; the FAIL rows were real, not attribution artefacts.
+- **Conformance.** `doctrine slice conformance 10` — 8 conformant, 0 undelivered,
+  4 undeclared (`notes.md`, `plan.md`, `research/baseline.toml`,
+  `slice-010.toml`): slice metadata, deliberately outside design §6's eight
+  design-target paths.
+- **Seat spot-checks.** `cargo test --test dsl` 19/19, `--test cli_contract`
+  62/62, `verify-vt` green, and `smut learn`'s short-form section read as a
+  reader. Children reported `just check` exit 0 after each phase (444 lib
+  default / 457 fault-injection at the end).
+- **Left open, deliberately.** VH-1 (human terminal gate) is pending and its
+  script is in PHASE-03's entry. The lifecycle stays `started` with 4/4 phases —
+  the expected divergent signal at the audit boundary.
+
 ## Autonomy log
 
 Seat-level envelope decisions, one line each: phase · decision · reason ·
@@ -628,6 +653,18 @@ Seat-level envelope decisions, one line each: phase · decision · reason ·
 - **PHASE-03 · nothing else left the envelope.** No escalation, no backlog
   deferral, no design drift, no source edit outside `src/learn.rs` and
   `tests/fixture.rs`; `.quotient/` and `_envrc` untouched.
+- **Seat · audit entry left to the operator, deferred.** All four phases are
+  complete and every VT is green, but VH-1 is a human act and the charter loop
+  stops before audit. Reason: the skill's boundary, and recording an audit start
+  before the human closure gate would overstate the evidence. The operator gets
+  the five-query script and the `doctrine slice status 10 audit` decision.
+- **Seat · the guide's “The hot path therefore has no flags” left unchanged,
+  deferred to audit.** It is design §1's own sentence, copied faithfully; read
+  literally the next paragraph's flag table contradicts it, read as “the bare
+  filter query needs no flags” it is true and the following sentence supports it.
+  Reason: the design owns the wording and this is not provably false, so it is an
+  audit question rather than a phase edit — a candidate sixth correction if audit
+  judges the literal reading the one a reader takes.
 
 - **PHASE-04 · F1 ruled decided.** `--depth abc`, `--depth=-1` and `--budget 0`
   reach the specification's sentence only with a direction present, because
