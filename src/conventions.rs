@@ -431,6 +431,23 @@ pub fn set_in_force<'a>(entries: &'a [Entry], name: &str) -> Option<&'a Entry> {
         .find(|entry| entry.name.as_deref() == Some(name))
 }
 
+/// The name an entry is listed under: the path's stem, or `None` when the
+/// filename is not UTF-8 text.
+fn stem_of(path: &Path) -> Option<String> {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .map(str::to_owned)
+}
+
+/// A row that did not load, named by its path's own stem.
+fn failed_row(layer: Layer, path: PathBuf, line: Option<usize>, reason: String) -> Entry {
+    Entry {
+        name: stem_of(&path),
+        origin: Origin { layer, path },
+        outcome: Outcome::Failed(Cause { line, reason }),
+    }
+}
+
 /// Read one layer's `<root>/<kind>` directory into entries, in no order of its
 /// own: sorting is [`load`]'s step, and it sorts each layer before the layers
 /// concatenate.
@@ -488,8 +505,18 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
 
         // Followed, deliberately unlike `project_root`'s `symlink_metadata`: a
         // symlinked `.md` is a candidate, and its bytes are read through the link.
-        let Ok(metadata) = std::fs::metadata(&path) else {
-            continue;
+        // A candidate whose own metadata cannot be read is still a row: §3's
+        // failure table has "cannot be opened or read" as a reasoned row, and a
+        // dangling symlink is the only portable fixture for that byte-level
+        // class (a mode-000 file cannot fail its read as root).
+        let metadata = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(source) => {
+                let reason = format!("{} could not be read: {source}", path.display());
+                entries.push(failed_row(layer, path, None, reason));
+
+                continue;
+            }
         };
         if !metadata.is_file() {
             continue;
@@ -503,28 +530,37 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
         // A filename that is not UTF-8 text has no name to list the entry under.
         // The row is decided here, before the read, so valid contents cannot
         // rescue it.
-        let Some(name) = path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .map(str::to_owned)
-        else {
-            entries.push(Entry {
-                name: None,
-                origin,
-                outcome: Outcome::Failed(Cause {
-                    line: None,
-                    reason: "the filename is not UTF-8 text".to_owned(),
-                }),
-            });
+        if path.file_stem().and_then(|stem| stem.to_str()).is_none() {
+            entries.push(failed_row(
+                layer,
+                path,
+                None,
+                "the filename is not UTF-8 text".to_owned(),
+            ));
 
             continue;
+        }
+
+        let bytes = match std::fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(source) => {
+                let reason = format!("{} could not be read: {source}", path.display());
+                entries.push(failed_row(layer, path, None, reason));
+
+                continue;
+            }
         };
 
-        let Ok(bytes) = std::fs::read(&path) else {
-            continue;
-        };
-        let Ok(text) = String::from_utf8(bytes) else {
-            continue;
+        // §3 fixes this sentence, so the decoder's own message (`Utf8Error`) is
+        // deliberately discarded here.
+        let text = match String::from_utf8(bytes) {
+            Ok(text) => text,
+            Err(_) => {
+                let reason = format!("the file is not UTF-8 text: {}", path.display());
+                entries.push(failed_row(layer, path, None, reason));
+
+                continue;
+            }
         };
 
         let outcome = parse(&text, origin.clone());
@@ -533,7 +569,7 @@ fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>
         // authority; a failed file is still listed under its own stem.
         let name = match &outcome {
             Outcome::Loaded(set) => Some(set.name.clone()),
-            Outcome::Failed(_) => Some(name),
+            Outcome::Failed(_) => stem_of(&path),
         };
 
         entries.push(Entry {
@@ -2252,6 +2288,181 @@ mod tests {
             names.iter().all(|name| *name != Some(lossy)),
             "no lossy `String` was built from the filename, so no entry is listed as `{lossy}`: \
              {names:?}"
+        );
+    }
+
+    // Reddens if bytes that are not UTF-8 are skipped as if the file were not
+    // there, or if the row carries the decoder's own words instead of §3's fixed
+    // sentence.
+    #[test]
+    fn a_file_that_is_not_utf8_text_is_a_failed_row() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let path = project_layer.join("broken.md");
+        fs::write(&path, b"# Broken\n\nAdvi\xffce.\n")
+            .expect("a file whose bytes are not UTF-8 text");
+
+        let roots = Roots::under(repo, None);
+        let entries = load(&roots, "conventions").expect("a row that did not load is not an error");
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "the file is one row and not silence, so the layer holds exactly it: {names:?}"
+        );
+
+        let row = project[0];
+        assert_eq!(
+            row.name.as_deref(),
+            Some("broken"),
+            "the name is the filename even though the bytes are not text: {names:?}"
+        );
+
+        let Outcome::Failed(cause) = &row.outcome else {
+            panic!(
+                "bytes that are not UTF-8 text do not load: {:?}",
+                row.outcome
+            );
+        };
+
+        assert_eq!(
+            cause.reason,
+            format!("the file is not UTF-8 text: {}", path.display()),
+            "§3 fixes the sentence and adds the path, and never the decoder's own message: {}",
+            cause.reason
+        );
+        assert_eq!(
+            cause.line, None,
+            "no frontmatter line is at fault when the bytes are: {cause:?}"
+        );
+    }
+
+    // Reddens if a candidate whose bytes cannot be read is skipped instead of
+    // reported: the layer then holds nothing and the caller is never told.
+    #[cfg(unix)]
+    #[test]
+    fn a_file_that_cannot_be_read_is_a_failed_row() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let dangling = project_layer.join("dangling.md");
+        std::os::unix::fs::symlink(scratch.path.join("gone.md"), &dangling)
+            .expect("a symlink to a file that is not there");
+
+        let roots = Roots::under(repo, None);
+        let entries = load(&roots, "conventions").expect("a row that did not load is not an error");
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "an `.md` entry whose bytes cannot be read is a row, so the layer holds exactly it: \
+             {names:?}"
+        );
+
+        let row = project[0];
+        assert_eq!(
+            row.name.as_deref(),
+            Some("dangling"),
+            "the entry keeps the layer's own spelling of the name: {names:?}"
+        );
+
+        let Outcome::Failed(cause) = &row.outcome else {
+            panic!(
+                "a file that cannot be read does not load: {:?}",
+                row.outcome
+            );
+        };
+
+        assert!(
+            cause
+                .reason
+                .starts_with(&format!("{} could not be read: ", dangling.display())),
+            "the operating system's own words, after the path the layer spells: {}",
+            cause.reason
+        );
+        assert!(
+            !cause.reason.starts_with("the file is not UTF-8 text"),
+            "the two failures below the read are separate rows and never collapse into one: {}",
+            cause.reason
+        );
+    }
+
+    // Reddens if `set_in_force` skips a nearer entry because it failed and
+    // promotes the farther working one: validity would then be a tie-breaker.
+    #[test]
+    fn a_broken_set_still_wins_its_name() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let broken = scratch.write(
+            &project_layer,
+            "mine.md",
+            "---\ntitle: Mine\n---\n# Mine\n\nproject advice.\n",
+        );
+
+        let user_layer_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_layer_root, "conventions");
+        scratch.write(&user_layer, "mine.md", "# Mine\n\nuser advice.\n");
+
+        let roots = Roots::under(repo, Some(user_layer_root));
+        let entries = load(&roots, "conventions").expect("every layer reads");
+        let mine: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.name.as_deref() == Some("mine"))
+            .collect();
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+
+        assert_eq!(
+            mine.len(),
+            2,
+            "both layers still hold the name, so a failed nearer entry does not remove it: \
+             {names:?}"
+        );
+
+        let winner = set_in_force(&entries, "mine").expect("`mine` is in force even broken");
+        assert_eq!(
+            winner.origin.layer,
+            Layer::Project,
+            "the nearer set wins the name whether or not it loaded, so validity is not a \
+             tie-breaker"
+        );
+        assert_eq!(
+            winner.origin.path, broken,
+            "the entry in force is the project layer's own broken file"
+        );
+
+        let Outcome::Failed(cause) = &winner.outcome else {
+            panic!(
+                "`mine.md` declares a derived `title` key, so the winner is a failed row: {:?}",
+                winner.outcome
+            );
+        };
+        assert!(
+            cause.reason.contains("title"),
+            "the cause is the project file's own, and it names the key that refused it: {}",
+            cause.reason
+        );
+
+        let shadowed = mine
+            .iter()
+            .find(|entry| entry.origin.layer == Layer::User)
+            .expect("the user layer's copy is still an entry");
+        assert!(
+            matches!(shadowed.outcome, Outcome::Loaded(_)),
+            "the user's working set is still listed and still loads: it is shadowed, not \
+             promoted: {:?}",
+            shadowed.outcome
         );
     }
 }
