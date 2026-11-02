@@ -29,6 +29,28 @@ It is not a bug. A `query` returns a set, and this set is empty.
   nothing matched" feature, which would need a store scan and would be noise on
   every honest empty answer.
 
+## A second sound case, of a different kind
+
+The exercise behind RFC-001 surfaced one more candidate, and it is *not* about the
+predicate at all: **`where` naming a field that no scanned root carries.**
+
+```
+❯ smut query '{"where":{"kind":"pipe"},"select":["id"]}'
+{"objects":[], …}          # the store's discriminator was `kind` on 7 of 34 entities
+```
+
+The predicate sees exactly the roots, so "none of these N entities has field
+`kind`" is decidable per query, needs no full-store scan beyond the one the query
+already does, and is sound: a field nobody carries cannot match. It is a statement
+about the *store*, though, not about the predicate — which makes it a different
+feature from (a)–(c) below and possibly an easier one to agree on. It is also the
+cheapest available answer to IMP-011's consequence.
+
+Boundary worth stating in the same breath: **absence of an incoming reference is
+not a case for this at all.** Asking which participants have no adverse event with
+`{"reported":{"$exists":false}}` is true as written and returns all of them —
+that is a teaching problem for IMP-012, and no diagnostic can call it wrong.
+
 ## The subset that is decidable, and sound
 
 One field's condition list is enough for the always-false forms:
@@ -68,6 +90,8 @@ defensible; one that refuses on a heuristic is not.
 - Any envelope or diagnostic-channel work — IMP-009.
 - A general "your query matched nothing" note; see above, it cannot distinguish
   the case that matters.
+- Absence-of-incoming-reference. It is true as written, so it belongs to teaching
+  (IMP-012), not to a refusal or a diagnostic.
 - Predicate error *messages* — ISS-004 owns the refusal text on the same surface.
 
 ## Ready to pick up when
@@ -78,6 +102,7 @@ item is small. Status `design-deferred`.
 
 ## Provenance
 
-0.2.0 rc trial, friction 1. The reporter's framing — "not wrong, unhelpful" — is
-the premise; the sound subset, the inconsistency argument and the options are
-this repo's reading.
+0.2.0 rc trial, friction 1: the reporter's framing — "not wrong, unhelpful" — is
+the premise. The sound subset, the inconsistency argument and the options are
+this repo's reading. The second sound case and its boundary come from the
+three-store exercise in RFC-001.

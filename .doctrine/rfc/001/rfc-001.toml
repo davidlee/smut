@@ -1,0 +1,52 @@
+schema = "doctrine.rfc"
+version = 1
+
+id = 1
+slug = "agent-usability-what-three-independently-authored-stores-taught-about-the-query-surface"
+title = "Agent usability: what three independently authored stores taught about the query surface"
+status = "open"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["prioritisation", "surface", "usability"]
+
+[relationships]
+# RFCs participate in the tier-1 `related` relation (AnyNumbered — links to any entity).
+# Author with `doctrine link RFC-NNN related <target>`. `doctrine inspect RFC-NNN` renders them.
+superseded_by = []   # reverse link is derived (REV→RFC originates_from)
+
+[[relation]]
+label = "related"
+target = "ISS-004"
+
+[[relation]]
+label = "related"
+target = "IMP-008"
+
+[[relation]]
+label = "related"
+target = "IMP-009"
+
+[[relation]]
+label = "related"
+target = "IMP-010"
+
+[[relation]]
+label = "related"
+target = "IMP-011"
+
+[[relation]]
+label = "related"
+target = "IMP-012"
+
+[[relation]]
+label = "related"
+target = "IDE-003"
+
+[[relation]]
+label = "related"
+target = "IMP-002"
+
+[[relation]]
+label = "related"
+target = "IMP-003"
+

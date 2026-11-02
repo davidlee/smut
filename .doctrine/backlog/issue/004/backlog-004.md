@@ -64,4 +64,6 @@ the other.
 
 0.2.0 rc trial, friction 2. The reporter's diagnosis — "the field mixes a
 literal with operators" — is wrong for their input and right for a different
-one; both cases are measured above, on `target/debug/smut` 0.2.0.
+one; both cases are measured above, on `target/debug/smut` 0.2.0. Ranked eighth
+of ten in RFC-001, which nonetheless recommends fixing it whenever refusal text is
+next touched.

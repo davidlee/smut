@@ -87,3 +87,5 @@ drops and its sections change.
 
 0.2.0 rc trial, frictions 3 and 4. The complaint sentences are the reporter's;
 the measurements, line references and the DEC-010 constraint are this repo's.
+RFC-001 ranks the selector seventh of ten, and sequences it after the teaching
+work (IMP-012): the doors are worth more once there is content behind them.

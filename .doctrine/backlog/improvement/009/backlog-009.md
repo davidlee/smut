@@ -18,9 +18,27 @@ JSON says so:
 | the walk | `traversal.depths`, `traversal.edges`, `traversal.frontier`, `dangling` |
 | the request | `missing` |
 
-The confusable pair is exactly the one measured in IMP-008: `objects` and
-`frontier` overlap at a depth boundary, and only the guide's paragraph
-distinguishes them.
+## The instance that actually cost answers
+
+The exercise behind RFC-001 narrowed the complaint to something more concrete than
+"six members are confusable": **the root of a traversal is unidentifiable inside
+`objects`**. `where` filters roots only, so the root cannot be excluded from the
+result; `traversal.depths` carries the information out of band, keyed by id. Every
+"how many entities point at this one" answer therefore needs the root subtracted
+by hand, and an off-by-one there is invisible in the answer.
+
+Seven of the eighteen answers in that exercise did exactly that subtraction
+(`.length-1`, or `select(.id != …)`), across two of the three stores:
+
+```
+❯ smut query '{"from":["zone-eastgate"],"backlinks":["in_zone"],"depth":1,"select":["id"]}'
+["zone-eastgate","p-church-eastgate","p-oak-eastgate"]
+```
+
+The root is present because it is a result of the walk, and there is no marker in
+the object that says so — only a side map the caller must consult. The earlier
+framing (six members with related meanings) is not wrong; it is the *second*
+problem, and the first one has a cheaper cure.
 
 ## This is a contract move, not a tidy
 
@@ -32,23 +50,32 @@ distinguishes them.
 - So any restructuring supersedes DEC-019 and re-cuts that pin. The honest moment
   is at or before 1.0 — i.e. with or before IMP-002 — because afterwards it is a
   break with consumers rather than a firming.
+- **But not everything here is that large.** A traversing response is 0.2-only, so
+  an *additive* member on it is invisible to the 0.1 pin: `traversal.roots` breaks
+  no 0.1 caller because no 0.1 caller made a traversing request. Only the
+  restructure below needs a DEC-019 successor; the first option does not.
 
 ## Options, not a proposal
 
-Status is `design-deferred`: this needs a conversation about the response surface,
-not an implementation task.
+Status is `design-deferred` for the *restructure*. The first option is not
+questionable and does not depend on the rest:
 
-1. **Keep the shape; carry the taxonomy in the guide.** Cheapest, and the friction
-   stands. IMP-008's section selector lowers the cost of the re-read the reporter
-   actually avoided, which may be enough of a cure on its own.
-2. **Rename before restructuring.** Keep it flat and let the walk's members say
+1. **Name the roots — additive, no DEC-019 decision.** `traversal.roots`, or a
+   top-level `roots` appearing only on a traversing response, listing the ids the
+   walk started from. It removes the measured cost above, it is invisible to the
+   0.1 pin, and it needs no taxonomy anyone has to agree on. Everything else here
+   becomes optional once this lands.
+2. **Keep the shape; carry the taxonomy in the guide.** Cheapest of the rest, and
+   the friction mostly stands. IMP-008's section selector lowers the cost of the
+   re-read the reporter actually avoided, which may be enough on its own.
+3. **Rename before restructuring.** Keep it flat and let the walk's members say
    "walk": `traversal` → `walk`, `dangling` → `walk.dangling` or `dangling`
    kept but named in the same breath. One rename, no nesting, smaller blast radius
    than a restructure — and still a break.
-3. **Group by subject.** `{"result": {objects, truncated, reasons}, "walk":
+4. **Group by subject.** `{"result": {objects, truncated, reasons}, "walk":
    {depths, edges, frontier, dangling}, "request": {missing}}`. The most legible
    and the largest break; it moves every pin at once.
-4. **A diagnostic channel.** If a caller-visible "nothing matched" or "this
+5. **A diagnostic channel.** If a caller-visible "nothing matched" or "this
    condition is contradictory" note is ever wanted (IMP-010), it needs a member
    that does not exist today. That is this conversation, not a separate one —
    adding a sixth flat key to fix a complaint about six flat keys would be an
@@ -83,5 +110,6 @@ which does not exist yet. Either way it must decide DEC-019's successor before
 ## Provenance
 
 0.2.0 rc trial, friction 5 — the one the operator flagged as "the thing I'd
-actually change". The taxonomy above, the DEC-019/SL-002 §8 constraints and the
-options are this repo's reading, not the reporter's.
+actually change" — reframed by the three-store exercise behind RFC-001, which
+supplied the measured instance and the additivity nuance. The taxonomy,
+the DEC-019/SL-002 §8 constraints and the options are this repo's reading.
