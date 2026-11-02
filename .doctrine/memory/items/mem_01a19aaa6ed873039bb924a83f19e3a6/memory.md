@@ -1,0 +1,5 @@
+`doctrine slice verify-vt <ID>` resolves each VT's `test_file` against the phase's source delta recorded in the slice's arm-neutral registry, not against the working tree or a raw `git diff`. That row is normally upserted by the `doctrine slice phase ... --status completed` transition (which captures `code_end_oid`), so running the gate while the phase is still `in_progress` reports every VT as `UNATTRIBUTABLE — keyword present but <file> not modified by this slice`, however green the work is.
+
+Observed 2026-11-02 on SL-005 PHASE-01: all four VTs unattributable after the code commit, all four `PASS` immediately after `doctrine slice record-delta 5 PHASE-01 --commit 7347dff` (the safe mode, which records exactly that commit's own patch). The later completion transition upserts the same range, so the manual step is harmless.
+
+Remedy order for a solo in-tree phase: implement → commit the code → `record-delta --commit <S>` → `verify-vt` → flip the phase to `completed`. Sibling fact `mem.fact.doctrine.vt-inert-keywords` covers the other way a VT can pass or fail vacuously (keywords already in the tree).

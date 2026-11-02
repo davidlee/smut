@@ -6,10 +6,16 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · slice ready, plan approved, PHASE-01 sheeted (2 phases; run dr-01a19a1e rev 43) · base 94f39c6
+fresh-as-of: 2026-11-02 · slice started, PHASE-01 complete (gates green, VT-1..VT-4 PASS); PHASE-02 planned, unsheeted · base 7347dff (+docs)
 
 ### Produced
 
+- **PHASE-01 implementation** (`7347dff`): `contradiction` and `refusal` as pure functions over
+  the parsed AST, `parse` split into a public wrapper over the private recursive
+  `parse_predicate`; `Reject::ContradictoryFieldConditions` with its `Display` arm, its boundary
+  row (`[(Error, u8); 25]`) and a whole-rendered message assertion; seven unit tests pinning the
+  seven sentences, the seven demand positions, the fixed order and the three silences; four
+  contradiction rows in the binary refusal table (exit 2, empty stdout, no store).
 - **DEC-027** — amended four times: the six-form enumeration → a decidability criterion
   → `$contains` completeness → demanded position. Now the governing rule.
 - **DEC-030** — new: both refusal messages' shape and wording, the never-invent-a-field
@@ -35,6 +41,17 @@ fresh-as-of: 2026-11-02 · slice ready, plan approved, PHASE-01 sheeted (2 phase
 
 ### Learned
 
+- **A gate that reads the completion registry cannot run before completion.** `doctrine slice
+  verify-vt` attributes each VT to the slice through the phase's delta row, which the
+  `--status completed` transition upserts — so a pre-completion run reports every VT
+  `UNATTRIBUTABLE` ("keyword present but `<file>` not modified by this slice") however green the
+  work is. Remedy: `doctrine slice record-delta <slice> PHASE-NN --commit <S>` (the safe mode,
+  recording exactly S's own patch) before the gate; the completion transition upserts the same
+  range. Not a defect, a bootstrap order.
+- **Rust red-first needs the type to exist first.** A test naming an unimplemented `Reject`
+  variant is a compile error, so "red" proves only that the name is absent. Land the variant and
+  its `Display` arm, re-run, and read the behavioural red ("should have been refused") before
+  writing the rule; otherwise the red-first claim is unfalsifiable.
 - **Duplicate keys cap the search space.** A condition object carries each operator at
   most once, so two of the original six "impossible forms" were unexpressible and the
   rule is four tests over ≤5 conditions. Reachability must be probed, not assumed.
@@ -59,6 +76,9 @@ fresh-as-of: 2026-11-02 · slice ready, plan approved, PHASE-01 sheeted (2 phase
 
 ### Open
 
+- **PHASE-01 is done; PHASE-02 is next** and its runtime sheet does not exist yet —
+  `/phase-plan` immediately before executing it. `doctrine slice verify-vt 5` stays non-zero
+  until PHASE-02's own keywords exist; PHASE-01's four VTs pass.
 - Nothing open inside the design. Three silences are deliberate and named in §7
   (`$contains` unbounded; anything outside demanded position; `$or` contents never
   analysed — pinned, so breaking it is a decision).

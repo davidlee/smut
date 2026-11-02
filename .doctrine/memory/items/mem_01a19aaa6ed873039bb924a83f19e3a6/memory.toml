@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19aaa6ed873039bb924a83f19e3a6"
+memory_key = "mem.fact.doctrine.verify-vt-needs-delta-row"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "verify-vt attributes through the phase delta row, which only lands at completion"
+summary = "A pre-completion `doctrine slice verify-vt` reports every VT UNATTRIBUTABLE; record the phase delta with `record-delta --commit <S>` first."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = ["slice verify-vt", "slice record-delta", "slice phase"]
+tags = ["doctrine", "verification", "dispatch", "conformance"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "bb2a6b227a6b9984d43722648eb41fead12858dd"
+ref_name = "refs/heads/main"
+checkout_state_id = "644bc046b0abce2a1f586968499308b2e2546a9cc6036a4497eae04910d24566"
+base_commit = "affacab0f244d45a785d765cf1d69a9be8da588d"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
