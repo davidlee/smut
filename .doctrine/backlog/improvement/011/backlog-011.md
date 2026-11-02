@@ -46,8 +46,8 @@ Operator direction, 2026-11-02:
   at the foot; a flag so an `AGENTS.md` can instruct it once — `smut learn
   --with-conventions hygiene`; and section retrieval (`smut learn labels`, etc.).
 - **Conventions are not injected into responses as a rule.** The one edge case
-  worth keeping open: a stderr warning when a *declaration* carries `kind` but no
-  `type`.
+  raised — a stderr warning when a *declaration* carries `kind` but no `type` — is
+  now closed by DEC-027 (see below).
 
 Those levers are specified in IMP-008, which therefore holds two jobs now —
 delivery (this item's cure) and legibility (its own complaint) — and the delivery
@@ -74,9 +74,10 @@ job outranks the legibility one.
   success in nine places, including the shared `assert_one_json_line` harness
   (`tests/compatibility.rs:85`) that most contract tests route through. The
   warning itself is cheap and sound — the declaration is in hand at `declare`
-  time, so "`kind` present, `type` absent" needs no scan — but whether a
-  successful command may ever write to stderr is a contract question, and the
-  answer belongs with IMP-012's boundary work rather than smuggled in here.
+  time, but whether a successful command may ever write to stderr is a contract
+  question — and it is **closed** by DEC-027: no success-path writes to stderr. If
+  the advisory is ever revived it goes inside `changes[]`, where `previous` already
+  lives, and never on stderr.
 - **Not a `$prefix` operator.** Substring filtering is a workaround for the
   missing discriminator. Adding a prefix test makes the workaround more
   comfortable and leaves the cause; if ids are the only handle, removing the need

@@ -51,10 +51,9 @@ are therefore candidates, and the last one waits on IMP-013.
   would be wrong the moment layering exists. Decide the loader first.
 - **Nothing lands in a response envelope.** Conventions stay out of `declare` and
   `query` replies. The one edge case raised — a stderr warning when a declaration
-  carries `kind` but no `type` — came with the same illustrations and is not a
-  proposal; the fact worth keeping is that it would contradict a success-path
-  `stderr is empty` pin, so it is IMP-011/IMP-012's contract question, not this
-  item's work.
+  carries `kind` but no `type` — came with the same illustrations; DEC-027 closed
+  it: no success-path writes to stderr, and if the advisory is ever revived it is a
+  `changes[]` entry, not this item's work.
 
 Consequences to plan for, not discover:
 

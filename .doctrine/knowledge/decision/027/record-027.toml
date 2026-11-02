@@ -1,0 +1,39 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 27
+slug = "a-predicate-that-cannot-hold-is-refused-by-name-within-one-fields-conditions"
+title = "A predicate that cannot hold is refused by name, within one field's conditions"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["cli", "contract", "predicates"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = 'The 0.2.0 rc trial ranked a silent empty answer as its first friction: a legal ANDed predicate such as {"status":{"$eq":"open","$ne":"open"}} returns [] with exit 0, while every other malformed input gets a named refusal. The three-store usability exercise added a second silent-empty shape (a where naming a field no entity carries) and a third case that wanted a warning on a successful declare. The open question was whether smut should gain a diagnostic channel at all — an envelope member or a warning on stderr — or reuse the refusal path.'
+choice = "Refuse at parse time, before any store access, when one field's condition list is provably unsatisfiable, naming the field and the contradiction. The decidable subset is fixed: $exists:false combined with any other condition on that field; $exists:true with $exists:false; $eq v with $ne v; $eq v with $in not holding v; $in with an empty array; $in A with $in B whose intersection is empty. No new envelope member, no success-path stderr, DEC-019 untouched. Two neighbours are decided the other way: a where naming a field no entity carries is taught and never refused, because refusing would punish filtering as a way to probe a store and the check is only sound when the roots are store-wide; a declaration carrying kind but no type is neither refused nor warned, its cure being delivery through the conventions surface, and if it is ever revived it is an advisory inside changes[] and never stderr."
+alternatives = ["a notes member carrying diagnostics on the envelope", " a warning on stderr for a successful command", " refusing the absent-field case as well", " leaving the silence and relying on teaching alone", " extending the check across $and clauses so cross-clause contradictions are caught too"]
+rationale = "The subset is sound: every form is false for every store, so no correct query changes result and no false positive is possible. It reuses the refusal path the store already has for input that makes no sense, so it needs no new channel and no envelope widening — and the structural analysis that killed the alternatives is that stderr is failure-only today and the brief already puts advisory content in the payload, while any top-level member would amend the DEC-019 pin. It is also 0.2-local: no 0.1 query can express a predicate, so no 0.1 caller is affected. Silence is the top-ranked invisible failure in the usability work, and this is the cheapest sound mechanism that removes one instance of it. from: [] remains the documented spelling for an intentional empty result."
+consequences = ["A partial detector obliges the guide to scope the guarantee", " or absence of a refusal becomes false assurance; runtime-composed predicates move from exit 0 to exit 2; cross-clause contradictions through $and stay silent by design; the absent-field and kind-without-type cases are closed as teaching and delivery rather than diagnostics; a new refusal variant and its message join the pinned refusal surface"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "answers RFC-001 diagnostic-channel question 5"
+target = "RFC-001"
+
+[[relation]]
+label = "spawns"
+target = "IMP-010"

@@ -23,6 +23,19 @@ the ones a real analysis walks into:
   entity's *label* costs a `get`. The two-call recipe is taught as direction
   discipline; the binding constraint is edge type.
 
+## The two sentences this item now owes the decision
+
+DEC-027 settled the refusal question, and it obliges the guide to say two things it
+would otherwise be free to leave out:
+
+- **Scope the refusal.** Smut refuses *some* provably-false conditions within one
+  field's conditions and nothing across `$and`. Without that sentence, absence of a
+  refusal reads as assurance and the guide has created a new wrong belief.
+- **A field no entity carries fails every operator**, exactly as a missing field on
+  one entity does. This is the trap that made "which participants have no adverse
+  event" answer *all eleven*; it belongs beside the missing-versus-null paragraph,
+  not in a section of its own.
+
 ## What a cure has to be
 
 One paragraph and a short list, in the shape the guide already uses — dense,
