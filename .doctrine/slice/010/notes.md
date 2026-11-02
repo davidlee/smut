@@ -126,18 +126,23 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · drafting · f1f2a9b
+fresh-as-of: 2026-11-02 · plan · 5318e39
 
 ### Produced
 
 - `research/research.md` — two threads, cross-thread findings F1–F7, design-input deltas
-  D1–D7, plus `raw/spike-clap-argv.md` (the twelve-case clap evidence).
+  D1–D7, plus `raw/spike-clap-argv.md` (the twelve-case clap evidence). F1 and D1 were
+  **corrected, not rewritten**, after the design review falsified them; the baseline is
+  restamped.
 - **DEC-034 … DEC-041** — one settled decision per inquiry: the verb, value typing, bare
   roots and the escape, the grammar inside clap's derive, the emit-for-`spec::parse` seam,
   refusing only what JSON cannot spell, what the guide teaches, `--ids`/`--select`.
-- `.doctrine/slice/010/design.md` — seven sections (surface, compiler, refusals, the verb,
-  the guide, code impact, verification), materialised at revision 25.
-- Eight `design-target` selectors, matching §6 exactly.
+- `.doctrine/slice/010/design.md` — seven sections, locked at revision 35 and adopted at 27.
+- **RV-031** — the review pass: eleven findings raised, disposed `fix-now`/`control`, verified,
+  pass concluded. `.doctrine/review/031/` is the authored ledger.
+- `.doctrine/slice/010/plan.toml` + `plan.md` — three phases, every routed finding transcribed
+  into the criterion that settles it; phase sheets materialised under `.doctrine/state/`.
+- Eleven `design-target` and `scope-relevant` selectors, matching design §6.
 
 ### Learned
 
@@ -154,11 +159,26 @@ fresh-as-of: 2026-11-02 · drafting · f1f2a9b
 - `smut q` with nothing at all is `query {}`, which the specification already defines as
   legal, so the front-end has no no-query refusal to write.
 
+### What the hostile pass taught (RV-031)
+
+- **A design claim can be unreachable rather than wrong.** The JSON-operand refusal was
+  written in the tables and asserted in the verification section while no branch of the
+  classifier could ever reach it: the rule and its detector were only reconciled on paper.
+- **A reflective reuse can carry a false sentence.** `ContradictoryFieldConditions` fits the
+  two-`=` case exactly; extended to a repeated `!=`/`~` it renders `cannot be satisfied`
+  about a predicate some entity satisfies. What forces a refusal is the *emit shape* — one
+  key per operator — not the specification, which can spell it with `$and`.
+- **`predicate::parse` answers what the design said it would refuse.** `$eq open` beside
+  `$ne resolved` passes the decidability walk; the design's verification row asserted exit 2.
+- **A file-level "unchanged" table is a claim with a census.** `smut render` had no row
+  although the scope non-goals it, and clap's errors are five lines while the design
+  called every refusal one.
+
 ### Open
 
-- **The review pass has not run.** The run is at `drafting`, forward to `reviewing` ready;
-  entering it opens this pass's RV ledger. No `review_policy` is declared yet — the choice
-  (formal hostile pass versus straight to plan) sits with the operator.
+- **The plan is under hardening.** Two audits (obligations; surface, sequencing, risk) run
+  against `plan.toml`, then an integrator revises the plan. Nothing about the design is
+  open.
 - **Obligations owed at reconcile** (none may be paid mid-slice):
   - DEC-016 — amend to name the DSL spelling of the two-call recipe; the guide keeps both
     spellings executed until then.
@@ -166,7 +186,10 @@ fresh-as-of: 2026-11-02 · drafting · f1f2a9b
     *string* literals so a value is never unquoted twice.
   - DEC-037 — its "no-query refusal belongs to this layer" consequence is superseded: the
     layer would own it, and §3 decides not to have one.
-  - IMP-014 — five new `Reject` variants land with no census to catch a missing one.
+  - IMP-014 — six new `Reject` variants land with no census to catch a missing one.
   - IMP-016 — the DSL's operator table is a third site that names the five operators.
-- Slice status is still `design`; the lifecycle move to `plan` follows the design locking, not
-  the drafting stage.
+  - **DEC-039** *(added by RV-031 F-3)* — its illustration that `status=open
+    status!=resolved` reaches the contradiction refusal is false: it is satisfiable and
+    answered. The decision's *rule* stands; only that sentence needs correcting.
+- Slice status is `plan`; the move to `ready` follows the plan hardening and is recorded at
+  handoff to `/phase-plan`.
