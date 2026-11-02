@@ -450,6 +450,49 @@ cases must restate that shape against `smut_id`, not merely respell it.
 Quotient, inherited model configuration; no worker failure, no model substitution.
 Wall time dominated by two `just check` runs.
 
+### Preflight refresh for PHASE-02 — 2026-11-02 (seat)
+
+Re-measured because the tree moved under the run: SL-005 landed its refusal phase
+and advanced to audit.
+
+- **PHASE-02/EN-5 is satisfied by landing.** SL-005 is `audit`, phases 2/2; its
+  refusal code is committed as `7347dff` (contradictory field conditions) and
+  `9727c1c` (misplaced predicate operator), both touching the shared
+  `src/error.rs`. `Reject` now carries `ContradictoryFieldConditions`,
+  `MisplacedPredicateOperator` and `MixedPredicateObject` alongside `InvalidId`.
+  Residual risk, logged not solved: SL-005 is `divergent` (phases complete,
+  lifecycle not terminal), so its reconcile could still touch source. A
+  source-side conflict in `src/error.rs` is report-and-halt, not a silent rebase.
+- **HEAD `2470576`; baseline gate green** — `just check` exit 0, 0 failures, 0
+  warnings: 359 lib (372 under `--features fault-injection`), 40 `cli_contract`,
+  34 `traversal`, 23 `store_corruption`, 15, 14, 13, 10, 10, 8, 8, 5, 4, 4, 0.
+  Any later red is a regression.
+- **Fixture baseline recorded ahead of the phase (EN-2).**
+  `tests/fixtures/interview/entities.json` at `2470576` is blob
+  `f5b29de67b5f539be018c72c5e88c3bd0f301a93`; 66 entities, **no `smut_id` key
+  anywhere**, 223 `"id"` occurrences; last touched by `fddbe33` (SL-002 PHASE-04).
+  The inverse-renamed comparison therefore cannot be ambiguous — read the original
+  with `git cat-file blob f5b29de6…`, never from a copy.
+- **Residual-`id` sweep baseline re-measured: repo-wide `"id"` is now 1091**
+  (the slice body's 984 and the review's 974 both predate SL-005). Highest
+  densities: `tests/fixtures/interview/entities.json` 223, `tests/traversal.rs`
+  78, `src/declare.rs` 63, `src/entity.rs` 48, `src/walk.rs` 46,
+  `tests/cli_contract.rs` 42, `src/order.rs` 37, `src/render_markdown.rs` 34,
+  `src/store/mod.rs` 32, `tests/compatibility.rs` 29.
+- **Constants and the README fence are unchanged.** `ENTITY_ID == "id"`
+  (`src/entity.rs:17`), `FORMAT_VERSION == 1` (`src/store/index.rs:28`),
+  `MANIFEST_FORMAT_VERSION == 1` (`src/store/journal.rs:35`); the one executed
+  README fence is still `119..146`.
+- **Identity-naming diagnostics, current locations:** `src/error.rs:296`
+  (`invalid entity id: {found}, and an id must be a nonempty string`),
+  `src/error.rs:415` (`the entity file {entry} holds id {found}, and the index
+  maps it to {key}`), `src/store/mod.rs:507` (describe: ``no `id` ``),
+  `src/entity.rs:93` (the `scan_refs` assertion), and `docs/store-format.md:252`
+  quotes the `IdDisagreement` string verbatim.
+- **Other writers, freshly measured:** `README.md` (M, operator's rewrite) plus
+  new untracked `.doctrine/slice/006*`, `.doctrine/review/027*`,
+  `.doctrine/backlog/{idea/004,idea/005,chore/002}*`. Never staged, never swept.
+
 ## Pre-implementation review
 
 Two independent reviews (Seat A: obligation ledger; Seat B: sequencing and surface) ran
