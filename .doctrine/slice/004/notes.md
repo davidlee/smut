@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..24682b2 + the rollup commit) · all three phases implemented · **audit next**
+fresh-as-of: 2026-11-02 · PHASE-03 completed (range 963a788..8ea2ee7 + the range-record commit) · all three phases implemented · **audit next**
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -1098,11 +1098,16 @@ amendment proposal is a committed slice artefact, never a record edit; `/reconci
 remains the only writer of the six records. (4) DEC-002 and DEC-012 are recorded as
 having **no facet change** rather than given a uniform-looking invented one.
 
-**Range and registry.** Own commit `24682b2` (the amendment proposal) plus the
-rollup commit this section lands in; first own commit's parent is `963a788` (the
-seat's PHASE-02 review), so the registry range is `963a788..<rollup tip>` and no
-foreign commit sits inside it. `doctrine slice verify-vt 4` re-run after completion
-and the recorded delta; `doctrine slice conformance 4` read at the terminus.
+**Range and registry.** Own commits `24682b2` (the amendment proposal) and
+`8ea2ee7` (this rollup), plus the follow-up commit that records the resolved range;
+first own commit's parent is `963a788` (the seat's PHASE-02 review), so the registry
+range is `963a788..<tip>` and no foreign commit sits inside it — `git log --oneline
+963a788..8ea2ee7` lists exactly the two. `doctrine slice verify-vt 4` re-run after
+completion and the recorded delta (all 11 VTs PASS); `doctrine slice conformance 4`
+read at the terminus: 31 selectors conformant, 24 undeclared (the foreign `.doctrine`
+work of other writers, this slice's own governance files, and `src/predicate.rs`'s
+selector gap), 6 undelivered — exactly the six decisions this phase proposes
+amendments for.
 
 **Workers and cost.** None spawned. Wall clock was dominated by the one `just check`
 run and the seven-surface authoring of the proposal; the probes are sub-second
