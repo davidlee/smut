@@ -443,8 +443,11 @@ fn the_seed_title_is_the_heading_verbatim() {
     );
 }
 
+// Reddens if the refusal drops the name asked for or the set that exists, if
+// its clause loses the layer it was read from, or if a usage refusal exits with
+// anything but 2.
 #[test]
-fn an_unknown_set_is_refused_with_exit_two_naming_the_sets() {
+fn an_unknown_name_still_exits_two() {
     let scratch = Scratch::new();
 
     let refused = smut(&scratch, &["conventions", "nonsense"]);
@@ -459,6 +462,13 @@ fn an_unknown_set_is_refused_with_exit_two_naming_the_sets() {
     assert!(
         refused.stderr.contains("hygiene"),
         "the refusal names the sets that exist: {:?}",
+        refused.stderr
+    );
+    // The clause, not just the name: a caller who retries from this message has
+    // to know which layer answered, and only the shipped layer answers here.
+    assert!(
+        refused.stderr.contains("hygiene (binary)"),
+        "the set that exists is one clause, named with its layer: {:?}",
         refused.stderr
     );
 }
@@ -507,7 +517,7 @@ fn format_text_is_identical_to_no_flag_at_all() {
 }
 
 #[test]
-fn json_without_a_name_is_refused_because_a_listing_is_not_a_declaration() {
+fn json_without_a_name_is_still_a_usage_error() {
     let scratch = Scratch::new();
 
     let refused = smut(&scratch, &["conventions", "--format", "json"]);
@@ -526,8 +536,11 @@ fn json_without_a_name_is_refused_because_a_listing_is_not_a_declaration() {
     );
 }
 
+// Reddens if the flag is validated after the operand: `hygiene` is a name the
+// binary layer holds, so the only thing a run can refuse here is the format —
+// and only the format may be named.
 #[test]
-fn any_other_format_is_a_usage_error() {
+fn an_unknown_format_is_still_refused_before_the_operand() {
     let scratch = Scratch::new();
 
     for format in ["dot", "yaml", "JSON", "markdown"] {
@@ -536,8 +549,15 @@ fn any_other_format_is_a_usage_error() {
         assert_eq!(refused.code, 2, "{format}: {}", refused.stderr);
         assert_eq!(refused.stdout, "", "{format} prints nothing");
         assert!(
-            refused.stderr.contains(format),
+            refused
+                .stderr
+                .contains(&format!("unknown --format {format}")),
             "the refusal names the format it refused: {:?}",
+            refused.stderr
+        );
+        assert!(
+            !refused.stderr.contains("unknown conventions set"),
+            "the operand resolves, so the refusal is about the flag and not the name: {:?}",
             refused.stderr
         );
     }
@@ -598,8 +618,46 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
     );
 }
 
+// Reddens if the declaration is printed across lines, if the binary writes no
+// final newline or two of them, or if the output is more than one JSON value.
 #[test]
-fn the_command_creates_no_store_and_does_not_read_one() {
+fn the_seed_is_one_compact_line() {
+    let scratch = Scratch::new();
+
+    let printed = smut(&scratch, &["conventions", "hygiene", "--format", "json"]);
+
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "");
+    assert!(
+        printed.stdout.ends_with('\n'),
+        "the output ends in a newline, because the shell never adds one: {:?}",
+        printed.stdout
+    );
+    // Exactly one newline in the whole output: with the final one above, that is
+    // the statement that the declaration is a single line, so a pretty-printed
+    // object or a second line reddens here.
+    assert_eq!(
+        printed.stdout.matches('\n').count(),
+        1,
+        "the one newline is the last byte: {:?}",
+        printed.stdout
+    );
+    // One JSON value and nothing after it: `from_str` refuses trailing input, so
+    // a second declaration or a log line after it reddens here.
+    let declaration = printed.json();
+    assert!(
+        declaration.is_object(),
+        "the seed is one JSON object: {}",
+        printed.stdout
+    );
+}
+
+// Reddens if any conventions invocation opens a store: the paired `get` would
+// then answer from it rather than refusing for its absence, and that message is
+// what tells a created-and-valid store from a created-and-corrupt one (RV-029
+// F-18).
+#[test]
+fn the_command_still_creates_no_store() {
     let scratch = Scratch::new();
 
     for arguments in [
@@ -617,6 +675,19 @@ fn the_command_creates_no_store_and_does_not_read_one() {
             scratch.store().display()
         );
     }
+
+    // Both halves design §7 names, in the same working directory: nothing on
+    // disk, and the command that would read a store refusing for its absence
+    // rather than for corruption. The message is what discriminates a store that
+    // was never written from one this suite cannot see.
+    let refused = smut(&scratch, &["get", "conventions-hygiene"]);
+    assert_eq!(refused.code, 1, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "", "a refusal prints no entity");
+    assert_eq!(
+        refused.stderr,
+        format!("smut: no store at {}\n", scratch.store().display()),
+        "the store no conventions run created is absent, not corrupt"
+    );
 
     // A path where a store would be, holding something no snapshot can read.
     // Every command that opened it would exit 1; conventions answers anyway.
@@ -1169,4 +1240,283 @@ fn no_repository_means_the_cwd_and_no_walk_up() {
         "the refusal names what was asked for: {:?}",
         refused.stderr
     );
+}
+
+// ── C4b: the failure classes, and the rows a broken file keeps ──────────────
+
+/// Frontmatter and nothing below it: a valid fence over an empty body, which is
+/// §3's empty-body failure class (DEC-028). The frontmatter itself parses, so the
+/// only thing wrong with this file is that it says nothing.
+const SILENT: &str = "---\nsummary: nothing yet\n---\n";
+
+/// The reason [`SILENT`] fails with: the reader's own sentence from §3's failure
+/// table, asserted rather than restated by each fixture around it.
+const SILENT_REASON: &str = "a set that says nothing is a mistake, not advice";
+
+// Reddens if a broken nearest set falls through to a working farther copy, or if
+// the loser is promoted.
+#[test]
+fn a_broken_project_set_shadows_a_good_user_set() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    let project = scratch.set(&scratch.project_sets(&repository), "hygiene", SILENT);
+    let user = scratch.set(&scratch.user_sets(), "hygiene", USER_HYGIENE);
+    let inside = scratch.sub(&repository, "sub");
+
+    let refused = scratch.smut_in(&inside, &["conventions", "hygiene"]);
+    assert_eq!(refused.code, 1, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "", "a refusal prints no prose");
+    assert!(
+        refused
+            .stderr
+            .contains(project.to_str().expect("a UTF-8 fixture path")),
+        "the refusal names the project file, which is the set in force: {:?}",
+        refused.stderr
+    );
+    assert!(
+        refused.stderr.contains(SILENT_REASON),
+        "and the reason it did not load: {:?}",
+        refused.stderr
+    );
+    assert!(
+        !refused
+            .stderr
+            .contains(user.to_str().expect("a UTF-8 fixture path")),
+        "the working user copy is not the diagnosis, because it is not in force: {:?}",
+        refused.stderr
+    );
+    assert!(
+        !refused.stderr.contains("store"),
+        "a set that did not load claims no store, because none was opened: {:?}",
+        refused.stderr
+    );
+
+    // The same fixture, listed: the user's copy is still behind the broken
+    // nearer file and says so, rather than being promoted into force by a
+    // failure it had no part in.
+    let listed = scratch.smut_in(&inside, &["conventions"]);
+    assert_eq!(
+        listed.code, 0,
+        "a listing reports and succeeds: {}",
+        listed.stderr
+    );
+
+    let user_row = row_naming(&listed, user.to_str().expect("a UTF-8 fixture path"));
+    assert_eq!(
+        user_row[2], "shadowed",
+        "the user's copy is shadowed by the broken project file: {}",
+        listed.stdout
+    );
+}
+
+// Reddens if failure loses to shadowing: the user row would say `shadowed` and
+// the reason it did not load would be unreadable from the listing alone.
+#[test]
+fn a_failed_row_behind_a_working_one_keeps_its_reason() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    let project = scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_HYGIENE,
+    );
+    let user = scratch.set(&scratch.user_sets(), "hygiene", SILENT);
+    let inside = scratch.sub(&repository, "sub");
+
+    let listed = scratch.smut_in(&inside, &["conventions"]);
+    assert_eq!(
+        listed.code, 0,
+        "a listing reports and succeeds: {}",
+        listed.stderr
+    );
+
+    let project_row = row_naming(&listed, project.to_str().expect("a UTF-8 fixture path"));
+    assert_eq!(
+        project_row[2], "the checkout's own structure rules",
+        "the working project row prints its own summary: {}",
+        listed.stdout
+    );
+
+    let user_row = row_naming(&listed, user.to_str().expect("a UTF-8 fixture path"));
+    // Weakest first, so each fact below can redden on its own: the row is not
+    // only its demotion, the demotion is rendered as the load failure it is, and
+    // the failure carries the reader's real reason rather than a generic word.
+    assert_ne!(
+        user_row[2], "shadowed",
+        "failure wins over the shadow, so the row is not only the demotion: {}",
+        listed.stdout
+    );
+    assert!(
+        user_row[2].starts_with("did not load:"),
+        "a broken file states why, even behind a working one: {:?}",
+        user_row[2]
+    );
+    assert!(
+        user_row[2].contains(SILENT_REASON),
+        "and carries the real reason: {:?}",
+        user_row[2]
+    );
+}
+
+// Reddens if an absent directory is treated as a failure, or invents a row.
+#[test]
+fn an_absent_layer_is_not_an_error() {
+    let scratch = Scratch::new();
+    let work = scratch.dir("work");
+    // Asserted first: a `$TMPDIR` inside a checkout would give the walk-up a
+    // repository of its own and redden this fixture for a reason it is not about.
+    scratch.assert_no_repository_above(&work);
+
+    let listed = scratch.smut_in(&work, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    assert_eq!(listed.stderr, "", "an absent layer is not a diagnostic");
+    assert_eq!(
+        listed.stdout,
+        format!("hygiene  binary  {}  conventions/hygiene.md\n", summary()),
+        "no project and no user layer contribute no row and no failure"
+    );
+
+    let printed = scratch.smut_in(&work, &["conventions", "hygiene"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(
+        printed.stdout,
+        format!("{}\n", body()),
+        "the shipped set still answers while two layers are simply not there"
+    );
+}
+
+// Reddens if a layer that exists and cannot be read is read as "no sets here":
+// the listing would print the shipped row alone and exit 0.
+#[test]
+fn an_unreadable_layer_exits_one() {
+    let scratch = Scratch::new();
+    let work = scratch.dir("work");
+    scratch.assert_no_repository_above(&work);
+
+    // A regular file where the user layer's *root* belongs, so the `conventions`
+    // directory below it cannot be read as one. Portable and root-proof: a
+    // mode-000 directory still opens for a root process, and that row is IMP-020's.
+    let root = scratch.config_home.join("smut");
+    fs::write(&root, b"not a directory\n").expect("a file where the user layer root belongs");
+    let unreachable = root.join("conventions");
+
+    let refused = scratch.smut_in(&work, &["conventions"]);
+    assert_eq!(refused.code, 1, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "", "a refusal prints no listing at all");
+    assert!(
+        refused
+            .stderr
+            .contains(unreachable.to_str().expect("a UTF-8 fixture path")),
+        "the diagnostic names the layer it could not read: {:?}",
+        refused.stderr
+    );
+    assert!(
+        refused.stderr.contains("reading the conventions layer"),
+        "and the step that failed: {:?}",
+        refused.stderr
+    );
+}
+
+// Reddens if a set that declares no summary has no row at all, or a blank third
+// field, or if the field is filled with a summary the file never declared.
+#[test]
+fn a_bare_markdown_file_lists_with_a_dash() {
+    let scratch = Scratch::new();
+    let work = scratch.dir("work");
+    scratch.assert_no_repository_above(&work);
+    let mine = scratch.set(&scratch.project_sets(&work), "mine", MINE);
+
+    let listed = scratch.smut_in(&work, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    assert_eq!(
+        listed.stdout,
+        format!(
+            "mine  project  -  {}\nhygiene  binary  {}  conventions/hygiene.md\n",
+            mine.display(),
+            summary()
+        ),
+        "a bare markdown file is in force and its third field is the dash"
+    );
+}
+
+// Reddens if a listing that reports a broken file exits non-zero, or if it hides
+// the reason behind a word that would not tell a reader what to fix.
+#[test]
+fn the_listing_reports_a_broken_file_and_succeeds() {
+    let scratch = Scratch::new();
+    let work = scratch.dir("work");
+    scratch.assert_no_repository_above(&work);
+    let broken = scratch.set(&scratch.user_sets(), "hygiene", SILENT);
+
+    let listed = scratch.smut_in(&work, &["conventions"]);
+    assert_eq!(listed.code, 0, "{}", listed.stderr);
+    assert_eq!(
+        listed.stderr, "",
+        "the report is the listing, not a diagnostic"
+    );
+
+    let broken_row = row_naming(&listed, broken.to_str().expect("a UTF-8 fixture path"));
+    assert_eq!(
+        broken_row[2],
+        format!("did not load: {SILENT_REASON}"),
+        "the broken row is the prefix and the real reason: {}",
+        listed.stdout
+    );
+    // The shipped row is still listed in the same successful report, behind the
+    // broken user file that carries its name — so it prints `shadowed`, and the
+    // report carries both states at once.
+    let shipped_row = row_naming(&listed, "conventions/hygiene.md");
+    assert_eq!(
+        (&shipped_row[0], &shipped_row[1]),
+        (&"hygiene", &"binary"),
+        "the shipped set is listed in the same report as the broken file: {}",
+        listed.stdout
+    );
+}
+
+// Reddens if the store root walks up with the sets, or if the sets stop at the
+// cwd: either root would answer from the other's place.
+#[test]
+fn the_two_roots_disagree_on_purpose() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    scratch.set(&scratch.project_sets(&repository), "mine", MINE);
+    let inside = scratch.sub(&scratch.sub(&repository, "sub"), "dir");
+
+    let printed = scratch.smut_in(&inside, &["conventions", "mine"]);
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(
+        printed.stdout, MINE,
+        "the advice walks up to the repository from sub/dir"
+    );
+
+    // The same cwd, the other root: a store is data placed at `<cwd>/.smut` and
+    // nothing above the cwd is read (DEC-004).
+    let refused = scratch.smut_in(&inside, &["get", "conventions-hygiene"]);
+    assert_eq!(refused.code, 1, "{}", refused.stderr);
+    assert_eq!(refused.stdout, "", "an absent store prints no entity");
+    assert_eq!(
+        refused.stderr,
+        format!("smut: no store at {}\n", inside.join(".smut").display()),
+        "the store root is the cwd alone, so the repository's sets are no store"
+    );
+    assert!(
+        !inside.join(".smut").exists(),
+        "and the failed read created nothing beside the cwd: {}",
+        inside.join(".smut").display()
+    );
+}
+
+/// The listing row naming `path` in its fourth field, so a fixture asserts on the
+/// row for its own file rather than on a position another layer could take.
+///
+/// Panics with the whole listing when no row names the path: a row that vanished
+/// is the thing these fixtures are about.
+fn row_naming<'a>(listed: &'a Ran, path: &str) -> Vec<&'a str> {
+    listed
+        .stdout
+        .lines()
+        .map(|row| row.split("  ").collect::<Vec<&str>>())
+        .find(|row| row.get(3) == Some(&path))
+        .unwrap_or_else(|| panic!("a row names {path}: {}", listed.stdout))
 }
