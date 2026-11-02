@@ -5,10 +5,10 @@ id = 7
 slug = "smut-render-short-flags-for-its-long-flags"
 title = "smut render — short flags for its long flags"
 kind = "improvement"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "resolved"
+resolution = "fixed"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = ["cli", "ergonomics"]
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role

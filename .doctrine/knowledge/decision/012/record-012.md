@@ -40,3 +40,31 @@ request keeps 0.1's five keys, so the compatibility pin does not move (DEC-019).
 limit; `frontier` describes the walk and is not cut. The scalar is not sugar
 over a node list: `objects` is the node list, and duplicating it would create a
 second account of one fact.
+
+
+## Amendment — 2026-11-02: `edges` is the third trigger
+
+SL-002 shipped `traversal` conditional on `follow` or `backlinks`, and its own
+rationale said the edge set was "the single derivation the 1.0 renderer and
+clients share". The conditionality defeated half of that: a `where`-only query
+returned no edge set at all, so the only way to reach a renderer outside `smut`
+was to spell a projection request with a traversal knob — `"follow": []`. The
+capability existed; the spelling was a trick.
+
+Amended because IMP-018 measured the gap and the operator chose the request-key
+spelling over documenting the trick (2026-11-02, this session):
+
+- `edges: true` is accepted as a tenth specification key. It parses to
+  `follow: Some(Fields::Named([]))` — the same representation as `follow: []`,
+  applied after the key loop so it never overrides a direction the request
+  named. There is no second representation for anything downstream to disagree
+  with.
+- `false` and absent are the absent request. DEC-019's 0.1 key-set pin does not
+  move: no 0.1 caller sends `edges`, and a request that does now traverses.
+- The same amendment fixed a defect the spelling would otherwise have blessed:
+  the walk charged one budget unit per root expansion even when no field was
+  requested, so `follow: []` (and therefore `edges`) on a request with more
+  roots than `budget` reported a phantom `traversal_budget` truncation. A
+  traversal that requests no field in either direction now expands nothing, so
+  it spends no budget and cannot truncate. `depth: 0` still frontiers its roots,
+  because the depth boundary is decided before any expansion.

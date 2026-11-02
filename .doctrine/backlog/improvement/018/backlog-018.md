@@ -128,3 +128,41 @@ Raised 2026-11-02 from the operator's question about building a Mermaid graph ou
 of a query. The measured transcripts above are from
 `target/release/smut` at 0.2 with a three-entity scratch store; the two
 contradictory-looking envelopes differ only by `"follow": []`.
+
+## Resolution — 2026-11-02: done, tiers 1 and 2 only
+
+The operator chose the request key over documenting the trick, which settles the
+open question the analysis raised and retires the parts of this item that were
+about *discoverability*.
+
+**Tier 1 (delivered).** `learn` and the README now join the two facts with the
+measured example. The guide states that `follow: []`, or its spelling
+`edges: true`, is a supplied traversal that follows nothing, and that such a
+traversal expands nothing — discovers nothing, spends no budget, cannot
+truncate — while the edge set is derived from the returned objects after the
+limit, so it is cut by `limit` exactly as `objects` is. The README section "The
+edge set without a traversal" is an executed transcript: a `where`-only query
+with `edges: true` returning two edges pointing opposite ways between the same
+pair, plus the external-renderer story (`| jq | mermaid`) and the rule that node
+symbols are generated, never ids.
+
+**Tier 2 (delivered, as a request key rather than a flag).** `"edges": true` is
+accepted as the tenth specification key. It is not a second mechanism: it parses
+to `follow: Some(Fields::Named([]))` after the key loop, so it never overrides a
+named direction, `false`/absent are the absent request, and the two envelopes are
+identical member for member. A flag was rejected — `query` has no flags, and a
+flag whose job is to amend the request document is a different kind of surface.
+
+**A defect found and fixed on the way.** The walk charged one budget unit per
+root expansion even when no field was requested, so this spelling would have
+reported a phantom `traversal_budget` truncation on any request with more roots
+than `budget` — a false account of what the store could answer, in exactly the
+requests most likely to want a graph. A traversal requesting no field now expands
+nothing. `depth: 0` still frontiers its roots.
+
+**Tier 3 (not delivered, deliberately).** Making the envelope carry edges without
+being asked is still DEC-019's successor and still IMP-009's conversation. The
+key made it unnecessary: the capability is now reachable by asking for it.
+
+DEC-012 was amended (third trigger, and the budget rule); DEC-019's 0.1 key-set
+pin did not move, because no 0.1 caller sends `edges`.

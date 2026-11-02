@@ -53,3 +53,36 @@ second spelling for flags that already behave. Not sequenced after it.
 
 Any time. The only reason to wait is if the letter choice would be settled better
 alongside a wider CLI surface review — nothing in this change forecloses one.
+
+## Resolution — 2026-11-02: done
+
+Landed directly, without a slice (the operator waived lifecycle ceremony for a
+change this size; SL-007 was created for this pairing and abandoned before
+design, keeping its scope document as the record).
+
+The scheme chose the "same letters as `render`" row from the table above, and
+extended it to the two flags outside `render` that share a noun:
+
+| long | short |
+| --- | --- |
+| `--format` | `-f` (`render` and `conventions`) |
+| `--show-ids` | `-i` |
+| `--show-fields` | `-s` |
+| `--heading-field` | `-t` |
+| `--heading-level` | `-l` |
+| `--compact` | `-c` |
+
+`-t`/`-l` over `-H`/`-L` because capitals need shift and read as an afterthought;
+`-s` over `-F` because a case-only distinction next to `-f` is a letter to
+mistype. Lowercase, one letter per noun.
+
+All three stated constraints held. The letters are declared on the derive
+attributes in `src/cli.rs`, so nothing in the core or the renderer changed. Both
+places that document the grammar list the short form: `learn`'s command block
+(with a prose pin in its rendering section) and the README's flag list/table.
+`--` still ends flag parsing, pinned by a test that reads `-i` as an id after it.
+
+Testing is equivalence rather than existence: one table parses seven short/long
+pairs and compares the whole resulting request, including the invocation IMP-007
+quotes in full, so a letter wired to the wrong field or dropping a value fails.
+DEC-008 was amended with the letter table.

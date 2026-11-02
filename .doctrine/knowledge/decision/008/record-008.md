@@ -8,14 +8,38 @@ Settled 2026-11-01.
 special-casing.
 
 ```
-smut declare [JSON] [--compact]
+smut declare [JSON] [-c|--compact]
 smut query   [JSON]
-smut render  [JSON] [--format markdown] [--heading-field <name>] [--heading-level <1-6>]
-                    [--show-ids] [--show-fields]
+smut render  [JSON] [-f|--format markdown] [-t|--heading-field <name>] [-l|--heading-level <1-6>]
+                    [-i|--show-ids] [-s|--show-fields]
 smut get    <ID>...
 smut delete <ID>...
 smut learn
 ```
+
+## Amendment — 2026-11-02: one-letter spellings
+
+Every long flag gained a short form (IMP-007), because the display flags are
+typed by hand and often in one line:
+
+| long | short |
+| --- | --- |
+| `--format` | `-f` |
+| `--show-ids` | `-i` |
+| `--show-fields` | `-s` |
+| `--heading-field` | `-t` |
+| `--heading-level` | `-l` |
+| `--compact` | `-c` |
+
+Lowercase throughout, one letter per noun where the noun is unambiguous: `-t`
+for the heading field because it defaults to `title` and is usually set to
+`type`, and `-s` over `-F` because a case-only distinction from `-f` is a letter
+to mistype. Nothing about this changes a behaviour, a response shape or an exit
+code — the short form parses to the identical request, which is how it is tested.
+
+Two constraints held: `-h` and `-V` stay help and version, and `--` still ends
+flag parsing, so `smut get -- -i` names the id `-i` rather than the flag. Both
+are pinned in `src/cli.rs`'s parsing tests.
 
 ## Input rules
 
