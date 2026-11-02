@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19b2803bb70e181e4ef37d0a7d175"
+memory_key = "mem.fact.doctrine.design-adopt-locked-refusal"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "A locked design run refuses `design adopt`; reconcile edits design.md directly"
+summary = "`design adopt` refuses a locked run; at reconcile, edit design.md directly — the adopt-is-the-lawful-crossing rule only applies to an unlocked run."
+created = "2026-11-02"
+updated = "2026-11-02"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["doctrine", "design-run", "reconcile"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "e5e508b7df9372b188bdcd717bb0e9bd7d524a78"
+ref_name = "refs/heads/main"
+checkout_state_id = "bda9eccc8b6fa5818d3b7057d5066346ade7cbd33e96a139bf1b9b2c983c9592"
+base_commit = "4fecf9ab8544d2220d234192087e1bc554f19e1e"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "low"
+weight = 0
+

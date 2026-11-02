@@ -10,7 +10,7 @@ The four things it owns, and the trigger for each:
 | --- | --- |
 | the directory layout, reserved names and journal states | a file, directory or reserved name moves, appears or disappears |
 | the format version and what it means | `FORMAT_VERSION` changes, or a store of a given version stops being readable |
-| the identity key and canonical bytes (entity-first ordering, `id`-first within an entity) | the identity key's spelling changes, an ordering rule changes, or the serialiser's shape changes |
+| the identity key and canonical bytes (entity-first ordering, `smut_id`-first within an entity) | the identity key's spelling changes, an ordering rule changes, or the serialiser's shape changes |
 | the corruption contract (what is refused, never repaired) | a validation is added or removed, or an exit-class boundary moves |
 
 A change that lands code without the document is a defect in the change, not a
