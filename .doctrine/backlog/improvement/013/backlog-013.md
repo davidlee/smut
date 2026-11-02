@@ -19,7 +19,7 @@ arrives with the work.
 Three layers, local wins:
 
 1. a **project directory** — the project's own sets, travelling with the repository
-   (recommended shape: `.config/smut/<kind>/` at the project root, mirroring the
+   (**decided, DEC-026**: `.config/smut/<kind>/` at the project root, mirroring the
    user path — see *Where the project's sets live* below)
 2. **`~/.config/smut/<name>/`** — the user's
 3. the binary — what ships
@@ -100,36 +100,36 @@ So this is a loader plus a naming rule, not a new concept.
    survive a stranger reading `--help`. The cheapest moment to decide is before any
    user has a directory named after it; after that a rename is a migration.
 
-### Where the project's sets live — the mirrored `.config` path
+### Where the project's sets live — decided (DEC-026)
 
-Operator's question: is `$PROJECT_ROOT/.config/smut/conventions/` a silly idea,
-when `~/.config/smut/conventions/` is the user's? It is not silly, and it is rare
-for a specific reason worth naming rather than guessing at.
+`$PROJECT_ROOT/.config/smut/conventions/`, mirroring `~/.config/smut/conventions/`,
+with the project root as the walk-up terminus (the git root) so cwd never enters
+the lookup. **Decided by the operator on 2026-11-02; the reasoning, the priced
+alternatives and the four conditions live in DEC-026**, and this section keeps only
+what the item still needs: why the *sharing* argument carried it, and what it costs
+the loader.
 
-**What it buys.** One rule covers both scopes: `<root>/.config/smut/<kind>/`. The
-lookup becomes the same relative suffix from two roots, the walk-up terminus is the
-project root, and no new dot-entry appears beside `.smut/` as artefacts accumulate
-(`conventions/`, later `schemas/`). It also reads as *configuration* rather than as
-tool internals, which is the whole data/direction separation — `.smut/` remains the
-store, untouched by STD-001.
+Structural equivalence is the point rather than an accident — a project set and a
+user set are the same artefact found earlier, so "trade a set" and "override the
+built-in" become one operation at different scopes, and a second artefact kind adds
+a subdirectory rather than a dot-entry. The accepted cost is that `.config` in a
+repository already means "this directory is a home directory"; its cure is origin
+printing and a set header naming its own file, which the loader must therefore
+carry from the first commit rather than add later.
 
-**Why it is rarely seen.** `.config` in a repository most strongly means "this
-directory is a home directory" — dotfiles repositories, container home mounts, the
-thing you symlink into `~/.config`. XDG itself defines the config home as
-user-scoped, so a project-local `.config` borrows a name whose established meaning
-is the opposite of project scope. The nearest precedents for a repo-local `.config`
-are a single known path (`.config/dotnet-tools.json`), not a tree of tool homes. So
-the objection is not "nobody does this because it is wrong"; it is "the name already
-means something else".
+**Why the sharing argument carried it.** A project set and a user set are the same
+artefact found earlier, so "trade a set" and "override the built-in" become one
+operation at different scopes — and a second artefact kind adds a subdirectory
+rather than a dot-entry in someone's repository. The priced alternatives
+(`.smut-config/`, one `.smut.toml`, a subtree inside `.smut/`) are in DEC-026.
 
-**The cost, stated honestly.** A reader meeting `.config/smut/` in a fresh checkout
-may assume it is meant to be copied or linked into the home directory — the exact
-inverse of the intent. That misreading is cheap to defeat: the listing prints
-origin, and the header of a loaded set names the file it came from, so a mistake is
-visible the first time anyone runs the command. It is more expensive to defeat after
-users have created files under a different name.
+**What it costs the loader.** `.config` in a repository already means "this
+directory is a home directory", and a reader meeting it in a fresh checkout may
+assume it is meant to be linked home. The cure is documentation-shaped and has to
+ship with the loader rather than after it: origin printing, plus a header on a
+loaded set naming its own file.
 
-**Conditions, if taken.**
+**Conditions the loader inherits.**
 
 - **Anchored at the project root, not the cwd.** One terminus (the git root) and one
   suffix; never also read `<cwd>/.config` part-way down the tree, or the rule
@@ -142,17 +142,6 @@ users have created files under a different name.
 - **An environment override exists** (`SMUT_CONFIG` or the XDG variable) so a
   monorepo or dotfiles user can point at one config deliberately rather than
   fighting the default.
-
-**The alternatives, for comparison.** `.smut-config/<kind>/` — unambiguous
-ownership, one extra dot-dir, no borrowed name. A single `.smut.toml` with a stanza
-per set — tidiest of all and the dominant Rust-tool shape, but it trades away
-file-copy trading, which is the point of user sets, and it puts prose bodies inside
-TOML strings. `.smut/<kind>/` — rejected above, on STD-001 and on the "stored
-content is data" sentence.
-
-**Recommendation:** take the mirrored path with the four conditions. The borrowed
-name is a documentation problem with a one-line cure; the alternative is a
-permanent second dot-dir to save that line.
 
 ## If typed schemas arrive
 
@@ -270,18 +259,30 @@ consequences above) when the loader is designed.
 
 ## Status
 
-`design-deferred`. Nothing here blocks Wave 1. But it sits *before* the point where
-IMP-008's `--with-conventions` grammar is pinned, because that flag's whole meaning
-depends on whether sets can be layered and resolved.
+Not `design-deferred` any more: the layering, precedence and structural-equivalence
+questions are settled (DEC-026), and no other item blocks this one. What remains is
+a short design pass, not a conversation:
+
+1. **The name** — verb and leaf directory together; the only genuine blocker.
+2. **Seed identity across layers**, and what re-installing means when a same-named
+   set exists at two scopes.
+3. **Malformed sets** — refuse by name and origin, keep the other layers working.
+4. **The no-`.git` fallback** for the walk-up terminus.
+
+One sequencing constraint survives from DEC-017's analysis: IMP-008's flag must not
+be pinned before this lands, because a flag naming a set means something different
+once resolution has layers.
 
 ## Provenance
 
 Operator inclination of 2026-11-02 — three messages: sets should be tradeable and
 overridable ("trivially easy"); the project's sets should live in a sibling
 directory rather than inside `.smut/`, project-scoped by walking to the nearest git
-root; and `recipe` as a possible verb. Recorded in RFC-001 § Outcome. The
-question that governs the naming hedge — whether the future holds user-definable
-typed schemas for entities — is the operator's ("I have no real idea about"), and is
-the reason § If typed schemas arrive exists rather than a decision. The reading of
-`src/conventions.rs`, the DEC-017 comparison, the STD-001 argument, the `recipe`
-collision count and the pins are this repo's.
+root; and `recipe` as a possible verb. Then the mirrored-path question, and "sold"
+on structural equivalence. The shape is recorded as **DEC-026**; this item keeps the
+reasoning that the decision did not need to carry and the work the decision did not
+settle. The question that governs the naming hedge — whether the future holds
+user-definable typed schemas for entities — is the operator's, and is the reason §
+If typed schemas arrive exists rather than a decision. The reading of
+`src/conventions.rs`, the DEC-017 comparison, the STD-001 argument and the `recipe`
+collision count are this repo's.

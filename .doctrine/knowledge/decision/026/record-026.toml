@@ -1,0 +1,45 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 26
+slug = "conventions-layer-from-a-mirrored-config-home-same-shape-at-project-and-user-scope-local-wins"
+title = "Conventions layer from a mirrored config home: same shape at project and user scope, local wins, origin always printed"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = ["config", "conventions", "surface"]
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "IMP-013 asks where a project conventions set lives and how it is found. The store rule is pinned and contrary: .smut/ beside cwd, never searched for in a parent; and the store layout is owned by docs/store-format.md under STD-001. The operator wanted user and project sets to be trivially tradeable and overridable, disliked proliferating dot-entries in a project, and asked whether mirroring ~/.config/smut/conventions with $PROJECT_ROOT/.config/smut/conventions is silly."
+choice = "Three layers found by one relative suffix from different roots: <project-root>/.config/smut/<kind>/ then ~/.config/smut/<kind>/ then the binary. The project root is the walk-up terminus (the git root) so cwd never enters the lookup. Every layer is structurally identical and none is special: the shipped set is found the same way and loses to a local one. Precedence is total — project beats user beats binary — with no merging of same-named sets; shadowing is reported as shadowing, and every listing prints each set layer and file. An environment override points at one config deliberately."
+alternatives = ["a sibling per-artefact directory (.smut-conventions/ then .smut-schemas/)", " a tool-named .smut-config/<kind>/ directory", " one .smut.toml with a stanza per set", " a conventions/ subtree inside .smut/", " relying on a per-project XDG_CONFIG_HOME override instead of a project path"]
+rationale = 'Structural equivalence is the point rather than an accident: it reduces sharing friction because a project set and a user set are the same artefact found earlier. The mirror buys one rule for both scopes and scales by subdirectory instead of by dot-entry so a second artefact kind adds no new file to a user project. The cost is that .config in a repository already means "this directory is a home directory" — a documentation problem with a one-line cure rather than a structural one.'
+consequences = ["docs/store-format.md and STD-001 stay untouched because no file appears inside .smut/", " the loader must be generic over declaration kind so a schema artefact can reuse the ladder", " the seed-into-declare pipe becomes a record of advice given rather than an installation mechanism", " the verb and the leaf directory name remain undecided and are the only blocker for IMP-013", " a borrowed name must be cured now by origin printing or paid for later with a rename migration"]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "records the decision RFC-001 § Outcome held open"
+target = "RFC-001"
+
+[[relation]]
+label = "references"
+role = "concerns"
+descriptor = "moves three of DEC-017s mechanism consequences: the match arm, the fixed single id, and the embedded-only source"
+target = "DEC-017"
+
+[[relation]]
+label = "spawns"
+target = "IMP-013"
