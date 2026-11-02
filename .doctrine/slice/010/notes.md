@@ -403,3 +403,25 @@ verify-vt 10` reports PHASE-04 VT-3 and VT-4 PASS.
   `worker` runs: two red steps (vocabulary sentences, flag surface) and two green
   steps (variants, compiler), plus one planning-free test brief; no model or
   provider was changed.
+
+## Autonomy log
+
+Seat-level envelope decisions, one line each: phase · decision · reason ·
+(decided / deferred / escalated).
+
+- **PHASE-04 · F1 ruled decided.** `--depth abc`, `--depth=-1` and `--budget 0`
+  reach the specification's sentence only with a direction present, because
+  EX-7's own strictness rule refuses a directionless `--depth`/`--budget` first;
+  `--limit 0` needs none. Reason: both criteria hold under that reading, the
+  queue order is deterministic (EX-10), and RV-031 F-7's intent — a numeric
+  defect is the specification's to voice, never clap's — is preserved. Recorded
+  as the fifth design correction in `plan.md` rather than paid in the design, and
+  carried into PHASE-02's charter as a precondition on its numeric rows.
+- **PHASE-04 · two residuals deferred to audit, not escalated.** `--from=`'s
+  empty-value sentence is EX-6's "names" wording applied to a flag that is not a
+  comma list, and `--edges --depth 2` refuses by a reading of §2's sentence with
+  no §3 row. Both are voiced refusals that name what was typed and no invented
+  field; whether §3 owes rows for them is an audit/reconcile question.
+- **PHASE-04 · nothing else left the envelope.** No backlog deferral, no
+  escalation, no design drift taken; owned paths only, `.quotient/` and `_envrc`
+  untouched.

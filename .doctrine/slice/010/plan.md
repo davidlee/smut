@@ -107,6 +107,13 @@ phase.
   puts the refusal in the caller's tokens, and PHASE-01 writes it as
   `cannot read "status=a,b status=c,d": q carries one = per field; use smut query`.
   §3 owes the row, and the correction count at reconcile is four, not three.
+- **§2's strictness rule refuses the numeric rows before the specification can**
+  *(found while executing PHASE-04, sheet finding F1)*. §3's `--depth=-1` /
+  `--depth abc` rows and §7's `--depth abc` row promise the specification's
+  sentence, but `--depth`/`--budget` without a direction are refused first by this
+  front-end (`MissingDirection`). The specification is reached with a direction
+  present (`--depth abc --follow any`); §3 and §7 owe the precondition or a
+  direction in the example. The correction count at reconcile is five, not four.
 
 The six reconcile obligations the design and the review already carry — DEC-016's
 amendment, DEC-035's narrowed wording, DEC-037's superseded consequence, IMP-014's
