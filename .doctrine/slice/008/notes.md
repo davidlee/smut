@@ -188,15 +188,25 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` lifecycle `started`, `PHASE-01` `completed` (roots landed,
-gate green, VT-1/VT-2 PASS at head `c3385c2`), `PHASE-02` green at `77444e8` with its review
-(RV-030) discharged in `8503b93`, `PHASE-03` **`in_progress`** — the loader landed green at
-`cfae50f`, `just check` exit 0, `PHASE-03 VT-1 PASS`, delta `9829de0..cfae50f`, deliberately
-left open for its independent review. Design run `dr-01a19b61` locked at revision 36. Next
-stage: the `PHASE-03` review, then `PHASE-04`; audit is not open.
+**fresh-as-of:** `SL-008` lifecycle `started`; `PHASE-01`, `PHASE-02` and `PHASE-03` landed
+green (`c3385c2`, `8503b93`, `cfae50f`), `PHASE-04` **`in_progress`** at `cd5c0dc` — the tail
+committed, `just check` exit 0, all six PHASE-04 VT rows PASS, delta `6007a0d..cd5c0dc`
+(registry provenance `manual`, 26 commits, SL-010's eighteen riding along), deliberately left
+open for its independent review. Design run `dr-01a19b61` locked at revision 36. Audit is not
+open; the next stage is the `PHASE-04` review, then `PHASE-05`.
 
 ### Produced
 
+- **`PHASE-04` closed on its criteria at `cd5c0dc`, with evidence for work it did not write.**
+  The tail is one commit (two guide sentences, two whole-sentence tests, one store-format
+  clause); the evidence is the half the concurrent run left out — VA-1's six real refusal runs
+  with exit codes and verbatim messages, VA-2's §7 row-by-row walk (two rows named as PHASE-05's)
+  and the `std::env::` grep, an EX-1..EX-8 check of the six inherited commits, and two negative
+  controls on the third-field precedence, each reddening exactly its named test and restored
+  byte-identically. All six PHASE-04 VT rows PASS; gate 705/766 tests, exit 0.
+- **Three findings for the review, none repaired here** (F1 the order test that cannot
+  discriminate its order, F2 the relative-root clause with no test, F3 EX-5's "nowhere else"
+  wording): all in files this charter does not own, all recorded with the smallest correction.
 - **`PHASE-03` implemented and green at `cfae50f`** — `load(roots, kind) -> Result<Vec<Entry>,
   Error>` and `set_in_force(entries, name)` with a private `read_layer` and `sort_layer`, three
   path-limited commits (`b3c2fd9`, `84a8155`, `cfae50f`), 14 pinned rows plus the six negative
@@ -264,6 +274,22 @@ stage: the `PHASE-03` review, then `PHASE-04`; audit is not open.
 
 ### Learned
 
+- **A criterion that names a test is satisfied by the test's name, not by the property.**
+  `an_unknown_format_is_still_refused_before_the_operand` passes with the operand validated
+  *first*, because it feeds a name that resolves: the format is still the only thing refused and
+  the message is identical. The property holds (a real run with an unknown operand proves it),
+  but the pin would not go red if the order swapped — the same class as an assertion occupying
+  an evidence slot. When a test's name claims an ordering, its fixture must be one where the two
+  orders disagree.
+- **A concurrent run's green is not coverage.** The six inherited commits arrived with VT-1..VT-3
+  passing and zero VA evidence, and both VA rows found something the green suite could not: a
+  design clause with no test behind it (the relative root), and a preserved-behaviour row weaker
+  than its name. The VT gate is a presence check on symbols; it cannot see either.
+- **A grep criterion is only evidence once its hits are classified.** VA-2 asks that `std::env::`
+  appear in `src/main.rs` "only inside `roots()`". It appears six times: two layer reads in
+  `roots()` (the property), `args_os()` in `main`, `current_dir()` in `current_directory`,
+  `temp_dir()` in a test helper, and a doc comment. The right report is the classification and
+  the fact that `dispatch`/`execute` hold none — not the literal absence, which is false.
 - **A doc comment that decides a question is a decision nobody made.** Attempt 1's `load` doc
   said "this phase makes 'absent' and 'unreadable' the same thing, so nothing here errs yet" and
   its `read_layer` doc said "Nothing is sorted or deduplicated here" — and those two sentences
@@ -332,6 +358,13 @@ stage: the `PHASE-03` review, then `PHASE-04`; audit is not open.
 
 ### Open
 
+- **`PHASE-04` is `in_progress`, awaiting its independent review** — and needs one more than most,
+  because six of its seven commits arrived from a run that left no account of itself. Hand the
+  reviewer the range `6007a0d..cd5c0dc`, not the files: eighteen foreign commits sit inside it
+  (`slice conformance`'s undeclared cell), and `src/conventions.rs`, `src/cli.rs`, `src/error.rs`,
+  `src/main.rs` and `tests/conventions.rs` also carry PHASE-01..03 and SL-010's work. The seat
+  re-tightens the range after concluding. F1-F3 above are the findings it should start from;
+  F1's fix and F2's row are three lines each and belong to whoever owns those files next.
 - **`PHASE-03` is `in_progress`, awaiting its independent code/correctness review** (standing
   cadence). Green and committed at `cfae50f`, `just check` exit 0, delta `9829de0..cfae50f`
   recorded, and the seat concludes after the review lands and any `fix-now` finding is corrected.
@@ -853,6 +886,10 @@ VT-1/VT-2/VT-3 PASS. Remaining against the criteria:
 So PHASE-04 is a small tail, not a phase: two guide sentences and their tests, one store-format
 clause, a recorded delta, then the review.
 
+**Closed at `cd5c0dc`.** The tail landed there, and the whole evidence packet for the six
+inherited commits — VA-1's real runs, VA-2's §7 walk, and the EX-1..EX-8 criteria check — is in
+§ PHASE-04 — the tail, and the evidence for six commits nobody accounted for, below.
+
 ### The SL-010 collision — and a brittleness that was ours
 
 SL-010 landed ten commits in this window and touched `src/cli.rs`, `src/conventions.rs`,
@@ -872,6 +909,243 @@ the boundary table's shape while the *test* keeps pinning whatever count it must
 33 was rejected: it would buy one green run and rearm the same trap for the next slice.
 PHASE-02 is back to five-for-five. Lesson worth carrying out of this slice: **a VT keyword is a
 presence check on a fact, never on a number a neighbour owns.**
+
+### PHASE-04 — the tail, and the evidence for six commits nobody accounted for
+
+**Observed at `cd5c0dc`.** PHASE-04 is left `in_progress` on purpose (standing cadence), green,
+committed, delta recorded. Two commits of the seat's: `cd5c0dc` (the tail: `src/learn.rs` +
+`docs/store-format.md`) and the notes commit that follows it. Nothing else was edited except the
+`src/conventions.rs` mutation probes below, each restored byte-identically (`git diff --stat --
+src/conventions.rs` empty afterwards).
+
+**The delta is `6007a0d..cd5c0dc`, 26 commits, registry provenance `manual`** —
+`code_start_oid = 6007a0d95971d62ff6b820d169d6d1537a0f93f8`,
+`code_end_oid = cd5c0dc7972a5c9608a1e4e95a4664c292909ec7`. Six of those are this phase's own
+(`b6cf47c`, `ec7c933`, `e50a75d`, `35eab67`, `af9fbbd`, `d1f0700`), one is the tail, one is the
+seat's notes commit `56488fa`, and eighteen belong to SL-010, the backlog and a `readme` commit —
+no contiguous range covers this phase without them, because the phase's own work arrived in two
+runs 100 minutes apart with another slice landing in between. Not narrowed with `--force`: the
+phase genuinely spans seven commits, and the foreign ones land in `slice conformance`'s
+undeclared cell where they are visible. The seat re-tightens after concluding.
+
+**What the tail changed.** Not one line of the inherited code. `src/learn.rs` gained two guide
+sentences — `A set is found in the project, then the user config home, then the binary.` in the
+`Conventions` section, and `, or a conventions set could not be loaded` appended to the exit-1
+row — plus the two tests EX-6 names. `docs/store-format.md`'s conventions clause now says one set
+ships with the binary and "a project or a user may supply more", with the leaf path, the three
+roots and the nothing-inside-`.smut/` promise byte-identical.
+
+The red was observed before the prose existed: `cargo test --lib learn::` →
+`test result: FAILED. 30 passed; 2 failed; 0 ignored` with both new tests reporting the missing
+sentence (not a missing helper): the exit-1 row reassembled to `0 success, … 2 invalid input or
+usage`, and the Conventions paragraph had no sentence about where a set is found. Green after the
+prose: `test result: ok. 32 passed`.
+
+The two pins, for the review:
+
+| criterion | test | what it reads |
+| --- | --- | --- |
+| VT-4 half 1 | `fn the_guide_states_where_a_set_is_found` | the `Conventions` paragraph, reassembled by `flattened_section`, must contain the whole sentence `A set is found in the project, then the user config home, then the binary.` |
+| VT-4 half 2 | `fn the_guide_exit_table_names_an_unloadable_set` | the `Exit codes` block, reassembled, must contain the whole row `1 no store, or the store could not be read or written, or a conventions set could not be loaded` |
+
+Both read the reassembled text, never `GUIDE.contains(…)`, so a hand wrap cannot pass for a
+missing sentence; the exit-table slice ends at `JSON goes to stdout` so the row cannot be found
+in the paragraph below the table instead. VT-6 needed no code: `src/cli.rs`'s
+`fn the_conventions_help_does_not_claim_the_set_is_embedded` was already on disk and read
+`UNATTRIBUTABLE` only for want of a registry row.
+
+**`doctrine slice verify-vt 008` at `cd5c0dc`** — the whole PHASE-04 column:
+
+```text
+  PHASE-04:
+    ✓ PASS        VT-1
+    ✓ PASS        VT-2
+    ✓ PASS        VT-3
+    ✓ PASS        VT-4
+    ✓ PASS        VT-5
+    ✓ PASS        VT-6
+```
+
+#### VA-1 — every new refusal path, run rather than asserted
+
+Four scratch trees under `/tmp` (`sl008-va1`, `sl008-va1b`, `sl008-rel`), a real `.git`
+directory, a fake `HOME` and `XDG_CONFIG_HOME` set explicitly, and the built `target/debug/smut`.
+No test harness stands between the run and the message.
+
+| path | command | exit | message (verbatim) |
+| --- | --- | --- | --- |
+| unknown name, every resolved file listed with its layer and verdict | `smut conventions nonsense` (cwd `repo/sub/dir`, three layers, two broken files) | **2** | see below |
+| broken winner | `smut conventions hygiene` (project file malformed, user file good) | **1** | `smut: /tmp/sl008-va1b/repo/.config/smut/conventions/hygiene.md did not load: frontmatter line 3 is not a flat \`key: value\` line: the key is one word with no space in it, and a \`:\` follows it` |
+| `--format json` with no name | `smut conventions --format json` | **2** | `smut: conventions --format json needs a set name, because the listing is a list and not a declaration; use \`smut conventions <name> --format json\`` |
+| unknown format, before the operand | `smut conventions nonsense --format yaml` | **2** | `smut: unknown --format yaml for conventions, which writes text or json` |
+| existing-but-unreadable layer (mode 000) | `smut conventions` with `<config-home>/smut/conventions` at mode 000 | **1** | `smut: reading the conventions layer failed for /tmp/sl008-va1b/config-home/smut/conventions: Permission denied (os error 13)` |
+| the same class, root that is a regular file | `smut conventions` with `config-home/smut` a file | **1** | `smut: reading the conventions layer failed for /tmp/sl008-va1b/config-home/smut/conventions: Not a directory (os error 20)` |
+
+The unknown-name message, whole — the one output that carries the listing's information in the
+listing's order, one clause per resolved file, `; `-joined and nothing else:
+
+```text
+smut: unknown conventions set nonsense; the sets are: broken (project, did not load: frontmatter line 3 is not a flat `key: value` line: the key is one word with no space in it, and a `:` follows it); hygiene (project); bad (user, did not load: frontmatter line 3 is not a flat `key: value` line: the key is one word with no space in it, and a `:` follows it); hygiene (user); mine (user); hygiene (binary)
+```
+
+The same tree's listing at the same moment, exit **0** while reporting two broken files — EX-2's
+"the listing exits 0 even when it reports a broken file" observed, not inferred:
+
+```text
+broken  project  did not load: frontmatter line 3 is not a flat `key: value` line: the key is one word with no space in it, and a `:` follows it  /tmp/sl008-va1/repo/.config/smut/conventions/broken.md
+hygiene  project  project structure advice  /tmp/sl008-va1/repo/.config/smut/conventions/hygiene.md
+bad  user  did not load: …  /tmp/sl008-va1/config-home/smut/conventions/bad.md
+hygiene  user  shadowed  /tmp/sl008-va1/config-home/smut/conventions/hygiene.md
+mine  user  -  /tmp/sl008-va1/config-home/smut/conventions/mine.md
+hygiene  binary  shadowed  conventions/hygiene.md
+exit=0
+```
+
+Four states in one tree, in the fixed precedence: `did not load:` on a broken *project* file and
+on a broken *user* file, `shadowed` on a loaded user file behind a working project file and on
+the **binary** row behind a project file, `-` on a bare markdown set, and a summary on the one
+row in force. Two rules that the design text argues about are visible in it: the binary row is
+shadowed (EX-2's rule, not §5's worked example — reconcile obligation 4) and the broken winner
+is not an unknown name (exit 1 above, not 2).
+
+One more real run, for EX-2's last clause: with `XDG_CONFIG_HOME=config-home` **relative**, the
+user row is `mine  user  -  config-home/smut/conventions/mine.md` — a relative row, nothing
+rewritten to look absolute.
+
+#### VA-2 — design §7 walked row by row
+
+Every row mapped to the test that would go red, read from the artefact rather than inferred from
+a green suite. "spawned" = `tests/conventions.rs`, "unit" = `src/conventions.rs`'s in-module
+tests.
+
+| §7 property | test that reddens | level |
+| --- | --- | --- |
+| project beats user beats binary | `the_project_set_beats_the_user_set_beats_the_binary`; `the_project_layer_beats_the_user_layer` | spawned + unit |
+| the user layer is really read | `a_set_that_exists_only_in_the_config_home_resolves`; `a_set_that_only_the_user_layer_holds` | spawned + unit |
+| the walk-up happens | `the_walk_up_finds_the_repositorys_set` | spawned |
+| a worktree counts as a repository | `a_worktree_is_a_repository`; `a_git_file_marks_a_repository` | spawned + unit |
+| the walk stops at the repository | `the_walk_stops_at_the_repository`; `a_home_above_a_repository_is_not_the_project_root` | spawned + unit |
+| no repository means cwd, no walk-up | `no_repository_means_the_cwd_and_no_walk_up`; `no_repository_above_leaves_the_start_directory_as_the_root` | spawned + unit |
+| a broken project set shadows a good user set | `a_broken_project_set_shadows_a_good_user_set`; `a_broken_set_still_wins_its_name` | spawned + unit |
+| a failed file behind a working one still reports its reason | `a_failed_row_behind_a_working_one_keeps_its_reason`; `a_failed_row_beats_shadowed` | spawned + unit |
+| the listing reports and succeeds | `the_listing_reports_a_broken_file_and_succeeds` | spawned |
+| an absent layer is not an error | `an_absent_layer_is_not_an_error` (both files) | spawned + unit |
+| an unreadable layer is exit 1 | `an_unreadable_layer_exits_one`; `an_unreadable_layer_is_an_error`; `a_layer_that_cannot_be_opened_is_an_error` | spawned + unit |
+| a set with no summary lists with `-` | `a_bare_markdown_file_lists_with_a_dash`; `an_in_force_set_without_a_summary_lists_with_a_dash`; `a_set_that_declares_no_summary_lists_with_a_dash` | spawned + unit |
+| frontmatter is not prose | `a_named_set_prints_the_body_verbatim`; `frontmatter_is_not_part_of_the_body` | spawned + unit |
+| **the body and the seed agree** | — | **NOT COVERED: PHASE-05** (`the_prose_and_the_seed_agree_on_the_body`) |
+| all four derived keys are refused by name | `the_four_derived_keys_are_refused_by_name`; `the_four_derived_keys_exit_one` | unit (PHASE-02's; no spawned row) |
+| unknown keys are ignored | `an_unknown_frontmatter_key_is_ignored` | unit (PHASE-02's) |
+| an empty body is malformed | `an_empty_body_is_malformed`; the `SILENT` fixture through `a_broken_project_set_shadows_a_good_user_set` | unit + spawned fixture |
+| a non-UTF-8 file and a non-UTF-8 name | `a_file_that_is_not_utf8_text_is_a_failed_row`; `a_non_utf8_filename_is_a_failed_row`; `an_undecodable_name_sorts_last` | unit |
+| **the seed is fixed and origin-bearing** | `the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version`; `the_seed_title_is_the_heading_verbatim` cover id, title, version and body — **`source` is absent** | **NOT COVERED: PHASE-05** (`the_seed_names_its_source_and_the_authors_version`) |
+| the shipped set is not special | `the_shipped_set_is_the_same_reader_as_a_file` | unit |
+| a second install still upserts | `the_seed_declares_once_and_a_second_install_updates_the_same_entity`; `a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_previous`; `compact_omits_the_previous_body_the_re_install_replaced` | spawned |
+| no store is created | `the_command_still_creates_no_store` — `!store.exists()` **and** the paired `get` failing with its absent-store message, plus a decoy file at `.smut` | spawned |
+| the two roots disagree on purpose | `the_two_roots_disagree_on_purpose` | spawned |
+| unknown name at exit 2 (preserved) | `an_unknown_name_still_exits_two`; `an_unknown_name_still_exits_two`'s unit sibling `the_unknown_conventions_refusal_joins_rendered_clauses` (in `src/error.rs`) | spawned + unit |
+| `--format json` with no name (preserved) | `json_without_a_name_is_still_a_usage_error`; `json_without_a_name_is_a_usage_error_naming_the_flag` | spawned + unit |
+| unknown format before the operand (preserved) | `an_unknown_format_is_still_refused_before_the_operand`; `any_other_format_is_refused_before_the_name_is_read` | spawned + unit — **the spawned row does not discriminate the order; see finding F1** |
+| the seed's single-line output (preserved) | `the_seed_is_one_compact_line`; `the_seed_is_one_compact_line_ending_in_one_newline` | spawned + unit |
+
+**Rows this phase does not cover, named:** *the body and the seed agree* and the `source` half of
+*the seed is fixed and origin-bearing*. Both are PHASE-05's, whose VT-1/VT-2 already fail for
+exactly those names. PHASE-05 also extends `the_seed_is_one_compact_line` from one line to a
+six-name key set.
+
+**The `std::env::` grep over `src/main.rs`**, because it is what proves the environment read did
+not land in `dispatch`:
+
+```text
+$ grep -n "env::" src/main.rs
+17:    let arguments: Vec<OsString> = std::env::args_os().skip(1).collect();
+114:/// `std::env::home_dir()` reports. Everything below takes the result as a
+131:            std::env::var_os("XDG_CONFIG_HOME")
+134:            std::env::home_dir().as_deref(),
+142:    std::env::current_dir().map_err(|source| StoreError::FileSystem {
+179:        Roots::under(std::env::temp_dir().join("smut-in-process-no-layer"), None)
+```
+
+Classified, because the criterion's wording ("only inside `roots()`") is not literally true and
+the honest reading is stronger: **the two layer reads** are 131 and 134, both inside `roots()`
+(125-137); 17 is `args_os()` in `main()`, the command line; 142 is `current_dir()` in
+`current_directory()`, which `roots()` and `execute`'s store root both use (DEC-004's cwd); 179 is
+`temp_dir()` in a test helper; 114 is a doc comment. `dispatch` (70-93) and `execute` (95-107)
+contain **no** `env::` call at all. The property F-3 protects is that no in-process test and no
+code below `main` reads `$HOME` or `$XDG_CONFIG_HOME` — and none does.
+
+#### The inherited commits checked against EX-1..EX-8
+
+Verified against the code and the tests at `cd5c0dc`, not against the committing run's account,
+which does not exist.
+
+| criterion | verdict | evidence |
+| --- | --- | --- |
+| EX-1 — `answer(roots, kind, ask)` the only entry `main` calls; `Ask` is the question; `resolve` pure; the two CLI doc comments fixed; the help test; no cli behaviour change | **met** | `execute` → `conventions::answer(roots, "conventions", ask)` is the only conventions call; `Ask::{List, Prose{name}, Seed{name}}`; `resolve` matches strings only (no `fs::`, no `env::`) and returns `Result<Ask, Reject>`; `git diff 6007a0d d1f0700 -- src/cli.rs` is two doc comments and one test, nothing executable; `the_conventions_help_does_not_claim_the_set_is_embedded` asserts the rendered help, and `smut --help` really prints `A set comes from the project, then the user config home, then the binary` |
+| EX-2 — one row per file, four fields, four states with the precedence failure > shadow > summary > dash, `<not UTF-8>`, exit 0 with a broken row, the binary row shadowable, `Path::display`, absolute exactly when its root is | **met** | `listing`'s doc states the four states in order and the code matches (failure matched first, then the positional shadow, then summary, then `-`); VA-1's real listing shows all four plus a shadowed binary row; the second mutation below reddens exactly `the_binary_row_is_shadowed_by_a_nearer_file`; `the_path_column_is_absolute_for_a_file_and_a_leaf_for_the_binary` plus the relative-`XDG_CONFIG_HOME` run above for the last clause. **The relative-root clause has no test of its own — finding F2** |
+| EX-3 — exit 2, one clause per resolved file in listing order joined by `; `, the field holds rendered clauses and says so, `None` contributes no clause | **met** | `clauses()` builds `name (layer)` / `name (layer, did not load: <reason>)`; `Reject::UnknownConvention { sets: Vec<String> }` doc says "each already rendered as …"; `Display` joins `; `; VA-1's message has six clauses in listing order and no `(not UTF-8)`; `the_unknown_conventions_refusal_joins_rendered_clauses` asserts the whole string |
+| EX-4 — a failed winner refuses at 1 with path and reason and no store vocabulary; unknown name at 2; `json` with no name a usage error; a shadowed set unaddressable | **met** | VA-1's broken-winner run: exit 1, path, reason, and the word `store` appears nowhere; `set_named` returns `StoreError::ArtefactNotLoaded` on `Outcome::Failed` and `Reject::UnknownConvention` only when `set_in_force` finds nothing; `set_in_force` takes the *first* match, so a shadowed copy is unreachable (and `the_project_set_beats_the_user_set_beats_the_binary` prints the project body for a name all three layers hold) |
+| EX-5 — roots computed once in `roots()`, `home_dir()` on the pinned toolchain, `.config/smut` joined only there, `load` joins only `<kind>`, threaded through `dispatch`/`execute`, the in-process shipped-set test moved out | **met, with a wording nit (F3)** | `roots()` is the only function reading `XDG_CONFIG_HOME`/`home_dir`; grep shows `.config/smut` as one literal in `Roots::under` and the home fallback in `user_root` (`home.join(".config").join("smut")`) — which PHASE-01/EX-2's own text requires, so EX-5's "nowhere else" is loose, not violated; `load` joins `<kind>` exactly twice (project, user); `dispatch`/`execute` take `&roots` and the per-test `no_layer_roots()` passes its own; `main.rs`'s shipped-set assertions are gone and the spawned suite owns them |
+| EX-6 — the layer sentence and DEC-033's exit clause, each pinned by a whole-sentence test; the store-format clause | **met in this tail** | the two tests above, red before the prose and green after; `grep -n "may supply more" docs/store-format.md` → line 55, one hit, one line |
+| EX-7 — the layered surface proved through the spawned binary, every name the plan pins, the four preserved behaviours | **met** | VT-2 passes with all 18 keywords; `tests/conventions.rs` is 1522 lines with 29 spawned rows; the rows map one-to-one onto §7's table above. One row is weaker than its name — finding F1 |
+| EX-8 — every assertion names the change that reddens it; nothing carried over that no input could falsify; the spawn helper sets the environment it depends on; absent and unreadable are separate rows | **met** | `Scratch::run_in` sets `HOME` and `XDG_CONFIG_HOME` on every spawn and its doc says why neither is unset (`home_dir()` falls back to passwd); `an_absent_layer_is_not_an_error` and `an_unreadable_layer_exits_one` are two rows over the same shape (RV-029 F-12); spot-checked for vacuous pins and found none; the two negative controls below are what turns that from a reading into evidence |
+
+#### Two negative controls on the inherited invariant
+
+PHASE-04's one frontier-shaped rule is the third field's precedence. Both probes were made in
+`src/conventions.rs`, run, and reverted from a byte-identical copy — no `checkout`, `reset` or
+`stash`.
+
+| mutation | reddened | restored |
+| --- | --- | --- |
+| the binary row exempted from the shadow (`if shadowed` → `if shadowed && layer != Layer::Binary`) | `the_binary_row_is_shadowed_by_a_nearer_file` — **exactly one** test, 56 passed 1 failed | `git diff --stat -- src/conventions.rs` empty |
+| a failure loses to the shadow (the `Failed` arm asks the shadow first) | `a_failed_row_beats_shadowed` (unit, exactly one) **and** `a_failed_row_behind_a_working_one_keeps_its_reason` (spawned, 0 passed 1 failed) | `git diff --stat -- src/conventions.rs` empty; `cargo test --lib conventions::` → 57 passed |
+
+The second is the phase's whole point in one probe: the same mutation breaks a unit row and a
+process row, in both directions of the rule.
+
+#### Findings — reported, not repaired
+
+- **F1 (minor): `an_unknown_format_is_still_refused_before_the_operand` does not discriminate the
+  order it is named for.** It runs `conventions hygiene --format yaml`, and `hygiene` is a name
+  the binary layer holds — so if the implementation resolved the operand *first*, the name would
+  succeed and the format would still be refused with the same message. Nothing goes red. The
+  property itself holds (VA-1: `conventions nonsense --format yaml` → the format is refused, the
+  unknown name is never mentioned), so this is a pin weaker than its name, not a defect in the
+  code. **Smallest correction:** add one case with an unknown operand and assert the format is
+  named and `unknown conventions set` is absent — three lines in a file this charter does not
+  own. Left for the review.
+- **F2 (nit): EX-2's relative-root clause has no test.** `the_path_column_is_absolute_for_a_file_and_a_leaf_for_the_binary` uses absolute roots only. The behaviour is correct and was
+  demonstrated by a real run (VA-1), but nothing would go red if `listing` normalised a relative
+  path to an absolute one. **Smallest correction:** one spawned row whose `XDG_CONFIG_HOME` is
+  relative, asserting the row's fourth field is the relative join.
+- **F3 (nit): EX-5's "the `.config/smut` segment is joined by PHASE-01/EX-3's function and
+  nowhere else"** is loose. `user_root`'s home fallback joins `.config` then `smut` — which
+  PHASE-01/EX-2's own text mandates, since a home is not a config home. No code change; the
+  criterion sentence is the imprecise part, and audit should read it as "no caller repeats the
+  suffix and `load` joins only `<kind>`".
+
+None of the three is a contradiction of accepted authority, a weakened bound or a new reach; all
+three are review material. Nothing in the inherited six commits was materially wrong.
+
+#### Gate
+
+`just check` at `cd5c0dc`, exit **0**: `cargo build` finished; both clippy configurations
+(`--all-targets` and `--all-targets --all-features`) with `-D warnings` clean; `cargo fmt
+--check` clean; the suite twice. Default features: 17 test binaries, **705 tests, 0 failed**
+(lib `446` — the 444 baseline at `8386aeb` plus the two new guide tests — plus main `9`,
+cli_contract `62`, compatibility `10`, concurrency `4`, conventions `29`, dsl `19`, durability
+`0`, fixture `17`, predicates `13`, readme `9`, render `11`, roundtrip `4`, selection `8`,
+store_corruption `27`, traversal `37`, doc `0`). `--features fault-injection`: **766 tests, 0
+failed**. No warnings, no ignores, no skips.
+
+#### For reconcile (already on the list, not touched)
+
+All seven obligations stand as the earlier sections write them: DEC-028's malformed-file clause,
+DEC-026's cost sentence, DEC-017's "a file plus a match arm", §5's worked listing (its binary row
+must read `shadowed` — this phase's rule and this phase's real run both say so), §4's "one clause
+per resolved name", `design.md:156`'s stale quoted diagnostic, and items 6-7 (§6's tie-break and
+§3's unsettled candidate). None was edited here.
 
 ## Autonomy log
 
@@ -1037,3 +1311,51 @@ presence check on a fact, never on a number a neighbour owns.**
   phase is always available; dropping rows, weakening a bound or handing back a green gate
   with a silent failure mode present is not. A frontier-shaped phase that reddens twice on
   the inherited model is a `contact_supervisor` item, not a re-charter on another model.
+
+- **PHASE-04 — the tail was delegated as two serial workers, tests first.** Charter 4 declared
+  that it would not re-do the inherited work, and the two remaining criteria are prose whose
+  contract is a test, so the split was: a test worker writes the two pins (GUIDE untouched),
+  observe red for the right reason, then an implementation worker adds the sentences and the
+  store-format clause, observe green. Reasons: the red is the only evidence that the pins pin
+  anything, and a single worker would have had no reason to stop between them. Both workers ran
+  foreground, model inherited (`llm-gateway/deepseek-flash`), no other provider touched. Decided.
+
+- **PHASE-04 — two verifier edits after the workers' green, logged rather than rebriefed.**
+  (i) The exit-table test's slice originally ended at the next blank line, which in this guide is
+  a paragraph *below* the table; tightened to `"\nJSON goes to stdout"` so the pinned row cannot
+  be found outside the table it belongs to. (ii) The store-format paragraph was left half-reflowed
+  by the implementation worker's edit; re-wrapped the one sentence onto the paragraph's own
+  margin, no word changed. Both are inside the two files this charter owns. Decided.
+
+- **PHASE-04 — the recorded delta spans 26 commits on purpose, and is not narrowed.** The
+  phase's own work arrived in two runs 100 minutes apart with SL-010's ten commits, a backlog
+  commit, a `readme` commit and this seat's notes commit in between, so no contiguous range
+  covers it and `--commit` mode cannot express a seven-commit phase. PHASE-03 recorded
+  `--start/--end` for the same reason; unlike PHASE-02 nothing was narrowed with `--force`,
+  because `--force` narrows and the need here is the opposite. The foreign commits land in
+  `slice conformance`'s undeclared cell, where they are visible, and the seat re-tightens after
+  concluding. Decided.
+
+- **PHASE-04 — the three findings are reported, not repaired.** F1 and F2 live in
+  `tests/conventions.rs`, which SL-010's wrap-up and PHASE-05 both still touch; F3 is a criterion
+  sentence, not code. The charter's rule is to report before editing a shared file, and none of
+  the three is a materially wrong behaviour — the code satisfies every property, the pins are
+  weaker than their names. Deferred to the review with the smallest correction written down.
+
+- **PHASE-04 — the negative controls ran against inherited code, with a file copy, not git.**
+  Two mutations in `src/conventions.rs` (`if shadowed` → exempt the binary row; the `Failed` arm
+  asking the shadow first), each run, each restored from a `/tmp` copy and confirmed by an empty
+  `git diff --stat -- src/conventions.rs`. No `checkout`, `reset` or `stash` was run, and the
+  restored file's own suite was re-run green (57 unit rows). Decided: PHASE-03's discipline,
+  because a pin nobody can redden is not evidence and the inheriting run supplied none.
+
+- **PHASE-04 — the phase is left `in_progress`.** Green, committed (`cd5c0dc` + the notes
+  commit), delta recorded, all six VT rows PASS — and the seat concludes after the independent
+  review, which this phase needs more than most because six of its seven commits were never
+  reviewed by anyone. Decided (operator cadence, not this charter's choice).
+
+- **PHASE-04 — what was deliberately not touched.** Audit (not open), PHASE-05 (not this
+  charter), the seven reconcile obligations (flag only), `README.md` and
+  `.doctrine/backlog/improvement/021/backlog-021.md` (another writer's dirty work, left exactly as
+  found), `Cargo.toml`, and the five phase files the tail did not need. The `.config/smut` join,
+  the binaries' kind-awareness and the four settled readings were taken as settled, not re-opened.
