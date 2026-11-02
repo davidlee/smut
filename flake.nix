@@ -25,12 +25,11 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    # The Rust builder the package below is assembled with. Following nixpkgs keeps
-    # one universe for the shell and the build.
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # The Rust builder the package below is assembled with. It declares no inputs of
+    # its own — crane is a library over whatever `pkgs` it is handed — so there is
+    # nothing to `follows`, and adding one earns "override for a non-existent input
+    # 'nixpkgs'".
+    crane.url = "github:ipetkov/crane";
 
     agents = {
       url = "github:davidlee/nix-config?dir=flakes/agents";
@@ -66,7 +65,9 @@
         };
 
         inherit (pkgs) lib stdenv;
-        inherit (stdenv) isLinux;
+        # `stdenv.isLinux` is deprecated; the platform attribute is the same question
+        # asked of the thing that actually knows.
+        inherit (stdenv.hostPlatform) isLinux;
 
         # One statement of the channel: `beta.latest`, the same channel
         # `rust-toolchain.toml` names for rustup and for CI. It is a function so

@@ -18,9 +18,16 @@ is settled: `crane.mkLib` over the flake's existing `rust-overlay` toolchain, on
 
 ## Decisions
 
-- **Crane, with `nixpkgs` followed.** `crane.url = "github:ipetkov/crane"` and
-  `inputs.nixpkgs.follows = "nixpkgs"`, so the builder and the shell share one
-  nixpkgs and the lockfile gains one input rather than a second universe.
+- **Crane, with no input of its own.** `crane.url = "github:ipetkov/crane"`, and
+  that is all. The first attempt also set `inputs.nixpkgs.follows = "nixpkgs"`, which
+  nix refused in the only way it can — a warning that the override names a
+  non-existent input — because this crane declares no inputs: it is a library over
+  whatever `pkgs` it is handed. Nothing followed, nothing needed to: the lockfile
+  gained one node and no second nixpkgs, which is what the `follows` was trying to
+  achieve by a mechanism that did not apply here.
+- **`stdenv.hostPlatform.isLinux`, not `stdenv.isLinux`.** The template's
+  `inherit (stdenv) isLinux` is deprecated and `nix flake check` says so. Same
+  question, asked of the attribute that still answers it.
 - **One statement of the channel, two derivations by role.** `toolchainFor = p:
   p.rust-bin.beta.latest.default` is the single place the compiler is named —
   `beta.latest`, the channel `rust-toolchain.toml` names for rustup and CI. The
@@ -73,10 +80,10 @@ enough: crane vendored from `Cargo.lock` on its own, the `lib.fileset` source
 carried the tests, and the suite compiled and passed inside the sandbox. The
 `toolchainFor` split did not disturb the devshell.
 
-`flake.lock` now pins crane — `ipetkov/crane`, rev `8782adaf`, and **no second
-nixpkgs**: `inputs.nixpkgs.follows = "nixpkgs"` held, so the node carries no inputs
-of its own and the graph gained one node, not a universe. Before that pin the build
-was running against an unlocked input, which is the failure mode this line closes.
+`flake.lock` pins crane — `ipetkov/crane`, rev `8782adaf` — and the graph gained one
+node and **no second nixpkgs**. Not because a `follows` held: crane has no inputs to
+follow (see Decisions). Before the pin the build was running against an unlocked
+input, which is the failure mode the pin closes.
 
 Reported green: `nix build` (the default package) and `nix build .#smut` (the named
 attribute), so both entry points into the same derivation resolve.

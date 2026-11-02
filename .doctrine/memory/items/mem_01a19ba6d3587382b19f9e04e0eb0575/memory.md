@@ -2,7 +2,7 @@
 
 The shape, and why each part is that way:
 
-- `crane = { url = "github:ipetkov/crane"; inputs.nixpkgs.follows = "nixpkgs"; }` — one nixpkgs for shell and build.
+- `crane.url = "github:ipetkov/crane";` and nothing else. Crane declares **no inputs** — it is a library over whatever `pkgs` it is handed — so `inputs.nixpkgs.follows = "nixpkgs"` earns `warning: input 'crane' has an override for a non-existent input 'nixpkgs'`. No second nixpkgs enters the graph either way.
 - `craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchainFor;` where `toolchainFor = p: p.rust-bin.beta.latest.default` is the **single statement of the channel**. The devshell overrides it with `rust-src`/`rust-analyzer`/`rust-docs`; the build takes it bare so the build closure carries no editor components.
 - `smut = craneLib.buildPackage { src = crateSrc; strictDeps = true; }` — deliberately bare. Crane vendored from `Cargo.lock` on its own; no `cargoDeps`/`cargoVendorDir` needed.
 - `crateSrc = lib.fileset.toSource { root = ./.; fileset = lib.fileset.unions [ ./Cargo.toml ./Cargo.lock ./README.md ./src ./tests ]; }` — **not** `craneLib.cleanCargoSource`, because the crate is not only `.rs`: `tests/readme_example.rs` does `include_str!("../README.md")` and `tests/fixture.rs` reads `tests/fixtures/interview/entities.json` at run time. An `.rs`-only filter breaks the suite inside the build.
