@@ -185,7 +185,7 @@ impl Declared {
         ran.json()
     }
 
-    /// The ids a `select: ["id"]` query returned, in result order.
+    /// The ids a `select: ["smut_id"]` query returned, in result order.
     fn ids(&self, request: &Value) -> Vec<String> {
         ids_of(&self.query(request))
     }
@@ -202,14 +202,14 @@ impl Declared {
     }
 }
 
-/// The ids a `select: ["id"]` query returned, in result order.
+/// The ids a `select: ["smut_id"]` query returned, in result order.
 fn ids_of(envelope: &Value) -> Vec<String> {
     envelope["objects"]
         .as_array()
         .unwrap_or_else(|| panic!("a query envelope carries objects: {envelope}"))
         .iter()
         .map(|object| {
-            object["id"]
+            object["smut_id"]
                 .as_str()
                 .unwrap_or_else(|| panic!("every returned object names its id: {object}"))
                 .to_owned()
@@ -223,17 +223,17 @@ fn ids_of(envelope: &Value) -> Vec<String> {
 /// off, and a cluster names the session — so "which questions hang off this
 /// session" is the set of incoming `part-of` references at depth 2: `backlinks`.
 fn reached_from_session() -> Value {
-    json!({"from": ["session"], "backlinks": ["part-of"], "depth": 2, "select": ["id"]})
+    json!({"from": ["session"], "backlinks": ["part-of"], "depth": 2, "select": ["smut_id"]})
 }
 
-/// Every reference target in one stored entity's fields: the entity's `id` is
-/// its name, not a reference to itself.
+/// Every reference target in one stored entity's fields: the entity's `smut_id`
+/// is its name, not a reference to itself.
 fn targets_of(entity: &Value) -> BTreeSet<&str> {
     let mut found = BTreeSet::new();
 
     if let Some(fields) = entity.as_object() {
         for (label, child) in fields {
-            if label != "id" {
+            if label != "smut_id" {
                 collect_references(child, &mut found);
             }
         }
@@ -244,12 +244,12 @@ fn targets_of(entity: &Value) -> BTreeSet<&str> {
 
 /// Adds every reference target under `value` to `found`.
 ///
-/// A reference is an object carrying a string `id`, at any depth; an object that
-/// is itself a reference is not descended into, exactly as `entity::scan_refs`
-/// treats one.
+/// A reference is an object carrying a string `smut_id`, at any depth; an object
+/// that is itself a reference is not descended into, exactly as
+/// `entity::scan_refs` treats one.
 fn collect_references<'a>(value: &'a Value, found: &mut BTreeSet<&'a str>) {
     match value {
-        Value::Object(fields) => match fields.get("id") {
+        Value::Object(fields) => match fields.get("smut_id") {
             Some(Value::String(id)) => {
                 found.insert(id);
             }
@@ -302,7 +302,7 @@ fn the_committed_array_declares_into_a_store_that_reads_back_the_same_entities()
     // And the fixture's own reference walk is held to the crate's. This is a
     // regression guard, not independent evidence about this data: both walks
     // encode the same rule and collapse to unordered target sets, and the
-    // committed array's references are flat `[{"id": ...}, ...]` lists, a shape on
+    // committed array's references are flat `[{"smut_id": ...}, ...]` lists, a shape on
     // which the two definitions cannot differ. It would catch either algorithm
     // changing, which is what it is for (RV-020 F-6, correcting RV-019 F-2's
     // overstated disposition).
@@ -315,7 +315,7 @@ fn the_committed_array_declares_into_a_store_that_reads_back_the_same_entities()
             mine, theirs,
             "the fixture's reference walk agrees with `entity::scan_refs` on {}:
              two definitions of a reference would make these properties vacuous",
-            entity["id"]
+            entity["smut_id"]
         );
     }
 }
@@ -328,7 +328,7 @@ fn the_array_holds_entities_nothing_points_at_including_a_focus() {
     let unreferenced: BTreeSet<&str> = declared
         .entities
         .iter()
-        .filter_map(|entity| entity["id"].as_str())
+        .filter_map(|entity| entity["smut_id"].as_str())
         .filter(|id| !targets.contains(*id))
         .collect();
 
@@ -393,7 +393,7 @@ fn finding_smut_17_and_the_conventions_proposal_reference_each_other() {
 fn the_clusters_are_exactly_the_five_this_slice_walks() {
     let declared = Declared::new();
 
-    let mut clusters = declared.ids(&json!({"where": {"type": "cluster"}, "select": ["id"]}));
+    let mut clusters = declared.ids(&json!({"where": {"type": "cluster"}, "select": ["smut_id"]}));
     clusters.sort();
 
     assert_eq!(
@@ -407,7 +407,7 @@ fn the_clusters_are_exactly_the_five_this_slice_walks() {
 fn no_entity_in_the_store_is_retracted() {
     let declared = Declared::new();
 
-    let retracted = declared.ids(&json!({"where": {"status": "retracted"}, "select": ["id"]}));
+    let retracted = declared.ids(&json!({"where": {"status": "retracted"}, "select": ["smut_id"]}));
 
     assert!(
         retracted.is_empty(),
@@ -454,8 +454,8 @@ fn filtering_the_reached_ids_for_open_status_names_the_eight_questions() {
 
     let reached = ids_of(&declared.query(&reached_from_session()));
     let ids = declared.ids(&json!({
-        "where": {"id": {"$in": reached}, "status": "open"},
-        "select": ["id"],
+        "where": {"smut_id": {"$in": reached}, "status": "open"},
+        "select": ["smut_id"],
     }));
 
     assert_eq!(
@@ -615,7 +615,7 @@ fn the_completeness_guard_reads_both_reasons_before_it_extracts_any_id() {
     // matter: the guard names each one rather than reporting a whole answer.
     for reason in ["result_limit", "traversal_budget"] {
         let first = json!({
-            "objects": [{"id": "q-split"}],
+            "objects": [{"smut_id": "q-split"}],
             "missing": [],
             "dangling": [],
             "truncated": true,
@@ -645,7 +645,7 @@ fn the_completeness_guard_reads_both_reasons_before_it_extracts_any_id() {
     // An envelope is whole only when both fields say so, and no reason is
     // manufactured when nothing was cut.
     let whole = json!({
-        "objects": [{"id": "q-split"}],
+        "objects": [{"smut_id": "q-split"}],
         "missing": [],
         "dangling": [],
         "truncated": false,
@@ -670,7 +670,7 @@ fn a_complete_looking_second_envelope_is_no_evidence_about_the_first() {
         "from": ["session"],
         "backlinks": ["part-of"],
         "depth": 2,
-        "select": ["id"],
+        "select": ["smut_id"],
         "limit": 3,
     }));
     let Guarded::Partial { ids, reasons } = guarded(&capped) else {
@@ -705,23 +705,23 @@ fn a_complete_looking_second_envelope_is_no_evidence_about_the_first() {
 /// The graph above the default cap: `session`, 120 resolved answers, and one
 /// open question that sorts past them (`answer-000` … `answer-119` < `z-`).
 fn over_cap_graph() -> Vec<Value> {
-    let mut entities = vec![json!({"id": "session", "type": "session"})];
+    let mut entities = vec![json!({"smut_id": "session", "type": "session"})];
 
     for number in 0..120 {
         entities.push(json!({
-            "id": format!("answer-{number:03}"),
+            "smut_id": format!("answer-{number:03}"),
             "type": "answer",
             "status": "resolved",
-            "part-of": [{"id": "session"}],
+            "part-of": [{"smut_id": "session"}],
         }));
     }
 
     entities.push(json!({
-        "id": "z-question",
+        "smut_id": "z-question",
         "type": "question",
         "status": "open",
         "title": "The one open question the cap cuts",
-        "part-of": [{"id": "session"}],
+        "part-of": [{"smut_id": "session"}],
     }));
 
     entities
@@ -763,7 +763,7 @@ fn an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions() {
     // First call: the shipped first call, unchanged, over a graph above the cap.
     let first = query(
         &scratch,
-        &json!({"from": ["session"], "backlinks": ["part-of"], "select": ["id"]}),
+        &json!({"from": ["session"], "backlinks": ["part-of"], "select": ["smut_id"]}),
     );
     let received = ids_of(&first);
 
@@ -826,7 +826,7 @@ fn an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions() {
     // fails here.
     let truth = ids_of(&query(
         &scratch,
-        &json!({"where": {"type": "question", "status": "open"}, "select": ["id"]}),
+        &json!({"where": {"type": "question", "status": "open"}, "select": ["smut_id"]}),
     ));
     assert_eq!(
         truth,
@@ -862,7 +862,7 @@ fn an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions() {
         &json!({
             "from": ["session"],
             "backlinks": ["part-of"],
-            "select": ["id"],
+            "select": ["smut_id"],
             "depth": 2,
             "budget": 3,
         }),

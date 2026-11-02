@@ -1,23 +1,23 @@
 [
   {
-    "id": "a-doctrine-payoff",
+    "smut_id": "a-doctrine-payoff",
     "about": [
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       },
       {
-        "id": "doctrine"
+        "smut_id": "doctrine"
       }
     ],
     "answers": [
       {
-        "id": "q-doctrine-payoff"
+        "smut_id": "q-doctrine-payoff"
       }
     ],
     "body": "Markdown is soup; a graph is mechanically traversible. Two payoffs, one large and one small.\n\n**Large — traceability and impact.** Trace a decision from inception through prioritisation, specification, design and implementation. Audit the tests that verify it. Make any variance travel back to the normative specification. Then answer the counterfactual: if this decision changed, which downstream dependants must be revisited.\n\n**Small — durability.** A graph of interview questions and answers is a durable, traversible record. It outlives an agent session and is user-inspectable. The alternative is trusting the agent to hold that graph in its head: not verifiably true, not coherent, and gone when the context window expires.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "status": "settled",
@@ -25,16 +25,16 @@
     "type": "answer"
   },
   {
-    "id": "a-error-verdict",
+    "smut_id": "a-error-verdict",
     "answers": [
       {
-        "id": "q-smut-test"
+        "smut_id": "q-smut-test"
       }
     ],
     "body": "Neither a feature gap nor a surprise. The command failed in argument parsing, before smut read any JSON.\n\nEvidence:\n\n- `smut declare '{\"id\":\"a\"} {\"id\":\"b\"}'` → `smut: trailing input after the JSON value`. smut's own refusal is precise and names the real problem.\n- My failing call produced `error: unexpected argument 'out to a verdict.\"}' found`, followed by a clap usage block. That is extra-positional rejection: unescaped apostrophes inside a single-quoted shell string split the JSON into several argv words, so smut's parser never ran.\n- Duplicate key: `smut: duplicate JSON key: id, and one object cannot give a key twice`. Also clear.\n- Heredoc on stdin worked first try, and `-` reads stdin too.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "settled",
@@ -42,26 +42,26 @@
     "type": "answer"
   },
   {
-    "id": "a-focus",
+    "smut_id": "a-focus",
     "about": [
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       }
     ],
     "answers": [
       {
-        "id": "q-focus"
+        "smut_id": "q-focus"
       }
     ],
     "body": "Side projects / prototypes around agentic engineering, plus watching Slow Horses. Still figuring out whether smut is useful yet.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "projects": [
       {
-        "id": "doctrine"
+        "smut_id": "doctrine"
       }
     ],
     "status": "recorded",
@@ -69,16 +69,16 @@
     "type": "answer"
   },
   {
-    "id": "a-friction-survey",
+    "smut_id": "a-friction-survey",
     "about": [
       {
-        "id": "criterion-adoption"
+        "smut_id": "criterion-adoption"
       }
     ],
     "body": "Scoped to what exists. What works: every refusal names itself and its version, truncation announces itself before any content, duplicate keys are refused, `--compact` is available, and the store is plain JSON on disk.\n\nFriction clusters in three places:\n\n1. **Silent loss** — one input shape is discarded without a word.\n2. **No time** — records are not durably ordered in time.\n3. **Edges of the surface** — filenames, `--show-fields`, and document boundaries each undermine a stated goal.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "settled",
@@ -86,43 +86,43 @@
     "type": "answer"
   },
   {
-    "id": "a-navigation",
+    "smut_id": "a-navigation",
     "about": [
       {
-        "id": "finding-smut-15"
+        "smut_id": "finding-smut-15"
       }
     ],
     "body": "One `query` with a wide `select` returned all 44 entities and all references in a single call. Everything after that was manual.\n\n- 28 of 44 entities had no incoming reference. Every finding, every option, both other answers.\n- Edges run one way: `answers` points from answer to question, so question to answer needed a full scan.\n- Nothing referenced `session`. No containment edge existed anywhere.\n- Six labels in live use for overlapping relations.\n\nThe tree shown to the operator was therefore authored by judgement, not derived. Traffic was never the constraint; derivation was.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "Measured: what navigating this store actually cost",
     "type": "observation"
   },
   {
-    "id": "a-schema-resolved",
+    "smut_id": "a-schema-resolved",
     "about": [
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       },
       {
-        "id": "opt-schema-advise"
+        "smut_id": "opt-schema-advise"
       },
       {
-        "id": "opt-schema-none"
+        "smut_id": "opt-schema-none"
       }
     ],
     "answers": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "**Inference from `criterion-scope-smut`, not a decision the operator made.** Recorded as an answer so the cluster reads resolved, and correctable by one patch.\n\nThe scope criterion says the property smut is buying is cheap writing, free vocabulary and nothing refused; validation is doctrine's job. So:\n\n- `opt-schema-none` for the store itself. `opt-schema-advise` where a store's conventions grow worth writing down — `vocab` is the worked example, a schema stored as an ordinary entity and enforced by nothing.\n- `opt-schema-validate` is excluded by scope, and with it the two hard questions `q-schema` raises. Retro-invalidation and traversal over invalid entities are problems only for a store that can hold invalid entities.\n- `prop-audit-not-gate` survives, demoted: not as a gate on smut's writes but as a way for a *consumer* to assert a pattern over a store when it needs one. That is a layer above 0.2, and it belongs to whichever domain is reading, not to the store.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "status": "settled",
@@ -130,30 +130,30 @@
     "type": "answer"
   },
   {
-    "id": "a-verdict-focus",
+    "smut_id": "a-verdict-focus",
     "about": [
       {
-        "id": "criterion-adoption"
+        "smut_id": "criterion-adoption"
       },
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       }
     ],
     "answers": [
       {
-        "id": "q-mode"
+        "smut_id": "q-mode"
       },
       {
-        "id": "q-state"
+        "smut_id": "q-state"
       },
       {
-        "id": "q-smut-test"
+        "smut_id": "q-smut-test"
       }
     ],
     "body": "First use of smut was partly an audit: what is actually built, and whether it is already useful. Verdict given: there is something useful here. The figuring-out phase is over, and the mode has moved from understanding to deciding scope.\n\nPriority named by the operator: everything relevant to the design of 0.2 **as already planned**, plus any near-term improvement that should be tabled alongside, before, or soon after. Of the twelve open questions that points at the design tension (`q-schema`, `q-audit-cost`, `q-promotion`) and at the thesis probes (`q-impact-query`, `q-variance-mechanism`).\n\nOn the frictions: trying the fixes needs no change to smut, but if the guidance built into smut is not updated in response there is no durable gain — each agent re-derives its own conventions from scratch. That is the operator's correction to `cluster-friction`, recorded as `finding-smut-17`.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "settled",
@@ -161,10 +161,10 @@
     "type": "answer"
   },
   {
-    "id": "arc-trace",
+    "smut_id": "arc-trace",
     "about": [
       {
-        "id": "a-doctrine-payoff"
+        "smut_id": "a-doctrine-payoff"
       }
     ],
     "body": "```\ninception ─▶ prioritisation ─▶ specification ─▶ design ─▶ implementation\n                                     ▲                        │\n                                     │                        ▼\n                                  variance ◀─────────────── tests\n```\nThree properties the drawing asserts: every stage has a predecessor edge, tests point at the stage they verify, and variance has a path back to the norm.",
@@ -176,7 +176,7 @@
     ],
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "stages": [
@@ -191,34 +191,34 @@
     "type": "model"
   },
   {
-    "id": "audit-handoff",
+    "smut_id": "audit-handoff",
     "about": [
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       },
       {
-        "id": "prop-result-provenance"
+        "smut_id": "prop-result-provenance"
       },
       {
-        "id": "finding-smut-17"
+        "smut_id": "finding-smut-17"
       },
       {
-        "id": "obs-rehydration"
+        "smut_id": "obs-rehydration"
       },
       {
-        "id": "finding-smut-19"
+        "smut_id": "finding-smut-19"
       },
       {
-        "id": "prop-conventions-library"
+        "smut_id": "prop-conventions-library"
       },
       {
-        "id": "finding-smut-20"
+        "smut_id": "finding-smut-20"
       }
     ],
     "body": "Entry point for the design work that follows the 0.1 audit. Two sessions, one operator, one agent; the first was the operator's first use of the tool and was partly an audit of what is built.\n\n**Read `criterion-scope-smut` first.** smut is a flexible standalone complement to doctrine for everything else — interviews, domain-specific ontologies, folk databases — not a replacement for doctrine's typed, mechanistic end-to-end trace. Every judgement below follows from that. Anything in this store that reads as \"smut should be more like doctrine\" has been misread, including by me once (`finding-smut-16`, retracted).\n\n**What is established, and what is not.** The adoption verdict rests on the half that exists: writing, reading, and rehydrating a store across a session boundary (`obs-rehydration`). Traversal is untested because it is unbuilt, so 0.2 is the first evidence for that half — a settled verdict on the first is not evidence for the second.\n\n**Sequencing.** No 0.2 code before the audit lands. The audit is the design input; whatever is written against the brief alone would be rewritten after it.\n\n## Settle before writing 0.2 code\n\n1. **What a traversal result carries** — `prop-result-provenance`. The only genuinely new design question in the store. Origin: the operator's principle that an object should carry what the query context knew. Recommended default: nodes plus induced edges plus the unexpanded frontier, with minimum depth as a scalar.\n2. **Whether `where` stays roots-only** — keep it (`finding-smut-18`). The two-call composition answers the common graph question, and the second call is an ordinary root filter. No change; the idiom goes in the guide.\n3. **Where conventions live, and in what shape** — `finding-smut-17`, answered in outline by `prop-conventions-library`: a separate read-only command, `smut conventions [NAME]`, carrying one general-hygiene set and three or four domain sets, printed prose by default and a pipeable declaration on request, never validated and never auto-selected. Whatever form it takes, the guide must be willing to recommend a vocabulary, or each agent re-derives one. The permissiveness criterion is about what the tool refuses, not about what its documentation declines to say.\n\n## Cheap, independent of 0.2, ship any time\n\n- Refuse the literal `DROP` instead of eating it (`finding-smut-08`). One refusal path, already exists for trailing input. Correctness.\n- `created`/`updated` on write (`finding-smut-09`). Unblocks chronology, which is the whole point of an interview record. `order` cannot sort by age without it.\n- Legibility triple (`finding-smut-10`, `finding-smut-11`, `finding-smut-13`): id-named files, references rendered as ids or links rather than raw JSON under `--show-fields`, fenced or indented stored headings.\n\n## Do not build\n\n- **Validating schema** (`opt-schema-validate`). It rebuilds doctrine inside smut and contradicts `criterion-scope-smut`. `q-schema` is answered accordingly in `a-schema-resolved`.\n- **Containment as a modelled feature.** A recommended label is enough; `part-of` was invented mid-session and worked.\n- **An audit mechanism in the store.** `prop-audit-not-gate` is a consumer-side pattern, not a 0.2 feature.\n\n## Costs and order of work\n\n`finding-smut-19` — the filter was never the cost. The risks are a second definition of what a reference is, the six determinism rules, and `backlinks` scanning the whole store per hop. Recommended order: walker and labels, then depth/budget/truncation and the envelope reasons, then predicates, which are independent.\n\n`obs-build-environment` — where the source is and what builds here. Perishable; recorded so the next reader does not rediscover it.\n\n## Use this store as a fixture\n\n66 entities at the time of writing, three labels in use, five clusters, one vocabulary entity, one retraction, and edges that point one way on purpose. It is a real graph, small enough to read whole, and it already contains the awkward cases: a reference to a superseded record, a claim that was wrong, and five mutually-referencing clusters. 22 of them have nothing pointing at them, so a `backlinks` test has both a hit and a miss to assert without inventing either.\n\nThat makes it a better acceptance fixture for `follow`, `backlinks`, `where`, `depth` and `budget` than anything synthetic — point 0.2's tests at a copy of `.smut/` rather than inventing a graph.\n\n## Open questions, sorted by whether they are worth answering\n\n- Worth answering, operator's call: `q-fix-order`, `q-channel-fix`. On the second, `finding-smut-17` adds a fourth option to the three recorded — a guide patch — and argues it is the only one with a durable return.\n- Not worth answering for design purposes: `q-split`, `q-more-friction`, and `session` itself. They are about the operator's day, not the tool. `q-more-friction` is cheap to answer but its value is survey completeness, not a decision.\n- Doctrine's, not smut's: `q-impact-query`, `q-variance-mechanism`, `q-promotion`. Keep them open; do not let them set 0.2 scope.\n- `q-audit-cost` was the hinge for two of those and is now demoted with `prop-audit-not-gate`.\n\n## How this store misled me once\n\n`a-doctrine-payoff` and `claim-session-durability` sit side by side in `cluster-thesis` and read as one argument: a typed graph pays off through traceability, and this store is the small case of it. It is two arguments. The first is doctrine's; only the second is smut's. I built `finding-smut-16` on the conflation, and it stood as the session's headline finding until the operator corrected it.\n\nEvidence for the design pass rather than blame: the records were accurate and the pointer was present — `a-doctrine-payoff` carries `about: doctrine`. What was missing is a field that says whose claim a claim is, and prose ambiguity is not something a reader can check. A durable record consumed by an agent without the human present would have propagated the error. Scope belongs in the data, not only in the prose.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "status": "current",
@@ -226,121 +226,121 @@
     "type": "index"
   },
   {
-    "id": "claim-session-durability",
+    "smut_id": "claim-session-durability",
     "about": [
       {
-        "id": "a-doctrine-payoff"
+        "smut_id": "a-doctrine-payoff"
       }
     ],
     "body": "Everything in this store survives this session. If the transcript is lost, the questions, answers, findings and their references remain readable and — from 0.2 — traversible.\n\n**Caveat, from measurement.** Surviving is not navigating. At 44 entities, 28 were unreferenced, edges ran one way, and the tree shown to the operator was authored by me rather than derived from the store. What actually persists is the content plus a sparse one-directional mesh. The shape of the conversation persists only where someone wrote it down, which is `finding-smut-15`.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "title": "The small case is already on trial: this store",
     "type": "claim"
   },
   {
-    "id": "cluster-friction",
+    "smut_id": "cluster-friction",
     "body": "The largest cluster. The adoption criterion, the verdict on the argv error, seven frictions found on the built surface, and the discovery that tool output is not a human channel, with three candidate fixes of which none needs a change to smut.",
     "part-of": [
       {
-        "id": "session"
+        "smut_id": "session"
       }
     ],
     "title": "Cluster: the tool on trial",
     "type": "cluster"
   },
   {
-    "id": "cluster-mind",
+    "smut_id": "cluster-mind",
     "body": "The opening answer, the two standing themes (graphs as leverage, doctrine as the typed counterpart), and three questions that were posed and never answered.",
     "part-of": [
       {
-        "id": "session"
+        "smut_id": "session"
       }
     ],
     "title": "Cluster: what was on the operator's mind",
     "type": "cluster"
   },
   {
-    "id": "cluster-schema",
+    "smut_id": "cluster-schema",
     "body": "The live design tension. Three options recorded, one proposal (conformance as a query rather than a gate), and the strategic finding that schema in smut converges on doctrine, which makes the open question a promotion path rather than a schema facility.\n\n**Update, second session.** The typed-or-untyped tension is resolved by scope rather than by argument — see `a-schema-resolved`: untyped, with conventions stored as data, and validation excluded because that is doctrine's job. This cluster therefore no longer carries a live design tension. Its remaining work is query design, which is where `finding-smut-18` sits.",
     "part-of": [
       {
-        "id": "session"
+        "smut_id": "session"
       }
     ],
     "title": "Cluster: typed or untyped",
     "type": "cluster"
   },
   {
-    "id": "cluster-setup",
+    "smut_id": "cluster-setup",
     "body": "Start with `start-here`. Contains the reading order, the conversation conventions in force, the record of how this store was navigated and drawn, and `vocab`, the label list that keeps traversal expressible.",
     "part-of": [
       {
-        "id": "session"
+        "smut_id": "session"
       }
     ],
     "title": "Cluster: how to read this store",
     "type": "cluster"
   },
   {
-    "id": "cluster-thesis",
+    "smut_id": "cluster-thesis",
     "body": "Markdown is soup, a graph is traversible; trace a decision end to end, audit its tests, carry variance back to the norm, and answer what a change would break. Includes the caveat that none of it is demonstrable in 0.1, and the impact and variance probes that remain open.\n\n**Update, second session.** After the scope correction (`criterion-scope-smut`) this cluster holds two different things: doctrine's traceability thesis, which is not smut's requirement, and `prop-result-provenance`, which is — a question about what a query returns, kept here because it descends from the same argument about traversibility rather than from the schema question.",
     "part-of": [
       {
-        "id": "session"
+        "smut_id": "session"
       }
     ],
     "title": "Cluster: the thesis under test",
     "type": "cluster"
   },
   {
-    "id": "convention",
+    "smut_id": "convention",
     "body": "Rendered through smut, in bounded chunks. A render intended for the operator stays under roughly 25 lines. Anything longer goes to a file and the tool output carries a one-line pointer. Index first, detail on request. Trees and structure summaries are given as conversational text, because smut has no structure renderer.",
     "history": "Supersedes the earlier rule that all reveals go through render with JSON suppressed; that rule assumed tool output was a human channel. It is not.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "How this conversation is rendered",
     "type": "convention"
   },
   {
-    "id": "criterion-adoption",
+    "smut_id": "criterion-adoption",
     "about": [
       {
-        "id": "q-smut-test"
+        "smut_id": "q-smut-test"
       }
     ],
     "body": "This is the bar to hold smut against, and it is a better one than any pass/fail test I would invent.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "title": "Stated goal: so easy to use it is almost harder not to use it",
     "type": "criterion"
   },
   {
-    "id": "criterion-scope-smut",
+    "smut_id": "criterion-scope-smut",
     "about": [
       {
-        "id": "doctrine"
+        "smut_id": "doctrine"
       },
       {
-        "id": "opt-schema-none"
+        "smut_id": "opt-schema-none"
       },
       {
-        "id": "a-doctrine-payoff"
+        "smut_id": "a-doctrine-payoff"
       }
     ],
     "body": "The operator's correction to a misreading I made, recorded because the audit will read this store next.\n\nsmut is **not** intended to replace doctrine's stronger domain-specific types and their supporting tooling — tracing end to end through a substantial codebase, with mechanistic checks. That is doctrine's job and staying with doctrine. smut is a **flexible standalone complement or alternative**, for everything else: interviews like this one, domain-specific ontologies, folk databases.\n\nConsequences:\n\n- The two live thesis probes — `q-impact-query` and `q-variance-mechanism` — are doctrine questions. They are not 0.2 requirements, and mechanistic checks are out of scope for smut by intent rather than by deferral.\n- `a-doctrine-payoff` stands as doctrine's payoff. The smut-relevant half of it is the small case only: a durable, inspectable, traversible record that outlives a session. That is the bar 0.2 is held to.\n- What smut must be good at is therefore the opposite of doctrine's strength: cheap writing, free vocabulary, no validation. `finding-smut-06` and `opt-schema-none` stop being costs to be corrected and become the property being bought. The cure for the traversal cost they impose is a filter, not a schema.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "settled",
@@ -348,16 +348,16 @@
     "type": "criterion"
   },
   {
-    "id": "doctrine",
+    "smut_id": "doctrine",
     "about": [
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       }
     ],
     "body": "Typed graph of semantic objects, backed by markdown/toml files on disk.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "active",
@@ -365,32 +365,32 @@
     "type": "project"
   },
   {
-    "id": "finding-smut-01",
+    "smut_id": "finding-smut-01",
     "about": [
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       }
     ],
     "body": "where / follow / backlinks / depth / budget are refused by name until 0.2. So references can be written but not traversed. A verdict on smut reached before 0.2 would be testing storage, not the graph property you actually care about.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "title": "Gap: 0.1 is a notebook, not yet a graph",
     "type": "finding"
   },
   {
-    "id": "finding-smut-02",
+    "smut_id": "finding-smut-02",
     "about": [
       {
-        "id": "criterion-adoption"
+        "smut_id": "criterion-adoption"
       }
     ],
     "body": "The commonest way to use smut wrongly is a shell quoting mistake that fragments the JSON into several argv words. It surfaces as a clap message about an *argument*, with a usage block, and never mentions JSON — the exact opposite of pointing at the cause.\n\nA one-line fix, inside the same refusal path that already exists for trailing input: when more than one positional is present, say so in smut's own words and name the cure — quote it properly, or pipe it on stdin with `-`.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "real",
@@ -398,11 +398,11 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-03",
+    "smut_id": "finding-smut-03",
     "body": "declare, query and render accept a literal JSON argument or stdin. There is no path-taking option. For a store whose whole point is a graph of any size, the only scriptable entry points are heredocs and pipes. Agents cope; humans do not type a forty-entity graph into a terminal.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "real",
@@ -410,16 +410,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-04",
+    "smut_id": "finding-smut-04",
     "about": [
       {
-        "id": "criterion-adoption"
+        "smut_id": "criterion-adoption"
       }
     ],
     "body": "The human-facing surface is `render`. The CLI is an agent-facing protocol: opaque ids, patch semantics with a DROP sentinel, a query spec object. For an agent that is fine and cheap. For a human at a prompt it is a foreign language, so the adoption question becomes two questions: can an agent use this without a wrapper, and can a human read the result without a decoder. My experience so far: yes, and yes — the second only because render emits Markdown.\n\n**Amendment, later the same session.** The second half was wrong. Tool output is not a human channel: the operator missed part of two rendered responses without noticing, because the harness truncates tool output and expanding it also exposes every JSON envelope. See `finding-smut-14`. Sharper statement: `render` produces human-readable text, but whether a human sees it depends on a channel smut does not control.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "design",
@@ -427,16 +427,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-05",
+    "smut_id": "finding-smut-05",
     "about": [
       {
-        "id": "claim-session-durability"
+        "smut_id": "claim-session-durability"
       }
     ],
     "body": "Evidence, three refusals, each exit 2:\n\n- `smut: follow is not supported in 0.1; it arrives in 0.2`\n- `smut: where is not supported in 0.1; it arrives in 0.2`\n- `smut: backlinks is not supported in 0.1; it arrives in 0.2`\n\nThe refusals themselves are good: named, versioned, no silent degradation. But the store is write-only in the graph sense. Tracing a decision and computing impact both require traversal, so nothing above can be demonstrated yet.\n\nInference: the 0.2 scope is the scope of the thesis. 0.2 is the release that decides this tool; 0.3 is refinement.\n\n**Sharpened by trying to draw the store.** Presenting the graph as a tree took one query, then pure manual labour: answers point at questions and never back, so question to answer meant scanning every entity; and 28 of 44 entities had nothing pointing at them. Reframed: not a feature gap, but the absence of the thing under test. Enumerating is not navigating.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "severity": "blocking-for-thesis",
@@ -444,16 +444,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-06",
+    "smut_id": "finding-smut-06",
     "about": [
       {
-        "id": "arc-trace"
+        "smut_id": "arc-trace"
       }
     ],
     "body": "Relations live in field names, so the field name is the edge label. In this one session I used `answers`, `theme`, `projects`, `subject` and `about` for relations that overlap heavily.\n\nConsequence: a traversal written against today's vocabulary breaks when tomorrow's differs, and impact analysis cannot be expressed once. Either a convention is enforced at write time, or every impact query must enumerate every field name ever used. The permissive model defers schema to discipline, which is exactly the thing a durable record is supposed to be free of.\n\n**Confirmed structurally.** Drawing the store showed five overlapping labels in live use plus `links`, and my own tree had to be authored by judgement rather than derived. Mitigation attempted afterwards: `vocab`, a hand-recorded label list — which is `opt-schema-advise` applied in practice.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "severity": "design",
@@ -461,16 +461,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-07",
+    "smut_id": "finding-smut-07",
     "about": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "A validating schema turns smut into a second doctrine: typed graph of semantic objects over files on disk.\n\nInference: the durable split is not typed versus untyped but normative versus exploratory. doctrine holds what must stay coherent and validated; smut holds what is cheap to write and cheap to throw away. That makes the open design question a promotion path — how a record graduates from smut into doctrine — rather than a schema facility.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "severity": "strategic",
@@ -478,16 +478,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-08",
+    "smut_id": "finding-smut-08",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Evidence. `{\"id\":\"probe-drop\",\"body\":\"DROP\"}` returns status `created`, no warning, and the entity afterwards is `{\"id\":\"probe-drop\"}`. Asking for `[\"DROP\"]` stores the array.\n\nSo the literal string `DROP` cannot be stored as a top-level field value, and the attempt is the one place smut discards input without refusing it — unlike a duplicate key, which is refused loudly. A permissive store that cannot represent one particular string, and loses it quietly, is the sharpest wart on the write path.\n\nCures, cheapest first: refuse `DROP` as a literal with the usual named error; or make the sentinel unrepresentable as data by moving it out of the value space, e.g. a `--drop FIELD` flag or `{\"$drop\":[\"field\"]}` off to one side.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "correction",
@@ -495,16 +495,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-09",
+    "smut_id": "finding-smut-09",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Evidence. Retrieved entities contain exactly the declared fields. `index.json` is `{format_version, objects: {id: filename}}`: no sequence, no timestamps. Filesystem mtime is the only trace and it dies on copy or clone.\n\nConsequences for the interview case that motivated this session: chronology cannot be reconstructed, and `order` — which needs a field — cannot sort by age. Every agent must remember to write its own timestamp, which is exactly the discipline a store exists to remove.\n\nsmut rewrites the file on every declare, so it already knows both facts.\n\n**Felt while writing this store.** Recording \"61 entities now\" is ambiguous the moment the store grows, and nothing in the record can be used to order that sentence against the one that says 53. Counts had to be re-written with \"at the time of writing\" bolted on — a workaround for a missing field, applied by hand, in the store that exists to stop exactly that.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "gap",
@@ -512,16 +512,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-10",
+    "smut_id": "finding-smut-10",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Evidence. `.smut/` holds one pretty-printed JSON file per entity, named by an opaque token (`-AZOyWBemhRVhHYbmAiuv.json`), plus `index.json` mapping id to filename. Content is fine — `grep` finds `\"id\": \"q-promotion\"` — but `ls` and `git diff` name files by hash.\n\nThat undercuts the inspectability argument that justifies the whole design: a version-control history reads `EuFCJR-M-Pwd51pseMOlP.json changed` instead of `arc-trace changed`. It is also the one point where smut is less legible on disk than doctrine, whose objects are files you can name.\n\nA sanitised id as filename, with the hash kept as fallback for ids that are not path-safe, costs an index that already exists.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "real",
@@ -529,16 +529,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-11",
+    "smut_id": "finding-smut-11",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Evidence. `render '{\"from\":[\"claim-session-durability\"],\"select\":[\"about\"]}' --show-fields` prints `- **about:** [{\"id\":\"a-doctrine-payoff\"}]`.\n\nEverything else about render is decoded for a reader; references are the exception. Rendering them as ids, or as links when the target has a title, would remove the last JSON from the human path — and make --show-fields usable for the thing it is for, which is seeing what an entity points at.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "real",
@@ -546,16 +546,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-12",
+    "smut_id": "finding-smut-12",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Evidence. `.smut/lock` exists, but grepping the guide for lock, concurrent, atomic or process returns nothing. Grepping for file, disk or index also returns nothing.\n\nBoth silences matter for the stated use. Agents run in parallel, so whether two declares can interleave is the difference between safe by default and unknown. And the on-disk shape is the argument for durability and inspectability, so leaving it undocumented hides the feature.\n\nAlso undocumented, and useful: `select: [\"id\"]` is the cheap way to list what is in a store — I found it by experiment.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "guidance",
@@ -563,16 +563,16 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-13",
+    "smut_id": "finding-smut-13",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Two edges, same cause: body text is emitted verbatim and the surrounding structure is thin.\n\n- An entity without a heading field renders with no heading at all — just its body. Two such entities in one document run together with nothing between them.\n- A stored body beginning `# ` produces a top-level heading that competes with the generated ones, so content can impersonate structure.\n\nThe truncation notice already solves the severe version of this by sitting above everything. A rule that also fences or indents stored headings would finish the job cheaply.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "minor",
@@ -580,19 +580,19 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-14",
+    "smut_id": "finding-smut-14",
     "about": [
       {
-        "id": "finding-smut-04"
+        "smut_id": "finding-smut-04"
       },
       {
-        "id": "criterion-adoption"
+        "smut_id": "criterion-adoption"
       }
     ],
     "body": "Observed this session: the operator missed part of two rendered responses without noticing. The harness truncates tool output past a limit and expanding it (C-o) also surfaces every JSON envelope, which then buries the rendered text.\n\nInference: a render is not a human surface just because it is Markdown. It arrives through a channel sized for machines, with silent display-side truncation that smut cannot see and its own truncation notice cannot cover. `finding-smut-04` needs amending accordingly.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "severity": "medium",
@@ -600,19 +600,19 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-15",
+    "smut_id": "finding-smut-15",
     "about": [
       {
-        "id": "claim-session-durability"
+        "smut_id": "claim-session-durability"
       },
       {
-        "id": "finding-smut-05"
+        "smut_id": "finding-smut-05"
       }
     ],
     "body": "The store holds a mesh, not a tree. There is no containment label in the model and none that arose by convention during use, so a parent-child view has to be invented by whoever reads the store — and is lost with them.\n\nThat is a sharper problem than missing traversal. `backlinks` would have found answers from questions. Nothing at all would have produced the grouping, because the grouping was never written until the operator asked for a tree, near the end of the session.\n\nMitigation used here, invented mid-session: five `cluster` entities with `part-of` edges up to `session` and down to every member. It works, it is cheap, and it required a human to decide the partition — which is the argument for a convention that is agreed before writing, not after.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "severity": "structural",
@@ -620,22 +620,22 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-16",
+    "smut_id": "finding-smut-16",
     "about": [
       {
-        "id": "a-doctrine-payoff"
+        "smut_id": "a-doctrine-payoff"
       },
       {
-        "id": "q-impact-query"
+        "smut_id": "q-impact-query"
       },
       {
-        "id": "q-variance-mechanism"
+        "smut_id": "q-variance-mechanism"
       }
     ],
     "body": "The refusals name the 0.2 scope: `where`, `follow`, `backlinks`, `depth` and `budget`. That is a reachability engine. Neither live thesis probe is a reachability problem.\n\n- **`q-impact-query` — \"what would this change break\" — is reachability, but over a *labelled* subgraph.** Unfiltered `follow` from a decision reaches everything it points at, themes and clusters included, so the result is the soup the graph was supposed to replace. Requirement: `follow` and `backlinks` take a label filter, where the label is the field name the relation lives in. Cheap, because the label already exists; nothing in the model changes.\n- **`q-variance-mechanism` — does a missing back-edge rot silently — is the opposite of reachability.** It asks whether a required edge is *absent*. Traversal enumerates what is present and cannot report an absence. Only an assertion over a pattern can, which is `prop-audit-not-gate` applied to edges rather than to types.\n\nSo the plan and the thesis do not coincide. The refusals sound like the thesis because they name the operations the thesis is written in; what they implement is enumeration. `finding-smut-05` said 0.2 is the release that decides this tool. On the current scope it can ship without deciding it, and the verdict slips once more.\n\n**Retracted on operator correction.** I read this as smut failing to deliver doctrine's end-to-end trace, and concluded that 0.2's planned scope could not decide the tool. That premise is wrong: smut is a flexible complement to doctrine for everything else, and mechanistic checks over a substantial codebase were never its job. See `criterion-scope-smut`.\n\nWhat survives of the finding is not a gap in 0.2 but a statement about `follow`: it takes an array of field names, so labelled traversal is already the planned surface rather than an addition to it. The reachability-versus-assertion argument holds for doctrine and does not constrain smut.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "status": "superseded",
@@ -643,91 +643,91 @@
     "type": "finding"
   },
   {
-    "id": "finding-smut-17",
+    "smut_id": "finding-smut-17",
     "about": [
       {
-        "id": "prop-bounded-payload"
+        "smut_id": "prop-bounded-payload"
       },
       {
-        "id": "vocab"
+        "smut_id": "vocab"
       },
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       },
       {
-        "id": "prop-conventions-library"
+        "smut_id": "prop-conventions-library"
       }
     ],
     "body": "The operator's correction, and it is structural rather than editorial. The three fixes in `prop-bounded-payload` need no change to smut in order to be trialled, but unless the guidance built into smut is updated in response there is no durable gain: every new agent re-derives the convention from scratch. The conventions that made this store navigable — an edge vocabulary, containment by `part-of`, bounded renders — live in `vocab` and `convention`, which are data in one store and reach nobody else.\n\nEvidence. `smut learn` carries syntax only. Its Workflows section teaches declare, amend, render and the `DROP` sentinel, and says nothing about which labels to use, whether to model containment, or how much to render at once. The guide is the only transmission channel the tool has.\n\nConsequence: every item in `cluster-friction` has two halves, a behaviour and a sentence. The cheap-fix framing — *caller discipline, cost none* — is wrong. Cost none means the cost is paid by every future caller. The durable half belongs in the guide, next to the syntax it constrains.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "title": "A fix that is not in the guide is not fixed",
     "type": "finding"
   },
   {
-    "id": "finding-smut-18",
+    "smut_id": "finding-smut-18",
     "about": [
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       },
       {
-        "id": "finding-smut-17"
+        "smut_id": "finding-smut-17"
       },
       {
-        "id": "q-impact-query"
+        "smut_id": "q-impact-query"
       }
     ],
     "body": "`where` filters roots only (brief, query contract), which is deliberate and keeps the pipeline and its determinism simple. The cost surfaces in exactly this store's use-case.\n\nThe question \"the twelve open questions reachable from `session`\" is the ordinary graph question, and one call cannot answer it: traverse to reach the questions, filter to keep the open ones, and the filter does not apply to what traversal discovers. With 0.1 I answered it by dumping all 53 entities and filtering by hand, which is `finding-smut-05`'s complaint in a smaller dress.\n\nThe cure already exists and needs no change to smut: the two calls compose.\n\n```\n1. query {\"from\":\"session\",\"follow\":[\"part-of\"],\"depth\":2,\"select\":[\"id\"]}   -> ids\n2. query {\"from\":[<those ids>],\"where\":{\"status\":\"open\"},\"select\":[\"title\"]} -> filtered\n```\n\n`from` takes an explicit id list and `where` filters roots, so the second call is a root filter over a known set. The store's own advice — prefer two simple calls over a richer query — is what makes this idiomatic rather than a workaround.\n\nInference: the limitation is not a defect to fix in 0.2 but an idiom to write down. Which puts it back on `finding-smut-17`: an idiom that exists only in this store reaches nobody. The brief already plans a traverse/backlink workflow for `smut learn`; the two-call composition, the `select:[\"id\"]` trick and a minimal label convention belong in it.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "title": "where filters roots only, so the common graph question takes two calls",
     "type": "finding"
   },
   {
-    "id": "finding-smut-19",
+    "smut_id": "finding-smut-19",
     "about": [
       {
-        "id": "prop-result-provenance"
+        "smut_id": "prop-result-provenance"
       },
       {
-        "id": "finding-smut-16"
+        "smut_id": "finding-smut-16"
       },
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       }
     ],
     "body": "The label filter was never the cost. What 0.2 traversal costs, in rough order of risk:\n\n1. **A second definition of \"reference\".** `declare` already decides what a reference is — an embedded object containing `id`, found recursively, with the label being the originating top-level field — and `src/entity.rs` is where that lives. The walker needs the same answer for the same data. Two implementations that drift give results wrong in the one way that is hard to see: a traversal that silently misses an edge. The walker must consume the existing definition rather than restate it.\n2. **Determinism.** The brief fixes discovery order in six places: outgoing before incoming, named fields in query order, wildcard fields lexical, array items preserved, incoming sources by ID, stable across filesystem iteration. This is where the tests belong, and `src/store/index.rs` iteration order is the thing to normalise rather than trust.\n3. **Backlinks are a whole-store scan per hop**, and the brief is explicit that the traversal budget does not bound them. So `backlinks` costs O(store) per expanded node. Fine at folk-database sizes; it also means the domains that lean on incoming edges are the ones where a reverse index would eventually pay. Not a 0.2 item.\n4. **`where` is a subsystem of its own** — five field operators and three boolean clauses — and is independent of traversal. Recommended sequence: walker and labels, then depth/budget/truncation and the envelope reasons, then predicates last.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "title": "Traversal's cost is the reference definition and determinism, not the filter",
     "type": "finding"
   },
   {
-    "id": "finding-smut-20",
+    "smut_id": "finding-smut-20",
     "about": [
       {
-        "id": "finding-smut-08"
+        "smut_id": "finding-smut-08"
       },
       {
-        "id": "prop-conventions-library"
+        "smut_id": "prop-conventions-library"
       },
       {
-        "id": "vocab"
+        "smut_id": "vocab"
       }
     ],
     "body": "A supplied array **replaces** the stored one; nothing is merged, and nothing says so at write time. The guide states it plainly — \"a supplied array or embedded object replaces what was there. Nothing is merged recursively\" — so this is documented behaviour, not a bug. It is still the second way this store can lose data without a word, and it caught me three times in one session.\n\nEvidence, and the reporter is the culprit. Amending three entities with `smut declare` and passing one new reference in `about`, I intended to add an edge. Each call replaced the list. `audit-handoff` lost its three original pointers, `finding-smut-17` lost the three findings it was about, and `q-channel-fix` lost `prop-bounded-payload` — the proposal the question was written for. Nothing failed; every call reported `updated`; the loss was found only by reading the entities back.\n\nThat is the same *class* as `finding-smut-08`, and the pattern is worth naming: both silent losses live in container semantics, not in scalars. A scalar patch either lands or is refused. A container patch lands while discarding its contents, and the echo confirms success.\n\nCures, cheapest first:\n\n- **A hygiene rule**, and it belongs in `prop-conventions-library`: when amending, re-send the whole reference list you mean to keep. Costs nothing, needs no software, and is exactly the kind of thing the conventions command exists to say.\n- **A merge operator** off to one side, in the same spirit as the `DROP` cure — `{\"$append\":[...]}` / `{\"$remove\":[...]}` rather than a change to what a plain array means. One caveat: it puts another operator in the value space, which is the thing `finding-smut-08` argued against.\n- **A count in the change record**: `{\"id\":\"...\",\"status\":\"updated\",\"previous\":{...}}` already carries the old value, so a reader *can* notice. Reporting which fields changed would make the loss visible in the response rather than only in the store.\n\nFor the audit: this is the strongest argument yet that `previous` earns its place, since it is the only thing that made the damage recoverable here.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "settled",
@@ -735,181 +735,181 @@
     "type": "finding"
   },
   {
-    "id": "obs-build-environment",
+    "smut_id": "obs-build-environment",
     "about": [
       {
-        "id": "finding-smut-19"
+        "smut_id": "finding-smut-19"
       }
     ],
     "body": "Checked, and perishable. smut's source is at `/home/david/dev/smut` — cargo 1.99, a git repository, roughly 15k lines of Rust across `src/` and `tests/`.\n\n- `cargo check --offline --lib --bins` is clean in seconds once `CARGO_TARGET_DIR` points outside the repo. A bare `cargo build` fails with `os error 30`, read-only filesystem, because `target/` is not writable.\n- `--all-targets` wants a network fetch: `bit-set 0.11.1`, a transitive dev-dependency of `proptest`, is not in the local registry. So the full suite cannot run offline as things stand.\n\nRecorded because the next reader hits both. None of it is a property of smut.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "Where smut's source is, and what builds here",
     "type": "observation"
   },
   {
-    "id": "obs-rehydration",
+    "smut_id": "obs-rehydration",
     "about": [
       {
-        "id": "claim-session-durability"
+        "smut_id": "claim-session-durability"
       },
       {
-        "id": "finding-smut-09"
+        "smut_id": "finding-smut-09"
       },
       {
-        "id": "finding-smut-16"
+        "smut_id": "finding-smut-16"
       }
     ],
     "body": "Second session, fresh agent, no transcript. The store was fully rehydrated in three reads: `get start-here`, one `query` with a wide `select`, one `render --show-fields`. 53 entities at the time, every reference present, nothing dangling. (Any count of \"now\" in this store is unrecoverable, which is `finding-smut-09` demonstrating itself.)\n\nWhat that establishes is the small payoff, and only that: content and shape survived the session boundary, and a reader who was not there could reconstruct the argument. That supports `claim-session-durability` at this size, with the mechanism being the reading order written into `start-here` rather than anything the tool did.\n\nWhat it did not give, and what the time actually went on: sequence, because nothing is timestamped (`finding-smut-09`); and the scope of a claim, which is how `finding-smut-16` came to be written and then retracted. Rehydration was cheap; judgement was not.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "Rehydration cost measured, second session: three reads, no transcript",
     "type": "observation"
   },
   {
-    "id": "opt-schema-advise",
+    "smut_id": "opt-schema-advise",
     "about": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "Types live in the store like anything else, so they are queryable with the same query language and need no new machinery. Agents read the schema before writing; nothing is refused.\n\nCost: drift is inspectable but silent, so the discipline still has to hold.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "title": "Option: schema as stored entities, consulted not enforced",
     "type": "option"
   },
   {
-    "id": "opt-schema-none",
+    "smut_id": "opt-schema-none",
     "about": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "Write cost near zero; nothing is ever refused. What that buys is visible in this store — I changed the model three times mid-session without touching earlier entities.\n\nWhat it costs is `finding-smut-06`: five overlapping edge labels, so impact queries cannot be written once.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "title": "Option: no schema, vocabulary by convention",
     "type": "option"
   },
   {
-    "id": "opt-schema-validate",
+    "smut_id": "opt-schema-validate",
     "about": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "Writes are refused when they contradict the current schema. Forces the three hard questions: retro-invalidation, traversal over invalid entities, and agent-legible version reasoning.\n\nCost: the largest of the three, and it converts every schema edit into a migration question.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "title": "Option: validating schema, versioned",
     "type": "option"
   },
   {
-    "id": "prop-audit-not-gate",
+    "smut_id": "prop-audit-not-gate",
     "about": [
       {
-        "id": "q-schema"
+        "smut_id": "q-schema"
       }
     ],
     "body": "Separate three layers and the tension dissolves.\n\n1. **Structure** — traversal stays schema-blind. An object with an id is already a reference, so follow and backlinks need no types at all.\n2. **Semantics** — schemas are entities, versioned like any other record.\n3. **Conformance** — validation is a query that emits violation entities, not a refusal at write time.\n\nConsequences: schema change never rewrites history, because history was never invalid, only non-conforming; an invalid entry is representable, which is what makes the version question answerable; and the agent reads violations as ordinary data, in the same shape as everything else.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "title": "Proposal: conformance as a query, not a gate",
     "type": "proposal"
   },
   {
-    "id": "prop-bounded-payload",
+    "smut_id": "prop-bounded-payload",
     "about": [
       {
-        "id": "finding-smut-14"
+        "smut_id": "finding-smut-14"
       }
     ],
     "body": "Three candidate fixes, and they are not exclusive:\n\n1. **Caller discipline** — chunked renders, index via `select:[\"title\"]`, detail on request. Cost: none, needs no software. Fails only if the caller is careless.\n2. **File handoff** — render to a path the operator tails. Cost: one redirect. Survives truncation because the artifact lives outside the tool-output stream.\n3. **Harness extension** — frame render output in the UI. Cost: real work, and it improves reading without fixing silent truncation, so it needs 1 or 2 underneath it.\n\nNo smut change is required for any of the three, which is itself evidence for the tool's design: the primitives (`select`, redirect) already cover it.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "title": "Bound the payload, not the channel",
     "type": "proposal"
   },
   {
-    "id": "prop-conventions-library",
+    "smut_id": "prop-conventions-library",
     "about": [
       {
-        "id": "finding-smut-17"
+        "smut_id": "finding-smut-17"
       },
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       },
       {
-        "id": "vocab"
+        "smut_id": "vocab"
       },
       {
-        "id": "opt-schema-advise"
+        "smut_id": "opt-schema-advise"
       }
     ],
     "body": "Operator's proposition: ship a small library of recommended conventions with smut, split into separately executable pieces — one for general hygiene, then a handful for specific domains (epistemic records, dependency resolution, social graph). Whether they ship with a formal schema is decided elsewhere.\n\n## A separate command, not a `learn` topic\n\n`learn` is descriptive and version-bound: it says what this release does, and it must be true. Conventions are advisory and domain-bound: they say what worked for someone. Merging them lends advice the authority of specification — the failure mode this store already produced, where a reader could not tell a claim about the tool from a claim about one store (`finding-smut-16`). Two commands, two epistemics:\n\n```\nsmut learn               how the tool works      descriptive, must be true\nsmut conventions [NAME]  how to use it well      advisory, may be wrong for you\n```\n\n`learn` should stay one document, because it is the version-matched contract and \"read the guide\" must not become ambiguous.\n\n## Print, never write\n\nNo store needed, exactly as with `learn`. Prose is the default; `--format json` emits one declaration the caller can pipe to `declare`:\n\n```\nsmut conventions hygiene --format json | smut declare -\n```\n\nReason: `declare` is the only thing that creates a store, and conventions installed without being asked for would be the tool writing data on its own behalf. `vocab` is the exemplar — a convention stored as data, consultable, enforced by nothing — and the pipe is the whole mechanism. It also makes the round trip testable, which `tests/roundtrip.rs` already exists to do.\n\n## Never checkable\n\nHard constraint: smut prints conventions and never validates a store against them. The moment a set is checkable it is a schema with a friendlier name, and `opt-schema-validate` returns through the back door. A consumer may audit (`prop-audit-not-gate`); the tool may not.\n\nSame rule for selection: **no heuristics choosing a set**, by the precedent the brief already sets for render formats. The caller names the set or gets none.\n\n## What general hygiene should contain\n\nEach rule below is earned by a cost observed in this store, not invented:\n\n1. Give every entity `type` and `title`. The discriminator is what makes `where` usable later.\n2. Give anything with a lifecycle a `status`, and write down the values in use.\n3. **One direction per relation, chosen by which direction you will ask.** `answers` points answer-to-question, so \"which questions have answers\" needed a full scan. State the direction in the convention.\n4. **Model containment explicitly** (`part-of`). Nothing infers it, and inventing it at entity 40 is what `finding-smut-15` records. Decide before writing, not after the mesh exists.\n5. Keep the label vocabulary to a handful, define each in one line, and normalise when adding one. Mutability makes retrofitting cheap; discovering the need late is what costs.\n6. **State whose claim a claim is.** A record read without its author's context gets misread, and prose ambiguity is not checkable by the reader.\n7. Render in bounded chunks. Render is a human channel; tool output is not one (`finding-smut-14`).\n\n## Which domains are worth a set\n\nDomains differ mostly in types and fields, and hygiene already covers structure and relations. So a domain earns a set only when its **edge vocabulary and direction rules** differ — not when its nouns do. On that test:\n\n- **Epistemic records** — best fit, and this store is one. Claims, questions, sources, refutations: heavily lateral, revised often. Forces direction discipline and gives `supersedes` a home.\n- **Social graph** — fits as a folk database of people and organisations; weak as a system of record. It carries an invariant smut cannot hold: if A knows B then B knows A. The convention picks one canonical direction and states that the inverse is derived, never written. The clearest illustration of a convention carrying discipline the store cannot.\n- **Dependency inventory, not dependency resolution.** Resolution is a DAG discipline with enforcement — doctrine's job. Recording what depends on what fits fine, and it is the case that actually exercises `depth` and `budget`.\n- Two candidates I would add: **source notes** (books, papers, quotes — the folk-database case) and **decision log** (decisions, options, `supersedes`), the latter because it is the smallest store in which traversal is worth having.\n\nShip three or four, not six. Each set is one screen, because it is printed to a terminal and read into an agent's context, and it is written for two readers at once: the human choosing, and the agent that will follow it.\n\n## Implementation shape\n\nEmbedded text, one file per set (`src/conventions/*.md`, the pattern `learn.rs` already uses), so adding a set is a file plus a match arm — content, not code. `smut conventions` with no argument lists the sets with a one-line description each; that listing is the discovery surface and stays a list. `learn` gains one pointer line.\n\n## Open\n\nPiping `--format json` into a store creates a copy that then diverges from the shipped set. Either a seed carries a version field and re-running is idempotent, or conventions are re-printed and never re-installed. Worth deciding before the first set ships, because the answer determines whether a store's `vocab` is owned by the store or by the binary.\n\n## Provenance and authority\n\nThe proposition is the operator's: a small library of recommended conventions, in separately executable pieces, a general-hygiene set and then domain sets. **The domain examples were offered tentatively, and the operator has since said they were not confident in them beyond epistemic records.** Social graph and dependency inventory are my inference from smut's shape and this store's evidence, not requirements — recorded so a later reader does not take an editorial guess for a brief.\n\nEpistemic records is the only one with evidence behind it, because this store is an instance.\n\n**Operator response, third pass.** Agreed with the three shape principles — a separate command with two epistemics, print and never write, and never checkable (including no heuristics choosing a set). Recorded as endorsement of the *shape*, not of the contents.\n\nNot included in that, and still mine: the criterion for when a domain earns a set, and the domain list itself (see *Provenance and authority* above, which was written before this reply). The hygiene set's seven rules are also mine, drafted from costs observed in this store, and none of them has been endorsed — one of them, the read-modify-write rule for amending reference lists, gained a tenth finding's worth of evidence after this record was written (`finding-smut-20`).",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "Ship conventions as a separate read-only command, not as part of learn",
     "type": "proposal"
   },
   {
-    "id": "prop-result-provenance",
+    "smut_id": "prop-result-provenance",
     "about": [
       {
-        "id": "criterion-scope-smut"
+        "smut_id": "criterion-scope-smut"
       },
       {
-        "id": "finding-smut-15"
+        "smut_id": "finding-smut-15"
       },
       {
-        "id": "finding-smut-18"
+        "smut_id": "finding-smut-18"
       }
     ],
     "body": "Operator principle, stated while reviewing the audit: an object should carry metadata that was known, or trivially knowable, in the query's execution context, rather than leaving each agent to reconstruct it. The operator's caveat: a graph is not necessarily a tree, so the sensible quantity is probably the *minimum* depth, or a set of them.\n\nThat principle sorts the candidates by what a client can recover once the query has exited:\n\n| what | who knows it | recoverable afterwards? | plausible form |\n|---|---|---|---|\n| minimum depth | the walk, at first discovery | only by re-running a shortest-path computation | scalar per object |\n| the edge set among discovered entities | nobody, until someone derives it | yes, expensively, once per client | edge list |\n| the frontier: discovered but never expanded | only the walker, and only while it runs | no | id list |\n\nThe third row is the argument. Minimum depth is a convenience. The edge set is a de-duplication of work that every client and every renderer would otherwise redo. The frontier is information that exists nowhere else, because it records what the walk *declined* to do — once the process exits it is gone. `depth` and `budget` both cut the walk, and today the only residue is `truncated: true`, which says something was cut and not where.\n\nConsequences for shape:\n\n- **Depth alone is insufficient, and edges are not optional.** This store is the counter-example. 28 of 44 entities once had no incoming reference, and the tree imposed on them was authored by judgement (`finding-smut-15`); a per-object depth would have made that tree look derived when it was not. Returning the induced subgraph — nodes plus the edges among them — lets a client that wants a tree project one, and a client that does not, not.\n- **Minimum depth is well defined and cheap, but needs its meaning stated.** With both directions enabled it is distance in the mixed graph, not a directed distance; dedup already fixes it as first discovery; and reporting it turns `depth` into an observable contract, which is testable rather than inferred.\n- **Mermaid already needs the edge set.** The brief has the 1.0 renderer draw references whose endpoints are both selected. If the envelope carries edges, that renderer projects the envelope instead of deriving the same structure a second time.\n\nOpen for the design pass: a per-object scalar plus a separate edge list; one `result` object holding nodes and edges; or both, with the scalar as sugar over the edge list. The third is redundant — keep whichever single derivation the renderers and clients can share.",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "title": "Results should carry what the walk knew: depth, edges, and the unexpanded frontier",
     "type": "proposal"
   },
   {
-    "id": "q-audit-cost",
+    "smut_id": "q-audit-cost",
     "about": [
       {
-        "id": "prop-audit-not-gate"
+        "smut_id": "prop-audit-not-gate"
       }
     ],
     "body": "It needs no new write semantics, which is why it is cheap. But it does assume an agent that actually runs the audit. Is that a step you trust, or does it need to ride on something the agent already does?",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "status": "open",
@@ -917,19 +917,19 @@
     "type": "question"
   },
   {
-    "id": "q-channel-fix",
+    "smut_id": "q-channel-fix",
     "about": [
       {
-        "id": "prop-bounded-payload"
+        "smut_id": "prop-bounded-payload"
       },
       {
-        "id": "prop-conventions-library"
+        "smut_id": "prop-conventions-library"
       }
     ],
     "body": "Chunking alone, chunking plus a followed file, or an extension you build later.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "open",
@@ -937,11 +937,11 @@
     "type": "question"
   },
   {
-    "id": "q-doctrine-payoff",
+    "smut_id": "q-doctrine-payoff",
     "body": "Which operations get cheaper, or become possible at all, only because the graph is typed — versus markdown + git + grep doing the same job?",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "status": "answered",
@@ -949,16 +949,16 @@
     "type": "question"
   },
   {
-    "id": "q-fix-order",
+    "smut_id": "q-fix-order",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "Three candidates, none expensive:\n\n- **Silent loss** — refuse the literal `DROP`, or move the sentinel out of the value space. Correctness, minutes.\n- **Time** — stamp `created` and `updated` on write. Unblocks chronology and makes `order` useful. Smallest change with the widest reach.\n- **Legibility** — id-named files, decoded references in `--show-fields`, fenced headings. Three cosmetic fixes that each repair an argument rather than a behaviour.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "open",
@@ -966,11 +966,11 @@
     "type": "question"
   },
   {
-    "id": "q-focus",
+    "smut_id": "q-focus",
     "body": "One sentence. No framing needed.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "answered",
@@ -978,11 +978,11 @@
     "type": "question"
   },
   {
-    "id": "q-impact-query",
+    "smut_id": "q-impact-query",
     "body": "Reachability over edges at some depth, stopping where? Does the answer need typed edges (verifies, specifies, depends-on) or is a field name enough?",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "status": "open",
@@ -990,11 +990,11 @@
     "type": "question"
   },
   {
-    "id": "q-mode",
+    "smut_id": "q-mode",
     "body": "Pick one, or say it is a mix, and name the parts.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "answered",
@@ -1002,16 +1002,16 @@
     "type": "question"
   },
   {
-    "id": "q-more-friction",
+    "smut_id": "q-more-friction",
     "about": [
       {
-        "id": "a-friction-survey"
+        "smut_id": "a-friction-survey"
       }
     ],
     "body": "The seven above are what one session of use exposes. Anything already on your list that I did not hit — or anything here you would reject?",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "open",
@@ -1019,16 +1019,16 @@
     "type": "question"
   },
   {
-    "id": "q-promotion",
+    "smut_id": "q-promotion",
     "about": [
       {
-        "id": "finding-smut-07"
+        "smut_id": "finding-smut-07"
       }
     ],
     "body": "If smut is exploratory and doctrine normative, does anything move between them — and does moving mean export, re-derivation from the store, or nothing at all?",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "status": "open",
@@ -1036,16 +1036,16 @@
     "type": "question"
   },
   {
-    "id": "q-schema",
+    "smut_id": "q-schema",
     "about": [
       {
-        "id": "theme-graphs"
+        "smut_id": "theme-graphs"
       }
     ],
     "body": "Is an untyped but easily mutable graph sufficiently useful, or should smut allow user (agent)-defined type schemas?\n\nAny schema that validates must also answer: what happens to entries already written when the schema changes, and how does traversal behave over entities that are invalid under the current schema. The alternative — versioning schemas — must keep version reasoning simple enough for an agent to follow. None of it is impossible; all of it raises complexity and development cost.",
     "part-of": [
       {
-        "id": "cluster-schema"
+        "smut_id": "cluster-schema"
       }
     ],
     "status": "answered",
@@ -1053,11 +1053,11 @@
     "type": "question"
   },
   {
-    "id": "q-smut-test",
+    "smut_id": "q-smut-test",
     "body": "Name the evidence that moves you from figuring out to a verdict.",
     "part-of": [
       {
-        "id": "cluster-friction"
+        "smut_id": "cluster-friction"
       }
     ],
     "status": "answered",
@@ -1065,11 +1065,11 @@
     "type": "question"
   },
   {
-    "id": "q-split",
+    "smut_id": "q-split",
     "body": "Prototypes interspersed with Slow Horses.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "open",
@@ -1077,11 +1077,11 @@
     "type": "question"
   },
   {
-    "id": "q-state",
+    "smut_id": "q-state",
     "body": "e.g. stuck, exploring broadly, converging on a choice, waiting on something external.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "answered",
@@ -1089,11 +1089,11 @@
     "type": "question"
   },
   {
-    "id": "q-variance-mechanism",
+    "smut_id": "q-variance-mechanism",
     "body": "Two candidates: a check that runs over the tree, or a discipline the agent follows while authoring. Which is it in doctrine — and what makes the loop close? Is a missing back-edge detectable, or does it rot silently?",
     "part-of": [
       {
-        "id": "cluster-thesis"
+        "smut_id": "cluster-thesis"
       }
     ],
     "status": "open",
@@ -1101,29 +1101,29 @@
     "type": "question"
   },
   {
-    "id": "session",
+    "smut_id": "session",
     "body": "Purpose: surface what is on your mind and turn it into records.\n\n**Outcome, second session.** Two sessions, one operator, one agent. What came out: a verdict that something useful exists, a corrected scope, one retracted finding, a consolidated entry point (`audit-handoff`), a proposal for how conventions ship, and one new design question about what a traversal result carries. The store closes here, with nine questions open and none of them blocking the audit.",
     "status": "settled",
     "title": "Interview: what is on your mind today",
     "type": "session"
   },
   {
-    "id": "start-here",
+    "smut_id": "start-here",
     "about": [
       {
-        "id": "session"
+        "smut_id": "session"
       },
       {
-        "id": "vocab"
+        "smut_id": "vocab"
       },
       {
-        "id": "audit-handoff"
+        "smut_id": "audit-handoff"
       }
     ],
     "body": "A single interview session between an operator and an agent, recorded as it happened. 53 entities, five clusters, twelve open questions. Read this entity, then the five clusters, then whatever the clusters point at.\n\n**Run every call from `/tmp/smut-interview`.** The store is `.smut/` beside the working directory and is never searched upward, so from anywhere else a call exits 1 having created nothing.\n\n**Read it with two calls.**\n\n1. `smut get start-here` — this.\n2. `smut query '{\"select\":[\"type\",\"status\",\"title\",\"part-of\",\"about\",\"answers\"],\"limit\":200}'` — the whole store flattened. 0.1 has no `follow`, `backlinks` or `where`, so a dump is not laziness, it is the only way in.\n\n**Shape.** `session` is the root. Five clusters hang off it by `part-of`: setup (how to read), mind (what the operator was thinking), thesis (the argument under test), schema (typed or untyped), friction (the tool on trial, the largest). Label conventions are in `vocab`; four labels are in force and three older ones were normalised away.\n\n**Where the weight is.** `a-doctrine-payoff` is the thesis. `finding-smut-08` through `finding-smut-14` are seven concrete frictions with costs and cures. `prop-audit-not-gate` dissolves the schema-versus-versioning tension and is the one proposal nobody has rejected yet.\n\n**Caveats, so you do not over-read the structure.**\n\n- No timestamps exist anywhere, so sequence is positional, not temporal. `finding-smut-09`.\n- Containment was invented late in the session (`finding-smut-15`). Before that the store was a mesh with one-way edges and 28 of 44 entities unreachable. If `part-of` looks tidy, that is hindsight, not a property of the tool.\n- Two cluster partitions were my judgement, not the operator's. `cluster-friction` in particular is a grab bag.\n\n**Open threads.** Twelve questions carry `status: open`. Live ones: `q-schema` (three options and one proposal beneath it), `q-promotion`, `q-channel-fix`, and `q-fix-order` — which cluster of friction to fix first. `q-mode`, `q-state` and `q-split` were posed at the opening and never answered; they are the cheapest place to continue the interview.\n---\n\n**Update, second session.** The first session's verdict has been given: there is something useful here (`a-verdict-focus`). The mode moved from understanding to deciding scope, so `q-mode`, `q-state` and `q-smut-test` are now answered and nine questions remain open.\n\n**Scope was corrected.** smut is a flexible standalone complement to doctrine, not a replacement for its mechanistic typed trace; see `criterion-scope-smut`. That retires `finding-smut-16` and demotes `prop-audit-not-gate` and `q-audit-cost`. Read the scope criterion before trusting anything here that sounds like \"smut should be more like doctrine\".\n\n**For the design work, start at `audit-handoff`** — an editorial pass over this store: what to settle before writing 0.2 code, what is cheap and independent, what not to build, and which open questions are not worth answering.\n\n**The one new design question** is `prop-result-provenance`: what a traversal result should carry beyond the objects. Everything else relevant to 0.2 was already decided in the implementation brief.\n\nCounts above are from the first session and are left as written: 53 entities, twelve open questions, 28 of 44 unreferenced. The store now holds more.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "status": "current",
@@ -1131,11 +1131,11 @@
     "type": "index"
   },
   {
-    "id": "theme-graphs",
+    "smut_id": "theme-graphs",
     "body": "Most of my work revolves around how graphs, ontologies and formal structures can improve agentic engineering.",
     "part-of": [
       {
-        "id": "cluster-mind"
+        "smut_id": "cluster-mind"
       }
     ],
     "status": "active",
@@ -1143,19 +1143,19 @@
     "type": "theme"
   },
   {
-    "id": "vocab",
+    "smut_id": "vocab",
     "about": [
       {
-        "id": "opt-schema-advise"
+        "smut_id": "opt-schema-advise"
       },
       {
-        "id": "finding-smut-06"
+        "smut_id": "finding-smut-06"
       }
     ],
     "body": "Recorded after six overlapping labels had already accumulated, then normalised. This is `opt-schema-advise` applied by hand: a schema stored as an ordinary entity, consulted before writing, enforced by nothing.\n\nEdges in force, four of them:\n\n- `part-of` — containment. Entity belongs to this cluster. Gives the tree.\n- `about` — the entity addresses this subject. The default for anything relating to a theme, finding or question.\n- `answers` — an answer responds to this question. Direction: answer to question. Only edge pointing upward against `part-of`.\n- `projects` — implementations an entity concerns.\n\nRetired: `theme`, `subject`, `links`. All three were normalised to `about` before this record was handed on, so a traversal of `about` misses nothing that was written before the vocabulary existed.\n\n`projects` is defined and unused: no entity in this store states one, so a traversal of `projects` returns nothing. Kept because the label is coherent and would otherwise be re-invented; noted because a label that looks live and is not costs a reader a wasted traversal.\n\nStatus values in use: open, answered, settled, recorded, active, current, superseded. Types in use: index, session, cluster, convention, question, answer, claim, finding, observation, model, option, proposal, project, theme, criterion.\n\n**Amendment, second session.** `superseded` was added to the status list and used to retire `finding-smut-16` without deleting it: a record that was wrong is more useful with its error and its retraction intact than with a gap where it stood. Adding the value here, rather than writing it and leaving this list short, is rule five of `prop-conventions-library` applied to the store that produced it.",
     "part-of": [
       {
-        "id": "cluster-setup"
+        "smut_id": "cluster-setup"
       }
     ],
     "title": "vocab: the edge labels in force",

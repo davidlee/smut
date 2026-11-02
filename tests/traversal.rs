@@ -29,7 +29,9 @@ fn store(entities: &[Value]) -> Entities {
     entities
         .iter()
         .map(|entity| {
-            let id = entity["id"].as_str().expect("every fixture names its id");
+            let id = entity["smut_id"]
+                .as_str()
+                .expect("every fixture names its id");
             (Id::new(id), entity.clone())
         })
         .collect()
@@ -59,9 +61,9 @@ fn assert_frontier(traversal: &Value, expected: Value) {
 /// of the query order the named-field tests ask for.
 fn hub() -> Entities {
     store(&[
-        json!({"id": "hub", "alpha": {"id": "n-a"}, "zeta": {"id": "n-z"}}),
-        json!({"id": "n-a"}),
-        json!({"id": "n-z"}),
+        json!({"smut_id": "hub", "alpha": {"smut_id": "n-a"}, "zeta": {"smut_id": "n-z"}}),
+        json!({"smut_id": "n-a"}),
+        json!({"smut_id": "n-z"}),
     ])
 }
 
@@ -96,10 +98,10 @@ fn array_references_keep_their_position() {
     // §7.4 "Array items preserve order": `scan_refs` walks arrays positionally,
     // so the discoveries follow the array, not the ids' lexical order.
     let entities = store(&[
-        json!({"id": "array-root", "list": [{"id": "c"}, {"id": "a"}, {"id": "b"}]}),
-        json!({"id": "a"}),
-        json!({"id": "b"}),
-        json!({"id": "c"}),
+        json!({"smut_id": "array-root", "list": [{"smut_id": "c"}, {"smut_id": "a"}, {"smut_id": "b"}]}),
+        json!({"smut_id": "a"}),
+        json!({"smut_id": "b"}),
+        json!({"smut_id": "c"}),
     ]);
 
     let traversal = walked(
@@ -115,10 +117,10 @@ fn outgoing_discoveries_precede_incoming_ones() {
     // §7.4 "Outgoing before incoming": `expand_outgoing` runs before
     // `expand_incoming`, and the queue records discovery, not interleaving.
     let entities = store(&[
-        json!({"id": "r", "down": {"id": "child"}}),
-        json!({"id": "child"}),
-        json!({"id": "x1", "up": {"id": "r"}}),
-        json!({"id": "x2", "up": {"id": "r"}}),
+        json!({"smut_id": "r", "down": {"smut_id": "child"}}),
+        json!({"smut_id": "child"}),
+        json!({"smut_id": "x1", "up": {"smut_id": "r"}}),
+        json!({"smut_id": "x2", "up": {"smut_id": "r"}}),
     ]);
 
     let traversal = walked(
@@ -134,9 +136,9 @@ fn incoming_sources_come_in_id_order() {
     // §7.4 "Incoming sources in ID order": the store is scanned in `Entities`
     // order, which is ID order — not the order the sources were declared in.
     let entities = store(&[
-        json!({"id": "src-b", "up": {"id": "r"}}),
-        json!({"id": "src-a", "up": {"id": "r"}}),
-        json!({"id": "r"}),
+        json!({"smut_id": "src-b", "up": {"smut_id": "r"}}),
+        json!({"smut_id": "src-a", "up": {"smut_id": "r"}}),
+        json!({"smut_id": "r"}),
     ]);
 
     let traversal = walked(
@@ -152,8 +154,8 @@ fn a_repeated_label_collapses_without_reordering() {
     // §5 "duplicates behave as a set for edge selection but do not reorder the
     // first occurrence": one discovery, one edge, no second visit.
     let entities = store(&[
-        json!({"id": "q-root", "q": {"id": "t"}}),
-        json!({"id": "t"}),
+        json!({"smut_id": "q-root", "q": {"smut_id": "t"}}),
+        json!({"smut_id": "t"}),
     ]);
 
     let traversal = walked(
@@ -294,7 +296,7 @@ fn declare_four(scratch: &Scratch) {
         scratch,
         &[
             "declare",
-            r#"[{"id":"alpha","title":"Alpha","next":{"id":"gamma"}},{"id":"beta","title":"Beta","next":[{"id":"delta"}]}]"#,
+            r#"[{"smut_id":"alpha","title":"Alpha","next":{"smut_id":"gamma"}},{"smut_id":"beta","title":"Beta","next":[{"smut_id":"delta"}]}]"#,
         ],
     );
     assert_eq!(first.code, 0, "{}", first.stderr);
@@ -303,7 +305,7 @@ fn declare_four(scratch: &Scratch) {
         scratch,
         &[
             "declare",
-            r#"[{"id":"gamma","title":"Gamma"},{"id":"delta","title":"Delta"}]"#,
+            r#"[{"smut_id":"gamma","title":"Gamma"},{"smut_id":"delta","title":"Delta"}]"#,
         ],
     );
     assert_eq!(second.code, 0, "{}", second.stderr);
@@ -364,7 +366,7 @@ fn shuffle_store(scratch: &Scratch) {
     fs::write(
         &index_path,
         format!(
-            "{{\n  \"format_version\": 1,\n  \"objects\": {{\n{}\n  }}\n}}\n",
+            "{{\n  \"format_version\": 2,\n  \"objects\": {{\n{}\n  }}\n}}\n",
             entries.join(",\n")
         ),
     )
@@ -502,10 +504,10 @@ fn follow_empty_still_honours_backlinks_and_the_depth_bound() {
     // both the returned set and the frontier, which the other two `follow: []`
     // tests cannot catch because neither supplies `backlinks`.
     let entities = store(&[
-        json!({"id": "hub", "alpha": {"id": "n-a"}}),
-        json!({"id": "n-a"}),
-        json!({"id": "n-z"}),
-        json!({"id": "x", "up": {"id": "hub"}}),
+        json!({"smut_id": "hub", "alpha": {"smut_id": "n-a"}}),
+        json!({"smut_id": "n-a"}),
+        json!({"smut_id": "n-z"}),
+        json!({"smut_id": "x", "up": {"smut_id": "hub"}}),
     ]);
 
     let traversal = walked(
@@ -571,7 +573,7 @@ fn get_and_non_traversing_specs_keep_the_five_0_1_keys() {
     for input in [
         json!({}),
         json!({"from": "hub"}),
-        json!({"from": "hub", "select": ["id"], "order": [{"field": "id"}], "limit": 2}),
+        json!({"from": "hub", "select": ["smut_id"], "order": [{"field": "smut_id"}], "limit": 2}),
         json!({"from": "hub", "depth": 2}),
         // DEC-019 re-cut: `budget` without `follow` or `backlinks` is accepted
         // and inert (§5), so the key set the compatibility pin compares is
@@ -637,27 +639,27 @@ fn depth_one_puts_the_depth_one_discoveries_in_the_frontier() {
 fn clusters() -> Entities {
     const NAMES: [&str; 5] = ["friction", "mind", "schema", "setup", "thesis"];
 
-    let mut entities = vec![json!({"id": "session", "type": "session"})];
+    let mut entities = vec![json!({"smut_id": "session", "type": "session"})];
 
     for name in NAMES {
         entities.push(json!({
-            "id": format!("cluster-{name}"),
+            "smut_id": format!("cluster-{name}"),
             "type": "cluster",
-            "part-of": [{"id": "session"}],
+            "part-of": [{"smut_id": "session"}],
         }));
 
         for hop in 1..=2 {
             let question = format!("q-{name}-{hop}");
 
             entities.push(json!({
-                "id": question,
+                "smut_id": question,
                 "type": "question",
-                "part-of": [{"id": format!("cluster-{name}")}],
+                "part-of": [{"smut_id": format!("cluster-{name}")}],
             }));
             entities.push(json!({
-                "id": format!("a-{name}-{hop}"),
+                "smut_id": format!("a-{name}-{hop}"),
                 "type": "answer",
-                "answered-by": [{"id": question}],
+                "answered-by": [{"smut_id": question}],
             }));
         }
     }
@@ -820,10 +822,10 @@ fn depths_are_result_scoped_and_the_frontier_is_not_cut_by_the_limit() {
     // §8.2 / DEC-013: `depths` names returned ids only, while the frontier is
     // walk-scoped and therefore keeps every discovery the limit dropped.
     let entities = store(&[
-        json!({"id": "root", "out": [{"id": "d1"}, {"id": "d2"}, {"id": "d3"}]}),
-        json!({"id": "d1"}),
-        json!({"id": "d2"}),
-        json!({"id": "d3"}),
+        json!({"smut_id": "root", "out": [{"smut_id": "d1"}, {"smut_id": "d2"}, {"smut_id": "d3"}]}),
+        json!({"smut_id": "d1"}),
+        json!({"smut_id": "d2"}),
+        json!({"smut_id": "d3"}),
     ]);
 
     let document = envelope_of(
@@ -833,7 +835,7 @@ fn depths_are_result_scoped_and_the_frontier_is_not_cut_by_the_limit() {
 
     assert_eq!(
         document["objects"],
-        json!([{"id": "root", "out": [{"id": "d1"}, {"id": "d2"}, {"id": "d3"}]}]),
+        json!([{"smut_id": "root", "out": [{"smut_id": "d1"}, {"smut_id": "d2"}, {"smut_id": "d3"}]}]),
         "the limit returned the root alone: {document}"
     );
     assert_eq!(
@@ -866,8 +868,8 @@ fn dangling_dedupes_by_triple_in_encounter_order() {
     // §7.2 "Deduped by `(source, field, target)`" and §8.2 "in encounter order":
     // the third occurrence of `gone-a` adds nothing and reorders nothing.
     let entities = store(&[json!({
-        "id": "root",
-        "refs": [{"id": "gone-a"}, {"id": "gone-b"}, {"id": "gone-a"}]
+        "smut_id": "root",
+        "refs": [{"smut_id": "gone-a"}, {"smut_id": "gone-b"}, {"smut_id": "gone-a"}]
     })]);
 
     let document = envelope_of(
@@ -890,8 +892,8 @@ fn a_reference_in_an_unrequested_field_is_not_dangling() {
     // §7.2 "a reference in an unrequested field is not reported": only `down` is
     // expanded, so `other`'s absent target is silent.
     let entities = store(&[
-        json!({"id": "root", "down": {"id": "kept"}, "other": {"id": "gone"}}),
-        json!({"id": "kept"}),
+        json!({"smut_id": "root", "down": {"smut_id": "kept"}, "other": {"smut_id": "gone"}}),
+        json!({"smut_id": "kept"}),
     ]);
 
     let document = envelope_of(
@@ -911,8 +913,8 @@ fn dangling_is_walk_scoped_and_not_cut_to_returned_sources() {
     // §8.2 "It is not cut to returned sources": `mid` is discovered and expanded
     // but omitted by `limit`, and its dangling reference is still reported.
     let entities = store(&[
-        json!({"id": "r", "down": {"id": "mid"}}),
-        json!({"id": "mid", "down": {"id": "gone"}}),
+        json!({"smut_id": "r", "down": {"smut_id": "mid"}}),
+        json!({"smut_id": "mid", "down": {"smut_id": "gone"}}),
     ]);
 
     let document = envelope_of(
@@ -922,7 +924,7 @@ fn dangling_is_walk_scoped_and_not_cut_to_returned_sources() {
 
     assert_eq!(
         document["objects"],
-        json!([{"id": "r", "down": {"id": "mid"}}]),
+        json!([{"smut_id": "r", "down": {"smut_id": "mid"}}]),
         "the limit returned the root alone: {document}"
     );
     assert_eq!(
@@ -936,7 +938,7 @@ fn dangling_is_walk_scoped_and_not_cut_to_returned_sources() {
 fn a_dangling_target_that_is_also_a_missing_root_appears_in_both_lists() {
     // §10.3 "dangling target also an explicit missing root": `missing` records
     // the request, `dangling` records the walk, and neither suppresses the other.
-    let entities = store(&[json!({"id": "hub", "alpha": {"id": "gone"}})]);
+    let entities = store(&[json!({"smut_id": "hub", "alpha": {"smut_id": "gone"}})]);
 
     let document = envelope_of(
         &entities,
@@ -960,9 +962,9 @@ fn an_edge_in_a_field_the_traversal_did_not_name_is_induced() {
     // §10.3 "an edge in a field not named in `follow`/`backlinks`": edges come
     // from full entities, so `side` counts although only `down` was followed.
     let entities = store(&[
-        json!({"id": "a", "down": {"id": "c"}, "side": {"id": "b"}}),
-        json!({"id": "b"}),
-        json!({"id": "c"}),
+        json!({"smut_id": "a", "down": {"smut_id": "c"}, "side": {"smut_id": "b"}}),
+        json!({"smut_id": "b"}),
+        json!({"smut_id": "c"}),
     ]);
 
     let traversal = walked(
@@ -986,8 +988,8 @@ fn two_returned_nodes_neither_expanded_still_contribute_their_edge() {
     // expands nothing, yet the edge is induced because both endpoints are
     // returned.
     let entities = store(&[
-        json!({"id": "a", "points_at": {"id": "b"}}),
-        json!({"id": "b"}),
+        json!({"smut_id": "a", "points_at": {"smut_id": "b"}}),
+        json!({"smut_id": "b"}),
     ]);
 
     let traversal = walked(
@@ -1012,17 +1014,20 @@ fn two_returned_nodes_neither_expanded_still_contribute_their_edge() {
 fn a_select_hiding_the_reference_field_keeps_edges_and_depths() {
     // §10.3 "`select` hides the reference field": edges and depths are read from
     // full entities, so the projection cannot erase connectivity.
-    let entities = store(&[json!({"id": "a", "next": {"id": "b"}}), json!({"id": "b"})]);
+    let entities = store(&[
+        json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+        json!({"smut_id": "b"}),
+    ]);
 
     let document = envelope_of(
         &entities,
-        json!({"from": "a", "follow": ["next"], "depth": 1, "select": ["id"]}),
+        json!({"from": "a", "follow": ["next"], "depth": 1, "select": ["smut_id"]}),
     );
     let traversal = traversal_member(&document);
 
     assert_eq!(
         document["objects"],
-        json!([{"id": "a"}, {"id": "b"}]),
+        json!([{"smut_id": "a"}, {"smut_id": "b"}]),
         "the projection hides `next`: {document}"
     );
     assert_eq!(
@@ -1042,8 +1047,8 @@ fn an_entity_reachable_twice_through_one_field_contributes_one_edge() {
     // §8.2 "dedupe by `(source, field, target)`": a repeated array entry is one
     // discovery and one edge.
     let entities = store(&[
-        json!({"id": "root", "list": [{"id": "c"}, {"id": "c"}]}),
-        json!({"id": "c"}),
+        json!({"smut_id": "root", "list": [{"smut_id": "c"}, {"smut_id": "c"}]}),
+        json!({"smut_id": "c"}),
     ]);
 
     let traversal = walked(
@@ -1068,8 +1073,8 @@ fn a_cycle_and_a_self_reference_record_their_edge_once() {
     // still dedupe by `(source, field, target)` when a triple points at itself
     // or back where it came from.
     let cycle = store(&[
-        json!({"id": "a", "next": {"id": "b"}}),
-        json!({"id": "b", "next": {"id": "a"}}),
+        json!({"smut_id": "a", "next": {"smut_id": "b"}}),
+        json!({"smut_id": "b", "next": {"smut_id": "a"}}),
     ]);
 
     let document = envelope_of(&cycle, json!({"from": "a", "follow": ["next"], "depth": 2}));
@@ -1095,7 +1100,7 @@ fn a_cycle_and_a_self_reference_record_their_edge_once() {
     );
     assert_frontier(&traversal, json!([]));
 
-    let itself = store(&[json!({"id": "s", "self": {"id": "s"}})]);
+    let itself = store(&[json!({"smut_id": "s", "self": {"smut_id": "s"}})]);
     let document = envelope_of(
         &itself,
         json!({"from": "s", "follow": ["self"], "depth": 1}),
@@ -1122,10 +1127,10 @@ fn edges_follow_result_order_not_discovery_order() {
     // never a second account of the walk. A re-ordered or returned-but-unexpanded
     // node must not reorder it.
     let entities = store(&[
-        json!({"id": "root", "kids": [{"id": "a"}, {"id": "b"}], "title": "Root"}),
-        json!({"id": "a", "link": {"id": "shared"}, "title": "Zulu"}),
-        json!({"id": "b", "link": {"id": "shared"}, "title": "Able"}),
-        json!({"id": "shared", "title": "Middle"}),
+        json!({"smut_id": "root", "kids": [{"smut_id": "a"}, {"smut_id": "b"}], "title": "Root"}),
+        json!({"smut_id": "a", "link": {"smut_id": "shared"}, "title": "Zulu"}),
+        json!({"smut_id": "b", "link": {"smut_id": "shared"}, "title": "Able"}),
+        json!({"smut_id": "shared", "title": "Middle"}),
     ]);
 
     let traversal = walked(
@@ -1161,9 +1166,9 @@ fn the_limit_cuts_depths_and_edges_but_not_the_frontier() {
     // §10.3 "`limit` omits a discovered node": its depth and its edges are cut
     // because only returned objects carry them, while the frontier still names it.
     let entities = store(&[
-        json!({"id": "root", "out": {"id": "d1"}}),
-        json!({"id": "d1", "next": {"id": "d2"}}),
-        json!({"id": "d2"}),
+        json!({"smut_id": "root", "out": {"smut_id": "d1"}}),
+        json!({"smut_id": "d1", "next": {"smut_id": "d2"}}),
+        json!({"smut_id": "d2"}),
     ]);
 
     let document = envelope_of(
@@ -1174,7 +1179,7 @@ fn the_limit_cuts_depths_and_edges_but_not_the_frontier() {
 
     assert_eq!(
         document["objects"],
-        json!([{"id": "root", "out": {"id": "d1"}}]),
+        json!([{"smut_id": "root", "out": {"smut_id": "d1"}}]),
         "the limit returned the root alone: {document}"
     );
     assert_eq!(
@@ -1197,11 +1202,11 @@ fn the_limit_cuts_depths_and_edges_but_not_the_frontier() {
 /// at the boundary.
 fn budget_fan() -> Entities {
     store(&[
-        json!({"id": "root", "kids": [{"id": "left"}, {"id": "right"}]}),
-        json!({"id": "left", "kids": [{"id": "left-leaf"}]}),
-        json!({"id": "right", "kids": [{"id": "right-leaf"}]}),
-        json!({"id": "left-leaf"}),
-        json!({"id": "right-leaf"}),
+        json!({"smut_id": "root", "kids": [{"smut_id": "left"}, {"smut_id": "right"}]}),
+        json!({"smut_id": "left", "kids": [{"smut_id": "left-leaf"}]}),
+        json!({"smut_id": "right", "kids": [{"smut_id": "right-leaf"}]}),
+        json!({"smut_id": "left-leaf"}),
+        json!({"smut_id": "right-leaf"}),
     ])
 }
 
@@ -1311,10 +1316,10 @@ fn a_budget_of_one_expands_the_first_root_and_leaves_the_second_in_the_frontier(
     // says so. Both roots are returned: a root is a selection, not a discovery,
     // so the budget cannot remove one from the result.
     let entities = store(&[
-        json!({"id": "r1", "out": {"id": "c1"}}),
-        json!({"id": "c1"}),
-        json!({"id": "r2", "out": {"id": "c2"}}),
-        json!({"id": "c2"}),
+        json!({"smut_id": "r1", "out": {"smut_id": "c1"}}),
+        json!({"smut_id": "c1"}),
+        json!({"smut_id": "r2", "out": {"smut_id": "c2"}}),
+        json!({"smut_id": "c2"}),
     ]);
 
     let document = envelope_of(
@@ -1352,10 +1357,10 @@ fn a_budget_that_leaves_only_depth_boundary_nodes_is_complete() {
     // left": complete, because the budget bounds expansions and never
     // discoveries — three discoveries at `depth: 1` cost one expansion.
     let entities = store(&[
-        json!({"id": "root", "kids": [{"id": "a"}, {"id": "b"}, {"id": "c"}]}),
-        json!({"id": "a"}),
-        json!({"id": "b"}),
-        json!({"id": "c"}),
+        json!({"smut_id": "root", "kids": [{"smut_id": "a"}, {"smut_id": "b"}, {"smut_id": "c"}]}),
+        json!({"smut_id": "a"}),
+        json!({"smut_id": "b"}),
+        json!({"smut_id": "c"}),
     ]);
 
     let document = envelope_of(
