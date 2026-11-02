@@ -763,7 +763,7 @@ mod tests {
         assert_eq!(
             inventory.len(),
             13,
-            "the count is pinned so a variant added without its row cannot pass: one row per \
+            "the count is pinned so a row added without moving it cannot pass: one row per \
              variant this list carries, which is NoFreshBasename short of the enum"
         );
     }

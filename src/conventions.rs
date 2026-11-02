@@ -328,11 +328,17 @@ fn frontmatter(lines: &[&str]) -> Result<Declared, Cause> {
     Ok(declared)
 }
 
-/// The one sentence a frontmatter line that is not `key: value` carries.
+/// The one sentence a frontmatter line that is not a flat `key: value` line
+/// carries: a line with no colon and a line whose key is empty or holds a space
+/// both reach it, so the sentence states the shape the line needs rather than
+/// claiming there is no colon, which the key cases would make false.
 fn not_key_value(number: usize) -> Cause {
     Cause {
         line: Some(number),
-        reason: format!("frontmatter line {number} is not `key: value`"),
+        reason: format!(
+            "frontmatter line {number} is not a flat `key: value` line: the key is one word \
+             with no space in it, and a `:` follows it"
+        ),
     }
 }
 
@@ -1155,6 +1161,17 @@ mod tests {
         assert!(
             !cause.reason.is_empty(),
             "a malformed fence is a reasoned failure, not a silent one"
+        );
+        assert_eq!(
+            cause.line,
+            Some(1),
+            "the fence that never closed is named by the line it opened on: {}",
+            cause.reason
+        );
+        assert!(
+            cause.reason.contains("line 1"),
+            "the sentence names the same line the cause carries: {}",
+            cause.reason
         );
     }
 

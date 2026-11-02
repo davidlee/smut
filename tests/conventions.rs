@@ -232,15 +232,9 @@ fn a_named_set_prints_the_body_verbatim() {
 
     assert_eq!(printed.code, 0, "{}", printed.stderr);
     assert_eq!(printed.stderr, "");
-    // The body and the one newline the shell writes: a reader that printed the
-    // whole file reddens here.
-    assert_eq!(
-        printed.stdout,
-        format!("{}\n", body()),
-        "the prose is the file's body, plus the one newline the binary writes"
-    );
     // The frontmatter is metadata, and none of it is printed: a reader that
-    // reproduced the fence reddens on all three.
+    // reproduced the fence reddens here, before the exact equality at the end of
+    // the test can stand in for these three.
     assert!(
         !printed.stdout.contains("summary:"),
         "the frontmatter's summary is not printed: {:?}",
@@ -269,6 +263,17 @@ fn a_named_set_prints_the_body_verbatim() {
     assert!(
         printed.stdout.contains(id),
         "the printed set names the id the seed emits ({id})"
+    );
+
+    // The body and the one newline the shell writes: a reader that printed the
+    // whole file reddens here. It is asserted last on purpose — an exact
+    // equality above the four weaker assertions would make each of them
+    // unfalsifiable, since `body()` derives from the same bytes this equality
+    // compares the output to.
+    assert_eq!(
+        printed.stdout,
+        format!("{}\n", body()),
+        "the prose is the file's body, plus the one newline the binary writes"
     );
 }
 
