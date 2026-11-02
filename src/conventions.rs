@@ -22,6 +22,7 @@
 //! because the reader who meets the upsert is the one who already edited it
 //! (§9.3).
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -374,6 +375,176 @@ fn binary_layer() -> Vec<Entry> {
         .collect()
 }
 
+/// Read one kind's sets from every layer, nearest layer first.
+///
+/// This is the only place in this module that reads a filesystem: [`parse`] is
+/// pure, and the binary layer reads the bytes the build embedded. `<kind>` is
+/// joined exactly once onto each root, which is why a root carries no kind of
+/// its own and no caller can join it twice — a caller who handed in
+/// `<root>/conventions` as a root would make the layer `conventions/conventions`.
+///
+/// The layers concatenate in precedence order: the project layer, then the user
+/// layer when the process has one, then the binary layer, which always exists.
+/// Each layer is sorted by decoded name before it concatenates, and within a
+/// layer an undecodable name sorts last. De-duplication is still not this
+/// function's: a name two layers hold is [`set_in_force`]'s question. An absent
+/// layer contributes no entries and is not a failure.
+///
+/// The answer is a `Result` because reading a layer is a filesystem step, and a
+/// later phase reports a layer it cannot read. This phase makes "absent" and
+/// "unreadable" the same thing, so nothing here errs yet.
+///
+/// Nothing in it is specific to the `conventions` kind: the kind is a parameter,
+/// so the same loader reads every kind from every layer.
+pub fn load(roots: &Roots, kind: &str) -> Result<Vec<Entry>, Error> {
+    let mut entries = read_layer(Layer::Project, roots.project.join(kind));
+    sort_layer(&mut entries);
+
+    if let Some(user) = &roots.user {
+        let mut user = read_layer(Layer::User, user.join(kind));
+        sort_layer(&mut user);
+        entries.extend(user);
+    }
+
+    let mut binary = binary_layer();
+    sort_layer(&mut binary);
+    entries.extend(binary);
+
+    Ok(entries)
+}
+
+/// The entry a caller who names `name` gets: the first entry carrying that
+/// name, in [`load`]'s order.
+///
+/// This is the only place precedence appears, and it is the order alone: the
+/// entries arrive project layer first, so the first match is the nearest set.
+/// Validity is never a tie-breaker — a nearer set that failed to load still wins
+/// its name, and the caller reads the cause rather than a farther set's prose.
+///
+/// The lifetime cannot elide, because there are two input lifetimes and no
+/// `self`: `entries`' lifetime is the output's.
+pub fn set_in_force<'a>(entries: &'a [Entry], name: &str) -> Option<&'a Entry> {
+    entries
+        .iter()
+        .find(|entry| entry.name.as_deref() == Some(name))
+}
+
+/// Read one layer's `<root>/<kind>` directory into entries, in the order the
+/// directory lists them: sorting is [`load`]'s step, and it sorts each layer
+/// before the layers concatenate.
+///
+/// A candidate is a regular file, with the `.md` extension, whose name has no
+/// leading dot — and candidacy inspects the file through a symlink rather than
+/// the link itself, so a layer may point at a set that lives elsewhere and the
+/// entry keeps the layer's own spelling of the path. A directory, any other
+/// extension and a dotfile are not entries at all: they are not rows, and they
+/// are not failed rows either.
+fn read_layer(layer: Layer, directory: PathBuf) -> Vec<Entry> {
+    // An unreadable layer directory is the same thing as an absent one this
+    // phase; a later phase separates them into a failure that names the layer.
+    let Ok(reading) = std::fs::read_dir(&directory) else {
+        return Vec::new();
+    };
+
+    let mut entries = Vec::new();
+
+    for entry in reading.flatten() {
+        let path = entry.path();
+
+        // Candidacy is decided on the encoded bytes, because the name may not
+        // decode at all: `.` is ASCII, so its encoded byte is its own, and no
+        // lossy `String` is ever built from a filename here.
+        let file_name = entry.file_name();
+        if file_name.as_encoded_bytes().first() == Some(&b'.') {
+            continue;
+        }
+
+        if path.extension() != Some(std::ffi::OsStr::new("md")) {
+            continue;
+        }
+
+        // Followed, deliberately unlike `project_root`'s `symlink_metadata`: a
+        // symlinked `.md` is a candidate, and its bytes are read through the link.
+        let Ok(metadata) = std::fs::metadata(&path) else {
+            continue;
+        };
+        if !metadata.is_file() {
+            continue;
+        }
+
+        let origin = Origin {
+            layer,
+            path: path.clone(),
+        };
+
+        // A filename that is not UTF-8 text has no name to list the entry under.
+        // The row is decided here, before the read, so valid contents cannot
+        // rescue it.
+        let Some(name) = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(str::to_owned)
+        else {
+            entries.push(Entry {
+                name: None,
+                origin,
+                outcome: Outcome::Failed(Cause {
+                    line: None,
+                    reason: "the filename is not UTF-8 text".to_owned(),
+                }),
+            });
+
+            continue;
+        };
+
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let Ok(text) = String::from_utf8(bytes) else {
+            continue;
+        };
+
+        let outcome = parse(&text, origin.clone());
+
+        // A loaded set is named by the set itself, so the file stays the
+        // authority; a failed file is still listed under its own stem.
+        let name = match &outcome {
+            Outcome::Loaded(set) => Some(set.name.clone()),
+            Outcome::Failed(_) => Some(name),
+        };
+
+        entries.push(Entry {
+            name,
+            origin,
+            outcome,
+        });
+    }
+
+    entries
+}
+
+/// Order one layer's entries by decoded name, undecodable names last.
+///
+/// The listing's order is the loader's, never `read_dir`'s, because a directory
+/// lists in whatever order it likes and a listing a caller cannot predict is one
+/// that cannot be diffed. `None` sorts last, spelled out rather than inherited:
+/// `Option`'s own `Ord` puts `None` first. Two undecodable names in one layer
+/// break their tie on the raw filename, which is the only total key available
+/// there — the decoded name orders the entries that have one, and a tie nobody
+/// specifies would otherwise be `read_dir`'s order again.
+fn sort_layer(entries: &mut [Entry]) {
+    entries.sort_by(|left, right| match (&left.name, &right.name) {
+        (Some(left), Some(right)) => left.cmp(right),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => left
+            .origin
+            .path
+            .file_name()
+            .cmp(&right.origin.path.file_name()),
+    });
+}
+
 /// The listing of any entries: one line per entry, two columns two spaces apart
 /// — the name, then the set's summary, a dash when it declares none, or the cause
 /// it did not load.
@@ -706,6 +877,32 @@ mod tests {
         fn layer(&self, repository: &Path) -> PathBuf {
             let path = repository.join(".config").join("smut").join("conventions");
             fs::create_dir_all(&path).expect("a layer directory");
+
+            path
+        }
+
+        /// The `<root>/<kind>` directory a layer's sets sit in, created empty.
+        fn kind_dir(&self, root: &Path, kind: &str) -> PathBuf {
+            let path = root.join(kind);
+            fs::create_dir_all(&path).expect("a kind directory");
+
+            path
+        }
+
+        /// The user layer root a config home names, created empty.
+        fn config_home(&self, name: &str) -> PathBuf {
+            let home = self.directory(name);
+            let root = user_root(Some(&home), None).expect("a config home names a user root");
+            fs::create_dir_all(&root).expect("a user layer root");
+
+            root
+        }
+
+        /// A file named `name` under `directory`, holding `body`, and its path.
+        fn write(&self, directory: &Path, name: &str, body: &str) -> PathBuf {
+            fs::create_dir_all(directory).expect("a directory for the file");
+            let path = directory.join(name);
+            fs::write(&path, body).expect("a fixture file");
 
             path
         }
@@ -1357,6 +1554,589 @@ mod tests {
             rendered.matches('\n').count(),
             1,
             "one set is one line: {rendered}"
+        );
+    }
+
+    // Reddens if `load` reads the user layer before the project layer, or if
+    // `set_in_force` skips a nearer entry for a name a later layer also holds.
+    #[test]
+    fn the_project_layer_beats_the_user_layer() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let project_mine = scratch.write(&project_layer, "mine.md", "project advice.\n");
+
+        let user_layer_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_layer_root, "conventions");
+        scratch.write(&user_layer, "mine.md", "user advice.\n");
+
+        let roots = Roots::under(repo.clone(), Some(user_layer_root));
+        let entries = load(&roots, "conventions").expect("every layer reads");
+
+        let mine: Vec<Layer> = entries
+            .iter()
+            .filter(|entry| entry.name.as_deref() == Some("mine"))
+            .map(|entry| entry.origin.layer)
+            .collect();
+        assert_eq!(
+            mine,
+            vec![Layer::Project, Layer::User],
+            "both file layers hold `mine`, so precedence is answering a name two layers have \
+             rather than a name only one has"
+        );
+
+        let winner = set_in_force(&entries, "mine").expect("`mine` is in force");
+        assert_eq!(
+            winner.origin.layer,
+            Layer::Project,
+            "the nearest layer wins, so the project layer's entry is in force"
+        );
+        assert_eq!(
+            winner.origin.path, project_mine,
+            "the winner is the project layer's own file, not the user layer's"
+        );
+        let Outcome::Loaded(set) = &winner.outcome else {
+            panic!("`mine.md` loads: {:?}", winner.outcome);
+        };
+        assert_eq!(
+            set.body, "project advice.",
+            "the prose in force is the project layer's, not the user layer's"
+        );
+
+        let hygiene =
+            set_in_force(&entries, "hygiene").expect("the shipped set is always an entry");
+        assert_eq!(
+            hygiene.origin.layer,
+            Layer::Binary,
+            "binary is the third rank, and a name no file layer holds reaches it"
+        );
+
+        let order: Vec<Layer> = entries.iter().map(|entry| entry.origin.layer).collect();
+        let last_project = entries
+            .iter()
+            .rposition(|entry| entry.origin.layer == Layer::Project)
+            .expect("the project layer contributed an entry");
+        let first_user = entries
+            .iter()
+            .position(|entry| entry.origin.layer == Layer::User)
+            .expect("the user layer contributed an entry");
+        let last_user = entries
+            .iter()
+            .rposition(|entry| entry.origin.layer == Layer::User)
+            .expect("the user layer contributed an entry");
+        let first_binary = entries
+            .iter()
+            .position(|entry| entry.origin.layer == Layer::Binary)
+            .expect("the binary layer contributed an entry");
+
+        assert!(
+            last_project < first_user,
+            "the entries are whole layers in order, so no project entry follows a user one: \
+             {order:?}"
+        );
+        assert!(
+            last_user < first_binary,
+            "the binary layer is appended last, so no user entry follows it: {order:?}"
+        );
+    }
+
+    // Reddens if `load` treats a missing layer directory as a failure, or as a
+    // reason to skip the binary layer.
+    #[test]
+    fn an_absent_layer_is_not_an_error() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let config_home = scratch.directory("config");
+
+        let roots = Roots::under(
+            repo.clone(),
+            Some(user_root(Some(&config_home), None).expect("a config home names a user root")),
+        );
+        let entries = load(&roots, "conventions").expect("an absent layer is not an error");
+        let layers: Vec<Layer> = entries.iter().map(|entry| entry.origin.layer).collect();
+
+        assert_eq!(
+            entries.len(),
+            SHIPPED.len(),
+            "neither file layer contributed an entry, so only the shipped pairs are left: \
+             {layers:?}"
+        );
+        assert!(
+            layers.iter().all(|layer| *layer == Layer::Binary),
+            "every entry came from the binary layer, and the layers were {layers:?}"
+        );
+    }
+
+    // Reddens if `load` joins `<kind>` twice onto the root, or joins `.config/smut`
+    // a second time: the first reads the nested decoy, the second reads nothing.
+    #[test]
+    fn the_kind_is_joined_once() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let one = scratch.write(&project_layer, "one.md", "# One\n\nAdvice.\n");
+
+        let second_join = scratch.kind_dir(&project_layer, "conventions");
+        scratch.write(
+            &second_join,
+            "decoy.md",
+            "# Decoy\n\nOnly a second join of the kind reads this.\n",
+        );
+
+        let roots = Roots::under(repo.clone(), None);
+        let entries = load(&roots, "conventions").expect("the layer reads");
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "the kind is joined once onto each root, so the layer holds one entry: {names:?}"
+        );
+        assert_eq!(
+            project[0].name.as_deref(),
+            Some("one"),
+            "the one project entry is the layer's own file: {names:?}"
+        );
+        assert_eq!(
+            project[0].origin.path, one,
+            "the entry is `<root>/conventions/one.md`, not a file under a second segment"
+        );
+        assert!(
+            names.iter().all(|name| *name != Some("decoy")),
+            "a second join of the kind would have made `decoy` an entry: {names:?}"
+        );
+    }
+
+    // Reddens if `load` is wired to the `conventions` kind rather than to the kind
+    // it was handed.
+    #[test]
+    fn a_second_kind_uses_the_same_loader() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let roots = Roots::under(repo.clone(), None);
+
+        let shapes = scratch.kind_dir(&roots.project, "shapes");
+        let one = scratch.write(&shapes, "one.md", "# One\n\nShape advice.\n");
+        scratch.kind_dir(&roots.project, "conventions");
+
+        let shapes_entries = load(&roots, "shapes").expect("the shapes layer reads");
+        let names: Vec<Option<&str>> = shapes_entries
+            .iter()
+            .map(|entry| entry.name.as_deref())
+            .collect();
+        let project: Vec<&Entry> = shapes_entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "the loader reads the kind it is handed, and `shapes` holds one file: {names:?}"
+        );
+        assert_eq!(
+            project[0].name.as_deref(),
+            Some("one"),
+            "the entry is named by the file the kind selected: {names:?}"
+        );
+        assert_eq!(
+            project[0].origin.path, one,
+            "the entry is under the `shapes` directory, so nothing joined `conventions`"
+        );
+
+        let conventions = load(&roots, "conventions").expect("the conventions layer reads");
+        let conventions_names: Vec<Option<&str>> = conventions
+            .iter()
+            .map(|entry| entry.name.as_deref())
+            .collect();
+
+        assert!(
+            conventions
+                .iter()
+                .all(|entry| entry.origin.layer != Layer::Project),
+            "the conventions layer is empty, so a project entry here means the kind was ignored: \
+             {conventions_names:?}"
+        );
+    }
+
+    // Reddens if the candidate filter admits a subdirectory, a `.txt` file or a
+    // dotfile — as a row or as a failure.
+    #[test]
+    fn only_dotless_markdown_files_are_entries() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        scratch.child(&project_layer, "nested");
+        scratch.write(&project_layer, "notes.txt", "not a set.\n");
+        scratch.write(&project_layer, ".hidden.md", "hidden advice.\n");
+        let real = scratch.write(&project_layer, "real.md", "# Real\n\nAdvice.\n");
+
+        let roots = Roots::under(repo.clone(), None);
+        let entries = load(&roots, "conventions").expect("the layer reads");
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "a subdirectory, a `.txt` file and a dotfile are not entries at all, so one file \
+             remains: {names:?}"
+        );
+        assert_eq!(
+            project[0].name.as_deref(),
+            Some("real"),
+            "the one entry is the markdown file whose name does not begin with a dot: {names:?}"
+        );
+        assert_eq!(
+            project[0].origin.path, real,
+            "the entry is that file, and not the dotfile beside it"
+        );
+        assert!(
+            matches!(project[0].outcome, Outcome::Loaded(_)),
+            "the markdown file loaded: {:?}",
+            project[0].outcome
+        );
+
+        for excluded in ["notes", ".hidden", "nested"] {
+            assert!(
+                names.iter().all(|name| *name != Some(excluded)),
+                "`{excluded}` is not an entry, so a row carrying that name means the candidate \
+                 filter admitted it: {names:?}"
+            );
+        }
+        assert!(
+            project
+                .iter()
+                .all(|entry| !matches!(entry.outcome, Outcome::Failed(_))),
+            "a file that is not a candidate is not a failed row either, so a directory in the \
+             layer produces no noise: {:?}",
+            project
+                .iter()
+                .map(|entry| (&entry.origin.path, &entry.outcome))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    // Reddens if candidacy reads `symlink_metadata` instead of following the
+    // link: the symlink is then neither a regular file nor a directory.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_set_is_an_ordinary_entry() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let target = scratch.write(&scratch.path, "target.md", "linked advice.\n");
+        let link = project_layer.join("link.md");
+        std::os::unix::fs::symlink(&target, &link).expect("a symlink into the layer");
+
+        let roots = Roots::under(repo.clone(), None);
+        let entries = load(&roots, "conventions").expect("the layer reads");
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "a symlink to a markdown file is a candidate, and it is the layer's only file: \
+             {names:?}"
+        );
+        assert_eq!(
+            project[0].name.as_deref(),
+            Some("link"),
+            "the name is the symlink's stem, not the target's: {names:?}"
+        );
+        assert_eq!(
+            project[0].origin.path, link,
+            "the entry is the path the layer spells, not the file it points at"
+        );
+
+        let Outcome::Loaded(set) = &project[0].outcome else {
+            panic!(
+                "a symlink to a markdown file loads: {:?}",
+                project[0].outcome
+            );
+        };
+        assert_eq!(
+            set.body, "linked advice.",
+            "the bytes are read through the link, so candidacy followed it"
+        );
+    }
+
+    // Reddens if `load` applies the crate's version to a file set, or fails to
+    // keep the version the binary layer's helper already applied.
+    #[test]
+    fn the_binary_layer_carries_the_crates_version() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        scratch.write(
+            &project_layer,
+            "authored.md",
+            "---\nversion: 9.9.9\n---\n# Authored\n\nAdvice.\n",
+        );
+        scratch.write(&project_layer, "bare.md", "# Bare\n\nAdvice.\n");
+
+        let roots = Roots::under(repo.clone(), None);
+        let entries = load(&roots, "conventions").expect("every layer reads");
+
+        let version_of = |name: &str| -> Option<String> {
+            let entry =
+                set_in_force(&entries, name).unwrap_or_else(|| panic!("`{name}` is an entry"));
+
+            match &entry.outcome {
+                Outcome::Loaded(set) => set.version.clone(),
+                Outcome::Failed(cause) => panic!("`{name}` loads: {cause:?}"),
+            }
+        };
+
+        assert_eq!(
+            version_of("hygiene"),
+            Some(env!("CARGO_PKG_VERSION").to_owned()),
+            "the crate's version lands on the binary layer, which is the only layer the build \
+             knows"
+        );
+        assert_eq!(
+            version_of("authored"),
+            Some("9.9.9".to_owned()),
+            "a file set's version is what its frontmatter declares, so the crate's version was \
+             not applied to it"
+        );
+        assert_eq!(
+            version_of("bare"),
+            None,
+            "a file that declares no version makes no claim about a release, so it gains none"
+        );
+    }
+
+    // Reddens if `load` skips the user layer when the project layer is absent, or
+    // if `set_in_force` needs a nearer name to exist before it reads that layer.
+    #[test]
+    fn a_set_that_only_the_user_layer_holds() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let user_layer_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_layer_root, "conventions");
+        let only = scratch.write(&user_layer, "only-user.md", "user only.\n");
+
+        let roots = Roots::under(repo.clone(), Some(user_layer_root));
+        let entries = load(&roots, "conventions").expect("an absent project layer is not an error");
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+        let user: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::User)
+            .collect();
+
+        assert_eq!(
+            user.len(),
+            1,
+            "the project layer is absent, so the user layer's one file is the only file entry: \
+             {names:?}"
+        );
+        assert_eq!(
+            user[0].name.as_deref(),
+            Some("only-user"),
+            "the entry is named by its filename: {names:?}"
+        );
+        assert_eq!(
+            user[0].origin.path, only,
+            "the entry is the user layer's own file, not a project path"
+        );
+
+        let in_force =
+            set_in_force(&entries, "only-user").expect("a set only the user layer holds");
+        assert_eq!(
+            in_force.origin.layer,
+            Layer::User,
+            "no nearer layer holds the name, so precedence reaches the user layer"
+        );
+        let Outcome::Loaded(set) = &in_force.outcome else {
+            panic!("`only-user.md` loads: {:?}", in_force.outcome);
+        };
+        assert_eq!(
+            set.body, "user only.",
+            "the prose in force is the user layer's"
+        );
+    }
+
+    // Reddens if `read_layer` keeps `read_dir`'s order instead of sorting each
+    // layer by name, or if it sorts the concatenated entries across layers.
+    #[test]
+    fn each_layer_is_sorted_by_name() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        for name in ["d2", "a1", "f3", "b1", "e2", "c3"] {
+            scratch.write(&project_layer, &format!("{name}.md"), "advice.\n");
+        }
+
+        let user_layer_root = scratch.config_home("config");
+        let user_layer = scratch.kind_dir(&user_layer_root, "conventions");
+        for name in ["z", "m"] {
+            scratch.write(&user_layer, &format!("{name}.md"), "advice.\n");
+        }
+
+        let roots = Roots::under(repo.clone(), Some(user_layer_root));
+        let entries = load(&roots, "conventions").expect("every layer reads");
+
+        let project: Vec<Option<&str>> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .map(|entry| entry.name.as_deref())
+            .collect();
+        let user: Vec<Option<&str>> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::User)
+            .map(|entry| entry.name.as_deref())
+            .collect();
+
+        assert_eq!(
+            project,
+            vec![
+                Some("a1"),
+                Some("b1"),
+                Some("c3"),
+                Some("d2"),
+                Some("e2"),
+                Some("f3")
+            ],
+            "the order is the loader's, not `read_dir`'s: the six files were created scattered \
+             and the project layer must list them alphabetically: {project:?}"
+        );
+        assert_eq!(
+            user,
+            vec![Some("m"), Some("z")],
+            "the order is the loader's, not `read_dir`'s: `z.md` was created first and the user \
+             layer must still list `m` before `z`: {user:?}"
+        );
+
+        let last_project = entries
+            .iter()
+            .rposition(|entry| entry.origin.layer == Layer::Project)
+            .expect("the project layer contributed entries");
+        let first_user = entries
+            .iter()
+            .position(|entry| entry.origin.layer == Layer::User)
+            .expect("the user layer contributed entries");
+        assert!(
+            last_project < first_user,
+            "sorting is within a layer and never across layers, so every project entry precedes \
+             every user one: {last_project} > {first_user}"
+        );
+    }
+
+    // Reddens if `read_layer` sorts with `Option`'s derived `Ord`, which puts
+    // `None` first, rather than with the explicit `None`-last rule.
+    #[cfg(unix)]
+    #[test]
+    fn an_undecodable_name_sorts_last() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let undecodable = project_layer.join(OsString::from_vec(b"zz\xff.md".to_vec()));
+        fs::write(&undecodable, "advice.\n").expect("a file whose name is not UTF-8 text");
+        scratch.write(&project_layer, "a.md", "advice.\n");
+
+        let roots = Roots::under(repo.clone(), None);
+        let entries = load(&roots, "conventions").expect("the layer reads");
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+
+        assert_eq!(
+            project.len(),
+            2,
+            "an undecodable filename is a row rather than a skipped file, so the layer holds \
+             both files: {names:?}"
+        );
+        assert_eq!(
+            project[1].name, None,
+            "`Option`'s own `Ord` puts `None` first, so this row pins the explicit `None`-last \
+             rule: the undecodable name sorts after `a`, whatever its bytes are: {names:?}"
+        );
+        assert_eq!(
+            project[0].name.as_deref(),
+            Some("a"),
+            "the decodable name is the one listed first: {names:?}"
+        );
+    }
+
+    // Reddens if `read_layer` keeps skipping a filename that is not UTF-8, or if
+    // it decides the row after reading the bytes: the content here is a set.
+    #[cfg(unix)]
+    #[test]
+    fn a_non_utf8_filename_is_a_failed_row() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let project_layer = scratch.layer(&repo);
+        let bytes = b"na\xffme.md";
+        let path = project_layer.join(OsString::from_vec(bytes.to_vec()));
+        fs::write(&path, "# Fine\n\nAdvice.\n").expect("a valid set under an undecodable name");
+
+        let roots = Roots::under(repo, None);
+        let entries = load(&roots, "conventions").expect("a row that did not load is not an error");
+        let project: Vec<&Entry> = entries
+            .iter()
+            .filter(|entry| entry.origin.layer == Layer::Project)
+            .collect();
+        let names: Vec<Option<&str>> = entries.iter().map(|entry| entry.name.as_deref()).collect();
+
+        assert_eq!(
+            project.len(),
+            1,
+            "the row is decided before any read, so a valid body cannot make this file load \
+             and the layer holds one entry: {names:?}"
+        );
+
+        let row = project[0];
+
+        assert_eq!(
+            row.name, None,
+            "an undecodable filename lists under no name: {names:?}"
+        );
+
+        let Outcome::Failed(cause) = &row.outcome else {
+            panic!(
+                "the row is decided before any read, which is why valid content cannot make it \
+                 load: {:?}",
+                row.outcome
+            );
+        };
+        assert_eq!(
+            cause.reason, "the filename is not UTF-8 text",
+            "the cause is the filename, not the bytes: {}",
+            cause.reason
+        );
+        assert_eq!(
+            cause.line, None,
+            "no line is at fault when the filename is: {cause:?}"
+        );
+
+        let lossy = String::from_utf8_lossy(bytes);
+        let lossy = lossy
+            .strip_suffix(".md")
+            .expect("the fixture ends in `.md`");
+        assert!(
+            names.iter().all(|name| *name != Some(lossy)),
+            "no lossy `String` was built from the filename, so no entry is listed as `{lossy}`: \
+             {names:?}"
         );
     }
 }
