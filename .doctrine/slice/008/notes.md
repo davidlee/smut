@@ -138,10 +138,9 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` status `ready`, design run `dr-01a19b61` locked at revision 36,
-head `de8cf3d`. Plan authored, hardened by two audit lanes, and the audit's design
-questions taken through `/feedback`. Next stage: implementation (PHASE-01..05), not
-audit.
+**fresh-as-of:** `SL-008` lifecycle `started`, `PHASE-01` `completed` (roots landed,
+gate green, VT-1/VT-2 PASS at head `c3385c2`), design run `dr-01a19b61` locked at
+revision 36. Next stage: `PHASE-02` (the reader), then 03–05; audit is not open.
 
 ### Produced
 
@@ -158,6 +157,11 @@ audit.
   (PHASE-02/EX-2). A value continued across lines still fails naming its line.
 - **Memory** `mem_01a19c0604b57ce397b575176682fc97` — harden-plan's audit lanes are
   read-only agents: brief them to return, never to write files.
+- **PHASE-01 is implemented** — `Roots { project, user }`, `Roots::under` (the crate's only
+  `.config/smut` join), `project_root` (`symlink_metadata` on `<ancestor>/.git`, inclusive
+  walk, `start` as the terminus fallback) and `user_root` (non-empty config home, else
+  `<home>/.config`, else `None`), with 10 in-module tests over temp-dir fixtures. Commits
+  `289d179` (`feat`) and `c3385c2` (`test`), both path-limited to `src/conventions.rs`.
 - Research baseline re-verified at `d224dc6` (line counts, both negative greps, the error
   inventories) and restamped; the advisory's drift was chronological, not evidential.
 
@@ -186,6 +190,17 @@ audit.
   tests, not the CLI — `main`'s in-process `dispatch_of` reads real cwd and `$HOME`.
 - Attestation is not coverage: a pass opened before late edits still reports `STALE` after the
   edits are re-attested.
+- **`verify-vt` attributes by recorded delta, not by the file being on disk.** Before
+  PHASE-01's delta was recorded, both its rows read `UNATTRIBUTABLE — keyword present but
+  src/conventions.rs not modified by this slice`; the `completed` transition recorded a span
+  covering three foreign `doc(sl-010)` commits and warned, so the range was tightened to
+  `--start 289d179^ --end c3385c2` via `slice record-delta`. Both rows then read `PASS`. The
+  command still exits 1 at this boundary because PHASE-02..05's keywords are legitimately
+  absent.
+- **A negative assertion the preceding assertion already guarantees is not evidence.** A
+  worker's `assert_ne!(found, scratch.path)` after `assert_eq!(found, child)` could not fail
+  once the fixture existed; it was reverted and the property was carried instead by a
+  fixture that makes it falsifiable (`a_home_above_a_repository_is_not_the_project_root`).
 
 ### Open
 
@@ -197,6 +212,17 @@ audit.
   "a file plus a match arm".
 - **RV-029 coverage residue** — the two hedge paragraphs (§5, §6 at revisions 30–31) are
   attested but no pass ran over them.
+- **PHASE-01 residual — an empty `home` yields a relative layer root.**
+  `user_root(Some(""), Some(Path::new("")))` returns `Some(".config/smut")`, because EX-2
+  rules only that the *config* home be non-empty and says nothing about `home`. Unreachable
+  from the binary — `main` passes `home_dir()`, which is absolute or `None` — so nothing is red
+  today. But a relative path as a layer root would resolve against the cwd and read the wrong
+  layer without a symptom: the PHASE-03 failure class in miniature. **Seat ruling:** the
+  non-emptiness EX-2 already applies to `config_home` reads onto `home`, since an empty `home`
+  resolves no config home either — that is what "neither resolves" already means, not a new
+  rule. Pinned by one row in PHASE-04's owned `src/conventions.rs` (charter 4 brief), not by
+  reopening PHASE-01. If audit reads it the other way, this paragraph is the record of what
+  was decided and why.
 - **SL-006** is unblocked by this slice landing: `epistemic-records` returns to `plan`.
 
 ## Plan stage (2026-11-02)
@@ -379,7 +405,54 @@ extends it. Facts here were observed this session at head `de8cf3d`.
 - **Severity honesty applies both ways** — `minors`/`nits` are dispositioned `follow-up` to the
   backlog rather than repaired inside the phase, and a clean review is reported as clean.
 
+### PHASE-01 — observed at `c3385c2`
+
+- **Commits, both path-limited with a pathspec (`-- src/conventions.rs`):** `289d179`
+  `feat(sl-008)` — the four items plus 9 tests, 339 insertions, 0 deletions;
+  `c3385c2` `test(sl-008)` — the F-17 home row, 31 insertions, 0 deletions. Index
+  untouched otherwise: the other writer's staged `README.md` was still staged after both
+  commits, `--amend`/`add -A`/reset never run, transient HEAD moves (three `doc(sl-010)`
+  commits) absorbed without rebase.
+- **Gate:** `just check` exit 0 after each commit — 389 lib tests on default features and 402
+  under `--features fault-injection` (baseline 379/392, +10 from this phase), zero warnings in
+  both clippy configurations, `fmt --check` clean. `pre-existing failures: none`.
+- **`doctrine slice verify-vt 008`:** PHASE-01 `VT-1 PASS`, `VT-2 PASS`; the command still
+  exits 1 because PHASE-02..05 keywords are legitimately absent (`pub fn parse`, `fn
+  the_four_derived_keys_are_refused_by_name`, `pub fn load`, `pub fn answer(roots`, `fn
+  the_seed_omits_a_version_a_file_does_not_declare`). Attribution needed a recorded delta
+  first — see § Harvest → Learned.
+- **VA-2 — the EN-1 greps, re-run beside the new code.** Before PHASE-01 both returned
+  nothing in `src/` (observed at `976f9dc`, exit 1 each). After it, `grep -rn '\.git\b' src/`
+  hits only the new predicate (`src/conventions.rs:78`, `symlink_metadata(ancestor.join(".git"))`),
+  its doc prose, and the fixtures; `grep -rn 'home_dir\|XDG\|config_dir' src/` hits only one
+  doc-comment line naming `XDG_CONFIG_HOME`/`HOME` as the binary's to read. No `std::env`, no
+  `Command`, no `fs::read`/`read_to_string`/`read_dir`, no `unwrap`/`expect`/`panic!` in the
+  new non-test code — the only filesystem call is `symlink_metadata`.
+- **Deferred/out-of-scope:** none found. The five reconcile obligations (DEC-028's
+  malformed-file clause, DEC-026's cost sentence, DEC-017's "a file plus a match arm",
+  `design.md` §5's worked listing, §4's per-name clause) were not touched and this phase
+  surfaced nothing new about them.
+- **Left dirty for the seat:** `.doctrine/slice/008/slice-008.toml` (lifecycle `ready →
+  started`, written by the CLI) and another writer's untracked `.doctrine/slice/010/research/`.
+  The phase sheet under `.doctrine/state/` is gitignored.
+
 ## Autonomy log
+
+- **PHASE-01 — three mutations used as negative controls, each reddening exactly the intended
+  test.** `fs::metadata` for `symlink_metadata` → the `.git`-symlink row; `Roots::under`
+  joining `<repo>/conventions` → `the_layer_roots_are_the_two_smut_directories`; the walk
+  fallback returning `/` → `no_repository_above_leaves_the_start_directory_as_the_root`.
+  Decided: keep the fixtures, no criterion change.
+- **PHASE-01 — `.config/smut` written as one literal.** `Roots::under` joins the single
+  segment `.config/smut` rather than two chained joins: same path, but it is the wording EX-3
+  and DEC-026 use and it keeps "exactly one join" greppable. Verifier edit after the worker's
+  green, logged rather than rebriefed.
+- **PHASE-01 — a second, `test(sl-008)` commit.** RV-029 F-17's directory-level half (EN-3)
+  was implied but never fixtured; the home-above-a-repository row now builds a real competing
+  layer and pins the consequence through `Roots::under`. Appended after the phase was flipped
+  `completed`, so the recorded registry range was re-tightened to cover both commits.
+- **PHASE-01 — one tautological assertion removed.** Reverted with its fixture; the property
+  is re-homed in a falsifiable row (see § Harvest → Learned). Not a test weakening.
 
 - **PHASE-01..05 — model envelope: inherit, all five. Operator ruling, not the seat's.**
   Asked once, at charter 1 (`6daf8f6e`), because `super-orchestrator` forbids the seat from
