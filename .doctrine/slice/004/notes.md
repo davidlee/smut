@@ -592,6 +592,41 @@ they state "An embedded object carrying `id` is a reference, not metadata… the
 no way to store inline metadata under a field named `id`" — the exact claim DEC-005
 reverses and this slice falsifies. Surfaced to the operator; not edited here.
 
+### Run handback — SL-004 implementation complete, stop before audit (2026-11-02)
+
+Three phases chartered, three landed. **All 3/3 phases `completed`; the run stops here
+and the audit is the next route, not part of this one.**
+
+| phase | charter | outcome |
+| --- | --- | --- |
+| PHASE-01 | `a4a7422e` | `validate_identity_tree` + 31 tests; stricter reader at format 1 |
+| PHASE-02 | `279ef05a`, resumed as `41520fcc` after the 30-minute wall | identity → `smut_id`, versions → 2, fixture, documents, sweeps |
+| PHASE-03 | `d7373cb8` | `decision-amendments.md` + independently repeated evidence |
+
+**Seat verification across the run** (not taken from handbacks): `just check` exit 0 at
+each phase tip, 0 failures and 0 warnings, 370 lib / 383 fault-injection at the
+decision tree; `verify-vt` PHASE-01 VT-1..3 + PHASE-02 VT-1..8 all PASS; the fixture
+inverse rename reproduces blob `f5b29de6…` byte for byte with both negative controls
+firing; wire spelling in production only at `ENTITY_ID` plus the guide's stated
+examples; README's executed fence touched inside its own range and nowhere else;
+zero `#[test]` removed and the two removed `fn` lines are renames; zero source delta
+between the gate at PHASE-02's tip and HEAD, so the green gate covers the tree the
+audit will read.
+
+**What this run deliberately did not do**, so the audit does not assume otherwise:
+no decision record amended (the proposal is a slice artefact, `/reconcile` is the
+writer); no README prose edit (CHR-001's scope); no design text corrected (the
+selector gaps are findings for the audit, not retro-fits); no knowledge record
+minted at the last two boundaries (lessons are in `### Learned` for the audit to
+promote or drop); no tag and no publish.
+
+**Open for the audit to judge** (all also in `### Open`): the `README.md` prose
+finding — lines 247-250 still state the claim DEC-005 reverses, plus stale-key
+mention at 16/65/73/77/252, outside this slice's write scope; the `src/predicate.rs`
+selector gap (8 lines of inline-test respell in a file §4 never listed); the brief's
+line 89 prose name "ID/content disagreement"; and the six-decision reconciliation
+itself.
+
 ## Pre-implementation review
 
 Two independent reviews (Seat A: obligation ledger; Seat B: sequencing and surface) ran
