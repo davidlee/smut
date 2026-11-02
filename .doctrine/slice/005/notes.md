@@ -47,7 +47,7 @@ fresh-as-of: 2026-11-02 · slice started, PHASE-01 complete (gates green, VT-1..
   `UNATTRIBUTABLE` ("keyword present but `<file>` not modified by this slice") however green the
   work is. Remedy: `doctrine slice record-delta <slice> PHASE-NN --commit <S>` (the safe mode,
   recording exactly S's own patch) before the gate; the completion transition upserts the same
-  range. Not a defect, a bootstrap order.
+  range. Not a defect, a bootstrap order. (`mem.fact.doctrine.verify-vt-needs-delta-row`.)
 - **Rust red-first needs the type to exist first.** A test naming an unimplemented `Reject`
   variant is a compile error, so "red" proves only that the name is absent. Land the variant and
   its `Display` arm, re-run, and read the behavioural red ("should have been refused") before
