@@ -390,18 +390,20 @@ fn binary_layer() -> Vec<Entry> {
 /// function's: a name two layers hold is [`set_in_force`]'s question. An absent
 /// layer contributes no entries and is not a failure.
 ///
-/// The answer is a `Result` because reading a layer is a filesystem step, and a
-/// later phase reports a layer it cannot read. This phase makes "absent" and
-/// "unreadable" the same thing, so nothing here errs yet.
+/// The answer is a `Result` because reading a layer is a filesystem step: an
+/// absent layer is not a failure and a layer that exists and cannot be read is
+/// one, so the two are never the same state. The refusal names the layer read,
+/// carries the operating system's own reason and arrives before any listing is
+/// rendered.
 ///
 /// Nothing in it is specific to the `conventions` kind: the kind is a parameter,
 /// so the same loader reads every kind from every layer.
 pub fn load(roots: &Roots, kind: &str) -> Result<Vec<Entry>, Error> {
-    let mut entries = read_layer(Layer::Project, roots.project.join(kind));
+    let mut entries = read_layer(Layer::Project, kind, roots.project.join(kind))?;
     sort_layer(&mut entries);
 
     if let Some(user) = &roots.user {
-        let mut user = read_layer(Layer::User, user.join(kind));
+        let mut user = read_layer(Layer::User, kind, user.join(kind))?;
         sort_layer(&mut user);
         entries.extend(user);
     }
@@ -429,9 +431,12 @@ pub fn set_in_force<'a>(entries: &'a [Entry], name: &str) -> Option<&'a Entry> {
         .find(|entry| entry.name.as_deref() == Some(name))
 }
 
-/// Read one layer's `<root>/<kind>` directory into entries, in the order the
-/// directory lists them: sorting is [`load`]'s step, and it sorts each layer
-/// before the layers concatenate.
+/// Read one layer's `<root>/<kind>` directory into entries, in no order of its
+/// own: sorting is [`load`]'s step, and it sorts each layer before the layers
+/// concatenate.
+///
+/// An absent layer is not a failure and a layer that exists and cannot be read
+/// is exit 1, naming the layer read.
 ///
 /// A candidate is a regular file, with the `.md` extension, whose name has no
 /// leading dot — and candidacy inspects the file through a symlink rather than
@@ -439,11 +444,29 @@ pub fn set_in_force<'a>(entries: &'a [Entry], name: &str) -> Option<&'a Entry> {
 /// entry keeps the layer's own spelling of the path. A directory, any other
 /// extension and a dotfile are not entries at all: they are not rows, and they
 /// are not failed rows either.
-fn read_layer(layer: Layer, directory: PathBuf) -> Vec<Entry> {
-    // An unreadable layer directory is the same thing as an absent one this
-    // phase; a later phase separates them into a failure that names the layer.
-    let Ok(reading) = std::fs::read_dir(&directory) else {
-        return Vec::new();
+fn read_layer(layer: Layer, kind: &str, directory: PathBuf) -> Result<Vec<Entry>, Error> {
+    // An absent layer is the state of every project that has not opted in: no
+    // entries and no error. Every other read failure is something the filesystem
+    // supplied, so it refuses at exit 1 instead of reading as "no sets here" —
+    // the two states are never the same thing.
+    let reading = match std::fs::read_dir(&directory) {
+        Ok(reading) => reading,
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(source) => {
+            // `StoreError::FileSystem.step` is a `&'static str` and the kind is a
+            // runtime parameter, so the sentence is built here rather than
+            // spelled as a literal that would be false for a second kind: one
+            // allocation, on the exit-1 path only, in a process about to exit.
+            let step: &'static str =
+                Box::leak(format!("reading the {kind} layer").into_boxed_str());
+
+            return Err(StoreError::FileSystem {
+                step,
+                path: directory,
+                source,
+            }
+            .into());
+        }
     };
 
     let mut entries = Vec::new();
@@ -520,7 +543,7 @@ fn read_layer(layer: Layer, directory: PathBuf) -> Vec<Entry> {
         });
     }
 
-    entries
+    Ok(entries)
 }
 
 /// Order one layer's entries by decoded name, undecodable names last.
@@ -885,6 +908,20 @@ mod tests {
         fn kind_dir(&self, root: &Path, kind: &str) -> PathBuf {
             let path = root.join(kind);
             fs::create_dir_all(&path).expect("a kind directory");
+
+            path
+        }
+
+        /// A layer path that exists and is not a directory.
+        ///
+        /// The portable, root-proof unreadable layer: `read_dir` fails with "not a
+        /// directory" for every user, where a mode-000 directory fails only for a
+        /// process that is not root.
+        fn blocked_layer(&self, repository: &Path) -> PathBuf {
+            let root = repository.join(".config").join("smut");
+            fs::create_dir_all(&root).expect("a smut directory");
+            let path = root.join("conventions");
+            fs::write(&path, "not a layer\n").expect("a file where the layer belongs");
 
             path
         }
@@ -1665,6 +1702,84 @@ mod tests {
             layers.iter().all(|layer| *layer == Layer::Binary),
             "every entry came from the binary layer, and the layers were {layers:?}"
         );
+    }
+
+    // Reddens if `read_layer` reads a layer that exists and cannot be read as an
+    // absent one: `load` then returns `Ok` and the refusal never happens.
+    #[test]
+    fn an_unreadable_layer_is_an_error() {
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let blocked = scratch.blocked_layer(&repo);
+
+        let roots = Roots::under(repo, None);
+        let error = load(&roots, "conventions")
+            .expect_err("a layer path that exists but is not a directory refuses at exit 1");
+
+        assert_eq!(
+            error.exit_code(),
+            1,
+            "a layer the filesystem supplied is exit 1, never 2: {error}"
+        );
+
+        let message = error.to_string();
+        assert!(
+            message.starts_with(&format!(
+                "reading the conventions layer failed for {}: ",
+                blocked.display()
+            )),
+            "the step names the layer read and the path names the layer, in \
+             `<step> failed for <path>: <reason>` order: {message}"
+        );
+        assert!(
+            !message.contains("store"),
+            "no line of it carries store vocabulary, because no store is involved: {message}"
+        );
+    }
+
+    // The second row the plan allows for this class: a mode-000 directory cannot
+    // fail as root, so where the process can still read it this row reports that
+    // it could not produce the class — the exists-but-not-a-directory row above
+    // carries it — rather than passing silently.
+    #[cfg(unix)]
+    #[test]
+    fn a_layer_that_cannot_be_opened_is_an_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let scratch = Scratch::new();
+        let repo = scratch.repo("checkout");
+        let layer = scratch.layer(&repo);
+        fs::set_permissions(&layer, fs::Permissions::from_mode(0o000)).expect("a mode-000 layer");
+
+        let roots = Roots::under(repo, None);
+        let loaded = load(&roots, "conventions");
+
+        // Restored before the fixture drops, so the cleanup can recurse.
+        fs::set_permissions(&layer, fs::Permissions::from_mode(0o755))
+            .expect("the layer's mode back");
+
+        match loaded {
+            Err(error) => {
+                assert_eq!(
+                    error.exit_code(),
+                    1,
+                    "an unreadable layer is exit 1: {error}"
+                );
+                assert!(
+                    error.to_string().starts_with(&format!(
+                        "reading the conventions layer failed for {}: ",
+                        layer.display()
+                    )),
+                    "the refusal names the layer read and its path: {error}"
+                );
+            }
+            Ok(entries) => eprintln!(
+                "skipped: this process can read a mode-000 directory (running as root?), so \
+                 `an_unreadable_layer_is_an_error` carries the unreadable-layer class; 0 entries \
+                 read here means the class was not exercised: {}",
+                entries.len()
+            ),
+        }
     }
 
     // Reddens if `load` joins `<kind>` twice onto the root, or joins `.config/smut`
