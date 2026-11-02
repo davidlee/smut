@@ -113,3 +113,29 @@ having no global options, and the learn exit table being one line.
    which DEC-031 declined. Amend the clause to point at the listing.
 3. **DEC-017** — the sentence about adding a later set being "a file plus a match arm" is no
    longer how sets arrive; check and amend if it still reads as mechanism.
+
+## Lock residue (2026-11-02)
+
+The design locked at revision 36 with all seven sections attested in both lanes and
+RV-029 disposed `conducted` on the operator's word ("otherwise lgtm, let's lock"), after
+the three highest-regret consequences were laid out and two hedges were written in:
+
+- **`smut learn` gains a line** saying a printed set does not reproduce its frontmatter —
+  a silent loss converted into a stated one (§5 of `design.md`).
+- **The seed's layer-blind provenance is stated in the design** rather than discovered:
+  `conventions-<name>` and `source: conventions/<name>.md` are identical at every layer, so
+  a stored record cannot name its layer; the listing is the answer.
+
+Two things the operator explicitly declined to pull in, and why they cost nothing later:
+
+- **Section addressing** (DEC-028's pinned grammar, IMP-008's flag). The loader stores a
+  `body` and never interprets it, so the grammar can arrive without touching the loader —
+  and it should arrive *with* the flag rather than before it.
+- **Validity as a tie-breaker.** A broken nearer set makes that name unaskable. Accepted as
+  "fails loud and clearly": the listing still names the file and its reason.
+
+**Residue to carry into audit:** RV-029's recorded coverage predates the two hedge edits
+(revisions 30–31). Those sections were re-attested in the adversarial lane (att-5, att-6 at
+revision 32), but no review *pass* has run over the edited text, so the run reports
+`RV-029 STALE — it no longer covers current content`. It is an advisory, not a gate; the
+audit should treat the two hedge paragraphs as reviewed-by-attestation only.

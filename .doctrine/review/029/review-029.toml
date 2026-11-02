@@ -17,6 +17,11 @@ act = "conclude"
 role = "raiser"
 note = "Adversarial pass over the seven drafted sections of design.md at revision 21: every load-bearing claim verified against the code and the governing decisions, 20 findings raised across all seven sections (nine major, eleven minor), all disposed fix-now and verified after the sections were revised and re-materialised (revision 25). The pass also confirmed the research artefact's code claims independently."
 
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Re-concluded after routing the ten severe findings: six route to review (type, signature and printing changes re-attested in the adversarial lane) and four route to demonstrate (each carries a verification row that reddens). All twenty findings disposed fix-now and verified; none contested, none open."
+
 [target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
 ref   = "SL-008"
 
@@ -27,7 +32,8 @@ severity = "major"
 title = "Failed(reason:String) cannot carry the line number the refusal variant and DEC-033 require; Cause is needed as a type."
 detail = "Found by the adversarial pass over the drafted design (sec-1's section). Resolution applied in the same review round: Failed(Cause) with Cause{line,reason}; the error variant holds the same Cause so nothing re-parses a message."
 disposition = "fix-now"
-response = "Failed(Cause) with Cause{line,reason}; the error variant holds the same Cause so nothing re-parses a message."
+response = "Failed(Cause) is a type change in sec-1, re-attested in the adversarial lane at revision 26."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -43,6 +49,23 @@ response = "Failed(Cause) with Cause{line,reason}; the error variant holds the s
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "Failed(Cause) is a type change in sec-1, re-attested in the adversarial lane at revision 26."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-2"
@@ -75,7 +98,8 @@ severity = "major"
 title = "main reading the environment does not protect the crate's in-process unit tests, which would read a developer's real ~/.config/smut."
 detail = "Found by the adversarial pass over the drafted design (sec-3's section). Resolution applied in the same review round: execute takes the roots as a parameter; main computes them and the in-process tests pass their own."
 disposition = "fix-now"
-response = "execute takes the roots as a parameter; main computes them and the in-process tests pass their own."
+response = "execute taking its roots is a signature change in sec-6, re-attested at revision 32."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -91,6 +115,23 @@ response = "execute takes the roots as a parameter; main computes them and the i
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "execute taking its roots is a signature change in sec-6, re-attested at revision 32."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-4"
@@ -147,7 +188,8 @@ severity = "major"
 title = "DEC-028's empty-body malformed class was dropped, so a frontmatter-only file would load as advice that says nothing."
 detail = "Found by the adversarial pass over the drafted design (sec-6's section). Resolution applied in the same review round: The empty body is a named failure class with DEC-028's own reason; the class list is closed and counted."
 disposition = "fix-now"
-response = "The empty body is a named failure class with DEC-028's own reason; the class list is closed and counted."
+response = "The empty-body class is restored in sec-3, re-attested at revision 26."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -163,6 +205,23 @@ response = "The empty body is a named failure class with DEC-028's own reason; t
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "The empty-body class is restored in sec-3, re-attested at revision 26."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-7"
@@ -171,7 +230,8 @@ severity = "major"
 title = "Printed prose was described as body plus the shell's newline, but the binary writes verbatim and no shell adds one."
 detail = "Found by the adversarial pass over the drafted design (sec-7's section). Resolution applied in the same review round: answer returns body plus exactly one newline; the seed keeps the trimmed body."
 disposition = "fix-now"
-response = "answer returns body plus exactly one newline; the seed keeps the trimmed body."
+response = "printing is body plus one newline in sec-3 and sec-5, re-attested at revisions 26 and 32."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -187,6 +247,23 @@ response = "answer returns body plus exactly one newline; the seed keeps the tri
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "printing is body plus one newline in sec-3 and sec-5, re-attested at revisions 26 and 32."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-8"
@@ -243,7 +320,8 @@ severity = "major"
 title = "A loaded in-force set with no summary had no third-column value, which is every hand-written set without frontmatter."
 detail = "Found by the adversarial pass over the drafted design (sec-10's section). Resolution applied in the same review round: The third field is - when a set is in force and declares no summary."
 disposition = "fix-now"
-response = "The third field is - when a set is in force and declares no summary."
+response = "A verification row asserts the '-' third field for a set with no summary."
+route = "demonstrate"
 
 [[finding.turn]]
 act = "raise"
@@ -259,6 +337,23 @@ response = "The third field is - when a set is in force and declares no summary.
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "demonstrate"
+response = "A verification row asserts the '-' third field for a set with no summary."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-11"
@@ -267,7 +362,8 @@ severity = "major"
 title = "Failed and shadowed had no precedence, so a broken file behind a working one could lose its reason."
 detail = "Found by the adversarial pass over the drafted design (sec-11's section). Resolution applied in the same review round: did not load: wins over shadowed; the mirrored fixture is a verification row."
 disposition = "fix-now"
-response = "did not load: wins over shadowed; the mirrored fixture is a verification row."
+response = "A verification row asserts did-not-load beating shadowed behind a working file."
+route = "demonstrate"
 
 [[finding.turn]]
 act = "raise"
@@ -283,6 +379,23 @@ response = "did not load: wins over shadowed; the mirrored fixture is a verifica
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "demonstrate"
+response = "A verification row asserts did-not-load beating shadowed behind a working file."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-12"
@@ -291,7 +404,8 @@ severity = "major"
 title = "An absent layer directory read as unreadable, making the command fail in every project that has not opted in."
 detail = "Found by the adversarial pass over the drafted design (sec-12's section). Resolution applied in the same review round: An absent directory is not an error; only an existing-and-unreadable one is exit 1."
 disposition = "fix-now"
-response = "An absent directory is not an error; only an existing-and-unreadable one is exit 1."
+response = "A verification row asserts an absent layer directory is exit 0 and an unreadable one exit 1."
+route = "demonstrate"
 
 [[finding.turn]]
 act = "raise"
@@ -307,6 +421,23 @@ response = "An absent directory is not an error; only an existing-and-unreadable
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "demonstrate"
+response = "A verification row asserts an absent layer directory is exit 0 and an unreadable one exit 1."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-13"
@@ -315,7 +446,8 @@ severity = "major"
 title = "load returned Vec and so could not carry the unreadable-directory exit-1 class the same document promises."
 detail = "Found by the adversarial pass over the drafted design (sec-13's section). Resolution applied in the same review round: load returns Result<Vec<Entry>, Error> and the directory failure returns before any listing is rendered."
 disposition = "fix-now"
-response = "load returns Result<Vec<Entry>, Error> and the directory failure returns before any listing is rendered."
+response = "load returning Result is a signature change in sec-6, re-attested at revision 32."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -331,6 +463,23 @@ response = "load returns Result<Vec<Entry>, Error> and the directory failure ret
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "load returning Result is a signature change in sec-6, re-attested at revision 32."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-14"
@@ -339,7 +488,8 @@ severity = "major"
 title = "The loader was not generic over declaration kind, dropping DEC-026's stated reason for the ladder and slice objective 7."
 detail = "Found by the adversarial pass over the drafted design (sec-14's section). Resolution applied in the same review round: load takes a kind and joins it once; Roots carries no kind."
 disposition = "fix-now"
-response = "load takes a kind and joins it once; Roots carries no kind."
+response = "load taking a kind restores DEC-026's ladder in sec-6, re-attested at revision 32."
+route = "review"
 
 [[finding.turn]]
 act = "raise"
@@ -355,6 +505,23 @@ response = "load takes a kind and joins it once; Roots carries no kind."
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "load taking a kind restores DEC-026's ladder in sec-6, re-attested at revision 32."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-15"
@@ -411,7 +578,8 @@ severity = "major"
 title = "No row asserted that the walk stops at the repository, which is the property protecting every developer's home from being read as project policy."
 detail = "Found by the adversarial pass over the drafted design (sec-17's section). Resolution applied in the same review round: A row with a fake home, a repository inside it and a set that must never be reported as project."
 disposition = "fix-now"
-response = "A row with a fake home, a repository inside it and a set that must never be reported as project."
+response = "A verification row asserts the walk stops at the repository and never adopts a home's set as project."
+route = "demonstrate"
 
 [[finding.turn]]
 act = "raise"
@@ -427,6 +595,23 @@ response = "A row with a fake home, a repository inside it and a set that must n
 act = "verify"
 role = "raiser"
 note = "Fixed in the same round; the section body carries the resolution and was re-materialised."
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "Routing the severe finding: it was verified before routes were recorded."
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "demonstrate"
+response = "A verification row asserts the walk stops at the repository and never adopts a home's set as project."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Route recorded; fix verified in the revisioned text."
 
 [[finding]]
 id = "F-18"

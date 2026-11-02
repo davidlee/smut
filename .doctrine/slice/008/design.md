@@ -195,8 +195,10 @@ content is a problem is still a successful report, as a query's reported missing
 
 **The prose** — `smut conventions <name>` — is the body followed by exactly one newline:
 no banner, no injected heading, no footer, no frontmatter. A caller piping it anywhere gets the
-file's own text. It is *not* a round trip: redirecting it into a set file loses the frontmatter
-(DEC-031).
+file's own text. It is *not* a round trip: redirecting it into a set file loses the frontmatter,
+and `smut learn` says so in one line — *prints the body; the frontmatter is metadata and is not
+reproduced* — because losing a `summary` and a `version` silently is the silent-loss class this
+repository ranks first (DEC-031).
 
 **The seed** — `smut conventions <name> --format json` — is one declaration:
 
@@ -210,6 +212,11 @@ file's own text. It is *not* a round trip: redirecting it into a set file loses 
 
 `smut_id` prints first and the rest lexically, as every declaration does. Declaring it is an
 upsert: a second install reports the body it replaced under `previous`, unchanged from today.
+
+An id of `conventions-<name>` and a `source` of `conventions/<name>.md` are the same at every
+layer, by DEC-017's design — so a stored record cannot say which layer its advice came from.
+That is deliberate, and the listing is the answer: it names the file in force, and the record is
+the advice, not its provenance.
 
 **Exit codes.** 0 for success, including a listing that reports a broken file. 2 for what the
 caller typed: an unknown set name, an unknown `--format`, `--format json` with no name. 1 for
@@ -267,8 +274,10 @@ origin-bearing rendering of §4.
 **`src/conventions/hygiene.md`** gains frontmatter with its `summary`, and its heading becomes
 `# Conventions: general hygiene`; its body is otherwise untouched.
 
-**`src/learn.rs`** gains the exit-table clause and one sentence in the Conventions section
-saying a set is found in the project, then the user config home, then the binary.
+**`src/learn.rs`** gains the exit-table clause, one sentence in the Conventions section saying a
+set is found in the project, then the user config home, then the binary, and the one line §5
+requires saying a printed set does not reproduce its frontmatter. Its guide is pinned by tests,
+so those move with it.
 
 **`tests/conventions.rs`** is rewritten: `Scratch` gains a repository marker and a config home,
 and the spawn helper clears and sets the environment it needs instead of inheriting it.
