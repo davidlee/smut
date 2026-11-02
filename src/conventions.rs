@@ -554,6 +554,37 @@ mod tests {
     }
 
     #[test]
+    fn a_home_above_a_repository_is_not_the_project_root() {
+        let scratch = Scratch::new();
+        let home = scratch.directory("home");
+        let home_layer = scratch.layer(&home);
+
+        let checkout = scratch.child(&home, "checkout");
+        scratch.git_directory(&checkout);
+        let src = scratch.child(&checkout, "src");
+
+        let found = project_root(&src);
+
+        assert_eq!(
+            found, checkout,
+            "the nearest repository is the project root"
+        );
+        assert_ne!(
+            found,
+            home,
+            "a home above a repository is never the project root, even when {} exists",
+            home_layer.display()
+        );
+        assert_eq!(
+            Roots::under(project_root(&src), None).project,
+            checkout.join(".config").join("smut"),
+            "the layer a reader would use is the repository's, never the home's: returning {} \
+             as the project root points the project layer at the home's .config/smut",
+            home.display()
+        );
+    }
+
+    #[test]
     fn the_user_root_is_the_config_home() {
         let scratch = Scratch::new();
         let config_home = scratch.directory("config");
