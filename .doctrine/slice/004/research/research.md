@@ -4,6 +4,12 @@ Produced for SL-004 (identity is `smut_id`), before design. Two read-only thread
 (governance applicability; code map) plus cross-thread synthesis, assembled by the
 orchestrating agent.
 
+Planning refresh: source symbols and version gates re-checked against the current
+tree on 2026-11-02; scope and locked design reconciled with DEC-020 through
+DEC-025. No source implementation changed during inquiry. This refresh was
+performed by the consuming agent; the original raw threads remain evidence of
+the pre-design snapshot, not current instructions.
+
 Baseline: `baseline.toml` (minted by `doctrine slice research 4`).
 Raw thread output: `raw/thread-1-governance.md`, `raw/thread-2-code-map.md`.
 
@@ -45,18 +51,23 @@ and `/reconcile` is the writer.
 **Not applicable, with reasons (checked, not assumed).**
 - ✓ No product or tech specs exist (`doctrine spec list` is empty), so no REQ or SPEC
   requirement pins the key name.
-- ✓ No policies and no standards are active (`doctrine policy list`, `doctrine
-  standard list` both empty; boot snapshot agrees).
+- ✓ No policies or specs are present in the current lists. STD-001 now governs
+  docs/store-format.md: format, version, identity and corruption changes must be
+  documented in the same change. The boot snapshot predates this standard;
+  `doctrine show STD-001` was read directly.
+- ✓ DEC-020 through DEC-025 shape SL-004: single definition/surface pins, eager
+  stored-identity validation, version refusal, normative brief, fixture-equivalence
+  verification and targeted amendments of the six prior decisions. The design
+  is locked at run revision 39 following the operator's batch approval.
 - ✓ No ADR other than ADR-001 exists.
 
-**Prior art that contradicts ADR-001 and needs a decision outside doctrine.**
+**Normative brief to update under the accepted inquiry decision.**
 - ✓ `smut-implementation-brief.org:33` — "An entity is a JSON object with a nonempty
   string =id=." The brief is the v1 implementation brief (a repo file, not a
-  doctrine entity; IMP-002 refers to it as the input for 1.0), and its six `"id"`
-  occurrences are the examples the README was written from. It is a *revision
-  candidate*: either the brief is amended where ADR-001 supersedes it, or it is
-  marked as the v1 brief whose identity key was superseded. Flagged at design time
-  rather than silently left standing.
+  doctrine entity; IMP-002 refers to it as the input for 1.0). DEC-023 settles its
+  treatment: keep it normative and amend identity mentions and the version example
+  in place. Its Mermaid and remaining 1.0 requirements are still live; neither
+  archiving the brief nor extracting specs belongs to SL-004.
 - ✓ `smut-implementation-brief.org:47` — "Entity identity cannot be dropped or
   renamed", and the `DROP` sentinel cannot be assigned as a top-level field value.
   Consistent with ADR-001 § "The boundaries this leaves"; no conflict.
@@ -122,9 +133,9 @@ and `/reconcile` is the writer.
    others must move with it** — with DEC-005 reversing rather than respelling. That
    is a reconciliation obligation, not a code task, and the slice's audit must carry
    it or the corpus will hold two identity rules.
-2. **The brief is the one governance-adjacent artefact that contradicts ADR-001**
-   (`:33`). It is not a doctrine entity, so no verb will flag it. Design should
-   decide: amend it, or declare it historical in the one paragraph that matters.
+2. **The normative brief must move with the identity/version change** (DEC-023).
+   It is not a doctrine entity, so no verb substitutes for reviewing its updated
+   requirements/examples against ADR-001 and the locked design.
 3. **The format version is already a working refusal path**, so "blow up loudly"
    needs no new mechanism — which is exactly why folding IMP-005 into this slice is
    cheap: the loader is being touched anyway, and the new spelling is the moment to
@@ -148,5 +159,6 @@ and `/reconcile` is the writer.
 - `changes[].id` → `changes[].smut_id` is the single envelope key change; `ids`,
   `deleted`, `missing`, `frontier`, `depths`, `edges[].source`/`.target` stay.
 - The fixture rewrite is spelling-only, and needs a check that holds it.
-- Six DECs move (one in substance); the brief needs an explicit disposition.
+- Six DECs move by targeted in-place amendment (DEC-025); the brief remains
+  normative and is updated in place (DEC-023).
 - Minting (ISS-003) and the short flags (IMP-007) are out of this slice.

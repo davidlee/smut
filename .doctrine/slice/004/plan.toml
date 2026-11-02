@@ -1,0 +1,105 @@
+# Implementation plan for SL-004 — the authored, durable phase plan.
+#
+# This is the single source of each phase's objective, criteria, verification,
+# and links. Runtime status lives separately under .doctrine/state/ (phase
+# tracking) — never record progress here. Hand-edit freely: the tool reads this
+# file but does not rewrite it.
+schema  = "doctrine.plan.overview"
+version = 1
+slice   = "SL-004"
+
+# Canonical spec/requirement links — cite ids, never restate what they say. The
+# plan reader does not model these yet, so nothing downstream consumes them.
+[specs]
+primary       = []
+collaborators = []
+
+[requirements]
+targets      = []
+dependencies = []
+
+# One [[phase]] per ordered phase, in execution order — the authored array order
+# IS the order; never sort by id. Ids are PHASE-NN (zero-padded), immutable and
+# never reused once authored — edits append, they never renumber, so the id
+# sequence goes non-monotonic after a split and that is expected. Criterion ids
+# are local to their phase, bare, and equally immutable
+# (`lib:reference/glossary.md` § reference forms). The prefix is
+# the only mode marker; there is no mode field. Reference a criterion from
+# another phase phase-qualified (PHASE-03/EX-8) — bare EX-8 is ambiguous.
+[[phase]]
+id        = "PHASE-01"
+name      = "Establish the loaded-identity invariant"
+objective = "Add eager recursive stored-identity validation using reference_id and the current ENTITY_ID, with unambiguous file/path corruption errors; preserve the existing key and format until PHASE-02."
+entrance_criteria = [
+  { id = "EN-1", text = "The locked design sections 1-3 and 5, DEC-021 and STD-001 are read; the existing Store::load root checks and reference_id rule match their current source." },
+  { id = "EN-2", text = "Baseline checks are green or any pre-existing failure is isolated and reported; preserve the operator's staged and unstaged README changes and keep them out of unrelated commits." },
+  { id = "EN-3", text = "Tests can construct malformed stores in scratch directories using ENTITY_ID, without touching the operator's live store or changing the format version." }
+]
+exit_criteria = [
+  { id = "EX-1", text = "A private validate_identity_tree helper in src/store/mod.rs walks parsed objects/arrays using reference_id after root checks and before snapshot insertion; scan_refs remains non-fallible." },
+  { id = "EX-2", text = "Malformed nested identity is StoreError::Corrupt, exit 1, naming the entity basename and JSON-quoted bracket path to the identity member; request malformation remains exit 2." },
+  { id = "EX-3", text = "Both get and traversal refuse malformed stored identity even outside the followed field; existing root-check precedence, no-repair behavior and reference-target permissiveness remain." },
+  { id = "EX-4", text = "docs/store-format.md documents the new corruption check, path notation and worked diagnostic using the phase's current identity spelling in the same change; focused and repository checks are green." }
+]
+verification = [
+  { id = "VT-1", expects = "Store corruption tests cover invalid nested identity under objects/arrays, JSON-escaped paths, lexical/positional first failure, unchanged entity/index bytes and preserved root-check precedence.", test_file = "tests/store_corruption.rs", keywords = ["nested_identity", "identity_path", "ENTITY_ID", "StoreError::Corrupt"], waived = false },
+  { id = "VT-2", expects = "CLI tests prove get and follow both fail with empty stdout and exit 1 for malformed persisted identity; an analogous request is exit 2.", test_file = "tests/cli_contract.rs", keywords = ["malformed_stored_identity", "follow", "get"], waived = false },
+  { id = "VT-3", expects = "The private load-boundary validator calls the shared identity predicate and is covered by the corruption tests; no independent identity rule or traversal Result plumbing is introduced.", test_file = "src/store/mod.rs", keywords = ["validate_identity_tree", "reference_id"], waived = false },
+  { id = "VA-1", expects = "Run cargo test --test store_corruption --test cli_contract and just check; retain actual test results separately from verify-vt's source-presence mandates." },
+  { id = "VA-2", expects = "Review the corruption-document change against actual diagnostics under STD-001; the index/manifest versions and ENTITY_ID value have not yet moved, and scan_refs retains its validated-input interface." }
+]
+specs             = []
+requirements      = []
+
+[[phase]]
+id        = "PHASE-02"
+name      = "Move structural identity and the store format together"
+objective = "Change ENTITY_ID to smut_id and both store versions to 2, adapt all structural inputs/outputs, fixtures and current normative/human documents, and prove ordinary id remains data without changing graph content."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-01/EX-1 through EX-4 hold and the loader regression suite is green; read design sections 1-5, ADR-001, DEC-020, DEC-022, DEC-023, DEC-024 and STD-001." },
+  { id = "EN-2", text = "Before fixture edits, record an immutable Git revision containing the original interview array and read that original into scratch space; record its entity count and confirm no pre-existing smut_id key would make the inverse mapping ambiguous." },
+  { id = "EN-3", text = "Coordinate the README passages with the operator before editing them, inspect staged and working-tree changes, and preserve unrelated content and staging; a missing coordination answer blocks that edit, not permission to overwrite it." }
+]
+exit_criteria = [
+  { id = "EX-1", text = "ENTITY_ID retains its name and has literal wire value smut_id; entity/reference recognition, root generation, projection, serialization, changes[].smut_id and the conventions JSON seed use it. Internal value/type names and response containers stay unchanged." },
+  { id = "EX-2", text = "Ordinary id values survive at roots and at depth, including mixed id/smut_id objects; identity predicates/projections use smut_id, while id behaves as an ordinary queried field under existing patch rules." },
+  { id = "EX-3", text = "Both format-version constants are 2; old indexes fail cleanly by version and old committed manifests fail before staged puts/removals replay. Existing recovery order, layout and durability protocol remain." },
+  { id = "EX-4", text = "The committed fixture differs only in structural identity keys: inverse comparison recovers the original parsed data with numeric representation distinctions, values and array order preserved; demonstrate rejection of an altered copy." },
+  { id = "EX-5", text = "The normative brief, docs/store-format.md, learn, README examples, fixture provenance and affected test expectations consistently describe the new identity/version rules. The brief's unfinished 1.0 requirements and historical fixture prose remain intact." },
+  { id = "EX-6", text = "Residual id uses in the code-impact set are classified by meaning, not banned; existing examples and regressions plus new behavior cases pass just check, and no unrelated test is removed or weakened." }
+]
+verification = [
+  { id = "VT-1", expects = "Pin the independent literal wire contract and structural canonical ordering, including smut_id beside lexically earlier ordinary keys.", test_file = "src/entity.rs", keywords = ["ENTITY_ID", "smut_id", "wire_contract"], waived = false },
+  { id = "VT-2", expects = "Public round trips prove ordinary id data, root generation versus nesting, mixed identity/data predicates and projections, and the renamed change receipt while retaining container vocabulary.", test_file = "tests/cli_contract.rs", keywords = ["ordinary_id", "smut_id", "changes", "select"], waived = false },
+  { id = "VT-3", expects = "Version-1 index refusal names found/expected versions and exits 1, while the new loader corruption and ordinary-id cases stay covered.", test_file = "tests/store_corruption.rs", keywords = ["format_version", "smut_id", "UnknownFormatVersion"], waived = false },
+  { id = "VT-4", expects = "An old committed manifest cannot replay staged puts/removals; valid new-format recovery still runs through the established interruption suite.", test_file = "tests/durability_crash.rs", keywords = ["old_manifest_not_replayed", "MANIFEST_FORMAT_VERSION"], waived = false },
+  { id = "VT-5", expects = "The conventions JSON seed uses structural smut_id while retaining its fixed public id and upsert behavior.", test_file = "tests/conventions.rs", keywords = ["smut_id", "conventions-hygiene"], waived = false },
+  { id = "VA-1", expects = "Compare the inverse-renamed fixture with its recorded Git original using serde_json structural equality, preserving 1 versus 1.0 and array order. Observe an altered target/value or reordered-array copy rejected; keep the baseline revision, exact command and results in slice evidence without committing a second fixture." },
+  { id = "VA-2", expects = "Run just check, including default/fault-injection tests and executed README/guide examples; review the full diff and classify residual structural id uses across source, tests and current docs." },
+  { id = "VA-3", expects = "Review docs/store-format.md under STD-001 in the same version-bump change: both versioned documents, canonical bytes, nested-identity corruption and diagnostic examples agree with code. Review the brief as normative and learn as version-matched." }
+]
+specs = []
+requirements = []
+
+[[phase]]
+id        = "PHASE-03"
+name      = "Assemble integrated evidence and the reconciliation handoff"
+objective = "Prepare the six targeted decision amendments for the audit/reconcile seam and independently recheck the integrated format-2 lifecycle, fixture preservation, documentation and regression evidence before audit."
+entrance_criteria = [
+  { id = "EN-1", text = "PHASE-02/EX-1 through EX-6 hold; the version-2 implementation and normative/human documents are green, and the original fixture baseline/equivalence evidence is available." },
+  { id = "EN-2", text = "Read design sections 4-6, DEC-025 and both facet/prose halves of DEC-005, DEC-007, DEC-010, DEC-016, DEC-002 and DEC-012 using doctrine show. RV-023 contains no routed instrument findings to transcribe." }
+]
+exit_criteria = [
+  { id = "EX-1", text = "A precise per-record amendment proposal maps old and new facet/prose passages for all six decisions, with dated ADR-001/SL-004 notes and unchanged rationale identified. DEC-005 explicitly frees ordinary id and cites DEC-021; DEC-007/010/016 and DEC-002/012 examples use the new key. Keep the accepted records untouched until formal reconciliation, as design section 4 requires." },
+  { id = "EX-2", text = "Fresh scratch-store evidence covers a version-2 declare/query/render/delete lifecycle with structural smut_id and ordinary id, old-index refusal, old-manifest no-replay and the malformed nested-identity get/follow refusal with file/path." },
+  { id = "EX-3", text = "Fixture equivalence is independently repeatable from the recorded original revision, residual id classifications identify the six decisions' pending reconciliation targets as well as code/docs, and the complete repository gate passes on the implementation tree." },
+  { id = "EX-4", text = "Notes retain the actual commands/results, original fixture revision, document review and unresolved audit work. No migration, minting/rename verb, short flags, Mermaid, new dependency or unrelated README change is introduced." }
+]
+verification = [
+  { id = "VA-1", expects = "Read all six current decisions via doctrine show and compare each proposed facet/prose amendment against it. Verify the precise identity-rule reversal, projection/recipe/format consequences, unchanged response containers and retained unrelated decisions; hand the mapping to audit for its reconciliation brief." },
+  { id = "VA-2", expects = "Run fresh CLI lifecycle and refusal probes in scratch directories, independently repeat fixture equivalence from the recorded Git original, and record concrete output/exit classes without touching a live store." },
+  { id = "VA-3", expects = "Run just check and doctrine slice verify-vt 4; a source-presence mandate passing is not evidence that its behavioral tests ran. Inspect the final diff, documentation ownership and residual classifications." },
+  { id = "VA-4", expects = "Review the normative brief, learn/README and docs/store-format.md against the final binary and STD-001; confirm code/doc version agreement and unfinished 1.0 scope is retained. Formal audit follows; reconcile then lands and verifies the accepted decision amendments before closure. Phase completion is not slice closure." }
+]
+specs = []
+requirements = []

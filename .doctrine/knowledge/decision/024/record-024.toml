@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 24
+slug = "verify-the-identity-sweep-by-fixture-equivalence-behavior-checks-and-classified-residual-search"
+title = "Verify the identity sweep by fixture equivalence, behavior checks and classified residual search"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-004 inq-5: how to verify the widespread identity-key rename while preserving graph meaning and legitimate payload id fields."
+choice = "Perform a targeted rename of structural identity keys and their predicate, projection, documentation and expected-response uses. Preserve public-id values, ordinary payload id fields and container-named identity values such as ids and source. Compare the rewritten fixture with its original: reversing only the identity-key rename must recover the same parsed data, including values and array order. Add behavior checks proving ordinary id remains data and smut_id supplies identity; run existing fixture, example and regression suites. Search residual id occurrences and inspect them by meaning rather than imposing a blanket prohibition."
+alternatives = ["Mechanical replacement followed only by existing tests"]
+rationale = "Changing both fixture inputs and expected results consistently can conceal an unintended semantic change. Fixture equivalence independently pins graph content, while behavior checks establish the intended new distinction between ordinary id and structural smut_id. Legitimate payload id makes a blanket search ban incorrect."
+consequences = ["The fixture rewrite changes identity spelling only, preserving ids, values and array order.", "Residual searches are review evidence requiring classification, not a zero-match gate.", "Existing fixture, guide/example and regression suites remain required, alongside new identity behavior checks."]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-004"

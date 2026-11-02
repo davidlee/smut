@@ -1,0 +1,24 @@
+id    = 23
+slug  = "design-review-of-sl-004"
+title = "design review of SL-004"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Self-review of materialised SL-004 design sections 1–6 against ADR-001, STD-001, DEC-020 through DEC-025, existing entity/declaration/conventions/store/index/journal source, test surfaces and just check recipe. Examined identity and payload distinction, root generation, receipt/projection/canonical bytes, loader ownership and path escaping, exit classes, both format gates before old committed-manifest replay, preserved recovery ordering, fixture equivalence with numeric distinctions and negative control, residual classification and documentation/decision/selector alignment. No verified findings raised. This is not an independent adversarial review or runtime evidence; final human reviews and review disposition remain outstanding."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-004"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

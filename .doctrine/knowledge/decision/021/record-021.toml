@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 21
+slug = "validate-nested-identity-eagerly-at-load-refuse-corruption-before-traversal"
+title = "Validate nested identity eagerly at load; refuse corruption before traversal"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-004 inq-2: establish scan_refs' stored-entity precondition and fix IMP-005 while the identity key moves to smut_id."
+choice = "Store::load recursively validates each parsed entity after its root object and root identity/index checks, using reference_id's nonempty-string rule for every object carrying smut_id. Ordinary id values remain unrestricted data. On malformed stored identity return StoreError::Corrupt at exit 1, naming the entity file and an unambiguous field/index path. Keep scan_refs non-fallible with its internal invariant assertion. Update docs/store-format.md in the same change under STD-001."
+alternatives = ["Validate during reference scanning and thread Result through traversal callers"]
+rationale = "The loader establishes validity once for every loaded entity and every subsequent read. Lazy validation lets malformed entities through reads that never scan references and spreads storage failure handling through traversal."
+consequences = ["An additional linear walk over each already-parsed entity on every load; no second file read or JSON parse.", "Malformed stored smut_id is storage corruption (exit 1); ordinary payload id values are data.", "The store-format document must carry the validation and diagnostic contract in the same change."]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-004"

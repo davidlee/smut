@@ -1,0 +1,1 @@
+SL-004 inq-5. The operator replied "agree" after the agent presented targeted identity replacement, reversible fixture comparison, ordinary-id versus smut_id behavior checks, existing suite execution, and semantic classification of remaining id occurrences. No assent is inferred for inq-6 or graph/sufficiency gates.

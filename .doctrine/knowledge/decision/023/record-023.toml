@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 23
+slug = "keep-the-implementation-brief-normative-and-update-identity-mentions-in-place"
+title = "Keep the implementation brief normative and update identity mentions in place"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-004 inq-4: how should the v1 implementation brief remain coherent with ADR-001 while its Mermaid and remaining 1.0 requirements are still unfinished?"
+choice = "Keep smut-implementation-brief.org as the normative product intent and requirements document. Update identity-key mentions and examples from id to smut_id, the affected change-record field and store-format version example in place under ADR-001 and SL-004. Preserve ordinary id data and container-named identity values. Do not mark the brief historical or extract separate product/technical specs as part of this slice. Keep its unfulfilled 1.0 scope live; docs/store-format.md remains the single record of the actual on-disk format under STD-001."
+alternatives = ["Mark the brief historical and transfer its remaining intent elsewhere", "Extract separate product/technical specs now"]
+rationale = "The brief still carries unfinished requirements, especially Mermaid and remaining 1.0 delivery work. The operator considers updating identity mentions cheaper than spec extraction and wants a clear normative truth document rather than ambiguous authority."
+consequences = ["The brief is part of the identity-change documentation sweep, including identity examples and format version.", "Historical archive treatment and spec extraction are outside this slice.", "Remaining brief requirements continue to govern delivery; the format document retains its specific ownership under STD-001."]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-004"

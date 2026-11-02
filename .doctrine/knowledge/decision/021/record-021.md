@@ -1,0 +1,1 @@
+Answer to SL-004's inq-2. The agent presented eager loader validation versus validation during traversal, including its additional linear walk, the failure shape and STD-001 documentation obligation. The operator replied "agree" in this session. This assent applies only to that answer, not graph review, inquiry sufficiency or later design acceptance.

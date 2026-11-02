@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 22
+slug = "old-format-stores-fail-cleanly-by-version-no-migration-advice-or-compatibility-layer"
+title = "Old-format stores fail cleanly by version; no migration advice or compatibility layer"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-02"
+updated = "2026-11-02"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-004 inq-3: is the existing format-version refusal sufficiently clean and loud for the identity format break?"
+choice = "Keep the existing version-refusal diagnostic shape and storage failure class: exit 1 naming the format version found and the version this build reads. Apply the corresponding version check to committed journal manifests before replay. Document the break in docs/store-format.md under STD-001. Add no release-specific migration advice, migration tooling, compatibility reader or repair path."
+alternatives = ["Expand the diagnostic with the identity rename and advice to re-declare existing data"]
+rationale = "The operator accepts the existing found-versus-expected version diagnostic and has essentially no legacy consumers whose compatibility they wish to preserve. Their report of 14 downloads of 0.1, with an expectation that 13 were bots, is operator context rather than independently verified adoption data. The stated requirement is to fail clean and loud, not to preserve compatibility."
+consequences = ["Old stores are refused rather than interpreted under the new identity spelling.", "Old committed journal manifests are refused by version before replay.", "Keep diagnostic guidance release-independent and document the format break in the format record."]
+decided_by = "operator and agent"
+decided_on = "2026-11-02"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-004"

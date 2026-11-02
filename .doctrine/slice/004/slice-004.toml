@@ -1,9 +1,9 @@
 id = 4
 slug = "identity-is-smut-id-the-format-break-and-a-fixed-loader"
 title = "Identity is smut_id — the format break, and a loader that refuses what it cannot trust"
-status = "design"
+status = "plan"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-02"
 tags = []
 
 [relationships]
@@ -12,43 +12,103 @@ after = []                      # slice→work soft sequence: { to, rank }
 
 [[selector]]
 selector = "src/entity.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/declare.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/store/**"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/walk.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/select.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/order.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/cli.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "src/learn.rs"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "docs/store-format.md"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[selector]]
 selector = "tests/**"
-intent = "scope-relevant"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = "src/conventions.rs"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = "src/render_markdown.rs"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = "README.md"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = "smut-implementation-brief.org"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/002/record-002.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/005/record-005.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/007/record-007.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/010/record-010.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/012/record-012.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
+
+[[selector]]
+selector = ".doctrine/knowledge/decision/016/record-016.*"
+intent = "design-target"
+note = "SL-004 design section 4: identity spelling, loader/format, documentation, fixture/tests and targeted DEC reconciliation; inspect shared consumers without requiring unrelated production changes"
 
 [[relation]]
 label = "governed_by"

@@ -1,0 +1,1 @@
+SL-004 inq-6. The agent presented the affected decision passages, targeted amendments and the alternative of superseding records. The operator replied "yes" to targeted in-place amendments. This assent resolves inq-6 only; graph-reviewed, sufficiency-accepted and later design acceptance remain separate acts.
