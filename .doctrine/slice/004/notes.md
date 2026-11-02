@@ -511,6 +511,59 @@ and advanced to audit.
   new untracked `.doctrine/slice/006*`, `.doctrine/review/027*`,
   `.doctrine/backlog/{idea/004,idea/005,chore/002}*`. Never staged, never swept.
 
+### Seat review of PHASE-02 — 2026-11-02 (super-orchestrator seat)
+
+Verified independently, not read off the handback.
+
+- **Gate.** `just check` re-run from the seat: **exit 0**, 0 failures, 0 warnings —
+  370 lib (383 `--features fault-injection`), 50 `cli_contract`, 48 `durability_crash`,
+  34 `traversal`, 27 `store_corruption`, 15, 14, 13, 11, 10, 10, 8, 5, 4, 0.
+- **Registry.** `doctrine slice verify-vt 4`: PHASE-01 VT-1..3 and PHASE-02 VT-1..8
+  **all PASS**; phase rollup `2/3`.
+- **Fixture, independently repeated against the recorded blob.**
+  `sed 's/"smut_id":/"id":/g'` over the committed fixture reproduces
+  `git cat-file blob f5b29de6…` **byte for byte** — a stronger result than the
+  structural comparison VA-1 asks for, and it settles the question of whether a
+  one-line rename could have done it: it could, and the inverse proves it. Both
+  negative controls fire (an altered title and a reordered array each break the
+  equality). The seat concedes the process point recorded here: the fixture *edit*
+  was mechanical; the deliverable was the repeatable proof.
+- **Wire spelling in production.** Only `src/entity.rs:17` (`ENTITY_ID`) and the
+  guide's own examples (`src/learn.rs:271/277/284`, which state the spelling rather
+  than emit it). Nothing else, in any production path. EX-1 holds.
+- **README boundary.** In committed coordinates the executed fence is `67..94`,
+  because the operator's uncommitted rewrite is absent from the commit; every
+  changed line (`68,71,73,82,85,88,93`) is inside it — 10 lines in, 10 out, no
+  prose hunk. EN-3 respected exactly.
+- **Live EX-8 probe** (scratch store, seat-run): nested `{"smut_id":null}` →
+  `smut: <file>.json is not a valid store entry: identity at $["payload"]["smut_id"]
+  must be a nonempty string`, exit 1; the same object with an ordinary
+  `{"id":null,"n":7,"arr":[1],"obj":{...}}` is served at exit 0 with the `id`
+  preserved as data. The promised behaviour is real, not just green tests.
+- **Diagnostics.** All four identity-naming strings moved, and `docs/store-format.md`
+  quotes each verbatim, including `holds nothing under smut_id` (the `describe()`
+  absent case now reads `nothing`). Version 2 in both versioned documents, no
+  migration offered, conventions stated as living in `.config/smut/conventions/`
+  and never inside `.smut/`.
+- **No weakening.** Zero `#[test]` lines removed anywhere in the range; the two
+  removed `fn` lines are renames (`an_id_is_an_ordinary_order_field` →
+  `smut_id_is_an_ordinary_order_field`, `project_gives_id_only_…` →
+  `project_gives_smut_id_only_…`), both keeping their original claim.
+- **Conformance.** 31 selectors conformant, including every assessed surface.
+  Undeclared: the operator's and SL-006's `.doctrine` work that landed inside the
+  range, this slice's own `notes.md`/`slice-004.toml`, and **`src/predicate.rs`** —
+  an 8-line inline-test respell (`{"id":"a"}` → `{"smut_id":"a"}`) in a file the
+  design's §4 table never listed. Not a defect, a selector gap: the occurrence count
+  named `src/predicate.rs` but the code-impact contract did not. For audit.
+  Undelivered: exactly the six decisions PHASE-03 proposes amendments for.
+
+**Operator-facing finding, outside this slice's write scope.** `README.md`'s
+surrounding prose (CHR-001's 0.2 rewrite, uncommitted) still teaches the old key at
+lines 16, 65, 73, 77, 247-250 and 252. Lines 247-250 are not merely stale spelling:
+they state "An embedded object carrying `id` is a reference, not metadata… there is
+no way to store inline metadata under a field named `id`" — the exact claim DEC-005
+reverses and this slice falsifies. Surfaced to the operator; not edited here.
+
 ## Pre-implementation review
 
 Two independent reviews (Seat A: obligation ledger; Seat B: sequencing and surface) ran
