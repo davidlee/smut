@@ -6,7 +6,7 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-02 · design locked (rev 47) + planned + reviewed · 01764f6
+fresh-as-of: 2026-11-02 · PHASE-01 completed (commit d7b6daa) · PT-02 next, gated on SL-005
 
 ### Produced
 - SL-004 — six-section materialised design and code-impact selectors
@@ -19,6 +19,9 @@ fresh-as-of: 2026-11-02 · design locked (rev 47) + planned + reviewed · 01764f
 - CHR-001 — operator's 0.2 README rewrite
 - RSK-001 — unenforced-invariant gap (promoted into STD-002)
 - SL-004 — three review reports under `research/raw/`
+- SL-004 PHASE-01 — `validate_identity_tree` + `walk_identities` in `src/store/mod.rs`, the
+  bracketed identity-path notation and its pending-PHASE-02 doc material; 31 new tests across
+  `tests/store_corruption.rs` (11), `tests/cli_contract.rs` (6) and the inline walk suite (14)
 
 ### Learned
 - DEC-020 — identity constant and per-surface pins
@@ -29,11 +32,22 @@ fresh-as-of: 2026-11-02 · design locked (rev 47) + planned + reviewed · 01764f
 - DEC-025 — targeted amendments of six identity-bearing decisions
 - DEC-027 — a field no entity carries is taught, never refused; the guide carries that consequence
 - STD-002 — recovery publishes before validation; the version gate is the whole defence
+- SL-004 — loader validation is a stricter reader at format 1: the rule lands now, the document
+  and the bump land together in PHASE-02 (STD-001's own format-break clause)
+- SL-004 — the IMP-005 panic was real: pre-change `follow` exited 101 at `src/entity.rs:93`
+  while `get` served the corrupt entity at exit 0; both now exit 1 with file and path
+- SL-004 — `serde_json::Map` is a `BTreeMap` in this crate (no `preserve_order`), so lexical
+  object iteration is free and the walk needs no sorting for deterministic first failure
+- SL-004 — a private helper's TDD red is a compile error (`E0425`); it is still red for the
+  intended reason when it names the missing symbol and `cargo build` stays clean
 
 ### Open
-- SL-004 — implementation not started; PHASE-01 is the next lifecycle step
-- SL-004 — PHASE-02/EN-4: the operator's live store needs an agreed re-declare path before the version bump
-- SL-004 — SL-005 ordering (`after: SL-005`): its refusal phase lands first or this work takes a rebase; both edit `src/error.rs`
+- SL-004 — PHASE-02 next, but chartered only after SL-005's refusal phase lands (shared
+  `src/error.rs`, `after: SL-005`); both PHASE-02 operator gates (EN-3, EN-4) are now recorded
+- SL-004 — PHASE-02 must carry PHASE-01's pending doc material: the nested-identity corruption
+  rule, the `$["key"][0]` notation and the worked diagnostic respelled to `smut_id`
+- SL-004 — PHASE-02 respells PHASE-01's literal `"id"` fixtures (`tests/store_corruption.rs`,
+  `tests/cli_contract.rs`, the inline walk suite) — a reviewed act, not a search-and-replace
 - SL-004 — formal audit and the six-decision reconciliation handoff (PHASE-03)
 - RV-025 — 8 minor + 2 nit answered, none contested; not verified, no route required
 - Doctrine — design status reports `review_pass RV-025 STALE` on a locked run whose content matches its watermark and whose cache is current (projection quirk, not a gate)
@@ -278,7 +292,109 @@ generated evidence, so it is regenerated against the binary that prints it rathe
 than hand-edited, and the tree stays green until PHASE-02's own red/green cycle.
 **EN-3 is satisfied; both PHASE-02 operator gates are now closed.**
 
-Not started. PHASE-01 is next; `doctrine slice phase SL-004 PHASE-01 --status in_progress` opens it.
+### PHASE-01 — 2026-11-02 (sub-orchestrator seat) — **completed**
+
+**Shipped.** `src/store/mod.rs` gains `validate_identity_tree(entry, value)`, a
+private wrapper over `walk_identities(entry, value, &mut path)`, called from
+`Store::load` after the existing is-an-object and root `IdDisagreement` checks and
+before `entities.insert`. Every object is asked `crate::entity::reference_id` (the
+one identity rule, imported from `src/entity.rs`; no second predicate exists), every
+object value and array element is descended into — including through an object that
+already scores a valid identity, so a reference-shaped object is not a leaf — and a
+malformed one becomes `StoreError::Corrupt` naming the indexed basename and the
+path. One linear pass over the already-parsed value: no second read, no second
+parse, no subtree clone; one `String` path is pushed and truncated along the walk
+and the reason is formatted once. `scan_refs` is untouched and still non-fallible;
+`ENTITY_ID`, `FORMAT_VERSION`, `MANIFEST_FORMAT_VERSION` and `src/error.rs` are
+unmoved; no new error variant, dependency, module or alias.
+
+**Diagnostic (settled).** `identity at <path> must be a nonempty string`, path =
+`$` root marker + `["<json-escaped key>"]` per object step + `[<index>]` per array
+step, ending at the offending identity member. Observed live:
+`smut: tvfxKuA5o75OyOTXXLgkF.json is not a valid store entry: identity at $["payload"]["tags"][2]["id"] must be a nonempty string`
+(exit 1, empty stdout), and for escapes
+`$["a.b"]["q\"z"][""][0]["id"]`. Object order is lexical because `serde_json::Map`
+is a `BTreeMap` here (`Cargo.lock`: serde_json without `preserve_order`), so
+first-failure is deterministic without sorting.
+
+**Evidence pointer.** Commits `d7b6daa` (sources + tests) and `0b63376` (VT-mandate
+naming only). Red-then-green, per behaviour:
+
+| Step | Red observed | Green after implementation |
+| --- | --- | --- |
+| VT-1 `tests/store_corruption.rs` | `16 passed; 7 failed` — each refusal failed at `expect_err` with the loaded `Snapshot` printed | `23 passed; 0 failed` (12 baseline + 11) |
+| VT-2 `tests/cli_contract.rs` | `37 passed; 3 failed` — `get` exit **0**, `render` exit **0**, `query`+`follow` exit **101** (the `scan_refs` panic at `src/entity.rs:93`, IMP-005 reproduced) | `40 passed; 0 failed` (34 baseline + 6) |
+| VT-3/VA-3 inline `mod tests` | `cargo test --lib`: `error[E0425]: cannot find function validate_identity_tree in module super` ×7, `cargo build` clean | `352 passed; 0 failed` (338 baseline + 14) |
+| VA-1 gate | — | `just check` **exit 0**: build, both clippy configs `-D warnings`, `cargo fmt --check`, default tests (352 lib + 10,40,10,4,14,0,15,12,5,10,4,8,23,34,0) and `--features fault-injection` (365 lib + 10,40,10,4,14,44,15,12,5,10,4,8,23,34,0); 0 failures, 0 ignored, 0 warnings |
+
+`doctrine slice verify-vt 4` — after completion and the recorded delta, all three
+PHASE-01 VTs **PASS** (VT-1, VT-2, VT-3); PHASE-02's unstarted VTs still report
+FAIL/UNATTRIBUTABLE, which belongs to that phase. The gate is a source-presence
+mandate either way and is kept separate from the behavioural results above, per
+VA-1. Two mandated keywords were missing from the files at first (VT-1's
+`ENTITY_ID`, VT-2's `malformed_stored_identity`); they were satisfied by naming —
+a doc-comment sentence saying why the fixtures spell the key literally *rather
+than* through `ENTITY_ID`, and renaming the two refusal tests for what they
+refuse — never by adding a constant reference to a fixture, loosening an
+assertion, or editing the plan. Commit `0b63376`.
+
+The phase's registry range is `fdd5f4d..0b63376`, recorded with
+`doctrine slice record-delta 4 PHASE-01 --start fdd5f4d --end 0b63376` after the
+keyword fix re-opened and re-closed the phase; the automatic binding had captured
+only the re-opened start point. Two completion transitions are in the runtime
+sheet's append-only `[[progress]]` log (completed → in_progress → completed); the
+second is the truthful one and both are visible there.
+
+**VT-1 content.** Literal `"id"` spelling in every injected malformed identity (the
+phase's spelling, so PHASE-02's respell is a visible reviewed act); null/empty/
+number/array/object values; malformed identity under objects and arrays; descent
+past a valid reference-shaped `{"id":"opaque"}`; JSON-escaped keys (`.`, `[x]`,
+`"`, `\`, `\u0001`, `""`) plus an array position; lexical-key and lowest-index
+first failure; entity+index byte equality and an unchanged directory listing after
+refusal; root malformation still `IdDisagreement` and a non-object file still the
+"holds a JSON object" refusal; valid nested identities and id-less objects load.
+
+**VT-2 content.** `get`, `render` and `query` with `follow` all refuse the corrupt
+store at exit 1 with **empty** stdout, naming the basename and the path — `follow`
+with the malformation under a field it never walks, paired with a control that the
+same graph and traversal exit 0 and return both entities. The analogous *request*
+malformation (`declare` with `payload.id` null and `[]`) stays exit 2 with the
+existing invalid-identity refusal.
+
+**VA-3 content.** 14 inline tests drive `validate_identity_tree` over parsed values
+only (no store, no filesystem): acceptance shapes, the five malformed shapes, array
+position, the root object, descent past a reference-shaped object, escaping, both
+determinism cases, a 40-step path, a 200-item identity-bearing array control, and a
+table asserting `reference_id(&v).is_err()` matches the walk's refusal row for row
+(one rule, not two).
+
+**Deviations.** (1) The design names one function; the implementation is a wrapper
+plus `walk_identities`, because the fixed `(entry, value)` signature cannot carry
+the path. Same rule, no public surface. (2) Red for the private helper is a compile
+error (E0425) by construction — the intended red for a not-yet-existing symbol, with
+`cargo build` clean and production code untouched at that point. (3) Path components
+transiently allocate their JSON-escaped/`usize` text; bounded by the component, not
+by any subtree, which is the VA-3 reading. (4) `render` gained a refusal test beyond
+VT-2's `get`/`follow` pair, because it is the third traversal over the same
+boundary.
+
+**EX-4 / EX-5.** `docs/store-format.md` is untouched (`git diff -- docs/` empty) and
+the corruption rule, path notation and worked diagnostic are recorded as pending
+PHASE-02 material in the runtime phase sheet (§ *Pending PHASE-02 material*) —
+PHASE-02 must carry them with the version bump, and its EX-9 respells the worked
+diagnostic's key. No tag, no publish, no release candidate, no invocation against
+`interview.local/.smut` or the committed fixture store: every probe and every test
+target wrote scratch temp directories only. This tree is a stricter reader at format
+1 and is deliberately not a release (STD-002's obligation is discharged by
+PHASE-02's bump inside the same slice; STD-001's "a format break moves the document
+with the version bump" clause is why the document is not rewritten here).
+
+**Workers.** Four native pi `worker` children, run serially in the main worktree, no
+Quotient, no worktrees, inherited model configuration: VT-1 tests (red), VT-2 tests
+(red), VT-3/VA-3 inline tests (red), implementation (green). One focused rebrief was
+not needed; no worker failure and no model substitution. Wall-clock cost was dominated
+by the one `just check` (~all suites, 0 failures); test-target runs are sub-second
+against the warm `target/`.
 
 ## Pre-implementation review
 
@@ -427,6 +543,53 @@ interfere; the gap is that one edited file was outside the code-impact contract.
 - **Preflight · baseline gate accepted as green.** Decided. `just check` ran to
   exit 0 in this jail with 0 failures across both feature configurations, so any
   later red is a regression, not a baseline condition.
+- **PHASE-01 · helper split into `validate_identity_tree` + `walk_identities`.**
+  Decided (sub-orchestrator, then verified). Reason: design §3 fixes the
+  `(entry, value)` signature, which cannot carry the diagnostic path; the wrapper
+  holds one `String` and the inner walk pushes/truncates one component per step.
+  Same single rule, no public surface, no new module. Records as a deviation, not a
+  design change.
+- **PHASE-01 · compile-error red accepted for the private helper.** Decided. The
+  VT-3/VA-3 inline tests were written first and the lib test target failed with
+  `E0425: cannot find function validate_identity_tree` ×7 while `cargo build` stayed
+  clean. Reason: a not-yet-existing private symbol has no runtime red; the observed
+  failure names exactly the missing symbol and no other error, so it is red for the
+  intended reason. The two integration suites still had genuine runtime reds
+  (`get`/`render` exit 0, `follow` exit 101 from the `scan_refs` panic).
+- **PHASE-01 · injected fixtures spell the key literally (`"id"`).** Decided.
+  Required by PHASE-01/VT-1: the semantic target stays visible in the diff, and
+  PHASE-02's respell becomes a reviewed act rather than an invisible search-and-
+  replace.
+- **PHASE-01 · `docs/store-format.md` left untouched.** Decided. Its Corruption
+  section would have to state a rule version 1's released reader did not enforce
+  (EX-4, review B-F-1); STD-001's own "a format break moves the document with the
+  version bump" clause puts it in PHASE-02. The corruption rule, bracket notation and
+  worked diagnostic are recorded as pending PHASE-02 material in the runtime sheet
+  and in this file.
+- **PHASE-01 · `render` refusal test added beyond VT-2's pair.** Decided. `render`
+  is the third traversal over the same load boundary and was silently exiting 0 on
+  the corrupt store; one test, no new obligation.
+- **PHASE-01 · path-component allocations accepted as bounded.** Decided. Each
+  object/array component allocates only its JSON-escaped key or index text, never an
+  entity subtree, which is VA-3's "allocates only the traversal path and the final
+  error". Recorded so the audit reads the criterion the same way.
+- **PHASE-01 · no new knowledge record minted at harvest.** Deferred. The one durable
+  fact (serde_json's map is a `BTreeMap` here, so object iteration is lexical and the
+  walk needs no sorting) is already stated in design §3 and in the helper's doc
+  comment; minting a memory would duplicate it without a consumer. The audit may
+  promote it if it becomes load-bearing elsewhere.
+- **PHASE-01 · VT keyword mandates satisfied by naming, not by weakening.** Decided
+  after `verify-vt` reported VT-1's `ENTITY_ID` and VT-2's
+  `malformed_stored_identity` absent. Added a doc sentence explaining why the
+  fixtures spell the key literally *rather than* through `ENTITY_ID` (adding the
+  constant to a fixture would have contradicted VT-1's own literal-spelling mandate)
+  and renamed the two refusal tests for what they refuse. No assertion, fixture or
+  plan edit; the phase was re-opened, re-gated and re-closed to make the source
+  presence attributable, and the range recorded with `slice record-delta`.
+- **PHASE-01 · `verify-vt` verdicts treated as non-evidence.** Decided. They are
+  source-presence mandates and are recorded separately from VA-1's behavioural
+  results; after the delta record all three PHASE-01 VTs pass, and PHASE-02's
+  unstarted FAILs are left alone for that phase.
 - **Run shape · PHASE-01 is the terminus.** Decided. Operator re-affirmed the
   SL-005 ordering at the seat, so the charter range is PHASE-01 alone and the run
   ends there with a checkpoint. Reason: PHASE-02/EN-5 binds PHASE-02's entrance on
