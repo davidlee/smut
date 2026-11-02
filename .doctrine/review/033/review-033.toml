@@ -1,0 +1,237 @@
+id    = 33
+slug  = "phase-04-layered-surface-review-of-seven-commits-six-of-them-never-reviewed"
+title = "PHASE-04 layered surface — review of seven commits, six of them never reviewed"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "code-review"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Independent per-phase review of SL-008 PHASE-04, conducted as a patch review rather than a range review because the recorded delta spans 26 commits of which 18 belong to the concurrently-running SL-010: the reviewer was given `/tmp/sl008-phase04.patch`, the seven PHASE-04 commits restricted to the seven owned files, and told the working tree carries another slice's code that is out of scope. Eight findings (4 minor, 4 nit), no blocker, no major. Seven discharged in `e692735` and verified by the seat; F-7 (the third field's vocabulary not being disjoint from author-supplied summaries, so `summary: shadowed` renders a shadow-shaped row) went to reconcile, where inventing an escaping rule belongs. The reviewer confirmed `listing`'s four states are decided once in one match in contract order, that the shadow predicate is positional so the binary row is demoted like any other, that `answer` is the single caller of `load`, and that the F-17 fixture genuinely terminates the walk at the repository rather than the home. Verdict was that EX-1..EX-7 are met as written and EX-8 was not literally met. As in RV-030 and RV-032, raise, dispose and verify were all the seat's turns; the audit's pre-close review should read this ledger rather than trust it."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-008"
+phase = "PHASE-04"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "minor"
+title = "An assertion a preceding line already guarantees — the class EX-8 forbids"
+detail = """
+`src/conventions.rs:2059`, in `a_failed_row_beats_shadowed`: `assert_ne!(row.split("  ").nth(2), Some("shadowed"))` follows `assert_eq!` on the same expression with `Some("did not load: {reason}")`. A string cannot equal both, so the `assert_ne!` occupies an evidence slot no input can falsify. The completing run's own mutation probe confirms it: making failure lose to shadow reddens via the exact equality, not this line. It also contradicts that run's EX-8 verdict of "no vacuous pins", and it is the defect PHASE-01 caught and reverted.
+
+Smallest correction: delete it, or move it above the exact equality."""
+disposition = "fix-now"
+response = "Upheld — and it is the third time in this slice that the same defect class has been found by review after a run declared the suite clean. That pattern is the finding behind the finding: a green suite is not evidence about its own assertions. Deleted rather than reordered, because the exact equality it sits under already carries the property and the mutation probe proves the line contributes nothing."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld — and it is the third time in this slice that the same defect class has been found by review after a run declared the suite clean. That pattern is the finding behind the finding: a green suite is not evidence about its own assertions. Deleted rather than reordered, because the exact equality it sits under already carries the property and the mutation probe proves the line contributes nothing."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `e692735`. The `assert_ne!` is gone (`grep` returns 0) and the exact equality that carries the property is untouched, so the mutation probe's evidence stands and the vacuous slot is removed rather than reordered."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "The refusal-order row cannot discriminate the order it is named for"
+detail = """
+`tests/conventions.rs:543`, fixture `:547`: `["conventions", "hygiene", "--format", format]`. `hygiene` resolves, so an operand-first implementation looks the name up, succeeds, and reaches the same `unknown --format` message — both orders print byte-identical stderr, so both assertions pass either way. The property is covered elsewhere (`any_other_format_is_refused_before_the_name_is_read`, `src/conventions.rs:1066`, uses `nonsense` and does discriminate), so nothing behavioural is at risk; the row's name promises more than its fixture checks.
+
+Smallest correction: `"hygiene"` → `"nonsense"`; the existing `!stderr.contains("unknown conventions set")` then reddens an operand-first implementation."""
+disposition = "fix-now"
+response = "Upheld, and it is exactly the weak spot the completing run flagged as F1 rather than repaired — which is how it should arrive. One word: the fixture must feed a name that does *not* resolve, or the row tests the message rather than the order. The sibling unit row already discriminates; this one should too."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld, and it is exactly the weak spot the completing run flagged as F1 rather than repaired — which is how it should arrive. One word: the fixture must feed a name that does *not* resolve, or the row tests the message rather than the order. The sibling unit row already discriminates; this one should too."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `e692735`, and the evidence is better than the correction I asked for. The fixture now feeds `nonsense`, and the worker proved the *old* fixture could not discriminate by running the operand-first mutant with `hygiene` restored — `ok. 1 passed` under a mutant that should have reddened it. It also reworded the stale header comment and the assertion message, which would otherwise have kept asserting what the fixture no longer did."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = """EX-2's "nothing rewrites a path to look absolute" has no falsifier"""
+detail = """
+`the_path_column_is_absolute_for_a_file_and_a_leaf_for_the_binary` (`src/conventions.rs:2078`) and every spawned listing row use absolute origins only, so a renderer that canonicalised or prefixed the cwd — making a relative root look absolute, the exact failure EX-2 names — passes the whole suite. The behaviour is correct today (`origin.path.display()`, `:699-700`), proven only by a manual run.
+
+Smallest correction, three lines: one unit row with `Origin { layer: User, path: PathBuf::from("config/smut/conventions/Mine.md") }` whose expected row ends in that relative path."""
+disposition = "fix-now"
+response = "Upheld. A property proved by a manual run and by no test is a property that will regress on the first refactor, and this one is the clause EX-2 goes out of its way to state. Adding the three-line row so the relative case has a falsifier."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld. A property proved by a manual run and by no test is a property that will regress on the first refactor, and this one is the clause EX-2 goes out of its way to state. Adding the three-line row so the relative case has a falsifier."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = 'Discharged in `e692735` by `a_relative_origin_renders_a_relative_row` (`src/conventions.rs:2103-2130`), and it improved on my brief: I asked for an `ends_with` on the relative path, but a cwd-prefixed path still *ends* in the relative one, so `ends_with` would not have falsified the failure EX-2 names. It compares the whole row instead — `Mine  user  -  config/smut/conventions/Mine.md\n`. That is the difference between a pin and a decoration.'
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "A no-repository fixture with an exact-output assertion skips EN-4's guard"
+detail = """
+`tests/conventions.rs:1075`, `a_set_that_exists_only_in_the_config_home_resolves`: cwd is `scratch.dir("work")`, the listing assertion is a whole-string equality whose correctness presumes no project layer (its own comment says "the listing is the shipped row alone"), and it is the only such fixture that does not call `assert_no_repository_above` — its siblings at `:1219`, `:1368`, `:1394`, `:1426`, `:1448` all do. On a `$TMPDIR` inside a checkout whose `.config/smut/conventions/` holds `.md` files it reddens for a reason its message does not name. EN-4 mandates the assertion for "every fixture that depends on there being no repository above it".
+
+Smallest correction: `scratch.assert_no_repository_above(&work);` as its first line."""
+disposition = "fix-now"
+response = "Upheld, and it is the one EN-4 case that the phase's own criterion predicted — a fixture reddening for its own reason rather than the test's is exactly what that guard exists to prevent, and it only bites on somebody else's machine, in a checkout, later. One line."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld, and it is the one EN-4 case that the phase's own criterion predicted — a fixture reddening for its own reason rather than the test's is exactly what that guard exists to prevent, and it only bites on somebody else's machine, in a checkout, later. One line."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `e692735`. `a_set_that_exists_only_in_the_config_home_resolves` now opens with `assert_no_repository_above`, matching its five siblings, so a `$TMPDIR` inside a checkout reddens the guard rather than the listing equality."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "nit"
+title = "Two pins duplicate properties already pinned, without retiring the redundant assertion"
+detail = '''
+`the_seed_is_one_compact_line` (`tests/conventions.rs:624`) is a strict subset of `the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version` (`:567`); and at `src/conventions.rs:1848` the unique assertion `matches('\n').count() == 1` in `a_set_that_declares_no_summary_lists_with_a_dash` is implied by the exact equality two lines above it.
+
+Scoped correction only: **delete the unfalsifiable assertions**, keep both VT-mandated test names and every distinct property. Do **not** merge or rename tests — `the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version` is referenced by PHASE-02's record and the VT keyword lists are substring-matched, so a restructure would be a bigger change than the defect.'''
+disposition = "fix-now"
+response = "Upheld on the assertion, refused on the restructure. The redundant `count()` lines are the same defect as F-1 and go. But merging tests so that a mandated name absorbs an older one is a change to the suite's shape that the reviewer proposed and I am not taking: VT keywords are substring-matched, PHASE-02's record cites one of these names, and trading a known-unfalsifiable assertion for an unknown keyword break is a bad exchange. Delete the assertion, keep the names."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld on the assertion, refused on the restructure. The redundant `count()` lines are the same defect as F-1 and go. But merging tests so that a mandated name absorbs an older one is a change to the suite's shape that the reviewer proposed and I am not taking: VT keywords are substring-matched, PHASE-02's record cites one of these names, and trading a known-unfalsifiable assertion for an unknown keyword break is a bad exchange. Delete the assertion, keep the names."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = '''Discharged in `e692735`, scoped as the disposition set: the two implied `matches('\n').count() == 1` assertions are deleted and both VT-mandated test names, and every distinct property, survive. No test was merged or renamed, so the substring-matched keyword lists are untouched.'''
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "nit"
+title = "The new doc asserting where `.config/smut` is joined is false"
+detail = """
+`src/main.rs:117` (added by this patch): "Neither root is spelled with `.config/smut` here: `Roots::under` is the one place that segment is joined." False — `user_root` joins `.config` + `smut` for its home fallback (`src/conventions.rs:112`), which PHASE-01/EX-2 *requires*. `Roots::under`'s own doc (`:61`) overstates identically, and so do EX-5's "nowhere else" and PHASE-01/EX-3's "the one place".
+
+The property they are all trying to protect holds: `roots()` spells neither segment and `load` joins `<kind>` once. Only the sentences are wrong.
+
+Smallest correction: "no root is spelled here; `Roots::under` joins the project layer's segment, `user_root` returns the user layer whole" — and the criterion wording goes to reconcile rather than being repaired in code."""
+disposition = "fix-now"
+response = "Upheld. The property holds and three separate sentences overstate it, including two the plan authored — so the honest fix is to correct the prose and record the criteria at reconcile rather than quietly writing code that matches a false sentence. This is the second criterion in two phases whose literal is stricter than its truth; that is a pattern worth carrying, not two accidents."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld. The property holds and three separate sentences overstate it, including two the plan authored — so the honest fix is to correct the prose and record the criteria at reconcile rather than quietly writing code that matches a false sentence. This is the second criterion in two phases whose literal is stricter than its truth; that is a pattern worth carrying, not two accidents."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `e692735`. Both overstating sentences are corrected — `main.rs`'s new doc and `Roots::under`'s own — so the prose now says what the code does: no root is spelled there, `Roots::under` joins the project layer's segment, `user_root` returns the user layer whole. The criterion wording stays for reconcile, as dispositioned."
+
+[[finding]]
+id = "F-7"
+status = "answered"
+severity = "nit"
+title = "The third field's vocabulary is not disjoint from its content"
+detail = """
+`listing` interpolates `set.summary` verbatim (`src/conventions.rs:696`), so a file declaring `summary: shadowed` (or `-`, or `did not load: x`) renders a row shaped exactly like the demoted or failed states, and a summary or path containing two spaces yields a five-field row — which breaks the suite's own `split("  ")` reading (`row_naming`, `tests/conventions.rs:1515`, and the `row.len() == 4` assertions).
+
+Not an EX-2 violation: the criterion says the field *is* the summary, and no escaping is specified anywhere. The "no two states can claim one row" guarantee holds for the renderer's choice, not for the bytes."""
+disposition = "follow-up"
+response = "Recorded as a design question, not a defect. The renderer cannot fix this without inventing an escaping rule that no design sentence authorises, and inventing one here would be exactly the kind of silent spec-growth the reconcile pass exists to surface. Goes to reconcile with the other obligations: either the third field's vocabulary is declared disjoint from author-supplied summaries and the two-space rule becomes total, or the listing gains a delimiter its helpers can trust."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = "Recorded as a design question, not a defect. The renderer cannot fix this without inventing an escaping rule that no design sentence authorises, and inventing one here would be exactly the kind of silent spec-growth the reconcile pass exists to surface. Goes to reconcile with the other obligations: either the third field's vocabulary is declared disjoint from author-supplied summaries and the two-space rule becomes total, or the listing gains a delimiter its helpers can trust."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "nit"
+title = "answer's doc claims a monopoly it does not have"
+detail = """
+`src/conventions.rs:766`: "the one place the layers are read", while `load`/`read_layer` perform every read, and design §6 says "`load` owns every filesystem read".
+
+Smallest correction: "the one place [`load`] is called"."""
+disposition = "fix-now"
+response = "Upheld — the same overclaim as F-6 in a different file, and worth fixing in the same pass precisely because two instances of one mistake is how a wrong mental model gets established."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "Upheld — the same overclaim as F-6 in a different file, and worth fixing in the same pass precisely because two instances of one mistake is how a wrong mental model gets established."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Discharged in `e692735`. `answer`'s doc now says it is the one place `load` is called, which is true and is what design §6 requires."
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

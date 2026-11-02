@@ -188,12 +188,14 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` lifecycle `started`; `PHASE-01`, `PHASE-02` and `PHASE-03` landed
-green (`c3385c2`, `8503b93`, `cfae50f`), `PHASE-04` **`in_progress`** at `cd5c0dc` — the tail
-committed, `just check` exit 0, all six PHASE-04 VT rows PASS, delta `6007a0d..cd5c0dc`
-(registry provenance `manual`, 26 commits, SL-010's eighteen riding along), deliberately left
-open for its independent review. Design run `dr-01a19b61` locked at revision 36. Audit is not
-open; the next stage is the `PHASE-04` review, then `PHASE-05`.
+**fresh-as-of:** `SL-008` lifecycle `started`, **4 of 5 phases complete**. `PHASE-01`, `-02`,
+`-03` and `-04` all landed green and reviewed (`c3385c2`, `8503b93`, `cfae50f`, `e692735`),
+reviewed by RV-030, RV-032 and RV-033 respectively. `just check` exit 0 at `e692735` — 447
+default, zero warnings; PHASE-04's six VT rows PASS. PHASE-04's delta is `6007a0d..e692735`
+(26+ commits; SL-010's eighteen ride along and are visible in conformance's undeclared cell).
+Design run `dr-01a19b61` locked at revision 36. **Remaining: `PHASE-05` (the seed), which owns
+`src/conventions.rs` and `tests/conventions.rs`; then audit, which is not the seat's.**
+SL-010 completed 4/4 and is **in audit, holding on this slice's completion**.
 
 ### Produced
 
@@ -1146,6 +1148,36 @@ DEC-026's cost sentence, DEC-017's "a file plus a match arm", §5's worked listi
 must read `shadowed` — this phase's rule and this phase's real run both say so), §4's "one clause
 per resolved name", `design.md:156`'s stale quoted diagnostic, and items 6-7 (§6's tie-break and
 §3's unsettled candidate). None was edited here.
+
+### PHASE-04 review — RV-033, and how the interleave was contained
+
+Eight findings (4 minor, 4 nit), no blocker, no major; seven discharged in `e692735`, F-7 to
+reconcile. All verified by diff inspection, not by the handback.
+
+- **The review technique is the durable lesson.** PHASE-04's delta spans 26 commits, 18 of them
+  SL-010's, so a range review would have produced findings against another slice's code — the
+  most expensive kind of false finding, because they read as actionable. Instead the reviewer
+  was handed `/tmp/sl008-phase04.patch`: the seven PHASE-04 commits restricted to the seven
+  owned files, verified to contain zero foreign files, with the working tree declared as
+  carrying SL-010's code out of scope. A shell-less reviewer can only see post-images, so the
+  patch is how the interleave stops contaminating judgement rather than just attribution.
+  Rebuild it with `git show <oid> -- <owned paths>` per commit in `git log` order.
+- **EX-8 was the criterion not literally met:** an `assert_ne!` sitting under an `assert_eq!` on
+  the same expression, a refusal-order row whose fixture fed a name that resolves (so both
+  orders printed identical stderr), a relative-path renderer with no falsifier, and a
+  no-repository fixture skipping `assert_no_repository_above` while its five siblings call it.
+- **Third phase running, a run declared its suite clean and the review found an assertion no
+  input could falsify** — PHASE-02's three tautologies, PHASE-03's unreachable tie-break,
+  PHASE-04's `assert_ne!`. Not three accidents: that is what a green gate does to a model's
+  judgement about its own assertions. The countermeasure that has actually worked is mutation
+  probes demanded per property, plus a reviewer reading for *falsifiability* rather than for
+  correctness.
+- **F-3's fix beat its own brief.** I asked for `ends_with` on the relative path; a cwd-prefixed
+  path still *ends* in the relative one, so `ends_with` would not have falsified the failure
+  EX-2 names. The worker compared the whole row instead. Worth recording as the standard.
+- **Two criteria now have literals stricter than their truth** — PHASE-02's boundary count
+  (owned by SL-010) and EX-5's "`.config/smut` is joined nowhere else" (`user_root`'s home
+  fallback must join it). Both went to reconcile rather than being repaired in code.
 
 ## Autonomy log
 
