@@ -122,8 +122,27 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
   drops `EXAMPLE_TRAVERSE`'s `select` so headings are visible; `r -title` asserts the identity fallback, since no
   entity carries `itle`. Green (the arm, ~10 lines) written by me. No Sonnet/Opus spawn.
 
+### PHASE-04 (sub-orchestrator, 2026-11-03)
+
+- Commits `738fec3` (constants + fixture runners), `9c5a2dc` (guide prose + pins), `5aae61c` (README); `just check`
+  exit 0 before each. Delta recorded `bb8a05b..5aae61c`. `tests/compatibility.rs` untouched since `046b360`.
+- Negative control (pi, verified by reading): dropping the `q-query` declaration leaves `r`/`render` equal on the
+  missing notice and fails only the `## Query design` assertion. Filter row compared as a set via `rendered_ids`
+  (ids printed as backticked paragraphs) and checked equal to `OPEN_QUESTIONS`.
+- VA-1 reading (guide and README as a reader): every new spelling probed on the built binary (`r` line, `r -j -`,
+  empty `q`/`r`, `r -- -title`, `r -title` → `-t itle`, `-j` beside tokens refused, `query -j` refused). Nothing taught
+  is refused; `query` stays "the complete surface"; no sentence calls `q` the only front end. The Opaque ids `--`
+  rescue is unchanged. The README does not repeat the `r` hyphen rule (EX-6 does not ask for it; the guide teaches it).
+- Passes: pi implement (deepseek-flash) fixture: run 1 timed out on provider 503s after 10 req, $0.006, no edits;
+  continued session $0.017, 19 req, clean (I renamed one local and reused `sorted_ids`). Sonnet (general-purpose;
+  `capsule-worker` not offered here) guide prose + pins, red-first evidence (8 pins red, then green); one over-long
+  wrapped line fixed by me. pi README $0.022, 14 req, clean.
+
 ## Autonomy log
 - PHASE-01 · wrote the EX-1 pin commit (two assertions) myself rather than via pi · brief would cost more than the edit · decided
 - PHASE-01 · EX-6 rows added as parse-level spec comparisons in `src/cli.rs` (`q a --follow x b`, `q -- -weird`, `q a -- --follow`, `q -- -junk`); none existed there · criterion says "where absent, added at the parse level" · decided
 - PHASE-03 · wrote the `R` arm myself (green), pi wrote the tests · brief would cost more than ~10 lines; tests and code still by different hands · decided
 - PHASE-03 · placed `r` after `render` in the verb list (doc text "…: `q`'s line, `render`'s display flags") · mirrors `query`/`q`; criterion allows "or equivalent" · decided
+- PHASE-04 · guide prose and pins delegated to Sonnet (general-purpose, model override) rather than pi · criteria-literal prose with moving and frozen pins; provider 503s on pi · decided
+- PHASE-04 · Sonnet added one guide sentence beyond the brief ("-j JSON replaces the words with the whole specification, and is refused beside a token or a selection flag") · true by probe, keeps scope · decided
+- PHASE-04 · README `smut r` step placed in the `~`/comma-list block of "Querying, quickly"; README omits the `r` hyphen rule · EX-6 permits one step and does not list the rule; guide carries it · decided
