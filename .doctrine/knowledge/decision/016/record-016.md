@@ -10,9 +10,21 @@ The normative home is `smut learn`. It is descriptive and version-bound, and a
 release that introduces traversal must teach the composition:
 
 ```
-1. smut query '{"from":"session","backlinks":["part-of"],"depth":2,"select":["smut_id"]}'
-2. smut query '{"from":[<ids>],"where":{"status":"open"},"select":["title"]}'
+1. smut q session --backlinks part-of --depth 2 --ids
+   smut query '{"from":"session","backlinks":["part-of"],"depth":2,"select":["smut_id"]}'
+2. smut q <ids> status=open --select title
+   smut query '{"from":[<ids>],"where":{"status":"open"},"select":["title"]}'
 ```
+
+Each call is printed in both spellings, the short form first and the JSON it denotes
+directly beneath it, and `smut learn` executes both. They agree on the set and not on
+order: roots are the short form's spelling of an `$in` filter on identity, answered in
+the order written, while the JSON twin filters in `smut_id` order.
+
+Amended 2026-11-03 by SL-010 (RV-034 F-6): the recipe gained its short-form spelling
+beside each JSON line. The JSON lines, the guard and the direction sentence are
+unchanged, and `tests/fixture.rs` runs both spellings so a printed line that stops
+working fails the suite.
 
 The direction is the first thing a reader gets wrong, so the example states it:
 `part-of` points child → container (a cluster is part-of a session), therefore

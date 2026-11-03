@@ -175,6 +175,94 @@ format is 1.0's; a `DROP` that removed exactly one field; a delete, after which
 and finally the same walk over the reference the delete left behind, reported as
 dangling and left alone.
 
+## Querying, quickly
+
+`smut q` takes the same query as a line of words instead of a JSON object: a bare
+word is a thing, `field=value` is a filter, and `--word` is structure. The cast
+is the worked example's, with two more questions and a decision so each line has
+something to find:
+
+```console
+$ smut declare -c '[{"smut_id":"smut","title":"Smut","body":"Persist conversational structure.","questions":[{"smut_id":"q-query"}]}]'
+{"changes":[{"smut_id":"smut","status":"created"}],"ids":["smut"],"missing":["q-query"]}
+$ smut declare -c '[{"smut_id":"q-query","type":"question","status":"open","title":"Query design","body":"Keep selection small."},{"smut_id":"q-limit","type":"question","status":"closed","title":"Does the limit stop the walk?","body":"Discovery is bounded separately."},{"smut_id":"d-escape","type":"decision","title":"JSON stays the complete surface","body":"Grouping and structural operands stay in query."}]'
+{"changes":[{"smut_id":"q-query","status":"created"},{"smut_id":"q-limit","status":"created"},{"smut_id":"d-escape","status":"created"}],"ids":["q-query","q-limit","d-escape"],"missing":[]}
+$ smut declare -c '[{"smut_id":"q-query","part-of":[{"smut_id":"smut"}]},{"smut_id":"q-limit","part-of":[{"smut_id":"smut"}]}]'
+{"changes":[{"smut_id":"q-query","status":"updated"},{"smut_id":"q-limit","status":"updated"}],"ids":["q-query","q-limit"],"missing":[]}
+```
+
+The envelope is the one `smut query` returns — `missing`, `dangling`, `truncated`,
+`truncation_reasons` — because `q` is a front end and not a second engine. The
+line and its JSON twin print the same bytes:
+
+```console
+$ smut q status=open --ids
+{"dangling":[],"missing":[],"objects":[{"smut_id":"q-query"}],"truncated":false,"truncation_reasons":[]}
+$ smut query '{"where":{"status":"open"},"select":["smut_id"]}'
+{"dangling":[],"missing":[],"objects":[{"smut_id":"q-query"}],"truncated":false,"truncation_reasons":[]}
+```
+
+`~` is a substring test on a string and a member test on an array, and the answer
+does not say which ran. `=` with a comma list means one of them:
+
+```console
+$ smut q title~design --select smut_id,title
+{"dangling":[],"missing":[],"objects":[{"smut_id":"q-query","title":"Query design"}],"truncated":false,"truncation_reasons":[]}
+$ smut q type=question,decision --select smut_id,type
+{"dangling":[],"missing":[],"objects":[{"smut_id":"d-escape","type":"decision"},{"smut_id":"q-limit","type":"question"},{"smut_id":"q-query","type":"question"}],"truncated":false,"truncation_reasons":[]}
+```
+
+The direction is the token you read first, and it is the footgun the guide warns
+about. Same root, same field, opposite direction:
+
+```console
+$ smut q smut --follow questions --depth 1 --ids
+{"dangling":[],"missing":[],"objects":[{"smut_id":"smut"},{"smut_id":"q-query"}],"traversal":{"depths":{"q-query":1,"smut":0},"edges":[{"field":"questions","source":"smut","target":"q-query"},{"field":"part-of","source":"q-query","target":"smut"}],"frontier":["q-query"]},"truncated":false,"truncation_reasons":[]}
+$ smut q smut --backlinks questions --depth 1 --ids
+{"dangling":[],"missing":[],"objects":[{"smut_id":"smut"}],"traversal":{"depths":{"smut":0},"edges":[],"frontier":[]},"truncated":false,"truncation_reasons":[]}
+```
+
+`depths` says how far each returned entity was found, `edges` is the induced edge
+set among the returned objects, and `frontier` is what the depth bound left
+unexpanded — a boundary, not a truncation.
+
+**Two things it cannot say, and the JSON that can.** A section that showed only
+wins would read as a salesman. The short form cannot carry a structural operand or
+a cross-field group; both are `smut query`'s, and the first fails *silently*, so
+the wall is worth showing:
+
+```console
+$ smut q 'questions~{"smut_id":"q-query"}' --ids
+{"dangling":[],"missing":[],"objects":[],"truncated":false,"truncation_reasons":[]}
+$ smut query '{"where":{"questions":{"$contains":{"smut_id":"q-query"}}},"select":["smut_id","title"]}'
+{"dangling":[],"missing":[],"objects":[{"smut_id":"smut","title":"Smut"}],"truncated":false,"truncation_reasons":[]}
+$ smut query '{"where":{"$or":[{"type":"question","status":"open"},{"type":"decision"}]},"select":["smut_id","type"]}'
+{"dangling":[],"missing":[],"objects":[{"smut_id":"d-escape","type":"decision"},{"smut_id":"q-query","type":"question"}],"truncated":false,"truncation_reasons":[]}
+```
+
+The first line exits 0 and returns nothing: an object inside an array is not a JSON
+scalar, so the value rule keeps it as text and it matches no array member. The
+spelling that works is one line down. `$or`, `$and` and `$not` have no short form
+at all — a comma list covers "one of a list on one field", which is the common
+case, and everything else stays JSON.
+
+Worth knowing, once each:
+
+- **Same rules.** One store, one lock, one recovery, one envelope, the same exit
+  codes; `q` validates before any store exists, exactly as `query` does.
+- **Same bytes** for the traversing recipes and `--ids`. For a filtering recipe the
+  two spellings agree on the selected set, and ordering is the `order` key's
+  business in both.
+- **`--depth` needs a direction** and says so — a JSON caller may generate a depth
+  it does not use, a human may not. **There is no unlimited `--limit`**: `smut get`
+  is the unlimited path.
+- **A field name no entity carries answers empty at exit 0**, in both verbs. The
+  typo is silent; a filter that matches nothing is a legal way to probe a store.
+- The rest of the short surface — `--select`, `--order`, `--limit`, `--has`,
+  `--missing`, `--edges`, `--from=ID` — and every refusal it can raise are in
+  `smut learn`, which prints all twelve flags and the five token shapes in one
+  place.
+
 ## Commands
 
 | command | what it does |
@@ -183,6 +271,7 @@ dangling and left alone.
 | `smut get <ID>...` | fetch entities by `smut_id`, in the order given, with no limit |
 | `smut delete <ID>...` | remove entities in one batch; incoming references are left untouched |
 | `smut query [JSON]` | select entities with a query specification |
+| `smut q [TOKEN]...` | the same selection as a line of words: bare roots and `field=value` filters, with `--flags` for everything else |
 | `smut render [JSON]` | the same selection, printed as Markdown |
 | `smut conventions [NAME] [-f\|--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
@@ -193,7 +282,9 @@ attached you get usage instead of a silent wait. Trailing input after the JSON
 value is refused, and so is a duplicate key inside one object.
 
 The specification keys are `from`, `where`, `select`, `order`, `limit`,
-`follow`, `backlinks`, `depth`, `budget` and `edges`. Absent `from` means every
+`follow`, `backlinks`, `depth`, `budget` and `edges`. `smut q` compiles its
+a line of words to this same specification, so both verbs obey one pipeline, one
+envelope and one set of exit codes. Absent `from` means every
 entity in
 `smut_id` order; absent `select` means every field, and `smut_id` is always
 returned whatever `select` names; `order` is

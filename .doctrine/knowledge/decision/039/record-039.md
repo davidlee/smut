@@ -10,10 +10,16 @@ time, before any store access — by *demand* (where in the predicate the field 
 pins the wording to one sentence: `field status cannot be satisfied: $eq and $ne are given the
 same value`.
 
-So `smut q status=open status!=resolved` needs no DSL rule: compile it, and the existing mechanism
-refuses it in the pinned voice. What remains is the **one shape the specification cannot spell** —
-two `=` on one field, since a JSON object has one key per field. That shape is also unsatisfiable
-(two different values cannot both hold), so it belongs in the same family, refused by name.
+So `smut q status=open status!=resolved` needs no DSL rule: compile it, hand it over, and it is
+**answered**, not refused — `$eq open` beside `$ne resolved` passes the decidability walk, which is
+the outcome this decision wants. (`status=open status!=open` is the pair that reaches the pinned
+sentence, and from `predicate::parse`, not from the DSL.) What remains is the **one shape the
+specification cannot spell** — two `=` on one field, since a JSON object has one key per field.
+When both values are single values that shape is also unsatisfiable (two different single values
+cannot both hold), so it belongs in the same family, refused by name; when either side is a comma
+list it may well be satisfiable, and the DSL refuses it in the caller's own tokens instead.
+(Amended 2026-11-03 by SL-010, RV-034 F-6: the first sentence of this paragraph described a refusal
+where the behaviour is an answer.)
 
 The suggested cure in IDE-006 was half-right, which is why the rule retires rather than gets
 reworded: `status=open,resolved` expresses *either*, and is only the right advice when both

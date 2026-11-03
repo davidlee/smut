@@ -39,3 +39,12 @@ comment required, and the compiler enforces that every arm handles every variant
 Deliberately not done inside SL-005: PHASE-02/EX-1 fixed the two-arm shape, the risk is
 latent (no sixth operator exists), and redesigning a module the slice just settled is scope
 creep. Related: RV-027 F-2.
+
+Widened by SL-010 (RV-034 F-6, 2026-11-03): `src/dsl.rs` is the third site that spells the
+predicate operators. `OPERATORS` carries `!=`/`=`/`~` mapped to `$ne`/`$eq`/`$contains`,
+and `EXISTS`/`IN` name the two the flags supply (`$exists` through `--has`/`--missing`,
+`$in` through a comma list on `=`). It derives from neither of the other two sites on
+purpose — the DSL's spellings are its own vocabulary and the JSON names are the emit
+target, so collapsing them into `Operator::parse` would put a user-facing spelling table
+inside the predicate layer. That makes a sixth operator a three-site change now, not two,
+and the `//!` header says so.

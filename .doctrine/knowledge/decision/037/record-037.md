@@ -19,5 +19,8 @@ is also the only silent-free one.
 
 Two grammar consequences follow, and are stated rather than discovered. A token directly after a
 value-taking flag is that flag's value — `--follow session` binds `session` — so examples place
-values where they read as values. And `smut q` with nothing at all is a valid parse, which puts the
-no-query refusal in this layer, where it can name what the caller typed.
+values where they read as values. And `smut q` with nothing at all is a valid parse — it is
+`query {}`, which the specification already defines as legal — so this layer deliberately has
+**no** no-query refusal. The earlier reading, that the parse being valid put such a refusal in
+this layer, is superseded: the layer would own it, and the decision is not to have one (SL-010
+design §3; RV-034 F-6, amended 2026-11-03).

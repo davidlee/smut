@@ -25,3 +25,15 @@ each message pin sits beside the variant it describes.
 
 Out of scope for SL-005 (its EX criteria fix three selectors and no test restructuring) and
 for SL-004 (identity respell).
+
+Widened again by SL-010 (RV-034 F-6, 2026-11-03). The `q` front-end lands six new
+variants — `JsonOperand`, `UnreadableToken`, `MissingDirection`, `UnknownDirection`,
+`UnreachableLimit`, `ConflictingSelection` — so the catalogue is now large enough that a
+missing row is a plausible human slip rather than a theoretical one. The compensation is
+deliberate but partial: `tests/dsl.rs`'s
+`every_refusal_names_what_was_typed_and_never_a_field_it_invented` carries one
+whole-rendered-line row per situation design §3 lists, and
+`each_refusal_test_names_the_change_that_reddens_it` guards the guard. Neither makes a
+variant that lands *without* a row fail, which is exactly what this item asks for — and
+SL-010's audit found the converse hole the enumeration would not have closed either: a row
+can be pinned and still be false about what the caller typed (`url=a=b`, `--from=`).
