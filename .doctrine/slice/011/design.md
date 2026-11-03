@@ -40,7 +40,8 @@ Rules, each inherited rather than invented:
   one thing across the CLI (`src/cli.rs` `conventions_takes_the_same_format_letter_as_render`);
   `-j` is unused anywhere, so it means `--json` wherever it appears.
 - **`render` and `query` do not gain `-j`.** They already take the spec positionally; a second
-  spelling there adds nothing.
+  spelling there adds nothing. Asserted: both still exit 2 with clap's
+  `error: unexpected argument '-j' found` (§ Verification).
 
 ### Where `r` and `render` deliberately differ
 
@@ -124,6 +125,18 @@ flattened and attribute-free:
 | `r -l -j 3` | level `-j` → the same loud refusal; `-j` is never silently lost |
 | `q --help` | `Usage: smut q [OPTIONS] [TOKENS]...` — the pinned line, unchanged |
 
+**Hyphen-led words (plan C6, extended by RV-037 F-3).** `--` reaches a hyphen-led id on every
+verb, and nothing else does. Without it, clap reads the word against the letters the verb owns. On
+`q` and `r`, a `-j…` word is `-j`'s value and, unless it is JSON, is refused in the JSON reader's
+voice (`malformed JSON: …`), which names neither the word nor `--`. On `r`, a word clap reads as a
+cluster of `-s`/`-i` optionally ending in `-t<value>` is silently display flags, exit 0 (`-title` is
+`-t itle`, `-site` is `-s -i -t e`), and a `-f…` or `-l…` word is refused as a format or a heading
+level. Only a word led by a letter the verb does not own (`q -weird`, `get -weird-id`) stays clap's
+usage error that teaches `--` (DEC-037). Accepted, not fixed: recognising the word needs argv
+inspection, which DEC-037 rejects; DEC-008 and IMP-007 keep the letters; PHASE-01/EX-5 binds a bad
+`-j` value to `query`'s message for the same operand. The guide teaches `--` for hyphen-led ids on
+`r`; `tests/cli_contract.rs` `r_reaches_ids_the_short_form_cannot_carry_bare` pins the behaviour.
+
 `render`'s usage keeps `[JSON]`; `r`'s reads `[TOKENS]...`. Both help tests gain `r`:
 `main.rs`'s verb list and `cli.rs`'s `help_is_answered_as_text_that_advertises_the_grammar`.
 `cli.rs`'s `every_short_flag_reaches_exactly_the_state_its_long_form_reaches` gains `r`'s five pairs.
@@ -144,8 +157,10 @@ the flag names (IMP-016's drift class) answered in clap's multi-line voice (DEC-
 
 ### The escape pointer becomes `-j` (DEC-045)
 
-Five sentences, verified: `src/dsl.rs:319,327,505,581` and `src/error.rs:385`. Each names `smut query` as its escape, and two name `q` as the subject.
-Through `r` both would be wrong. They become verb-blind, so the compiler stays verb-blind:
+Five sentences, verified: `src/dsl.rs:319,327,505,581` and `src/error.rs:385`. Each names `smut query` as its escape,
+and three name `q` as the subject: `dsl.rs:319` (`so q cannot tell…`), `dsl.rs:581`
+(`q carries one {spelling}…`) and `error.rs` `JsonOperand` (`q takes field=value tokens…`).
+Through `r` all three would be wrong. All five become verb-blind, so the compiler stays verb-blind:
 
 | site | today | after |
 | --- | --- | --- |
@@ -205,9 +220,16 @@ The new variant joins an uncensused `Reject` set (IMP-014); refusal tests use th
 
 ### README (user direction: in scope)
 
-- The Commands table gains `smut r [TOKEN]...` ("the same line of words, printed as Markdown") and
-  the `q` row notes `-j`.
+- The Commands table gains `smut r [TOKEN]... [-j|--json JSON]` ("the same line of words, printed
+  as Markdown"), and the `q` and `r` rows note `-j`, as the guide's commands block does (RV-037 F-6).
 - The operand paragraph mirrors the guide's.
+- The opaque-id bullet ("Without `--` it is a usage error") is narrowed so it is true of `get`,
+  `delete`, `q` and `r`, in the guide's voice (`src/learn.rs` Opaque ids and the short form's `r`
+  hyphen rule), per § The command line's hyphen-led words (RV-037 F-2): "Ids are opaque,
+  case-sensitive strings and may begin with a hyphen. `--` ends flag parsing, so
+  `smut get -- -weird-id` reaches that id and nothing else does. Without `--` the word is read as
+  flags: `-weird-id` is a usage error, but on `q` and `r` a word such as `-jane` is read as
+  `-j ane`, and on `r` a word such as `-title` is read as `-t itle` without an error."
 - The JSON render examples (`README.md:53,67,91,145`) stay as they are: they are valid, executed by
   `tests/readme_example.rs`, and `render` is unchanged. Converting one to `r` is optional and
   only if the README harness runs it without new machinery.
@@ -249,12 +271,16 @@ On one fixture store, byte-identical stdout, stderr and exit code for:
 
 | left | right |
 | --- | --- |
-| `r <line>` | `render <json>` — for the three recipes with JSON twins in `learn.rs` (`EXAMPLE_TRAVERSE`/`_FOLLOW`/`_FILTER` and their `_Q` lines), the Workflows recipe (`EXAMPLE_RENDER`/`_R`), and the other two hot paths (`learn.rs:154-158`) with JSON twins written in the harness |
+| `r <line>` | `render <json>` — for the three recipes with JSON twins in `learn.rs` (`EXAMPLE_TRAVERSE`/`_FOLLOW`/`_FILTER` and their `_Q` lines), the Workflows recipe (`EXAMPLE_RENDER`/`_R`), and the other three hot paths (`title~graph`, `type=question status=open --select smut_id,title`, `--has body --order title:desc`) with JSON twins written in the harness |
 | `r -j <json>` | `render <json>` |
 | `r -j -` (stdin) | `render -` |
 | `q -j <json>` | `query <json>` |
 | `r <line> -s -i -l 3 -t name` | `render <json> -s -i -l 3 -t name` — display flags agree across verbs |
 | `r` (empty) | `render '{}'` |
+
+One exception (plan C2): the filter recipe is compared **set-equal**, not byte-identical — its roots
+answer in the order written and `$in` answers in `smut_id` order (SL-010, RV-031 F-6), so the two
+spellings agree on the entities, not their order.
 
 ### Refusals
 
@@ -274,13 +300,18 @@ On one fixture store, byte-identical stdout, stderr and exit code for:
 ### Stated divergences, tested
 
 - `r` with no words answers like `render '{}'`; `render` with no operand on a terminal is
-  `MissingInput` — both asserted.
+  `MissingInput` — both asserted. The terminal half is reachable only in-process
+  (`parse_with(…, true)` in `src/cli.rs`, plan C4): the contract harness always pipes the child's
+  stdin, so `MissingInput` cannot be reached from a spawned command. The pipe-reachable rows stay
+  in `tests/cli_contract.rs`.
 - `r '[1]'` asks for the id `[1]`; `render '[1]'` is refused — both asserted.
 
 ### Surfaces that must not move
 
 - `tests/compatibility.rs` passes **unedited**.
 - `smut q --help` still prints `Usage: smut q [OPTIONS] [TOKENS]...` (existing pin).
+- `render -j '{}'` and `query -j '{}'` still exit 2 with clap's `error: unexpected argument '-j'
+  found` (plan C5).
 - `render`'s existing contract tests (`tests/cli_contract.rs:453-505`) pass unedited; the
   short/long pair test (`src/cli.rs:986`) keeps every existing pair and gains `r`'s.
 
@@ -294,7 +325,7 @@ still passes.
 <!-- doctrine:section sec-7 -->
 ## Reconcile obligations
 
-Knowledge-record amendments — not revisions (REV-003's precedent) — landed at reconcile with
+Eight knowledge-record amendments (four from the design, four added by RV-037 F-3/F-4) — not revisions (REV-003's precedent) — landed at reconcile with
 `doctrine knowledge edit decision`, keeping commas out of `--alternatives`/`--consequences`
 (`mem.fact.doctrine.knowledge-facet-array-comma-splitting`):
 
@@ -303,7 +334,11 @@ Knowledge-record amendments — not revisions (REV-003's precedent) — landed a
 | DEC-034 | "`q` is the only human front-end and has no alias" | two human verbs `q` and `r` over one grammar; superseded in part by DEC-042 |
 | DEC-008 | "one JSON operand" | the JSON spec arrives as an operand on `query`/`render` or as `-j` on `q`/`r` |
 | DEC-039 | refusals "point at `smut query`" | they point at `-j` (DEC-045) |
-| DEC-040 | the guide's division of labour names `q` and `query` | adds `r` and `-j` |
+| DEC-040 | the guide's division of labour names `q` and `query`; the body's "three escapes: `--ids`, `--from=ID`, `smut query`" | adds `r` and `-j`; the escapes are `--ids`, `--from=ID` and `-j` (RV-037 F-4) |
+| DEC-035 | "`smut query` for exactness"; "`--ids`, `--from=ID` and `smut query` are the three ways out" | the exactness escape is `-j`, or `smut query` (RV-037 F-4) |
+| DEC-036 | refusals "refuse toward `smut query`" / "naming `smut query`" | they name `-j` (RV-037 F-4) |
+| DEC-037 | the bare positional keeps `-weird-id` an error that teaches `--` | the guard is clap's and holds only for a word led by a letter the verb does not own: narrowed on `q` by `-j`, on `r` by `-j` and the display letters (§ The command line, hyphen-led words; RV-037 F-3) |
+| DEC-043 | consequences omit what the flatten put beside the id positional | gains the accepted silent `-s`/`-i`/`-t` read on `r`, taught by the guide (RV-037 F-3) |
 
 Backlog: none new. IMP-014, IMP-015 and IMP-016 are touched and named, not paid.
 

@@ -281,7 +281,7 @@ Worth knowing, once each:
 | `smut query [JSON]` | select entities with a query specification |
 | `smut q [TOKEN]... [-j\|--json JSON]` | the same selection as a line of words: bare roots and `field=value` filters, with `--flags` for everything else |
 | `smut render [JSON]` | the same selection, printed as Markdown |
-| `smut r [TOKEN]...` | the same line of words, printed as Markdown (with render's display flags) |
+| `smut r [TOKEN]... [-j\|--json JSON]` | the same line of words, printed as Markdown (with render's display flags) |
 | `smut conventions [NAME] [-f\|--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
 
@@ -474,8 +474,11 @@ and a drawing has no room for either — which is the reason the renderer inside
   a later release. `--format` is the only surface still promising one (Mermaid,
   in 1.0).
 - **`--` reaches an opaque id.** Ids are opaque, case-sensitive strings and may
-  begin with a hyphen, so `smut get -- -weird-id` names that id. Without `--` it
-  is a usage error.
+  begin with a hyphen. `--` ends flag parsing, so `smut get -- -weird-id` reaches
+  that id and nothing else does. Without `--` the word is read as flags:
+  `-weird-id` is a usage error, but on `q` and `r` a word such as `-jane` is read
+  as `-j ane`, and on `r` a word such as `-title` is read as `-t itle` without an
+  error.
 - **Bodies may absorb each other, but never the completeness notice.** A body is
   rendered verbatim, so a stored body ending in an unclosed HTML comment or an
   unclosed fence hides whatever follows it. The notice for a truncated or

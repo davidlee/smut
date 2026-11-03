@@ -105,7 +105,7 @@ pub enum Reject {
     /// a JSON specification goes after `-j` (or to `smut query`), and a `{`-led id
     /// after `--from=` (DEC-036, DEC-039, DEC-045).
     JsonOperand,
-    /// A `smut q` token carries structure the short form cannot read: two
+    /// A token carries structure the short form cannot read: two
     /// operators, a field name holding one, a comma where the operator takes a
     /// single value, or a repeat one condition object cannot hold. The token as
     /// typed travels with the one sentence saying why (DEC-030, DEC-039).
@@ -116,7 +116,7 @@ pub enum Reject {
         /// the caller did not type.
         reason: String,
     },
-    /// A `smut q` flag that takes a number was given without a traversal
+    /// A short-form flag that takes a number was given without a traversal
     /// direction, so there is no traversal for the number to bound or count.
     MissingDirection {
         /// The flag as the caller typed it, e.g. `--depth`.

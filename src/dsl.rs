@@ -1,5 +1,5 @@
 //! The short form's compiler: one argument line of words, and the specification
-//! object it denotes. The human verbs share it.
+//! object it denotes. The human verbs `q` and `r` share it.
 //!
 //! This is a front-end, not a second engine. It emits the object [`crate::spec`]
 //! already reads and lets that read it, so "the short form adds no semantics" is

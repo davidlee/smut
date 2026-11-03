@@ -234,15 +234,18 @@ struct Cli {
     command: Option<Sub>,
 }
 
-// The selection line q shares: tokens, q's flags, and `-j` (DEC-043, DEC-044).
+// The selection line q and r share: tokens, q's flags, and `-j` (DEC-043, DEC-044).
 #[derive(Debug, clap::Args)]
 pub struct SelectionArgs {
     // The positional carries no attribute, on purpose: `trailing_var_arg` and
     // `allow_hyphen_values` swallow every flag after the first token (the second
     // also leaks a literal `--` into the list), `last` hides the tokens behind
     // one `--`, and `value_terminator` stops `--` ending flags. Bare, flags parse
-    // on either side of a token, no `--` reaches the list, and `-weird-id` stays
-    // the error that teaches `--` (DEC-037).
+    // on either side of a token and no `--` reaches the list. `--` reaches a
+    // hyphen-led id, and nothing else does: without it a `-j…` word is `-j`'s
+    // value, on `r` a cluster of `-s`/`-i` optionally ending in `-t<value>` is
+    // silently display flags, and only a word led by a letter the verb does not
+    // own stays clap's usage error that teaches `--` (DEC-037, SL-011 C6).
     tokens: Vec<String>,
     /// The outgoing fields to traverse.
     #[arg(long)]
@@ -285,7 +288,7 @@ pub struct SelectionArgs {
     json: Option<String>,
 }
 
-// The display flags render shares (DEC-009, IMP-007).
+// The display flags render and r share (DEC-009, IMP-007).
 #[derive(Debug, clap::Args)]
 pub struct DisplayArgs {
     /// The output format: `markdown` is the only value this release writes.
@@ -438,9 +441,10 @@ pub fn parse(
 }
 
 impl SelectionArgs {
-    /// The line compiled and parsed, or `-j`'s specification: q's contribution to
-    /// step 1. `-j` is the whole specification, so anything beside it is refused
-    /// before an operand is read (DEC-044).
+    /// The line compiled and parsed, or `-j`'s specification: the short form's
+    /// contribution to step 1, on `q` and `r` alike. `-j` is the whole
+    /// specification, so anything beside it is refused before an operand is read
+    /// (DEC-044).
     fn specification(self, stdin_is_terminal: bool, stdin: &mut dyn Read) -> Result<Spec, Error> {
         let flags = Flags {
             follow: self.follow,
