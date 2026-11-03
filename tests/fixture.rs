@@ -25,8 +25,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::{Value, json};
 
 use smut::learn::{
-    EXAMPLE_FILTER, EXAMPLE_FILTER_Q, EXAMPLE_FOLLOW, EXAMPLE_FOLLOW_Q, EXAMPLE_TRAVERSE,
-    EXAMPLE_TRAVERSE_Q,
+    EXAMPLE_FILTER, EXAMPLE_FILTER_Q, EXAMPLE_FOLLOW, EXAMPLE_FOLLOW_Q, EXAMPLE_RENDER,
+    EXAMPLE_RENDER_R, EXAMPLE_TRAVERSE, EXAMPLE_TRAVERSE_Q,
 };
 
 /// The committed array, relative to the crate root. It is the only data source
@@ -202,6 +202,35 @@ impl Declared {
         assert_eq!(ran.code, 0, "q {line}: {}", ran.stderr);
 
         ran.json()
+    }
+
+    /// Runs `smut r` with `line` and returns the Markdown it printed; a refusal
+    /// is a test failure, not a branch.
+    ///
+    /// The translation is the same as [`Self::q`]'s, because the two verbs take
+    /// the same line: the printed words split on whitespace into the token list
+    /// `r` accepts, so what this runs is what a reader types (EX-5 of SL-011
+    /// PHASE-04).
+    fn r(&self, line: &str) -> String {
+        let mut arguments = vec!["r"];
+        arguments.extend(line.split_whitespace());
+
+        let ran = smut(&self.scratch, &arguments);
+        assert_eq!(ran.code, 0, "r {line}: {}", ran.stderr);
+
+        ran.stdout
+    }
+
+    /// Runs `smut render` with `request` and returns the Markdown it printed; a
+    /// refusal is a test failure, not a branch.
+    ///
+    /// This is the JSON spelling `r`'s line has to agree with, byte for byte.
+    fn render(&self, request: &Value) -> String {
+        let argument = request.to_string();
+        let ran = smut(&self.scratch, &["render", &argument]);
+        assert_eq!(ran.code, 0, "render {argument}: {}", ran.stderr);
+
+        ran.stdout
     }
 
     /// The ids a `select: ["smut_id"]` query returned, in result order.
@@ -1061,4 +1090,155 @@ fn an_over_cap_graph_makes_the_naive_composition_answer_no_open_questions() {
             panic!("a budget-truncated walk is not apparent completeness: {bounded}")
         }
     }
+}
+
+// ── every hot path renders the same Markdown as its JSON twin (SL-011 PHASE-04, EX-5) ──
+
+/// The entities one render printed, read out of its Markdown.
+///
+/// A request that selects `smut_id` alone prints each result as a paragraph
+/// holding nothing but its id in backticks, which is the only shape this helper
+/// claims to read; the missing notice and any heading fall through untouched.
+/// Two spellings of one filter answer in different orders (RV-031 F-6), so a
+/// caller compares these as a set.
+fn rendered_ids(markdown: &str) -> Vec<String> {
+    let mut ids = Vec::new();
+
+    for line in markdown.lines().map(str::trim) {
+        let Some(id) = line
+            .strip_prefix('`')
+            .and_then(|rest| rest.strip_suffix('`'))
+        else {
+            continue;
+        };
+
+        if !id.is_empty() && !id.contains('`') && !id.chars().any(char::is_whitespace) {
+            ids.push(id.to_owned());
+        }
+    }
+
+    ids
+}
+
+#[test]
+fn the_render_recipe_reads_the_same_both_ways() {
+    let declared = Declared::new();
+
+    // The committed array carries no `q-query`, so without this declaration both
+    // spellings would render only the missing notice and a defect in `r` could
+    // never fail the equality below: `## Query design` is what shows the request
+    // found the entity.
+    let text = r#"{"smut_id":"q-query","type":"question","title":"Query design","body":"Keep selection small."}"#;
+    let seeded = run(&declared.scratch, &["declare", "-"], Some(text));
+    assert_eq!(seeded.code, 0, "declaring q-query: {}", seeded.stderr);
+
+    let words = declared.r(EXAMPLE_RENDER_R);
+    let json = declared.render(&example(EXAMPLE_RENDER));
+
+    assert_eq!(
+        words, json,
+        "`smut r` and `smut render` print one request as the same Markdown"
+    );
+    assert!(
+        words.contains("## Query design"),
+        "the rendered entity is the declared one, not a missing notice: {words}"
+    );
+}
+
+#[test]
+fn the_traversal_recipes_render_the_same_both_ways() {
+    let declared = Declared::new();
+
+    for (line, constant) in [
+        (EXAMPLE_TRAVERSE_Q, EXAMPLE_TRAVERSE),
+        (EXAMPLE_FOLLOW_Q, EXAMPLE_FOLLOW),
+    ] {
+        let words = declared.r(line);
+        let json = declared.render(&example(constant));
+
+        assert_eq!(
+            words, json,
+            "`smut r {line}` prints the same Markdown as its JSON twin: a client may carry \
+             either spelling and read the same answer"
+        );
+        assert!(
+            words.contains("session"),
+            "both spellings select the session, so the pair is not equal on nothing: {words}"
+        );
+    }
+}
+
+#[test]
+fn the_other_hot_paths_render_the_same_as_their_json_twins() {
+    let declared = Declared::new();
+
+    // Three ordinary requests in both spellings: a `~` containment token, a
+    // two-condition filter with a projection, and the flag-only line. `~`
+    // compiles to `$contains` and `--has` to `$exists`, so these are the lines a
+    // reader types, not a hand-written near miss.
+    let cases = [
+        (
+            "title~graph",
+            json!({"where": {"title": {"$contains": "graph"}}}),
+        ),
+        (
+            "type=question status=open --select smut_id,title",
+            json!({
+                "where": {"type": "question", "status": "open"},
+                "select": ["smut_id", "title"],
+            }),
+        ),
+        (
+            "--has body --order title:desc",
+            json!({
+                "where": {"body": {"$exists": true}},
+                "order": [{"field": "title", "direction": "desc"}],
+            }),
+        ),
+    ];
+
+    for (line, twin) in cases {
+        let words = declared.r(line);
+        let json = declared.render(&twin);
+
+        assert_eq!(
+            words, json,
+            "`smut r {line}` prints the same Markdown as {twin}"
+        );
+        assert!(
+            words.lines().any(|heading| heading.starts_with("## ")),
+            "the line renders at least one entity under a heading, so the equality is not \
+             equal on nothing: {words}"
+        );
+    }
+}
+
+#[test]
+fn the_filter_recipe_renders_the_same_set_both_ways() {
+    let declared = Declared::new();
+
+    let first = declared.query(&example(EXAMPLE_TRAVERSE));
+    let Guarded::Complete(reached) = guarded(&first) else {
+        panic!("the acceptance graph fits under the default cap: {first}");
+    };
+
+    // The second call, both ways. These are deliberately not byte-identical:
+    // bare roots are answered in the order written and the `$in` twin filters in
+    // `smut_id` order, so the claim is about the set (RV-031 F-6).
+    let line = filter_over_words(&reached);
+    let words = declared.r(&line);
+    let json = declared.render(&filter_over(&reached));
+
+    let typed = sorted_ids(&rendered_ids(&words));
+    let quoted = sorted_ids(&rendered_ids(&json));
+
+    assert_eq!(
+        typed, quoted,
+        "both spellings render the same set of entities: {line}"
+    );
+    assert_eq!(
+        typed,
+        sorted_ids(&OPEN_QUESTIONS.map(String::from)),
+        "and the set is the eight open questions, so the comparison is not vacuous: {line}"
+    );
 }

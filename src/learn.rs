@@ -376,6 +376,16 @@ pub const EXAMPLE_FOLLOW_Q: &str = "session --follow part-of --depth 2 --ids";
 /// identity rather than a `where` of its own.
 pub const EXAMPLE_FILTER_Q: &str = "IDS status=open --ids";
 
+/// The Workflows recipe's "read them back" call: one entity, addressed by its
+/// `smut_id`, with the two fields a reader wants — the JSON argument the guide
+/// hands to `smut render`.
+pub const EXAMPLE_RENDER: &str = r#"{"from":"q-query","select":["title","body"]}"#;
+
+/// [`EXAMPLE_RENDER`] in the short form's spelling, the words `smut r` takes:
+/// the root is a bare id and the projection is a flag, so the guide prints it as
+/// `smut r q-query --select title,body` with no quotes and no display flags.
+pub const EXAMPLE_RENDER_R: &str = "q-query --select title,body";
+
 #[cfg(test)]
 mod tests {
     use super::*;
