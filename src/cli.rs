@@ -345,6 +345,13 @@ enum Sub {
         #[command(flatten)]
         display: DisplayArgs,
     },
+    /// Render a line of words as Markdown: `q`'s line, `render`'s display flags.
+    R {
+        #[command(flatten)]
+        selection: SelectionArgs,
+        #[command(flatten)]
+        display: DisplayArgs,
+    },
     /// Print the embedded guide.
     Learn,
     /// Print the conventions sets: the listing, one set's prose, or its
@@ -410,6 +417,16 @@ pub fn parse(
 
             Ok(Invocation::Request(Request::Render(Render {
                 spec: spec::parse(&input)?,
+                options,
+            })))
+        }
+        Sub::R { selection, display } => {
+            // As `render`: the display flags first, so a refusal never waits on
+            // stdin (DEC-008); then the line, before any store (DEC-004).
+            let options = display.options()?;
+
+            Ok(Invocation::Request(Request::Render(Render {
+                spec: selection.specification(stdin_is_terminal, stdin)?,
                 options,
             })))
         }
@@ -663,6 +680,24 @@ mod tests {
     }
 
     #[test]
+    fn r_with_no_words_on_a_terminal_is_the_empty_specification() {
+        // EX-5 (VT-5): the one place the two verbs part on the empty line. A bare
+        // `render` on a terminal has nothing to render and is refused; `r` with no
+        // words is the empty specification, because a line of no words denotes
+        // `{}` and there is nothing to decide from stdin.
+        assert_eq!(
+            rejection(parse_with(&["render"], "{\"from\":\"a\"}", true)),
+            Reject::MissingInput
+        );
+
+        assert_eq!(
+            shape(parse_with(&["r"], "{\"from\":\"a\"}", true)),
+            shape(parse_of(&["render", "{}"])),
+            "r with no words is `{{}}`, and it never reads the piped specification"
+        );
+    }
+
+    #[test]
     fn a_duplicate_key_is_refused_while_the_operand_is_parsed() {
         assert_eq!(
             rejection(parse_of(&[
@@ -708,6 +743,15 @@ mod tests {
         ] {
             assert!(text.contains(named), "{text}");
         }
+
+        // EX-6: the verb list names `r`, on a line of its own. `text.contains("r")`
+        // would be satisfied by almost every word in the help, so the assertion is
+        // that some line *starts* with it.
+        assert!(
+            text.lines()
+                .any(|line| line.split_whitespace().next() == Some("r")),
+            "the verb list names r on a line of its own: {text}"
+        );
     }
 
     #[test]
@@ -1067,7 +1111,7 @@ mod tests {
         // assertion is equivalence of the whole rendered request — not "the
         // short form parses". A letter that reached a different field, or dropped
         // a value, is invisible to a bare `is_ok`.
-        let pairs: [(&[&str], &[&str]); 7] = [
+        let pairs: [(&[&str], &[&str]); 12] = [
             (
                 &["render", "{}", "-f", "markdown"],
                 &["render", "{}", "--format", "markdown"],
@@ -1103,6 +1147,27 @@ mod tests {
             ),
             // The other two long-only flags in the CLI, for the same reason.
             (&["declare", "{}", "-c"], &["declare", "{}", "--compact"]),
+            // r's five display pairs, on `-j`'s specification rather than on `{}`
+            // as a token: a token beginning with `{` is r's JsonOperand refusal,
+            // and a pair that reddened for *that* would prove nothing about the
+            // letters. The specification is `{}`, so no store is needed.
+            (
+                &["r", "-j", "{}", "-f", "markdown"],
+                &["r", "-j", "{}", "--format", "markdown"],
+            ),
+            (&["r", "-j", "{}", "-i"], &["r", "-j", "{}", "--show-ids"]),
+            (
+                &["r", "-j", "{}", "-s"],
+                &["r", "-j", "{}", "--show-fields"],
+            ),
+            (
+                &["r", "-j", "{}", "-t", "type"],
+                &["r", "-j", "{}", "--heading-field", "type"],
+            ),
+            (
+                &["r", "-j", "{}", "-l", "3"],
+                &["r", "-j", "{}", "--heading-level", "3"],
+            ),
         ];
 
         for (short, long) in pairs {
@@ -1126,7 +1191,13 @@ mod tests {
     /// A short/long pair may spell either a rendering or a declaration, so the
     /// comparison is over the parts that differ between them.
     fn render_or_request(arguments: &[&str]) -> (String, String) {
-        match request(parse_of(arguments).expect("the flags are valid")) {
+        shape(parse_of(arguments))
+    }
+
+    /// What one parse denotes, whole enough to tell two requests apart: the verb
+    /// and the state its flags reached, so words and a piped line can be compared.
+    fn shape(invocation: Result<Invocation, Error>) -> (String, String) {
+        match request(invocation.expect("the flags are valid")) {
             Request::Render(command) => (
                 "render".to_owned(),
                 format!("{:?}|{:?}", command.spec, command.options),

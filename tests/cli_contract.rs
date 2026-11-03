@@ -2057,6 +2057,21 @@ fn q_takes_its_bare_positional_so_the_usage_line_says_tokens() {
         "the usage line names render's JSON operand: {}",
         render.stdout
     );
+
+    // EX-6, VT-6: `r` takes the same line `q` takes, so its usage line names the
+    // same bare positional with the same word for it.
+    let rendered = smut(&scratch, &["r", "--help"]);
+
+    assert_eq!(rendered.code, 0, "{}", rendered.stderr);
+    assert!(
+        rendered
+            .stdout
+            .lines()
+            .any(|line| line == "Usage: smut r [OPTIONS] [TOKENS]..."),
+        "r's usage line names the bare positional: {}",
+        rendered.stdout
+    );
+    assert!(!scratch.has_store(), "--help touches no store");
 }
 
 #[test]
@@ -2221,4 +2236,556 @@ fn json_beside_a_selection_is_refused_by_name() {
 
     assert_eq!(declared.code, 0, "{}", declared.stderr);
     assert!(scratch.has_store(), "declare creates the store q did not");
+}
+
+// ── VT-2…VT-6: `r`, the render verb on the line `q` takes ───────────────────
+
+#[test]
+fn r_renders_what_render_renders() {
+    // EX-2: `r` is `render` with the words `q` takes, so each row is one pipeline
+    // with two front doors — compared byte for byte — and each document is then
+    // asserted to carry a heading from the fixture, so two refusals or two empty
+    // documents cannot pass the equality above.
+    let scratch = Scratch::new();
+    store_of_a_session_and_two_questions(&scratch);
+
+    let projected = same_streams(
+        smut(&scratch, &["r", "session", "--select", "title,body"]),
+        smut(
+            &scratch,
+            &[
+                "render",
+                r#"{"from":["session"],"select":["title","body"]}"#,
+            ],
+        ),
+        "a single root with a projection",
+    );
+    assert_eq!(projected.code, 0, "{}", projected.stderr);
+    assert!(
+        projected.stdout.contains("## Session"),
+        "the projection still renders the title as its heading: {:?}",
+        projected.stdout
+    );
+
+    // Bare roots are this surface's spelling of a root list, so the twin is
+    // `from` as an array; a filter token is a `where` condition.
+    let filtered = same_streams(
+        smut(&scratch, &["r", "status=resolved"]),
+        smut(
+            &scratch,
+            &["render", r#"{"where":{"status":{"$eq":"resolved"}}}"#],
+        ),
+        "a filter line",
+    );
+    assert_eq!(filtered.code, 0, "{}", filtered.stderr);
+    assert!(
+        filtered.stdout.contains("## A graph view"),
+        "the filter selects the resolved question and nothing else: {:?}",
+        filtered.stdout
+    );
+
+    // `EXAMPLE_TRAVERSE` carries `"select":["smut_id"]`, so its line needs
+    // `--ids`; this row asks for the whole entities instead, so the headings are
+    // visible and the equality is checkable by eye as well as by bytes.
+    let traversed = same_streams(
+        smut(
+            &scratch,
+            &["r", "session", "--backlinks", "part-of", "--depth", "2"],
+        ),
+        smut(
+            &scratch,
+            &[
+                "render",
+                r#"{"from":["session"],"backlinks":["part-of"],"depth":2}"#,
+            ],
+        ),
+        "a traversal line",
+    );
+    assert_eq!(traversed.code, 0, "{}", traversed.stderr);
+    for heading in ["## Session", "## Query shape", "## A graph view"] {
+        assert!(
+            traversed.stdout.contains(heading),
+            "the walk reaches {heading}: {:?}",
+            traversed.stdout
+        );
+    }
+
+    for (id, title) in [("-weird", "Weird"), ("--follow", "Follow")] {
+        let declared = smut(
+            &scratch,
+            &[
+                "declare",
+                &format!(r#"{{"smut_id":"{id}","title":"{title}"}}"#),
+            ],
+        );
+        assert_eq!(declared.code, 0, "{id}: {}", declared.stderr);
+    }
+
+    let hyphen_led = same_streams(
+        smut(&scratch, &["r", "--", "-weird"]),
+        smut(&scratch, &["render", r#"{"from":["-weird"]}"#]),
+        "a hyphen-led root behind `--`",
+    );
+    assert_eq!(hyphen_led.code, 0, "{}", hyphen_led.stderr);
+    assert!(
+        hyphen_led.stdout.contains("## Weird"),
+        "`--` reaches the id the flag grammar cannot: {:?}",
+        hyphen_led.stdout
+    );
+
+    let two_roots = same_streams(
+        smut(&scratch, &["r", "session", "--", "--follow"]),
+        smut(&scratch, &["render", r#"{"from":["session","--follow"]}"#]),
+        "a hyphen-led root after a bare one",
+    );
+    assert_eq!(two_roots.code, 0, "{}", two_roots.stderr);
+    assert!(
+        two_roots.stdout.contains("## Follow"),
+        "the escaped root is selected, not swallowed as a flag: {:?}",
+        two_roots.stdout
+    );
+    assert!(
+        two_roots.stdout.contains("## Session"),
+        "{:?}",
+        two_roots.stdout
+    );
+}
+
+#[test]
+fn r_dash_j_renders_what_render_renders() {
+    // EX-2: `-j` carries the whole specification, so `r -j` is `render` in every
+    // respect — the same document, byte for byte, from the operand and from stdin.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let specification = r#"{"from":["a"]}"#;
+
+    let operand = same_streams(
+        smut(&scratch, &["r", "-j", specification]),
+        smut(&scratch, &["render", specification]),
+        "-j carries render's operand",
+    );
+    assert_eq!(operand.code, 0, "{}", operand.stderr);
+    assert!(
+        operand.stdout.contains("## Alpha"),
+        "a non-empty document, so the equality above is not two empty ones: {:?}",
+        operand.stdout
+    );
+
+    let piped = same_streams(
+        run(&scratch, &["r", "-j", "-"], Some(specification)),
+        run(&scratch, &["render", "-"], Some(specification)),
+        "one specification on stdin reaches render either way",
+    );
+    assert_eq!(piped.code, 0, "{}", piped.stderr);
+    assert_eq!(
+        piped.stdout, operand.stdout,
+        "the operand and stdin carry the same specification"
+    );
+}
+
+#[test]
+fn display_flags_agree_across_render_and_r() {
+    // EX-2: the display flags say how to render and not what, so they mean the
+    // same thing on both verbs and on either spelling of the specification.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let flags = ["-s", "-i", "-l", "3", "-t", "title"];
+
+    let mut from_line = vec!["r", "a"];
+    let mut from_json = vec!["render", r#"{"from":["a"]}"#];
+    let mut from_dash_j = vec!["r", "-j", r#"{"from":["a"]}"#];
+    for flag in flags {
+        from_line.push(flag);
+        from_json.push(flag);
+        from_dash_j.push(flag);
+    }
+
+    let beside_the_line = same_streams(
+        smut(&scratch, &from_line),
+        smut(&scratch, &from_json),
+        "the flags beside the line",
+    );
+    assert_eq!(beside_the_line.code, 0, "{}", beside_the_line.stderr);
+    assert!(
+        beside_the_line.stdout.contains("### Alpha"),
+        "the level reached the renderer: {:?}",
+        beside_the_line.stdout
+    );
+    assert!(
+        beside_the_line.stdout.contains("`a`"),
+        "--show-ids reached the renderer: {:?}",
+        beside_the_line.stdout
+    );
+
+    let beside_dash_j = same_streams(
+        smut(&scratch, &from_dash_j),
+        smut(&scratch, &from_json),
+        "the flags beside -j",
+    );
+    assert_eq!(beside_dash_j.code, 0, "{}", beside_dash_j.stderr);
+    assert!(
+        beside_dash_j.stdout.contains("### Alpha"),
+        "the level reached the renderer through -j too: {:?}",
+        beside_dash_j.stdout
+    );
+    assert_eq!(
+        beside_dash_j.stdout, beside_the_line.stdout,
+        "one specification, one document, whichever door it came through"
+    );
+}
+
+#[test]
+fn an_empty_r_line_renders_the_empty_specification() {
+    // EX-2: `r` with no words and no `-j` is `{}` and never reads stdin. The
+    // fixture specification on stdin selects one entity, so a stdin-reading `r`
+    // would render one title and not all three.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let ran = same_streams(
+        run(&scratch, &["r"], Some(r#"{"from":["a"]}"#)),
+        smut(&scratch, &["render", "{}"]),
+        "an empty line is the empty specification",
+    );
+    assert_eq!(ran.code, 0, "{}", ran.stderr);
+    for title in ["Alpha", "Beta", "Gamma"] {
+        assert!(
+            ran.stdout.contains(&format!("## {title}")),
+            "an empty line renders the whole store, so stdin went unread: {:?}",
+            ran.stdout
+        );
+    }
+}
+
+#[test]
+fn json_beside_a_selection_is_refused_on_r() {
+    // EX-3: `-j` is the whole specification on `r` exactly as it is on `q`, so
+    // any token or selection flag beside it is the same one-sentence conflict.
+    let scratch = Scratch::new();
+
+    for arguments in [
+        &["r", "a", "-j", "{}"][..],
+        &["r", "--ids", "-j", "{}"][..],
+        &["r", "--depth", "2", "-j", "{}"][..],
+    ] {
+        let refused = smut(&scratch, arguments);
+
+        assert_eq!(refused.code, 2, "{arguments:?}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{arguments:?} prints no document");
+        assert_eq!(
+            refused.stderr,
+            "smut: -j takes the whole specification; drop the tokens and selection flags beside it\n",
+            "{arguments:?}"
+        );
+        assert!(!scratch.has_store(), "{arguments:?} creates nothing");
+    }
+
+    // Paired in the same directory, so the assertions above discriminate: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"A"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(scratch.has_store(), "declare creates the store r did not");
+
+    // Display flags are legal beside `-j`: they say how to render, not what.
+    let shown = smut(&scratch, &["r", "-j", "{}", "-s"]);
+
+    assert_eq!(shown.code, 0, "{}", shown.stderr);
+    assert!(!shown.stdout.is_empty(), "a declaration renders a document");
+}
+
+#[test]
+fn every_q_refusal_reaches_r_unchanged() {
+    // EX-3: `r` compiles the same line with the same compiler, so every refusal
+    // the line earns arrives whole and at exit 2, byte for byte with `q`'s.
+    let scratch = Scratch::new();
+
+    for line in [
+        &["--ids", "--select", "a"][..],
+        &["--depth", "2"][..],
+        &["--limit", "all"][..],
+        &["--from="][..],
+        &["--order", "title:user"][..],
+        &["status~a=b"][..],
+    ] {
+        let mut from_q = vec!["q"];
+        from_q.extend_from_slice(line);
+        let mut from_r = vec!["r"];
+        from_r.extend_from_slice(line);
+
+        let refused = same_streams(
+            smut(&scratch, &from_q),
+            smut(&scratch, &from_r),
+            line.join(" ").as_str(),
+        );
+
+        assert_eq!(refused.code, 2, "{line:?}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{line:?} prints no document");
+        assert!(
+            !refused.stderr.is_empty(),
+            "{line:?} says why, so two silent refusals prove nothing"
+        );
+        assert!(!scratch.has_store(), "{line:?} creates nothing");
+    }
+
+    // Paired in the same directory, so the assertions above discriminate: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"A"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(scratch.has_store(), "declare creates the store q did not");
+}
+
+#[test]
+fn r_refuses_without_creating_a_store() {
+    // EX-3, EX-4: the display flags refuse before the selection and before any
+    // store, with render's own sentences, because they are render's own flags.
+    let scratch = Scratch::new();
+
+    for (from_r, from_render, description) in [
+        (
+            &["r", "--format", "mermaid"][..],
+            &["render", "{}", "--format", "mermaid"][..],
+            "a format this release does not write",
+        ),
+        (
+            &["r", "--format", "bogus"][..],
+            &["render", "{}", "--format", "bogus"][..],
+            "a format the release has never heard of",
+        ),
+        (
+            &["r", "-l", "7"][..],
+            &["render", "{}", "-l", "7"][..],
+            "a heading level outside 1 to 6",
+        ),
+    ] {
+        let refused = same_streams(
+            smut(&scratch, from_r),
+            smut(&scratch, from_render),
+            description,
+        );
+
+        assert_eq!(refused.code, 2, "{description}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{description} prints no document");
+        assert!(!scratch.has_store(), "{description} creates nothing");
+    }
+
+    // `-l` takes a hyphen-leading value, so `--ids` and `-j` are heading levels
+    // here and are refused as ones — the same sentence `render` prints for them.
+    // `r -l -j 3` leaves `3` as a token, which the refusal never reaches.
+    for (found, from_r) in [
+        ("--ids", &["r", "-l", "--ids"][..]),
+        ("-j", &["r", "-l", "-j", "3"][..]),
+    ] {
+        let refused = same_streams(
+            smut(&scratch, from_r),
+            smut(&scratch, &["render", "{}", "-l", found]),
+            found,
+        );
+
+        assert_eq!(refused.code, 2, "{found}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{found} prints no document");
+        assert_eq!(
+            refused.stderr,
+            format!(
+                "smut: --heading-level takes a whole number from 1 to 6, and {found} is not one\n"
+            ),
+            "{found} is read as the level's value"
+        );
+        assert!(!scratch.has_store(), "{found} creates nothing");
+    }
+
+    // Display flags are validated before the selection, so the level is refused
+    // and not the `--ids`/`--select` conflict beside it.
+    let before_the_selection = same_streams(
+        smut(&scratch, &["r", "-l", "7", "--ids", "--select", "a"]),
+        smut(&scratch, &["render", "{}", "-l", "7"]),
+        "the display flags answer first",
+    );
+
+    assert_eq!(
+        before_the_selection.code, 2,
+        "{}",
+        before_the_selection.stderr
+    );
+    assert!(
+        !before_the_selection.stderr.contains("--select"),
+        "the selection was never reached: {}",
+        before_the_selection.stderr
+    );
+    assert!(!scratch.has_store(), "-l 7 creates nothing");
+
+    // A word beginning with `{` is `q`'s `JsonOperand` refusal, and `r` compiles
+    // the line with the same compiler, so it earns the same sentence.
+    for word in [r#"{"from":"a"}"#, "{weird}"] {
+        let refused = same_streams(
+            smut(&scratch, &["r", word]),
+            smut(&scratch, &["q", word]),
+            word,
+        );
+
+        assert_eq!(refused.code, 2, "{word}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{word} prints no document");
+        assert!(
+            refused
+                .stderr
+                .contains("a JSON specification goes after -j, and an id after --from="),
+            "{word}: {}",
+            refused.stderr
+        );
+        assert!(!scratch.has_store(), "{word} creates nothing");
+    }
+
+    // Paired in the same directory, so the assertions above discriminate: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"A"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(scratch.has_store(), "declare creates the store r did not");
+}
+
+#[test]
+fn r_reaches_ids_the_short_form_cannot_carry_bare() {
+    // EX-3, EX-4: `--from=` is the root escape, and `--` is the rescue for an id
+    // that begins with a hyphen. Between them, `r` reaches every id.
+    let scratch = Scratch::new();
+
+    for (id, title) in [("{weird}", "Curly"), ("-title", "Hyphenated")] {
+        let declared = smut(
+            &scratch,
+            &[
+                "declare",
+                &format!(r#"{{"smut_id":"{id}","title":"{title}"}}"#),
+            ],
+        );
+        assert_eq!(declared.code, 0, "{id}: {}", declared.stderr);
+    }
+
+    let escaped = smut(&scratch, &["r", "--from={weird}"]);
+
+    assert_eq!(escaped.code, 0, "{}", escaped.stderr);
+    assert!(
+        escaped.stdout.contains("## Curly"),
+        "--from= carries the brace-led id: {:?}",
+        escaped.stdout
+    );
+
+    // Characterisation (plan C6): `r -title` with no `--` is `-t itle` — the
+    // heading field `itle`, and no tokens at all — because DEC-008 and IMP-007
+    // keep the letters as they were typed. The rescue for a hyphen-led id is
+    // `--`, below. No entity carries `itle`, so the document falls back to the
+    // identity block and proves the field, not the title, was used.
+    let letters_win = same_streams(
+        smut(&scratch, &["r", "-title"]),
+        smut(&scratch, &["render", "-title", "{}"]),
+        "-title is -t itle",
+    );
+
+    assert_eq!(letters_win.code, 0, "{}", letters_win.stderr);
+    assert!(
+        letters_win.stdout.contains("`-title`"),
+        "a heading field no entity carries renders identity instead: {:?}",
+        letters_win.stdout
+    );
+    assert!(
+        !letters_win.stdout.contains("## Hyphenated"),
+        "the title is not the heading here: {:?}",
+        letters_win.stdout
+    );
+
+    let rescued = smut(&scratch, &["r", "--", "-title"]);
+
+    assert_eq!(rescued.code, 0, "{}", rescued.stderr);
+    assert!(
+        rescued.stdout.contains("## Hyphenated"),
+        "`--` reaches the hyphen-led id: {:?}",
+        rescued.stdout
+    );
+}
+
+#[test]
+fn r_and_render_differ_only_where_the_design_says() {
+    // EX-5, VT-3: the two verbs differ on the empty line and on `[1]`, and on
+    // nothing else that a spawned process can see.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    // A specification on stdin is ignored by an empty `r` line and read by a bare
+    // `render`: `r` renders `{}`, `render` renders the piped selection.
+    let piped = same_streams(
+        run(&scratch, &["r"], Some(r#"{"from":["a"]}"#)),
+        smut(&scratch, &["render", "{}"]),
+        "r never reads stdin",
+    );
+
+    assert_eq!(piped.code, 0, "{}", piped.stderr);
+    for title in ["Alpha", "Beta", "Gamma"] {
+        assert!(
+            piped.stdout.contains(&format!("## {title}")),
+            "`r` rendered the empty specification and not the piped one: {:?}",
+            piped.stdout
+        );
+    }
+
+    // `[1]` is a root id to the short form and not a specification to `render`,
+    // whose operand is JSON and must parse.
+    let declared = smut(
+        &scratch,
+        &["declare", r#"{"smut_id":"[1]","title":"Bracketed"}"#],
+    );
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+
+    let short = smut(&scratch, &["r", "[1]"]);
+
+    assert_eq!(short.code, 0, "{}", short.stderr);
+    assert!(
+        short.stdout.contains("## Bracketed"),
+        "[1] is one root id in the short form: {:?}",
+        short.stdout
+    );
+
+    let json = smut(&scratch, &["render", "[1]"]);
+
+    assert_eq!(json.code, 2, "{}", json.stderr);
+    assert_eq!(json.stdout, "", "the refusal prints no document");
+
+    // The terminal half of the same divergence — `r` on a terminal is `{}` where a
+    // bare `render` there is MissingInput — cannot be reached from here, because
+    // `run` always pipes stdin. It lives in `src/cli.rs`'s
+    // `r_with_no_words_on_a_terminal_is_the_empty_specification`.
+}
+
+#[test]
+fn query_and_render_do_not_take_dash_j() {
+    // EX-7's non-goal, asserted: `-j` belongs to the verb that compiles a line,
+    // and the two verbs that take one specification take it as the operand.
+    let scratch = Scratch::new();
+
+    for verb in ["query", "render"] {
+        let refused = smut(&scratch, &[verb, "-j", "{}"]);
+
+        assert_eq!(refused.code, 2, "{verb}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{verb} prints nothing");
+        assert!(
+            refused
+                .stderr
+                .lines()
+                .any(|line| line == "error: unexpected argument '-j' found"),
+            "{verb} never took -j: {:?}",
+            refused.stderr
+        );
+        assert!(!scratch.has_store(), "{verb} creates nothing");
+    }
+
+    // Paired in the same directory, so the assertions above discriminate: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"A"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(
+        scratch.has_store(),
+        "declare creates the store neither verb did"
+    );
 }

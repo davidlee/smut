@@ -197,6 +197,17 @@ mod tests {
             assert!(rendered.stdout.contains(named), "{}", rendered.stdout);
         }
         assert!(rendered.stderr.is_empty(), "{}", rendered.stderr);
+
+        // EX-6: the verb list names `r` on a line of its own. A bare
+        // `contains("r")` is vacuous, so the assertion is line-anchored.
+        assert!(
+            rendered
+                .stdout
+                .lines()
+                .any(|line| line.split_whitespace().next() == Some("r")),
+            "the verb list names r on a line of its own: {}",
+            rendered.stdout
+        );
     }
 
     #[test]
