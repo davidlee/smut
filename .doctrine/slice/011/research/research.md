@@ -49,7 +49,7 @@ load-bear ✓ rows, or verify an unmarked row at point of use.
 | **ADR-001** | identity is `smut_id`, a reserved key in a permissive store; an ordinary `id` is data | ✓ |
 | **STD-001** | `docs/store-format.md` is the store format's only record; nothing may appear in `.smut/` for a query feature | ✓ |
 | **IMP-002** | the 1.0 presentation release owns Mermaid, the completed display-flag behaviour, and `--brief` | ✓ |
-| **IMP-007** | resolved *in this tree*: render's five short letters `-f -t -l -i -s` exist and are pinned as short/long equivalence pairs. The shared flag struct must not consume one | ✓ (`src/cli.rs:312-335`, `tests/cli_contract.rs:988-1035`) |
+| **IMP-007** | resolved *in this tree*: render's five short letters `-f -t -l -i -s` exist and are pinned as short/long equivalence pairs. The shared flag struct must not consume one | ✓ (`src/cli.rs:312-335`, `src/cli.rs:986` every_short_flag_reaches_exactly_the_state_its_long_form_reaches — corrected per RV-036 F-5) |
 | **IMP-014** | no `every_reject_refusal()` census exists; a new `Reject` variant lands unpinned by default | ✓ (`src/error.rs:618-800`) |
 | **IMP-015** | `!has_store()` is non-discriminating in the query refusals; refusal tests copy that weakness | ✓ (`tests/cli_contract.rs`) |
 | **IMP-016** | the five predicate operators are spelled in three places, and `dsl.rs` names its own table as the third; a shared *flag* set adds a fourth spelling of the **flag names** (in `cli.rs`) if the extracted struct carries them | ✓ (`src/dsl.rs:244-252`) |

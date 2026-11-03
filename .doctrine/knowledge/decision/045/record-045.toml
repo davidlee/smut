@@ -11,8 +11,8 @@ updated = "2026-11-03"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
-context = "Six DSL refusal sentences say use smut query and one says q carries. Through r they would point at the wrong surface."
-choice = "Every DSL refusal that names an escape names `-j`. `q carries one ... per field` reads `a line carries one ... per field`. Reject::JsonOperand stays in dsl::compile with a verb-free sentence. A `[`-leading token stays a root."
+context = "Five short-form refusal sentences (src/dsl.rs:319 327 505 581 and src/error.rs:385) name smut query as their escape and two name q as their subject. Through r they would point at the wrong surface."
+choice = "Every short-form refusal that names an escape names -j. Sentences whose subject was q take the short form as subject. Reject::JsonOperand stays in dsl::compile and names both escapes (-j for a JSON specification and --from= for a {-led id). A [-led token stays a root."
 alternatives = ["pass the verb into compile: couples the compiler to its call sites", "move JsonOperand to each call site: duplicates the check"]
 rationale = "-j is the right escape on both verbs so the compiler stays verb-blind. q is post-0.2 and outside the compatibility guard so only tests/dsl.rs and error.rs pins move. Ids are free-form so `[` is a legal root spelling."
 consequences = ["DEC-039 pointer to smut query is amended at reconcile", "re-read each changed sentence for a cause it cannot establish"]

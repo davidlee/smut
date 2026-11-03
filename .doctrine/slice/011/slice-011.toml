@@ -1,7 +1,7 @@
 id = 11
 slug = "render-speaks-q"
 title = "Markdown from a q line — render reachable through the humane grammar"
-status = "design"
+status = "plan"
 created = "2026-11-03"
 updated = "2026-11-03"
 tags = ["cli", "ergonomics", "render", "surface"]
@@ -12,31 +12,39 @@ after = [{ to = "SL-010", rank = 0 }]                      # slice→work soft s
 
 [[selector]]
 selector = "src/cli.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "src/dsl.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "src/error.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "src/learn.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "src/main.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "tests/cli_contract.rs"
-intent = "scope-relevant"
+intent = "design-target"
 
 [[selector]]
 selector = "tests/fixture.rs"
-intent = "scope-relevant"
+intent = "design-target"
+
+[[selector]]
+selector = "README.md"
+intent = "design-target"
+
+[[selector]]
+selector = "tests/dsl.rs"
+intent = "design-target"
 
 [[relation]]
 label = "references"

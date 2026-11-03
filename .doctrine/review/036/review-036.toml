@@ -1,0 +1,497 @@
+id    = 36
+slug  = "design-review-of-sl-011"
+title = "design review of SL-011"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "design"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Two pi passes (deepseek-flash, review profile) over design.md sec-1..7 against src/cli.rs dsl.rs error.rs input.rs learn.rs main.rs and tests/; round 1 raised 12, round 2 verified all 12 and raised 3 minors, fixed in place"
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "unchanged pass; re-concluded after routing F-1..F-6"
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-011"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Refusal dsl.rs:318 after-sentence drops the tool as subject"
+detail = "sec-3 row: 'it carries two {first}, so the field cannot be told from the value; use -j'. Old subject was the compiler (q cannot tell). pi review (deepseek-flash) at run-20261103T051837694Z; verified src/dsl.rs:311-321, tests/dsl.rs:392,399."
+disposition = "fix-now"
+response = "Defect in a design sentence not a lag: settled in prose in sec-3 by restoring the short form as subject."
+route = "review"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-3: subject is the short form again: 'it carries two {first}, so the short form cannot tell the field from the value; use -j'."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "Defect in a design sentence not a lag: settled in prose in sec-3 by restoring the short form as subject."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "Refusal dsl.rs:581 after-sentence reads as a rule the line breaks"
+detail = "sec-3 row: 'a line carries one {spelling} per field; use -j' is said of a line carrying two (title~a title~b). Verified src/dsl.rs:578-581."
+disposition = "fix-now"
+response = "Defect in a design sentence: settled in prose in sec-3 (the short form carries one spelling per field)."
+route = "review"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-3: 'the short form carries one {spelling} per field; use -j'."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "Defect in a design sentence: settled in prose in sec-3 (the short form carries one spelling per field)."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "major"
+title = "JsonOperand after-sentence asserts the token is JSON; a {-led id also reaches it"
+detail = "sec-3: the check is first-character only (src/dsl.rs:85). An id like {weird} is legal (ADR-001) and its escape is --from= (DEC-036), not -j. The design's claim that the sentence asserts only what was typed is false."
+disposition = "fix-now"
+response = "Defect: the JsonOperand sentence over-claimed. Settled in prose in sec-3 and DEC-045 by naming both escapes (-j and --from=) and tested in sec-6."
+route = "review"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-3: JsonOperand reads 'a word beginning with { is not read as a token: a JSON specification goes after -j, and an id after --from='; false claim removed; sec-6 tests both a JSON word and a {-led id; DEC-045 choice updated."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "Defect: the JsonOperand sentence over-claimed. Settled in prose in sec-3 and DEC-045 by naming both escapes (-j and --from=) and tested in sec-6."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "learn.rs pins and sentences missing from code impact"
+detail = "Verified: src/learn.rs:59 'the others, q included, do.' (store-need list, pinned ~1019); :143/:149 name smut query as an escape (pinned :933); :766 SHORT_FORM_HEADING 'The short form: smut q' pinned twice; :702 the_guide_prints_the_examples_the_fixture_executes enumerates EXAMPLE_* constants."
+disposition = "fix-now"
+response = "Refresh: the code is right and the design lagged it. Edited sec-4 and sec-5 to name learn.rs:59 :143 :149 :702 :766 :933; swept slice-011.md affected-surface (learn.rs row) which cites no line pins."
+route = "refresh"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-4 and sec-5 name learn.rs:59 store-need sentence, :766 heading, :143/:149 escapes with pin :933, and the :702 examples pin."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = "Refresh: the code is right and the design lagged it. Edited sec-4 and sec-5 to name learn.rs:59 :143 :149 :702 :766 :933; swept slice-011.md affected-surface (learn.rs row) which cites no line pins."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "major"
+title = "Wrong citation for the short/long flag pair test"
+detail = "sec-6 cites tests/cli_contract.rs:988-1035; that range is unrelated. The pairs are src/cli.rs:986 every_short_flag_reaches_exactly_the_state_its_long_form_reaches, which flattening could break and which should gain r pairs."
+disposition = "fix-now"
+response = "Refresh: the code is right (the pair test is src/cli.rs:986). Edited sec-2/5/6; swept research.md IMP-007 row which carried the same wrong citation."
+route = "refresh"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-6 cites src/cli.rs:986 and says it gains r's pairs; sec-2 and sec-5 list it."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "refresh"
+response = "Refresh: the code is right (the pair test is src/cli.rs:986). Edited sec-2/5/6; swept research.md IMP-007 row which carried the same wrong citation."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "major"
+title = "EXAMPLE_RENDER_R has no JSON twin constant"
+detail = "sec-4/sec-6 assert EXAMPLE_RENDER_R equals its JSON twin; no EXAMPLE_RENDER exists (render recipe is inline prose at src/learn.rs:337). Both constants must be added."
+disposition = "fix-now"
+response = "Defect: the design assumed a constant that does not exist. Settled in prose in sec-4/5/6 by adding EXAMPLE_RENDER beside EXAMPLE_RENDER_R."
+route = "review"
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-4/5/6: EXAMPLE_RENDER (JSON) and EXAMPLE_RENDER_R both added; fixture gains Declared::render beside Declared::r."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding.turn]]
+act = "reopen"
+role = "raiser"
+note = "reopened to attach the route the design gate requires; the fix itself is unchanged"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+route = "review"
+response = "Defect: the design assumed a constant that does not exist. Settled in prose in sec-4/5/6 by adding EXAMPLE_RENDER beside EXAMPLE_RENDER_R."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "prose fix verified by pi round 2; route attached"
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "minor"
+title = "[-led token diverges between r and render, unstated"
+detail = "r '[1]' answers an id named [1] at exit 0; render '[1]' is refused (not a specification). Not an equivalence breach (different inputs) but should be stated and tested."
+disposition = "fix-now"
+response = "sec-1 states the [-led divergence; sec-6 tests both sides."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-1 states the [-led divergence; sec-6 tests both sides."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "minor"
+title = "'short letters are verb-local' contradicts the crate's pinned rule"
+detail = "src/cli.rs:1077 conventions_takes_the_same_format_letter_as_render: one letter means one thing across the CLI. sec-1 should say letters keep their cross-verb meaning."
+disposition = "fix-now"
+response = "sec-1: one letter means one thing across the CLI; -j means --json wherever it appears."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-1: one letter means one thing across the CLI; -j means --json wherever it appears."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "minor"
+title = "DEC-045 context says six sentences; there are five"
+detail = "Verified five sites: src/dsl.rs:318,327,503,581 plus src/error.rs:385."
+disposition = "fix-now"
+response = "DEC-045 context and choice rewritten: five sites listed by line."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "DEC-045 context and choice rewritten: five sites listed by line."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-10"
+status = "verified"
+severity = "minor"
+title = "Guide does not state r's empty line vs render's missing operand"
+detail = "render with no operand on a terminal is MissingInput; r with no tokens answers everything. One sentence in the operand paragraph."
+disposition = "fix-now"
+response = "sec-4 operand paragraph states the empty q/r line answers everything; sec-1 and sec-6 state and test the divergence from render's MissingInput."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-4 operand paragraph states the empty q/r line answers everything; sec-1 and sec-6 state and test the divergence from render's MissingInput."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-11"
+status = "verified"
+severity = "minor"
+title = "Return Spec from SelectionArgs::specification; name cli.rs help test"
+detail = "spec::parse then appears once for the humane path. Also src/cli.rs:667 help_is_answered_as_text_that_advertises_the_grammar should name r."
+disposition = "fix-now"
+response = "sec-2: specification returns Spec, so spec::parse appears once; cli.rs help test (:667) named in sec-2/sec-5."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-2: specification returns Spec, so spec::parse appears once; cli.rs help test (:667) named in sec-2/sec-5."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-12"
+status = "verified"
+severity = "minor"
+title = "r -l -j is an untested loud spelling"
+detail = "The -l flag carries allow_hyphen_values (src/cli.rs:322), so r -l -j 3 binds -j as the level and refuses it. Add to sec-6."
+disposition = "fix-now"
+response = "sec-2 probe table and sec-6 add r -l -j 3 as a loud invalid-level refusal."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-2 probe table and sec-6 add r -l -j 3 as a loud invalid-level refusal."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "VERIFIED by pi review round 2 (run-20261103T052340700Z-110), evidence cited per finding"
+
+[[finding]]
+id = "F-13"
+status = "verified"
+severity = "minor"
+title = "Pinned 'complete surface' clause at learn.rs:149-150 unnamed"
+detail = "src/learn.rs:898 and :1028 pin 'smut query takes the full specification and is the complete surface', inside the escape sentence sec-4 rewrites. Raised by the pi verification round."
+disposition = "fix-now"
+response = "sec-4: the pinned clause stays verbatim; only the preceding escape wording changes to -j."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-4: the pinned clause stays verbatim; only the preceding escape wording changes to -j."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "fix checked by the orchestrator against src/learn.rs:147-158 and design sec-4/sec-6 text; not re-reviewed by pi"
+
+[[finding]]
+id = "F-14"
+status = "verified"
+severity = "minor"
+title = "Hot-path equivalence row unactionable: three hot paths lack JSON twins"
+detail = "learn.rs:154-158 lists five hot paths; only traverse/follow/filter have JSON constants."
+disposition = "fix-now"
+response = "sec-6 names the three JSON-twinned recipes, the render recipe, and harness-written twins for the other two hot paths."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-6 names the three JSON-twinned recipes, the render recipe, and harness-written twins for the other two hot paths."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "fix checked by the orchestrator against src/learn.rs:147-158 and design sec-4/sec-6 text; not re-reviewed by pi"
+
+[[finding]]
+id = "F-15"
+status = "verified"
+severity = "minor"
+title = "Empty-line sentence omits the 100 cap"
+detail = "sec-4 says 'answers everything'; the default limit caps at 100."
+disposition = "fix-now"
+response = "sec-4: 'answers every entity, capped at 100'."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = "sec-4: 'answers every entity, capped at 100'."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "fix checked by the orchestrator against src/learn.rs:147-158 and design sec-4/sec-6 text; not re-reviewed by pi"
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.
