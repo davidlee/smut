@@ -72,4 +72,20 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
 - **Operator rulings.** None beyond the plan. No operator-supplied inputs needed.
 - **Charters.** PHASE-01+02, PHASE-03, PHASE-04.
 
+### PHASE-01 (sub-orchestrator, 2026-11-03)
+
+- Commits: `9a54c97` (EX-1 pins: about line, render usage), `7c255e2` (refactor, no test edited),
+  `0c37d52` (`-j` + `JsonBesideSelection`, tests). `just check` exit 0 after the refactor and at `0c37d52`.
+  Delta recorded `1ddf284..0c37d52` (all three commits are this phase's).
+- VA-1: refactor diff read alone (`git diff -w 7c255e2^ 7c255e2`): fields moved with attributes and doc
+  comments byte-identical; `check_format`/`heading_level_of` unchanged; `options()` still runs before
+  `operand`. Struct comments are plain `//` (a `///` on a flattened `Args` struct would reach the parent's
+  help). `--help`, `q --help`, `render --help` byte-identical to pre-refactor captures (also after `-j`
+  for `--help`).
+- pi passes (implement profile, deepseek-flash): refactor $0.012, 14 req, clean; red tests $0.030,
+  27 req (mis-cited EX-4/EX-5 and DEC-008 in two test comments; corrected before commit); green $0.018,
+  19 req, clean. No Sonnet/Opus spawn.
+
 ## Autonomy log
+- PHASE-01 · wrote the EX-1 pin commit (two assertions) myself rather than via pi · brief would cost more than the edit · decided
+- PHASE-01 · EX-6 rows added as parse-level spec comparisons in `src/cli.rs` (`q a --follow x b`, `q -- -weird`, `q a -- --follow`, `q -- -junk`); none existed there · criterion says "where absent, added at the parse level" · decided
