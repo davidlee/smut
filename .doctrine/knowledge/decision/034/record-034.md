@@ -18,3 +18,10 @@ and DEC-019 require every existing call to keep both its meaning and its bytes.
 tests — and stays documented as the way to say what the DSL cannot. `find` was the discoverable
 alternative and differs in nothing else, so the rename later is one subcommand variant plus guide
 text: the door stays open until the guide ships.
+
+## Amendment — 2026-11-03 (SL-011 reconcile, RV-037)
+
+"`q` is the only human front-end and has no alias" is superseded in part by DEC-042. There are two
+human verbs over one grammar: `q` answers the envelope, `r` prints the Markdown `render` prints, and
+both take the same line through one compiler. Neither is an alias. `smut query` is unchanged and
+stays the complete surface; `-j` now carries the whole specification on both human verbs.

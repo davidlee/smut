@@ -125,3 +125,47 @@ Each copies the design sentence above; none is authored independently. Then `jus
   the guide.
 
 Backlog: none. IMP-014, IMP-015, IMP-016 touched and named, not paid.
+
+## Reconciliation Outcome
+
+Paid in the brief's order: design prose, then the mirrors copied from it, then the records.
+No REV: every governance item is a DEC, and a DEC is not a `revision change add` target (SL-010
+precedent, REV-003). The records were amended on the knowledge surface — `doctrine knowledge edit
+decision` for facets (comma-free arrays), direct edits for bodies.
+
+### Direct edits applied (design.md, locked; amended in place, run not resumed) — `3b1cb0b`
+- § The surface, `render`/`query` non-goal: asserted (C5).
+- § The command line: a "Hyphen-led words" paragraph — C6 as extended by F-3 (`-s`/`-i`/`-t…`
+  silent on `r`, `-f…`/`-l…` loud, `-j…` in the JSON reader's voice on `q` and `r`, `--` the rescue,
+  the pin named).
+- § Refusals: three sentences name `q` as subject, each located (C1).
+- § The guide and the README: the `r` row notes `-j` (F-6); a README opaque-id bullet carrying the
+  narrowed sentence, true of `get`, `delete`, `q`, `r` (F-2).
+- § Verification: three hot paths named (C3); the filter recipe set-equal (C2); the terminal half
+  in-process (C4); `render -j`/`query -j` still clap's error (C5).
+- § Reconcile obligations: eight records (F-4).
+
+### Mirrors (operator ruling 2026-11-03: reconcile pays them, as RV-034's) — `3b1cb0b`
+- README.md: the opaque-id bullet (F-2) copies the design sentence; the `r` commands row gains
+  `[-j\|--json JSON]` (F-6).
+- src/cli.rs: `SelectionArgs`/`DisplayArgs` comments name `r`; the positional's comment copies C6's
+  narrowed guard; `specification`'s doc names both verbs. src/error.rs: `UnreadableToken` and
+  `MissingDirection` docs say "short-form". src/dsl.rs: module doc names `q` and `r` (F-5).
+- Comment/doc text only. `--help` for the root and all nine verbs byte-identical before/after.
+  `just check` exit 0. `tests/compatibility.rs` untouched.
+
+### Records amended (knowledge edits)
+- DEC-034 choice + body amendment: two human verbs `q`/`r`, superseded in part by DEC-042.
+- DEC-008 choice + Input rules: the operand on `declare`/`query`/`render`; `-j` on `q`/`r`.
+- DEC-039 choice + body amendment: refusals point at `-j` (DEC-045).
+- DEC-040 choice + body: `r` and `-j` added; the three escapes are `--ids`, `--from=ID`, `-j` (F-4).
+- DEC-035 choice + body: exactness escape is `-j` (or `smut query`) (F-4).
+- DEC-036 consequences + body: refusals name `-j` (F-4).
+- DEC-037 consequences + body amendment: the guard is narrowed per C6 (F-3).
+- DEC-043 consequences + body amendment: the accepted silent `-s`/`-i`/`-t` read on `r` (F-3).
+
+### Withdrawn / tolerated
+- F-1, F-7: aligned; nothing to write.
+- Backlog: none. IMP-014, IMP-015, IMP-016 named, not paid.
+
+`doctrine check gate` exit 0. Reconcile pass complete — handoff to /close.

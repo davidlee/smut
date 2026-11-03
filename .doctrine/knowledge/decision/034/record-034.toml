@@ -7,12 +7,12 @@ title = "The human query surface is `smut q`, and `smut query` stays the complet
 record_kind = "decision"
 status = "accepted"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "IDE-006 asks whether the human surface is a new verb or new flags on `query`. The brief's ten-key specification is the machine contract and must stay complete, and every existing `query` call must keep its meaning (DEC-011, DEC-019)."
-choice = "A new verb, `smut q`. `smut query` keeps the JSON specification unchanged forever and stays documented as the complete surface for everything the DSL cannot say. `q` is the only human front-end and has no alias."
+choice = 'A new verb, `smut q`. `smut query` keeps the JSON specification unchanged forever and stays documented as the complete surface for everything the DSL cannot say. The human front-ends are two verbs over one grammar — `q` answers the envelope and `r` prints Markdown — and neither has an alias. (Amended 2026-11-03 by SL-011: "`q` is the only human front-end" is superseded in part by DEC-042.)'
 alternatives = ["`smut find` — more discoverable, one syllable longer, and nothing else about it differs", "rather bare positionals on `query` — ambiguous with the JSON operand, and a back-compat trap", "`smut query --human` — a mode flag on the machine verb, which makes the machine surface conditional"]
 rationale = "The ambiguity is structural rather than stylistic: a bare positional on `query` cannot be distinguished from a JSON operand, so a grammar bolted onto the machine verb would have to guess. A new verb is the only spelling that buys a grammar with no back-compat trap, and it makes the division of labour legible — `query` is the complete surface, `q` is the shortcut. One letter is short enough for a hot path and unique among declare, get, delete, query, render, learn and conventions."
 consequences = ["`smut q` becomes the spelling in `learn`'s hot-path recipes, which obliges a DEC-016 amendment", "`query`'s bytes, refusals and compatibility tests do not move; `q` is additive", "renaming to `find` later is one subcommand variant plus guide text, so the door stays open until the guide ships", "shell completion keys on the verb, so value completion is `smut q status=<TAB>`"]

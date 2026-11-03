@@ -7,12 +7,12 @@ title = "The DSL refuses only what the specification cannot spell, and voices re
 record_kind = "decision"
 status = "accepted"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "IDE-006's rule 3 refused any repeated field in the DSL. The research round found DEC-027 already refuses the provably-unsatisfiable case at parse time, by demand and decidability, with a message DEC-030 has pinned."
-choice = "Repeated conditions on one field compile and are judged by `predicate::parse`, except the one shape the specification cannot express — two `=` on one field — which the DSL refuses: as a contradiction in DEC-027/DEC-030's family when both values are single values, and in the caller's own tokens when either is a comma list, because the lists may intersect. Every DSL-only refusal exits 2, names the defect, names only flags and fields the caller typed, and points at `smut query` where the DSL cannot express the request."
+choice = "Repeated conditions on one field compile and are judged by `predicate::parse`, except the one shape the specification cannot express — two `=` on one field — which the DSL refuses: as a contradiction in DEC-027/DEC-030's family when both values are single values, and in the caller's own tokens when either is a comma list, because the lists may intersect. Every DSL-only refusal exits 2, names the defect, names only flags and fields the caller typed, and points at `-j` where the short form cannot express the request (DEC-045; amended 2026-11-03 by SL-011 — it pointed at `smut query`, which stays the complete surface)."
 alternatives = ["IDE-006's blanket duplicate-field refusal — deletes a refusal the specification already words better, and its suggested cure is only correct when both conditions are `=`", "compiling two `=` into `$in` — silently changes what was asked", "refusing every same-field repeat — refuses requests the specification accepts"]
 rationale = "A front-end that refuses what the machine accepts punishes only humans, and one that silently changes meaning is worse than either. Two different single `=` values are unsatisfiable, not interchangeable, so that one shape stays refused — in the contradiction voice only where the contradiction is real, and in the caller's words where the lists might intersect. Every expressible repeat travels to the mechanism that already decides it, and inherits a sounder rule and a pinned sentence."
 consequences = ["the DSL's refusal count drops, and one refusal the design expected is not built", "a same-field contradiction now speaks DEC-030's sentence rather than a DSL one", "the two-`=` refusal needs its own sentence and a red-first message test", "`$in` is spelled `field=a,b` and is never inferred from two conditions"]

@@ -15,7 +15,7 @@ context = "q's twelve flags are inline in Sub::Q and render's five in Sub::Rende
 choice = "A SelectionArgs struct (the attribute-free tokens positional plus q's twelve flags plus -j) is flattened into q and r and converts into dsl::Flags in cli.rs. A DisplayArgs struct (-f -t -l -i -s) is flattened into render and r and builds render_markdown::Options. dsl.rs gains no clap import."
 alternatives = ["copy the flags into a third enum variant: parallel implementation", "make dsl::Flags itself derive clap Args: couples the pure compiler to clap"]
 rationale = "One definition per flag set. The probe showed the bare positional keeps DEC-037 behaviour under flatten and q's pinned usage line is unchanged."
-consequences = ["render's usage keeps [JSON] and q's keeps [TOKENS]", "-l with a flag-looking value binds it and refuses it loudly as an invalid level"]
+consequences = ["render's usage keeps [JSON] and q's keeps [TOKENS]", "-l with a flag-looking value binds it and refuses it loudly as an invalid level", "the flatten puts the display letters beside the id positional on `r`: a hyphen-led word clap reads as `-s`/`-i` optionally ending in `-t<value>` (`-title` or `-site`) is silently display flags at exit 0 — the accepted cost — and the guide teaches `--` for hyphen-led ids on `r` (amended 2026-11-03 by RV-037 F-3)"]
 decided_by = "user (agreed, 2026-11-03) on agent proposal"
 decided_on = "2026-11-03"
 

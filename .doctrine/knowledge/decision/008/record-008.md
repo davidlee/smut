@@ -43,7 +43,9 @@ are pinned in `src/cli.rs`'s parsing tests.
 
 ## Input rules
 
-- Exactly one JSON operand. `-` reads stdin explicitly.
+- Exactly one JSON operand. `-` reads stdin explicitly. (Amended 2026-11-03 by
+  SL-011, DEC-042: the operand is `declare`'s, `query`'s and `render`'s; `q` and
+  `r` take the same JSON after `-j`, `-` included, in place of their words.)
 - Operand absent: on a TTY → usage help, exit 2; on a pipe → read stdin.
 - Trailing non-whitespace after the JSON value → exit 2. No newline-delimited
   stream mode.

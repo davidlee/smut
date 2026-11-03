@@ -23,5 +23,6 @@ RV-034 F-6; the choice above already enumerated boolean, null and number, so onl
 owed.)
 
 The wart is documented where it bites. `smut_id` is identity (ADR-001), so a numeric-looking id
-compared with `=` compares a number; `--ids`, `--from=ID` and `smut query` are the three ways out,
-and the guide names them beside the rule rather than in a footnote.
+compared with `=` compares a number; `--ids`, `--from=ID` and `-j` (or `smut query`) are the three
+ways out, and the guide names them beside the rule rather than in a footnote. (Amended 2026-11-03
+by SL-011, RV-037 F-4: the exactness escape was `smut query`; `-j` reaches it on the same verb.)

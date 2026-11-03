@@ -16,5 +16,6 @@ So: bare means a thing, `field=value` means a filter. `--from=ID` reaches a root
 token containing an operator is never resolved as an id, whatever the store holds.
 
 The cost is that a field name containing `=`/`~`/`,` and a value containing a comma are outside the
-DSL's domain. They refuse, naming `smut query` — which is the sentence that makes the front-end's
+DSL's domain. They refuse, naming `-j` (amended 2026-11-03 by SL-011, DEC-045: they named `smut
+query`) — which is the sentence that makes the front-end's
 boundary a teaching moment rather than a wall.

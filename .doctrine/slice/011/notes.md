@@ -58,6 +58,7 @@ fresh-as-of: 2026-11-03 · audit (RV-037 concluded) · ef76f19
 ## Reconcile obligations (from design § Reconcile obligations)
 
 - Amend DEC-034, DEC-008, DEC-039, DEC-040 via `doctrine knowledge edit decision`, comma-free arrays.
+  (RV-037 F-3/F-4 extended this to eight: + DEC-035, DEC-036, DEC-037, DEC-043; paid — § Reconcile.)
 - Amend design.md for C1–C6 — the single list is plan.md § Where this plan supersedes design.md
   during execution; until reconcile, those rows govern.
 
@@ -183,3 +184,37 @@ overturned by F-2 — the README states the opposite.
 F-5 and the README mirrors are code/README edits: the operator rules whether reconcile pays
 them, as RV-034's were. `plan.toml` is off-surface.
 
+
+## Reconcile — RV-037 paid (2026-11-03)
+
+**Operator rulings (2026-11-03).**
+1. Reconcile pays the off-surface edits, as RV-034 set precedent: README.md opaque-id bullet (F-2),
+   README.md `r` commands row `-j` (F-6), and the F-5 code comments (src/cli.rs, src/error.rs,
+   src/dsl.rs). Comment and doc text only — no behaviour change.
+2. The `.doctrine/observations/` record committed in `c30398d` stays committed. No action.
+
+**Order paid.** Design prose → mirrors copied from it → records, so each mirror copies a sentence
+that already existed. The design run was **not** resumed; design.md was amended in place (locked).
+`plan.toml` untouched (off-surface). plan.md's supersession table is left as the execution record;
+its rows C1–C6 are now paid in design.md.
+
+**Design (`3b1cb0b`).** C1 (three `q`-subject sentences, located), C2 (filter recipe set-equal),
+C3 (three hot paths named), C4 (terminal half in-process), C5 (`render`/`query` `-j` asserted, in
+§ The surface and § Verification), C6 extended per F-3 as a "Hyphen-led words" paragraph in
+§ The command line — the canonical sentence the code comment and DEC-037 copy. § The guide and the
+README: the `r` row notes `-j` (F-6) and the narrowed opaque-id bullet (F-2). § Reconcile
+obligations lists eight records (F-4).
+
+**Mirrors (`3b1cb0b`).** README.md opaque-id bullet and `r` row; src/cli.rs (four comment sites),
+src/error.rs (two variant docs), src/dsl.rs (module doc). Evidence: built-binary probes of
+`get -weird-id`, `delete -weird-id`, `q -weird` (usage error + `--` tip), `q -jane`/`r -jane`
+(`malformed JSON`, exit 2), `r -site` (exit 0), `r -- -title` (reaches the id) — each matches the
+sentence. `--help` for root and all nine verbs byte-identical before/after (no doc comment touched
+is clap-visible: the edited `///` sit on a method and on `Reject` variants). `just check` exit 0.
+
+**Records.** DEC-034, DEC-008, DEC-039, DEC-040, DEC-035 (choice facet), DEC-036, DEC-037, DEC-043
+(consequences facet, every item rewritten comma-free and checked in the TOML diff), each with a
+dated body amendment. No REV: DEC is not a `revision change add` target (SL-010/REV-003 precedent).
+
+**Gate.** `just check` exit 0; `doctrine check gate` exit 0; `tests/compatibility.rs` unchanged.
+Outcome recorded in `review-037.md § Reconciliation Outcome`. Hand-off: /close.

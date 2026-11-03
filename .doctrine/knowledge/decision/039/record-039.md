@@ -28,3 +28,10 @@ conditions were `=`. Compiling two `=` into `$in` would answer a question nobody
 Every DSL-only refusal — an ambiguous token, a JSON operand, an unknown flag, `--limit all`, a
 comma list a `!=` cannot carry — exits 2, names the defect, and names only flags and fields the
 caller actually typed (DEC-030).
+
+## Amendment — 2026-11-03 (SL-011 reconcile, RV-037)
+
+The choice's last clause said every DSL-only refusal "points at `smut query`". Since SL-011 the short
+form is reachable through two verbs, `q` and `r`, so the refusals name `-j` — the escape on the same
+verb — and no verb (DEC-045). `smut query` is still the complete surface; it is no longer the
+pointer.
