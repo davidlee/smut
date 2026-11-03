@@ -126,7 +126,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-03 · audit (RV-034 concluded) · head 9e5083e
+fresh-as-of: 2026-11-03 · reconcile (RV-034 paid) · head ce7fd82
 
 Every phase `completed` — PHASE-01 `1fb66de`, PHASE-04 `bb6a9d2`, PHASE-02 `d20a84f`,
 PHASE-03 `cd69acd`; VH-1 a pass; RV-034 concluded with every finding terminal. The
@@ -842,3 +842,35 @@ prose** (six corrections: §3's field-name row, a §3 row for `--from=`, §2 bul
 - **One wording, authored once.** Write the design sentence first, then copy it into the
   code mirror. Reversed, the mirror invents a second voice for the same refusal.
 - **Path-scoped `git add` only.** Another slice's session shares this worktree.
+
+## Reconcile — RV-034 paid (2026-11-03)
+
+The brief was paid in full, in its order: design prose first, then the mirrors copied from it,
+then the records. Two commits carry it — `780903b` (design r35 + the code mirrors, with two
+mutation probes red then restored) and `ce7fd82` (four decisions, two backlog annotations, the
+README section, and REV-003's abandonment).
+
+**Design r35 amended in place, twelve edits.** §1's flagless claim and its unsayable list; §2's
+two-`=` rule, its comma-list sibling and the `Flags` doc comment; §3's same-operator row rewritten
+to be true of a value holding the operator, plus rows for `--from=` and `title~a,b` and the
+sentence that discriminates the two "more than one operator" branches; §3's and §7's numeric rows
+carrying the direction the front-end requires; §4's struct block losing the attribute its own prose
+forbids. The run was **not** resumed.
+
+**The brief named a surface that cannot be written: a DEC is not a REV target.** `revision change
+add` accepts SPEC/PRD/REQ/ADR/POL/STD only, so REV-003 was abandoned empty with the refusal quoted
+in its rationale. No revision was needed: ADR-001 stands, STD-001/STD-002 are untouched (nothing in
+`.smut/`, no stored-validity rule moved), and the slice declares no spec targets. The four decisions
+were amended on the knowledge surface — `knowledge edit decision` for facets, direct body edits for
+prose — and the two IMPs annotated in their own bodies, since `backlog edit` only moves status.
+
+**README paid, not restaged (CHR-001).** `## Querying, quickly` sits between the worked example and
+`## Commands`, with the `smut q` row added to the table and the spec-keys paragraph carrying the
+one sentence. Every transcript was re-run against a fresh store and the harness executes the section
+(`every_readme_transcript_runs_and_prints_what_it_records` walks every section), so the pipes the
+proposal used were dropped and the envelopes are shown whole.
+
+**What this leaves for close:** nothing in the brief is open. The standing risks are the audit's —
+IMP-014's census gap and IMP-016's third site, both now annotated rather than fixed — and the
+`mem.pattern.smut.refusal-pins-hold-shape-not-truth` lesson, which is the one worth carrying into
+the next surface that pins messages.

@@ -190,3 +190,103 @@ mirror copies the prose authored above; each is in a path this slice already own
 - **F-7** — PHASE-03's boundary re-recorded as `f26f923..cd69acd`; conformance 8/0/4
   verified, `verify-vt` re-verified green. Nothing left for reconcile.
 - **F-8, F-9** — aligned; recorded so closure inherits the reading.
+
+## Reconciliation Outcome
+
+Twelve design edits, six code mirrors, four decision amendments, two backlog annotations, one
+README section. Written in the order the brief set — prose first, mirrors copied from it — so no
+surface authored a second wording. Commits `780903b` (design + mirrors) and `ce7fd82` (decisions,
+backlog, README, REV-003).
+
+### Erratum on this brief
+
+The brief above says "six corrections" and then lists seven. The authoritative inventory is
+**twelve design edits**, and all twelve were paid. The count was loose prose on the audit's side,
+not a shortfall: `plan.md`'s five recorded corrections (incorporated by reference) + this audit's
+F-1, F-2, F-3 and F-4 + three sites the recorded set named only in general terms (§2's `Flags` doc
+comment, §3's second unsatisfiability sentence, §7's row). No finding was skipped, and nothing
+outside the findings was written — the extra sites are the same findings at their remaining
+addresses.
+
+### Direct edits — `.doctrine/slice/010/design.md`, in place
+
+The design run was **not** resumed; the prose was edited directly, which is what the audit's trap
+list and the run's locked status require.
+
+- **§1** — "the hot path therefore has no flags" became "the tokens need no flags and nothing the
+  grammar invents needs a quote" (F-4); the unsayable list gained a *value* holding `=`, `~` or `,`
+  (F-1's mirror).
+- **§2** — two `=` are unsatisfiable *when both values are single values* (F-2); a second `=`
+  carrying a comma list joins the caller's-words rule beside two comma lists (F-2); the `Flags` doc
+  comment carries the direction precondition (F-5).
+- **§3** — the field-name row became "a token carrying the same operator twice", true of `a=b=c`
+  and of `url=a=b`; a `--from=` row and a `title~a,b` row were added; the discrimination sentence
+  now says which branch fires on which kind (F-1, F-3, corrections 2 and 3); the specification-refusal
+  rows carry a direction, with the sentence that says why (F-5); the two-`=` paragraph no longer
+  calls every repeat unsatisfiable (F-2).
+- **§4** — the struct block's `#[arg(value_name = "TOKEN")]` is deleted, replaced by the doc line
+  that says why the positional is bare (correction 1).
+- **§7** — `--depth abc --follow any` for the specification's sentence, plus a row for the
+  directionless `--depth abc` the front-end answers first (F-5).
+
+### Code mirrors — the same sentences, copied
+
+`src/dsl.rs` (`ambiguous`'s reason and its doc comment, the `--from` arm, `Flags`'s doc comment),
+`src/learn.rs` (110-113 and 141-143), `tests/dsl.rs` (the `a=b=c` pin, a new `url=a=b` case, the
+`--from=` pin moved out of the list-flag loop into the census), and one whole-sentence pin in
+`src/learn.rs`'s tests for the reworded claim. `just check` exit 0, every configuration.
+
+Two mutation probes, each red then restored: the old same-operator reason reddened two tests, the
+old `--from` reason reddened one. The pins bite the code, not just the prose.
+
+### Governance — no revision was needed, and none was used
+
+REV-003 `reconcile-sl-010` was created and then **abandoned empty**:
+
+```
+Error: `revises` target must be one of [SPEC, PRD, REQ, ADR, POL, STD], got a DEC
+```
+
+That is not a missing finding; it corrects the *surface* the brief named. A decision is a knowledge
+record, not governance/spec truth, so no REV can carry one. Nothing else qualified either: no ADR
+(ADR-001 stands untouched), no policy, no standard (STD-001/STD-002 are quiet — nothing landed in
+`.smut/`, no stored-validity rule moved), and no spec or requirement (the slice declares no spec
+targets). REV-003's rationale quotes the refusal verbatim so the next pass does not repeat it.
+
+- **DEC-016** — the recipe gained its short-form spelling beside each JSON line; the JSON lines,
+  the direction sentence and the completeness guard are unchanged, and both spellings are executed.
+- **DEC-035** — the body states the JSON-string-literal exclusion and its double-unquoting reason;
+  the `choice` facet already enumerated boolean/null/number, so only that sentence was owed.
+- **DEC-037** — the consequence "the no-query refusal belongs to this layer" is superseded:
+  `smut q` alone is `query {}`, so there is deliberately no refusal. Facet and body.
+- **DEC-039** — the illustration is corrected: `status=open status!=resolved` is **answered**;
+  `status=open status!=open` is the pair that reaches the pinned sentence, and it comes from
+  `predicate::parse`. `choice` and `rationale` now say "single values", and the body carries the
+  comma-list half too.
+- **IMP-014** — annotated: six variants landed, the census gap is real, and the audit found the
+  converse hole a census would not close (a row can be pinned and still be false).
+- **IMP-016** — annotated: `src/dsl.rs` is the third site, deliberately not derived from the other
+  two, so a sixth operator is now a three-site change.
+
+### Operator-owned — `README.md` (CHR-001), paid not restaged
+
+- New `## Querying, quickly` between the worked example and `## Commands`: three compact declares,
+  the point (line and JSON twin, same bytes), substring and list, the direction pair, then the two
+  limits with the JSON that does what `q` cannot.
+- The `Commands` table gained the `smut q` row; the specification-keys paragraph gained the
+  sentence that `q` compiles to the same specification.
+- **Every transcript was re-run against a fresh store** rather than transcribed from the
+  proposal, and the harness executes the new section: `tests/readme_example.rs` runs each section's
+  console blocks in a store of its own, so the section is pinned exactly as the worked example is.
+  Two proposal details did not survive that contact — a transcript cannot carry a pipe, so the
+  envelopes are shown whole; and the cast is trimmed to what these examples need, which is also the
+  proposal's own "short enough to read in one screen" rule.
+
+### Deviations, and why
+
+- **Decisions amended as knowledge, not by REV** — the engine refuses the target; see above.
+- **IMP annotations appended to their bodies** — `backlog edit` transitions status only, so there
+  is no prose verb for a work record.
+- **Correction count** — see the erratum. Everything else was paid as briefed.
+
+Ready for `/close`.

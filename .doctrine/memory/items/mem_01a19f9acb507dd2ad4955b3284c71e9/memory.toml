@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19f9acb507dd2ad4955b3284c71e9"
+memory_key = "mem.fact.doctrine.decisions-are-knowledge-not-rev-targets"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "Amending a decision is a knowledge edit, never a revision — and its facet lists split on every comma"
+summary = "A DEC cannot be a REV target; amend it with `knowledge edit decision` (facets) plus a direct `.md` body edit — and author facet list items comma-free, because those flags split on every comma."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = []
+commands = []
+tags = ["revision", "knowledge", "reconcile"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "6fca641d2d4b116a7d05878eaf85406cc9ea3c9a"
+ref_name = "refs/heads/main"
+checkout_state_id = "763e09733fbde387529d4eadc0348b34d384d44c29424ae35da59c4f6052420b"
+base_commit = "780903b63417ddd2512a9aafbacd67a906076d83"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "high"
+weight = 0
+
