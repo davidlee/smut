@@ -2818,7 +2818,8 @@ mod tests {
 
     // Reddens if `read_layer` sorts with `Option`'s derived `Ord`, which puts
     // `None` first, rather than with the explicit `None`-last rule.
-    #[cfg(unix)]
+    // macOS filesystems reject non-UTF-8 names (EILSEQ), so the fixture can't exist.
+    #[cfg(all(unix, not(target_os = "macos")))]
     #[test]
     fn an_undecodable_name_sorts_last() {
         use std::ffi::OsString;
@@ -2861,7 +2862,8 @@ mod tests {
     // layer: their order is the raw filename's, not the order the directory
     // listed them in. Every other fixture holds one unnameable file, so this arm
     // is unreachable there and an `Ordering::Equal` mutant stays green.
-    #[cfg(unix)]
+    // macOS filesystems reject non-UTF-8 names (EILSEQ), so the fixture can't exist.
+    #[cfg(all(unix, not(target_os = "macos")))]
     #[test]
     fn two_undecodable_names_break_their_tie_on_the_raw_filename() {
         use std::ffi::OsString;
@@ -2897,7 +2899,8 @@ mod tests {
 
     // Reddens if `read_layer` keeps skipping a filename that is not UTF-8, or if
     // it decides the row after reading the bytes: the content here is a set.
-    #[cfg(unix)]
+    // macOS filesystems reject non-UTF-8 names (EILSEQ), so the fixture can't exist.
+    #[cfg(all(unix, not(target_os = "macos")))]
     #[test]
     fn a_non_utf8_filename_is_a_failed_row() {
         use std::ffi::OsString;
