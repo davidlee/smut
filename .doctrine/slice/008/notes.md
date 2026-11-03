@@ -188,16 +188,28 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` lifecycle `started`, **4 of 5 phases complete**. `PHASE-01`, `-02`,
-`-03` and `-04` all landed green and reviewed (`c3385c2`, `8503b93`, `cfae50f`, `e692735`),
-reviewed by RV-030, RV-032 and RV-033 respectively. `just check` exit 0 at `e692735` — 447
-default, zero warnings; PHASE-04's six VT rows PASS. PHASE-04's delta is `6007a0d..e692735`
-(26+ commits; SL-010's eighteen ride along and are visible in conformance's undeclared cell).
-Design run `dr-01a19b61` locked at revision 36. **Remaining: `PHASE-05` (the seed), which owns
-`src/conventions.rs` and `tests/conventions.rs`; then audit, which is not the seat's.**
-SL-010 completed 4/4 and is **in audit, holding on this slice's completion**.
+**fresh-as-of:** `SL-008` lifecycle `started`, **5 of 5 phases complete**. `PHASE-01`, `-02`,
+`-03`, `-04` and `-05` all landed green and reviewed/verified (`c3385c2`, `8503b93`, `cfae50f`,
+`e692735`, `c6cebe2`); the first three were reviewed by RV-030, RV-032 and RV-033, the last two
+verified by their seats. `just check` exit 0 at `c6cebe2` — 451 default and 464
+`--features fault-injection` lib tests, 34 green result lines, zero warnings; all 16 VT rows
+PASS, `verify-vt` exit 0. PHASE-05's delta is `e54f7aa..c6cebe2` (one commit, the two owned
+files). Design run `dr-01a19b61` locked at revision 36. **Implementation is complete: the next
+action is audit, which is not this run's seat.** SL-010 completed 4/4 and is **in audit,
+holding on this slice's completion**.
 
 ### Produced
+
+- **`PHASE-05` implemented, verified and concluded at `c6cebe2`** — `seed` gains `source` (the
+  literal `conventions/<name>.md`, identical at every layer), the version rule is pinned in all
+  three shapes without re-deriving the crate's, and the declaration's key list moves from five
+  names to six. One path-limited commit over the two owned files (390/14); gate 451/464 lib
+  tests, exit 0; four new unit rows and three spawned rows; six mutation probes, the sixth
+  isolating the two-layer comparison as the only row that catches a per-layer `source`; VA-2's
+  hand transcripts (field order, one line, `previous`, `--compact`) in § Implementation run.
+  No new design question — `source`'s literal is plan.md item 5's recorded reading.
+- **The slice's implementation is complete** — five phases, one commit apiece at the end, all
+  owned paths, another writer's backlog file and `_envrc` untouched throughout.
 
 - **`PHASE-04` closed on its criteria at `cd5c0dc`, with evidence for work it did not write.**
   The tail is one commit (two guide sentences, two whole-sentence tests, one store-format
@@ -275,6 +287,19 @@ SL-010 completed 4/4 and is **in audit, holding on this slice's completion**.
   set), `mem_01a19bce0c187080a465340cfaf6f8bd` (shared worktree git discipline).
 
 ### Learned
+
+- **A "the same at every layer" rule needs a row that compares two layers, and a control that
+  is right at one of them.** PHASE-05's five obvious probes all reddened five rows at once, so
+  none of them showed the two-layer test had force of its own. The control that did was
+  contrived on purpose — a `source` keyed to the user fixture's version, correct at the project
+  layer and wrong at the user layer — and it reddened exactly one row. When a rule is about
+  *sameness across contexts*, the falsifying input is a value that is right in one context and
+  wrong in the other; anything uniformly wrong proves only that the value is checked at all.
+- **A hand transcript run from the repository root writes a store into it.** `smut declare`
+  keeps its store at the cwd (DEC-004), so a VA-2 transcript taken "from a scratch directory"
+  means `cd` into the scratch, not just exporting `HOME` and `$XDG_CONFIG_HOME` — the layers
+  follow the environment, the store follows the cwd. `.smut` is gitignored, so neither the gate
+  nor `git status` would have caught it; the cwd has to be part of the fixture.
 
 - **A criterion that names a test is satisfied by the test's name, not by the property.**
   `an_unknown_format_is_still_refused_before_the_operand` passes with the operand validated
@@ -359,6 +384,13 @@ SL-010 completed 4/4 and is **in audit, holding on this slice's completion**.
   fixture that makes it falsifiable (`a_home_above_a_repository_is_not_the_project_root`).
 
 ### Open
+
+- **Nothing in implementation is open.** The next action is audit (`/audit`), which this run's
+  charter excludes; the seven obligations in § Obligations owed at reconcile and
+  `plan.md`'s adjudicated design questions are the audit's input, none of them repaired here.
+- **`PHASE-04`'s "in_progress, awaiting its review" line below is discharged** — the seat
+  concluded it at 4/5 in `1b409c9` after RV-033's seven fixes landed in `e692735`; it is kept
+  for the record of what that review had in hand.
 
 - **`PHASE-04` is `in_progress`, awaiting its independent review** — and needs one more than most,
   because six of its seven commits arrived from a run that left no account of itself. Hand the
@@ -1200,7 +1232,135 @@ reconcile. All verified by diff inspection, not by the handback.
 - **Model posture unchanged:** children inherit the seat's `llm-gateway/deepseek-flash`,
   thinking high. No operator pin was requested for this phase.
 
+### PHASE-05 — observed at `c6cebe2` (concluded, 5/5)
+
+- **One commit, path-limited with a two-path pathspec:** `c6cebe2` `feat(sl-008)` over
+  `src/conventions.rs` and `tests/conventions.rs` — 390 insertions, 14 deletions. The other
+  writer's `M .doctrine/backlog/improvement/021/backlog-021.md` and untracked `_envrc` were
+  untouched; no `--amend`, `add -A`, reset, stash or checkout. HEAD did not move mid-phase.
+  Sheet decision 1 asked for a `test` commit then a `feat` commit; the split was not taken —
+  see § Autonomy log.
+- **What landed.** `seed` gains one field: `source` = `format!("conventions/{}.md", set.name)`
+  — the literal leaf, at every layer, never `origin.path` and never derived from a kind
+  (`seed(set: &Set)` has no `kind`: plan.md design question 5, disposition **R**). `version`
+  is unchanged (`set.version`, which the loader leaves as the author's for a file and the
+  crate's for the binary layer) — no `env!` call was added anywhere in `seed`. `smut_id`,
+  `type`, `title` and `body` are untouched. `seed`'s doc comment now names all six fields, the
+  layer-blind literal and the printed order.
+- **Red observed before green** (the worker's run, re-run by the seat):
+  `cargo test --lib -- conventions::` → 59 passed, **3 failed** —
+  `the_seed_is_the_body_under_a_fixed_id_and_the_crates_version` (`source` left `Null`),
+  `the_source_is_the_conventions_leaf_path` (`Null` vs `conventions/Mine.md`),
+  `the_seed_omits_a_version_a_file_does_not_declare` (map had four names, wanted five).
+  `cargo test --test conventions` → 28 passed, **4 failed** — `the_seed_key_set_is_six_names`
+  (five names vs six), `the_seed_is_one_compact_line` (line without `source`),
+  `the_seed_names_its_source_and_the_authors_version` (absolute path where the leaf belongs),
+  `the_source_is_the_same_at_every_layer` (`Null`). Nothing else went red; the library
+  compiled throughout, so this is an assertion red and not a build red.
+- **Green:** `cargo test --lib -- conventions::` 62 passed; `cargo test --test conventions`
+  32 passed.
+- **Gate — `just check`, exit 0,** 34 green `test result` lines, zero warnings in either
+  clippy configuration, `fmt --check` clean. Default features: **451** lib tests (baseline
+  447, +4 — the four new unit rows); `--features fault-injection`: **464** (baseline 460, +4).
+  Integration `conventions` **32** tests (29 + 3 spawned rows). Every other target identical to
+  the baseline. No pre-existing failure, no jail-only failure: the baseline was green and this
+  is green.
+- **Six mutation probes, each reverted byte-identically** (`sha256` of the file after the last
+  equals the pre-probe hash):
+
+  | # | mutation to `seed` | rows that reddened |
+  | --- | --- | --- |
+  | 1 | `source` ← `set.name` (leaf and `.md` dropped) | `the_source_is_the_conventions_leaf_path`, `the_seed_is_the_body_under_a_fixed_id…`, `the_seed_names_its_source_and_the_authors_version`, `the_source_is_the_same_at_every_layer`, `the_seed_is_one_compact_line` |
+  | 2 | `source` ← `conventions/<version-or-crate>/<name>.md` (a layer-visible field leaks in) | the same five |
+  | 3 | `version` ← `env!("CARGO_PKG_VERSION")` unconditionally | `a_file_sets_version_is_the_authors`, `the_seed_omits_a_version_a_file_does_not_declare`, `the_seed_names_its_source_and_the_authors_version`, `the_source_is_the_same_at_every_layer` |
+  | 4 | `body` dropped from the fields | `the_seed_is_the_body_under_a_fixed_id…`, `the_seed_omits_a_version…`, `the_seed_key_set_is_six_names`, `the_seed_is_one_compact_line`, `the_prose_and_the_seed_agree_on_the_body`, `a_second_install_reports_the_body_it_replaced`, `compact_omits_the_previous_body_the_re_install_replaced`, `the_seed_names_its_source…`, `the_source_is_the_same_at_every_layer` |
+  | 5 | `title` ← `format!("Conventions: {}", set.title)` | `a_file_with_no_heading_falls_back_to_its_filename`, `the_seed_is_the_body_under_a_fixed_id…`, `the_title_is_the_first_heading_verbatim`, `the_seed_title_is_the_heading_verbatim`, `the_seed_key_set_is_six_names`, `the_seed_is_one_compact_line`, `the_seed_names_its_source…` |
+  | 6 | `source` correct for the project layer (version 2.5.0) and `…-user.md` for the user layer (3.1.0) | **only** `the_source_is_the_same_at_every_layer` |
+
+  Probe 6 is the one that matters for the phase's hardest rule: a `source` that is right at
+  one layer and wrong at another reddens exactly one row, and it is the row that compares two
+  layers. Probes 1-5 each redden their intended rows plus honest collateral (probe 4's nine
+  rows are all rows that carry the body). `a_file_sets_version_is_the_authors` and
+  `the_prose_and_the_seed_agree_on_the_body` are green on arrival — preserved behaviour — and
+  are made evidence by probes 3 and 4 only.
+- **VA-2 — the hand transcripts, from a scratch cwd** (`/tmp/sl008-va2b.3LjRSK/work`, with
+  `HOME`/`XDG_CONFIG_HOME` under it, so no layer and no store of the developer's is touched):
+
+  ```
+  $ smut conventions hygiene --format json > seed.json
+  seed bytes=2907  newlines=1
+  seed key order: "smut_id": "body": "source": "title": "type": "version":
+
+  $ smut declare < seed.json            # first install
+  {"changes":[{"smut_id":"conventions-hygiene","previous":null,"status":"created"}],"ids":["conventions-hygiene"],"missing":[]}
+
+  $ smut declare < seed.json            # identical re-install: nothing replaced
+  {"changes":[{"smut_id":"conventions-hygiene","status":"unchanged"}],"ids":["conventions-hygiene"],"missing":[]}
+
+  $ echo '{"smut_id":"conventions-hygiene","body":"Our house rule: one label per relation."}' | smut declare
+  {"changes":[{"smut_id":"conventions-hygiene","previous":{"smut_id":"conventions-hygiene","body":"<the shipped body>",…},"status":"updated"}],…}
+
+  $ smut declare < seed.json            # the second install that replaces an amendment
+  {"status":"updated","previous":{"smut_id":"conventions-hygiene","body":"Our house rule: one label per relation.","source":"conventions/hygiene.md","title":"Conventions: general hygiene","type":"convention","version":"0.2.2"}}
+
+  $ echo '{"smut_id":"conventions-hygiene","body":"Draft, to be replaced."}' | smut declare
+  $ smut declare --compact < seed.json   # no `previous` under --compact
+  {"changes":[{"smut_id":"conventions-hygiene","status":"updated"}],"ids":["conventions-hygiene"],"missing":[]}
+  ```
+
+  Read off the run: the declaration is one compact line ending in exactly one newline; its
+  field order is `smut_id` first and `body`, `source`, `title`, `type`, `version` lexically;
+  `version` is the crate's `0.2.2` for the shipped set; `source` is `conventions/hygiene.md`;
+  the re-install that replaces an amendment reports the replaced entity under `previous`,
+  `source` and `version` included; `--compact` omits `previous` entirely. A separate check in
+  the same scratch: `prose == seed["body"] + "\n"` exactly.
+- **`doctrine slice verify-vt 008`:** all **16 rows PASS**, zero FAIL and zero UNATTRIBUTABLE,
+  exit **0** — including PHASE-05 `VT-1` and `VT-2`.
+- **Recorded delta:** `e54f7aa..c6cebe2` (`--start e54f7aa --end c6cebe2`, recorded *after* the
+  flip). `git log e54f7aa..c6cebe2` is the one commit; `git diff --name-only` over it is
+  exactly `src/conventions.rs` and `tests/conventions.rs`. Boundaries row provenance `solo`.
+- **Verifier edits after the workers' green (two, both logged in § Autonomy log):** two
+  `assert_ne!` rows in `the_source_is_the_same_at_every_layer` removed as already guaranteed by
+  the two exact per-layer body/version assertions above them.
+- **One integrity note.** The first VA-2 attempt ran the binary from the repository root and so
+  created a `.smut` store there (gitignored; index holding only the one entity that run
+  declared, every file timestamped at that run). It was removed, the tree re-checked against
+  `git status --porcelain`, and the transcript above is from a re-run whose cwd is the scratch.
+  No tracked path was affected.
+- **Out of scope, untouched:** the seven reconcile obligations, `plan.md`'s design questions
+  and the design text. This phase raised no new design question: `source`'s literal is
+  plan.md item 5's recorded reading, and nothing in the diff needs a different one.
+
 ## Autonomy log
+
+- **PHASE-05 — sheet decision 1 superseded: one commit, not a `test` then a `feat`.** The
+  phase is one compile unit in one file: the new assertions name the six-name key set and the
+  `source` field, so the test-only state is a knowingly red tree. Splitting it into two commits
+  would need hunk staging on a shared index (the other writer's backlog file is dirty) or a red
+  commit in history. Decided: one `feat(sl-008)` commit carrying implementation and tests, as
+  PHASE-02 did for its own compile-forced unit, with the red recorded in § Implementation run
+  instead of in the log. Reversible and in-scope; logged rather than rebriefed.
+- **PHASE-05 — two `assert_ne!` rows removed as verifier edits after the workers' green.**
+  `the_source_is_the_same_at_every_layer` asserted that the two replies' bodies differ and that
+  their versions differ, *after* two exact assertions pinning each body and each version to a
+  different const — so neither `assert_ne!` could fail once the exact rows passed, which is the
+  "negative assertion occupying an evidence slot" class this slice's own notes name. Removed,
+  with a comment saying the exact rows are what make the shared `source` a rule rather than a
+  coincidence. Decided (mechanical, inside the owned file, no property lost).
+- **PHASE-05 — probe 6 added beyond the sheet's five.** The sheet's probe 2 (a version-keyed
+  leaf) reddened five rows, so it proved the literal is load-bearing but not that the
+  two-layer comparison has force of its own. Probe 6 — a `source` that is *correct* for the
+  project layer and wrong for the user layer — reddens exactly one row,
+  `the_source_is_the_same_at_every_layer`, which is the honest demonstration that this row is
+  the only place a per-layer `source` can be caught when each single-layer value looks right.
+  Decided: extra negative control, no criterion change.
+- **PHASE-05 — the first VA-2 run wrote a store into the repository root.** The transcript was
+  taken with the binary's cwd still at `/workspace/smut`, so `declare` created a gitignored
+  `.smut/` there. It held only the one entity that run declared and every file was timestamped
+  by that run, so it was this run's artefact: removed, `git status --porcelain` re-checked, and
+  the recorded transcript re-taken from a scratch cwd. Decided (clean up my own side effect,
+  disclose it in the phase record); no tracked path was touched and nothing of the developer's
+  was read or removed.
 
 - **PHASE-03 attempt 2 — the gap attempt 1 died carrying, stated in full and ruled.** Two
   under-determinations sit inside EX-2/EX-3 and EX-4. The inherited diff did not ask about
