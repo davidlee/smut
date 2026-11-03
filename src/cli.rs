@@ -234,6 +234,74 @@ struct Cli {
     command: Option<Sub>,
 }
 
+// The selection line q shares: tokens and q's flags (DEC-043).
+#[derive(Debug, clap::Args)]
+pub struct SelectionArgs {
+    // The positional carries no attribute, on purpose: `trailing_var_arg` and
+    // `allow_hyphen_values` swallow every flag after the first token (the second
+    // also leaks a literal `--` into the list), `last` hides the tokens behind
+    // one `--`, and `value_terminator` stops `--` ending flags. Bare, flags parse
+    // on either side of a token, no `--` reaches the list, and `-weird-id` stays
+    // the error that teaches `--` (DEC-037).
+    tokens: Vec<String>,
+    /// The outgoing fields to traverse.
+    #[arg(long)]
+    follow: Option<String>,
+    /// The incoming fields to traverse.
+    #[arg(long)]
+    backlinks: Option<String>,
+    /// How far the traversal goes.
+    #[arg(long)]
+    depth: Option<String>,
+    /// How many entity expansions the traversal may spend.
+    #[arg(long)]
+    budget: Option<String>,
+    /// The fields to project.
+    #[arg(long)]
+    select: Option<String>,
+    /// Project `smut_id` alone.
+    #[arg(long)]
+    ids: bool,
+    /// The sort keys, each with an optional direction.
+    #[arg(long)]
+    order: Option<String>,
+    /// The result cap.
+    #[arg(long)]
+    limit: Option<String>,
+    /// Give a traversal no followed fields, for its edges.
+    #[arg(long)]
+    edges: bool,
+    /// The fields that must be present.
+    #[arg(long)]
+    has: Option<String>,
+    /// The fields that must be absent.
+    #[arg(long)]
+    missing: Option<String>,
+    /// The root escape for an id the grammar cannot carry bare.
+    #[arg(long)]
+    from: Option<String>,
+}
+
+// The display flags render shares (DEC-009, IMP-007).
+#[derive(Debug, clap::Args)]
+pub struct DisplayArgs {
+    /// The output format: `markdown` is the only value this release writes.
+    #[arg(long, short = 'f')]
+    format: Option<String>,
+    /// The field the heading comes from (default `title`).
+    #[arg(long, short = 't')]
+    heading_field: Option<String>,
+    /// The heading's level, 1 to 6 (default 2).
+    #[arg(long, short = 'l', allow_hyphen_values = true)]
+    heading_level: Option<String>,
+    /// Show identity even when the entity has visible content.
+    #[arg(long, short = 'i')]
+    show_ids: bool,
+    /// Show the other selected fields.
+    #[arg(long, short = 's')]
+    show_fields: bool,
+}
+
 /// The 0.1 subcommands.
 #[derive(Debug, Subcommand)]
 enum Sub {
@@ -264,69 +332,15 @@ enum Sub {
     },
     /// Query with a line of words: `field=value` filters, bare words are roots.
     Q {
-        // The positional carries no attribute, on purpose: `trailing_var_arg` and
-        // `allow_hyphen_values` swallow every flag after the first token (the second
-        // also leaks a literal `--` into the list), `last` hides the tokens behind
-        // one `--`, and `value_terminator` stops `--` ending flags. Bare, flags parse
-        // on either side of a token, no `--` reaches the list, and `-weird-id` stays
-        // the error that teaches `--` (DEC-037).
-        tokens: Vec<String>,
-        /// The outgoing fields to traverse.
-        #[arg(long)]
-        follow: Option<String>,
-        /// The incoming fields to traverse.
-        #[arg(long)]
-        backlinks: Option<String>,
-        /// How far the traversal goes.
-        #[arg(long)]
-        depth: Option<String>,
-        /// How many entity expansions the traversal may spend.
-        #[arg(long)]
-        budget: Option<String>,
-        /// The fields to project.
-        #[arg(long)]
-        select: Option<String>,
-        /// Project `smut_id` alone.
-        #[arg(long)]
-        ids: bool,
-        /// The sort keys, each with an optional direction.
-        #[arg(long)]
-        order: Option<String>,
-        /// The result cap.
-        #[arg(long)]
-        limit: Option<String>,
-        /// Give a traversal no followed fields, for its edges.
-        #[arg(long)]
-        edges: bool,
-        /// The fields that must be present.
-        #[arg(long)]
-        has: Option<String>,
-        /// The fields that must be absent.
-        #[arg(long)]
-        missing: Option<String>,
-        /// The root escape for an id the grammar cannot carry bare.
-        #[arg(long)]
-        from: Option<String>,
+        #[command(flatten)]
+        selection: SelectionArgs,
     },
     /// Render a selection as Markdown.
     Render {
         /// One specification object; `-` reads stdin.
         json: Option<String>,
-        /// The output format: `markdown` is the only value this release writes.
-        #[arg(long, short = 'f')]
-        format: Option<String>,
-        /// The field the heading comes from (default `title`).
-        #[arg(long, short = 't')]
-        heading_field: Option<String>,
-        /// The heading's level, 1 to 6 (default 2).
-        #[arg(long, short = 'l', allow_hyphen_values = true)]
-        heading_level: Option<String>,
-        /// Show identity even when the entity has visible content.
-        #[arg(long, short = 'i')]
-        show_ids: bool,
-        /// Show the other selected fields.
-        #[arg(long, short = 's')]
-        show_fields: bool,
+        #[command(flatten)]
+        display: DisplayArgs,
     },
     /// Print the embedded guide.
     Learn,
@@ -381,65 +395,14 @@ pub fn parse(
                 spec: spec::parse(&input)?,
             })))
         }
-        Sub::Q {
-            tokens,
-            follow,
-            backlinks,
-            depth,
-            budget,
-            select,
-            ids,
-            order,
-            limit,
-            edges,
-            has,
-            missing,
-            from,
-        } => {
-            let compiled = dsl::compile(&Line {
-                tokens: &tokens,
-                flags: Flags {
-                    follow,
-                    backlinks,
-                    depth,
-                    budget,
-                    select,
-                    ids,
-                    order,
-                    limit,
-                    edges,
-                    has,
-                    missing,
-                    from,
-                },
-            })?;
-
-            Ok(Invocation::Request(Request::Query(Query {
-                spec: spec::parse(&compiled)?,
-            })))
-        }
-        Sub::Render {
-            json,
-            format,
-            heading_field,
-            heading_level,
-            show_ids,
-            show_fields,
-        } => {
+        Sub::Q { selection } => Ok(Invocation::Request(Request::Query(Query {
+            spec: selection.specification()?,
+        }))),
+        Sub::Render { json, display } => {
             // The flags are validated before the operand is read, so a refusal
             // never waits on stdin (DEC-008).
-            check_format(format.as_deref())?;
+            let options = display.options()?;
 
-            let defaults = Options::default();
-            let options = Options {
-                heading_field: heading_field.unwrap_or(defaults.heading_field),
-                heading_level: match heading_level.as_deref() {
-                    Some(found) => heading_level_of(found)?,
-                    None => defaults.heading_level,
-                },
-                show_fields,
-                show_ids,
-            };
             let input = operand(json.as_deref(), stdin_is_terminal, stdin)?;
 
             Ok(Invocation::Request(Request::Render(Render {
@@ -451,6 +414,50 @@ pub fn parse(
         Sub::Delete { ids } => Ok(Invocation::Request(Request::Delete(Delete {
             ids: ids_of(ids),
         }))),
+    }
+}
+
+impl SelectionArgs {
+    /// The selection line, compiled and parsed: q's contribution to step 1.
+    fn specification(self) -> Result<Spec, Error> {
+        let compiled = dsl::compile(&Line {
+            tokens: &self.tokens,
+            flags: Flags {
+                follow: self.follow,
+                backlinks: self.backlinks,
+                depth: self.depth,
+                budget: self.budget,
+                select: self.select,
+                ids: self.ids,
+                order: self.order,
+                limit: self.limit,
+                edges: self.edges,
+                has: self.has,
+                missing: self.missing,
+                from: self.from,
+            },
+        })?;
+
+        Ok(spec::parse(&compiled)?)
+    }
+}
+
+impl DisplayArgs {
+    /// The render options, every flag validated before any operand is read.
+    fn options(self) -> Result<Options, Reject> {
+        check_format(self.format.as_deref())?;
+
+        let defaults = Options::default();
+
+        Ok(Options {
+            heading_field: self.heading_field.unwrap_or(defaults.heading_field),
+            heading_level: match self.heading_level.as_deref() {
+                Some(found) => heading_level_of(found)?,
+                None => defaults.heading_level,
+            },
+            show_fields: self.show_fields,
+            show_ids: self.show_ids,
+        })
     }
 }
 
