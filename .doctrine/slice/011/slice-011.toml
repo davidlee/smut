@@ -1,7 +1,7 @@
 id = 11
 slug = "render-speaks-q"
 title = "Markdown from a q line — render reachable through the humane grammar"
-status = "reconcile"
+status = "done"
 created = "2026-11-03"
 updated = "2026-11-03"
 tags = ["cli", "ergonomics", "render", "surface"]
