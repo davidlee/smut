@@ -669,6 +669,14 @@ mod tests {
             panic!("help is help");
         };
 
+        // A doc comment on a flattened `clap::Args` struct can replace the
+        // `about` line; this pins it whole.
+        assert_eq!(
+            text.lines().next(),
+            Some("A permissive notebook for an agent's mutable entity graph"),
+            "{text}"
+        );
+
         for named in [
             "declare",
             "get",

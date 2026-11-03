@@ -2043,6 +2043,20 @@ fn q_takes_its_bare_positional_so_the_usage_line_says_tokens() {
         help.stdout
     );
     assert!(!scratch.has_store(), "--help touches no store");
+
+    // Beside it, render's positional keeps its own display name: a flattened
+    // display-flag struct must leave `[JSON]` alone.
+    let render = smut(&scratch, &["render", "--help"]);
+
+    assert_eq!(render.code, 0, "{}", render.stderr);
+    assert!(
+        render
+            .stdout
+            .lines()
+            .any(|line| line == "Usage: smut render [OPTIONS] [JSON]"),
+        "the usage line names render's JSON operand: {}",
+        render.stdout
+    );
 }
 
 #[test]
