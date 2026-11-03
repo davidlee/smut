@@ -200,7 +200,7 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 **fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `started`, **5 of 5 phases complete** ·
 last source change `c6cebe2` (audit is the next stage; only `.doctrine` commits since). `PHASE-01`, `-02`,
-`-03`, `-04` and `-05` all landed green and reviewed/verified (`c3385c2`, `8503b93`, `cfae50f`,
+`-03`, `-04` and `-05` all landed green and reviewed/verified (`c3385c2`, `8503b93`, `1ced7c8`,
 `e692735`, `c6cebe2`); PHASE-02, -03 and -04 were reviewed (RV-030, RV-032, RV-033),
 PHASE-01 and PHASE-05 were verified by their seats. `just check` exit 0 at `c6cebe2` — 451 default and 464
 `--features fault-injection` lib tests, 34 green result lines, zero warnings; all 16 VT rows
