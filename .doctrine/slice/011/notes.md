@@ -42,6 +42,10 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
   Neither needs a pre-lock design pass: both are execution-time checks named in § Verification.
   An independent (GPT) design pass was offered and the user chose pi first; not run.
 
+## Slice base
+
+- `046b360` (2026-11-03): `just check` green in both feature configurations — the base for PHASE-03/VA-1's `git diff --stat`.
+
 ## Reconcile obligations (from design § Reconcile obligations)
 
 - Amend DEC-034, DEC-008, DEC-039, DEC-040 via `doctrine knowledge edit decision`, comma-free arrays.
