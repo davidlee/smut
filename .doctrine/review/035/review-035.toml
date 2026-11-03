@@ -1,0 +1,239 @@
+id    = 35
+slug  = "sl-008-audit-conformance-of-the-layered-conventions-implementation-against-design-rev-36-the-plans"
+title = "SL-008 audit — conformance of the layered-conventions implementation against design rev 36, the plan's criteria, and the eight reconcile obligations"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "raiser"
+responder = "responder"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Conformance audit of SL-008 at source head `c6cebe2` / ledger head `9e5083e`, in the primary worktree (no dispatch candidate exists, so the main tree is the surface): design §1–§7 (rev 36) row by row, `plan.toml`'s 16 VT rows and its eleven adjudicated design questions, `slice-008.md`'s scope and five non-goals, the eight reconcile obligations and the three RV-030 design questions each checked against the artefact it names, `doctrine slice conformance 008` (undeclared 55 all attributed to SL-010 / doctrine bookkeeping / this slice's own documents, undelivered 0, conformant 8), `just check` and `doctrine check gate` green (451 default and 464 fault-injection lib tests, zero warnings, fmt clean), `doctrine slice verify-vt 008` 16/16 PASS, and hand-observed binary behaviour over a scratch repository, config home and HOME. Five findings raised — three design-text defects routed to `design.md` §2/§6 for reconcile's direct edit, two code residuals captured as CHR-006 — every finding disposed and verified, no blocker, and a reconciliation brief written that maps the five findings plus the eight inherited obligations and two of the plan's upheld ambiguities onto the surfaces reconcile can actually write."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-008"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "Design §2 names `$HOME` as the user root's source; the binary resolves a home for an unset *and* an empty `$HOME`, so a container with no home still reads a user layer"
+detail = """
+**Expected** (design §2, *User root*, verbatim): "`$XDG_CONFIG_HOME` when set and non-empty, else `$HOME/.config`. … when neither variable resolves — **a container with no home** — there is no user root and the user layer is simply absent."
+
+**Observed.** `src/main.rs:134` hands `user_root` whatever `std::env::home_dir()` reports, and `home_dir()` falls back to the passwd entry when `$HOME` is absent *or empty*. Measured on the pinned toolchain (a three-line probe, `rustc 1.100.0-beta.7`):
+
+    HOME=None        home_dir=Some("/home/david")
+    HOME=Some("")    home_dir=Some("/home/david")
+    HOME=Some("/tmp/fakehome") home_dir=Some("/tmp/fakehome")
+
+So the container §2 names — a process with no `$HOME` — gets a user layer at the passwd home's `.config/smut`, not an absent layer. The design's rule and the binary disagree in exactly the case the design calls out.
+
+This is not a phase defect. PHASE-04/EX-5 authorised the call ("home comes from `std::env::home_dir()` when that call is clippy-clean on the pinned toolchain") and PHASE-04/EN-4 built its fixtures around the fallback ("the spawn helper … never unsets them, because `std::env::home_dir()` falls back to the passwd entry"). The plan knew; the **design never recorded it**, and design is what a future reader consults for the rule. Sub-second reproducer: `env -u HOME smut conventions` in a container reads `/root/.config/smut`, while §2 promises it reads nothing.
+
+Two readings, one of which reconcile must pick: (a) amend design §2 to state the source as `std::env::home_dir()` — `$HOME` when set and non-empty, else the passwd entry, absent only when both are missing — keeping "no home at all is an absent layer"; or (b) hold the design's literal and gate on `$HOME` alone, which is a code change the plan deliberately declined. This audit recommends (a): the fallback is the more usable behaviour and the code already ships it, so the design sentence is what is stale. `major` rather than `blocker`: nothing is broken for a caller with a home, and reconcile lands the correction in this same unit of work."""
+disposition = "design-wrong"
+response = """
+Upheld as a design-text defect, reading (a). The code is what the plan authorised and what the tests were built around; the design is the artifact that never recorded it, and design is what a future reader consults for the rule. Nothing in the code should move: gating on `$HOME` alone would trade a measured passwd fallback for a worked-around one, and PHASE-04/EX-5 chose the other way with the gate green.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §2.** Replace the *User root* paragraph's source rule with the value the binary actually hands the pure function — `std::env::home_dir()`: `$HOME` when set and non-empty, else the passwd entry — keep "the layer root is `<config-home>/smut`", and keep "no home at all is an absent layer" (now meaning: no `$HOME`, no passwd entry). The pure signature `user_root(config_home: Option<&Path>, home: Option<&Path>)` is unchanged, so §2's shape claim — "the binary is the only code that reads the environment" — gets *stronger*, because it now names the whole environment read rather than a variable."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Upheld as a design-text defect, reading (a). The code is what the plan authorised and what the tests were built around; the design is the artifact that never recorded it, and design is what a future reader consults for the rule. Nothing in the code should move: gating on `$HOME` alone would trade a measured passwd fallback for a worked-around one, and PHASE-04/EX-5 chose the other way with the gate green.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §2.** Replace the *User root* paragraph's source rule with the value the binary actually hands the pure function — `std::env::home_dir()`: `$HOME` when set and non-empty, else the passwd entry — keep "the layer root is `<config-home>/smut`", and keep "no home at all is an absent layer" (now meaning: no `$HOME`, no passwd entry). The pure signature `user_root(config_home: Option<&Path>, home: Option<&Path>)` is unchanged, so §2's shape claim — "the binary is the only code that reads the environment" — gets *stronger*, because it now names the whole environment read rather than a variable."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = 'The `.config/smut` segment is built in two places, and the two plan criteria that say "one place"/"nowhere else" are lodged with reconcile — which cannot edit `plan.toml`'
+detail = """
+**Expected / observed.** Design §2 never says *who* joins the `.config/smut` segment, and four separate sentences then overstated it — RV-033 F-6 already found `src/main.rs`'s and `Roots::under`'s and both were corrected in `e692735`. What survives is in the **plan**, and it is still false:
+
+- `plan.toml` PHASE-01/EX-3: "this is the one place that `.config/smut` is joined".
+- `plan.toml` PHASE-04/EX-5: "so the `.config/smut` segment is joined by PHASE-01/EX-3's function and **nowhere else**".
+
+The compound segment is built in two places, and both are mandated: `Roots::under` joins the literal `.config/smut` onto the repository root (`src/conventions.rs:68`), and `user_root` builds the same sequence for the home fallback, `home.join(".config").join("smut")` (`:112`) — PHASE-01/EX-2 requires exactly that. The property the sentences protect does hold: no root is spelled in `roots()`, and `load` joins only `<kind>`. Only the literals are wrong.
+
+**Why this is an audit finding and not a reconcile line item as recorded.** RV-033 F-6's verify turn ends "The criterion wording stays for reconcile, as dispositioned", and the handover repeats it ("the criteria wording is owed to reconcile"). That route does not exist: `plan.toml` `EX-/EN-/VT-` ids and their rows are a completed plan's approved text, not a per-slice write surface (`lib:reference/review-ledger.md` §6, and the audit brief-surface guardrail: "never a reconcile direct-edit surface"). A reconcile brief naming `plan.toml` stalls.
+
+**Smallest resolution.** Give the truth an authoritative home the writer can actually reach: one sentence in `design.md` §2 saying the compound segment is deliberately constructed twice — `Roots::under` for the project layer, `user_root` for the home fallback — because a config home already names `.config`. Then the two plan literals read as the plan's own looser shorthand rather than as a rule the code violates, and no approved criterion is rewritten. Audit does not "fix" the code to match the false sentence; the code is right."""
+disposition = "design-wrong"
+response = """
+Upheld, including the routing correction. RV-033 F-6 fixed the two code-adjacent sentences and left the two plan criteria to reconcile; reconcile cannot write `plan.toml`, so the residue has no owner and would be re-discovered at closure. `plan.md`'s item 1 disposition (`P` — the plan was the defect, no design change owed) stands as the plan stage's judgement, but post-completion the only surface that can carry the truth is the design.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §2**, one sentence after "The declaration-kind segment is joined **exactly once**, inside `load`": the *compound* `.config/smut` segment is deliberately constructed twice — `Roots::under` joins it onto the repository root for the project layer, and `user_root` builds it for the home fallback (`<home>/.config` then `smut`), because a config home already names `.config`. Say plainly that "one join per layer root" is the rule and "one join for the segment" is not.
+
+Not a `plan.toml` edit: `EX-3`/`EX-5`'s literals stand as approved text, read as shorthand. No code change: the code implements the true property."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Upheld, including the routing correction. RV-033 F-6 fixed the two code-adjacent sentences and left the two plan criteria to reconcile; reconcile cannot write `plan.toml`, so the residue has no owner and would be re-discovered at closure. `plan.md`'s item 1 disposition (`P` — the plan was the defect, no design change owed) stands as the plan stage's judgement, but post-completion the only surface that can carry the truth is the design.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §2**, one sentence after "The declaration-kind segment is joined **exactly once**, inside `load`": the *compound* `.config/smut` segment is deliberately constructed twice — `Roots::under` joins it onto the repository root for the project layer, and `user_root` builds it for the home fallback (`<home>/.config` then `smut`), because a config home already names `.config`. Say plainly that "one join per layer root" is the rule and "one join for the segment" is not.
+
+Not a `plan.toml` edit: `EX-3`/`EX-5`'s literals stand as approved text, read as shorthand. No code change: the code implements the true property."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "nit"
+title = "Obligation 6 quotes §6 text the design does not contain — the quoted sentences are plan EX-4's, and §6's actual clause is one line different"
+detail = '''
+**Expected.** Obligation 6 (`notes.md` § Obligations owed at reconcile) tells reconcile that "§6 (and EX-4, which restates it) has no tie-break among unnameable entries" and quotes the offending text: *"Sorted by name … a `name: None` entry sorts last … sorting is by the decoded name only"*, then says "Owed: one sentence in §6."
+
+**Observed.** Design §6 contains no such sentences. `grep -n 'None\|sort' .doctrine/slice/008/design.md` returns exactly one hit in the whole file — `:246`, "sorts each layer's entries by name (a directory's order is arbitrary, and the listing is the diagnostic)". The string `None` does not appear in `design.md` at all. The quoted wording is `plan.toml` PHASE-03/EX-4's ("a `name: None` entry sorts last within its layer … Sorting is by the decoded name only"), which the obligation's own parenthetical half-acknowledges but then attributes to §6 anyway.
+
+**The gap is real**; only its evidence is misquoted. §6's one clause sorts entries "by name" without saying what the key is when an entry has no name — and §1 permits a nameless entry ("A file whose name is not UTF-8 never becomes an `Entry` with a name"), so §6's sort is under-determined by its own vocabulary. PHASE-03 ruled the tie (decoded name, `None` last, raw `OsStr` among `None`s, `src/conventions.rs:642`) and RV-032 F-2 pinned it (`two_undecodable_names_break_their_tie_on_the_raw_filename`), so the code needs nothing.
+
+Reconcile would hunt §6 for a sentence that is not there and might "correct" the wrong clause. The brief must quote §6 as it stands (`:246`) and name the tie-break the code implements, not the plan's paraphrase.'''
+disposition = "design-wrong"
+response = """
+Upheld. The gap obligation 6 names is genuine and stays on the brief; its quotation is wrong and would send reconcile to a clause that does not exist. `design.md` :246 is the only sorting text in the file ("sorts each layer's entries by name"), and `None` never appears in `design.md` — so the obligation's quoted sentences are PHASE-03/EX-4's paraphrase, as its own parenthetical half-admits.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §6**, one clause appended to :246's sentence — "sorted by name; an entry whose filename is not UTF-8 sorts last, and two such entries order by their raw filename, so the order is total whatever `read_dir` returns". The brief must quote §6 as it stands, not the plan's wording, and must name `src/conventions.rs:642` (`sort_layer`) as the implementation and `two_undecodable_names_break_their_tie_on_the_raw_filename` as the row, so the sentence lands against evidence."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Upheld. The gap obligation 6 names is genuine and stays on the brief; its quotation is wrong and would send reconcile to a clause that does not exist. `design.md` :246 is the only sorting text in the file ("sorts each layer's entries by name"), and `None` never appears in `design.md` — so the obligation's quoted sentences are PHASE-03/EX-4's paraphrase, as its own parenthetical half-admits.
+
+Reconcile write surface: **per-slice direct edit, `design.md` §6**, one clause appended to :246's sentence — "sorted by name; an entry whose filename is not UTF-8 sorts last, and two such entries order by their raw filename, so the order is total whatever `read_dir` returns". The brief must quote §6 as it stands, not the plan's wording, and must name `src/conventions.rs:642` (`sort_layer`) as the implementation and `two_undecodable_names_break_their_tie_on_the_raw_filename` as the row, so the sentence lands against evidence."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "minor"
+title = "A recorded seat ruling on an empty `home` is neither implemented nor pinned, and the handover and notes both claim a pin that does not exist"
+detail = """
+**Expected.** `notes.md:373–381` records a PHASE-01 residual and the seat's ruling on it:
+
+> "**Seat ruling:** the non-emptiness EX-2 already applies to `config_home` reads onto `home`, since an empty `home` resolves no config home either — that is what 'neither resolves' already means, not a new rule. **Pinned by one row in PHASE-04's owned `src/conventions.rs`** (charter 4 brief), not by reopening PHASE-01."
+
+The handover repeats the claim: "an empty `home` yields a relative layer root — ruled unreachable from the binary, **pinned by one row**".
+
+**Observed, twice over.**
+
+1. **The ruling is not implemented.** `user_root(None, Some(Path::new("")))` returns `Some(".config/smut")` — a *relative* layer root read against the cwd (`src/conventions.rs:110-115`: the non-emptiness test is applied to `config_home` only). The ruling says an empty `home` "resolves no config home" and so should be `None`.
+2. **The pin does not exist.** `grep -n 'Path::new("")' src/conventions.rs tests/conventions.rs` returns one line: `:1524`, inside `an_empty_config_home_falls_through_to_home`, which passes the empty path as *`config_home`*, not as `home`. No row exercises an empty `home`. `grep -n 'empty home'` has no test.
+
+Reachability: from the binary, none — `home_dir()` is absolute or `None` (measured: `HOME=` empty still reports the passwd home), so the branch cannot be entered through `roots()`. From the crate's public API, trivially: `user_root` is `pub`, and the behaviour is the "relative root resolves against the cwd and reads the wrong layer without a symptom" class this module's own doc comment argues against ("An empty config home is no config home, because an empty path is what an unset variable looks like once it has been joined onto anything").
+
+Not a blocker and not this stage's repair: it is unreachable from the shipped caller, and PHASE-01/EX-2 pins only that *`config_home`* be non-empty, so the code meets its criterion and the ruling is an extension of it. Both halves — the guard (`home.filter(|home| !home.as_os_str().is_empty())`) and the absent row — are owned work outside the audit's stage; captured as a backlog chore below, and the false "pinned by one row" claim is corrected in `notes.md` by this audit's harvest."""
+disposition = "follow-up"
+response = """
+Upheld on both halves, and neither belongs to reconcile: a guard on a pure function and a test row are code, and the design and slice documents say nothing false here — the *notes* and the handover do. Reconciled in two places.
+
+1. **Owned work:** CHR-006 (`doctrine backlog inspect CHR-006`) carries the guard plus the missing row (`fn an_empty_home_is_an_absent_layer`), with the reversal path recorded in case the ruling is dropped instead.
+2. **The false claim, corrected now:** this audit's harvest amends `notes.md` § Harvest → Open so the residual no longer asserts "pinned by one row in PHASE-04's owned `src/conventions.rs`" — it says what is true, that the ruling is unimplemented, the pin is absent, and the reachability argument is the whole reason it is off the close-gate.
+
+Not `fix-now`: a source edit at audit would leave `src/conventions.rs` changed after PHASE-05's concluded delta with no phase that concluded it, which is a worse defect than an unreachable branch. Not `tolerated`: the record was wrong, and wrong records are corrected rather than tolerated."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Upheld on both halves, and neither belongs to reconcile: a guard on a pure function and a test row are code, and the design and slice documents say nothing false here — the *notes* and the handover do. Reconciled in two places.
+
+1. **Owned work:** CHR-006 (`doctrine backlog inspect CHR-006`) carries the guard plus the missing row (`fn an_empty_home_is_an_absent_layer`), with the reversal path recorded in case the ruling is dropped instead.
+2. **The false claim, corrected now:** this audit's harvest amends `notes.md` § Harvest → Open so the residual no longer asserts "pinned by one row in PHASE-04's owned `src/conventions.rs`" — it says what is true, that the ruling is unimplemented, the pin is absent, and the reachability argument is the whole reason it is off the close-gate.
+
+Not `fix-now`: a source edit at audit would leave `src/conventions.rs` changed after PHASE-05's concluded delta with no phase that concluded it, which is a worse defect than an unreachable branch. Not `tolerated`: the record was wrong, and wrong records are corrected rather than tolerated."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Brief entry verified: CHR-006 exists and carries the residual with its replacement text."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "nit"
+title = """`load`'s doc claims the module "reaches a filesystem in three places, and this is the middle one" — there are two, and `load` is neither"""
+detail = """
+**Expected.** A doc comment that counts the places a module reaches a filesystem should count them correctly — especially this one, which is the *replacement* text for RV-032 F-3 ("load's doc claims a filesystem-read monopoly it does not have"), discharged in `1ced7c8`.
+
+**Observed.** `src/conventions.rs:436-439`, added by that very commit:
+
+    /// This module reaches a filesystem in three places, and this is the middle one:
+    /// [`project_root`] above walks the ancestors looking for a `.git` entry, this
+    /// function turns each root into that layer's one `<root>/<kind>` directory, and
+    /// [`read_layer`] below reads the directory's entries.
+
+`load` performs no filesystem access. It builds two `PathBuf`s (`roots.project.join(kind)`, `user.join(kind)` — `Path::join`, pure), calls `read_layer`, sorts, and extends. The reaches are **two**: `project_root` (`symlink_metadata`) and `read_layer` (`read_dir`, `metadata`, `read`). `binary_layer` reads nothing (the bytes are `include_str!`). So the count is wrong and the "middle one" is not one of them — the same overclaim F-3 was raised for, inverted into a count.
+
+This is the fourth false doc sentence in this slice after RV-032 F-3's monopoly and RV-033 F-6 and F-8, and the second produced *by the fix for a previous one*. That pattern, not the sentence, is the durable lesson: each was found by review after a run declared the docs clean, so a doc sentence introduced to discharge a finding needs the same falsification as code. Corrected text: "This module reaches a filesystem in two places: [`project_root`] above … and [`read_layer`] below; `load` only joins and orders what they return."
+
+Not repaired here: the audit stage does not write code — `src/conventions.rs`'s last change is PHASE-05's concluded delta (`e54f7aa..c6cebe2`), and a source edit now would leave the phase registry describing code that no phase concluded. Captured as a backlog chore with F-4."""
+disposition = "follow-up"
+response = """
+Upheld. The sentence is false arithmetic, not a false rule — the property it guards (`parse` is pure; `project_root` and `read_layer` are the module's only filesystem reaches) is true in the code and pinned elsewhere by VA-2's greps. So the correction is one comment, and it belongs with F-4 in CHR-006 rather than in a second backlog item.
+
+Reconciled: **CHR-006** carries it, with the replacement text written down. Not repaired at audit for the reason given on F-4 (no code after the last concluded delta), and not `tolerated`: this slice has now produced four false doc sentences, three of them found by review after a green run, and letting the fourth stand would make "the docs are honest" a claim the slice's own record contradicts. The pattern goes to `notes.md` § Harvest → Learned as a durable lesson: a sentence introduced to discharge a doc finding needs the same falsification as code."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "follow-up"
+response = """
+Upheld. The sentence is false arithmetic, not a false rule — the property it guards (`parse` is pure; `project_root` and `read_layer` are the module's only filesystem reaches) is true in the code and pinned elsewhere by VA-2's greps. So the correction is one comment, and it belongs with F-4 in CHR-006 rather than in a second backlog item.
+
+Reconciled: **CHR-006** carries it, with the replacement text written down. Not repaired at audit for the reason given on F-4 (no code after the last concluded delta), and not `tolerated`: this slice has now produced four false doc sentences, three of them found by review after a green run, and letting the fourth stand would make "the docs are honest" a claim the slice's own record contradicts. The pattern goes to `notes.md` § Harvest → Learned as a durable lesson: a sentence introduced to discharge a doc finding needs the same falsification as code."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Brief entry verified: CHR-006 exists and carries the residual with its replacement text."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

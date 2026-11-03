@@ -20,3 +20,30 @@ written as a doc comment reads like an implementation note.
   finding.
 - Reviewing a diff, treat persuasive prose next to load-bearing code as the highest-risk region,
   not the lowest — it is the part no test can redden.
+
+
+# The second failure mode: the sentence written to discharge the finding
+
+SL-008's audit (RV-035) found the same slice had produced **four false doc
+sentences**, and **two of them were written by the fixes for earlier ones**:
+
+- RV-032 F-3: `load`'s doc claimed a filesystem-read monopoly it did not have. The
+  fix (`1ced7c8`) replaced it with "This module reaches a filesystem in three
+  places, and this is the middle one" — `load` touches no filesystem, and there are
+  two reaches. (RV-035 F-5.)
+- RV-033 F-6/F-8: two sentences asserting where `.config/smut` is joined, both
+  false; corrected in `e692735` into a third wording that is now accurate but was
+  never falsified against `user_root`'s home fallback.
+
+The rule this adds to the one above:
+
+- A doc sentence **introduced to discharge a finding** needs the same falsification
+  as the code: name the fact it asserts and check the fact, not the finding's
+  closure. A fix's diff is the *highest*-risk prose in a review, not the safest,
+  because the reviewer who raised the original finding reads the new sentence as
+  the fix rather than as a new claim.
+- A count ("in three places", "the middle one", "the only place") is a fact with a
+  falsifier; a rule without a count usually is not. Prefer the rule.
+- Raise it as its own finding even when it is one line and the behaviour is
+  correct — three rounds of RV-032/RV-033 closed on "docs honest" while the next
+  sentence was already wrong.

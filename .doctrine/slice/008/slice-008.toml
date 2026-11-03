@@ -1,9 +1,9 @@
 id = 8
 slug = "conventions-are-layered-a-set-is-a-file-the-project-the-user-or-the-binary-supplies-and-every"
 title = "Conventions are layered — a set is a file the project, the user or the binary supplies, and every listing says which"
-status = "started"
+status = "reconcile"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 tags = ["cli", "config", "conventions"]
 
 [relationships]

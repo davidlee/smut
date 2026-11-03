@@ -143,6 +143,32 @@ having no global options, and the learn exit table being one line.
    the listing a delimiter its helpers can trust. Raised by the PHASE-04 review and deliberately
    not patched in the phase.
 
+**Audit's additions and corrections (RV-035, 2026-11-03).** The eight above stand; four
+things changed when the audit checked each against the artefact it names, and the review's
+`## Reconciliation Brief` is now the operative list for `/reconcile`
+(`doctrine review show 35 --full`):
+
+- **Obligation 6's quotation is wrong** (RV-035 F-3). `design.md` carries no `None` at all;
+  its only sorting text is `:246`'s "sorts each layer's entries by name". The quoted
+  "a `name: None` entry sorts last … sorting is by the decoded name only" is
+  PHASE-03/EX-4's paraphrase. The gap is real — §6's one clause is under-determined for a
+  nameless entry, which §1 permits — so the brief writes the sentence against `:246`.
+- **The `.config/smut` literals cannot go to reconcile** (RV-035 F-2). PHASE-01/EX-3's "the
+  one place" and PHASE-04/EX-5's "nowhere else" are false (the segment is built in
+  `Roots::under` *and* in `user_root`'s home fallback), but `plan.toml` is a completed plan's
+  approved text, not a post-plan write surface. The brief routes the truth to `design.md` §2
+  instead; the code is not "fixed" to match the false sentence.
+- **Two upheld plan items were missing from this list** — plan.md item 3 (`parse` derives the
+  name from `origin.path`; §6 should say so) and item 4 (an unreadable layer *directory* has
+  no `Origin`, so §6 should name `StoreError::FileSystem` with a layer-worded `step`). Both are
+  per-slice design edits and both are in the brief. Item 9 (`§5's "absolute for a file
+  layer"` is falsified by a relative `$XDG_CONFIG_HOME`) was ruled "no design change" and the
+  audit recommends the one clause anyway.
+- **A ninth obligation the audit found** (RV-035 F-1): design §2 names `$HOME` as the user
+  root's source while the binary asks `std::env::home_dir()`, which resolves the passwd entry
+  for an unset or empty `$HOME` — so §2's "a container with no home … has no user root" is
+  false. Per-slice edit to §2; no code change.
+
 ### Design questions the PHASE-02 review raised (RV-030, judgement calls)
 
 Not defects — the design or the operator owns them — but they are owed a ruling, and none of
@@ -198,19 +224,34 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `started`, **5 of 5 phases complete** ·
-last source change `c6cebe2` (audit is the next stage; only `.doctrine` commits since). `PHASE-01`, `-02`,
-`-03`, `-04` and `-05` all landed green and reviewed/verified (`c3385c2`, `8503b93`, `1ced7c8`,
-`e692735`, `c6cebe2`); PHASE-02, -03 and -04 were reviewed (RV-030, RV-032, RV-033),
-PHASE-01 and PHASE-05 were verified by their seats. `just check` exit 0 at `c6cebe2` — 451 default and 464
-`--features fault-injection` lib tests, 34 green result lines, zero warnings; all 16 VT rows
-PASS, `verify-vt` exit 0. PHASE-05's delta is `e54f7aa..c6cebe2` (one commit, the two owned
-files). Design run `dr-01a19b61` locked at revision 36. **Implementation is complete: the next
-action is audit, which is not this run's seat.** SL-010 completed 4/4 and is **in audit,
-holding on this slice's completion**.
+**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `reconcile`, **audit complete (RV-035)** ·
+last source change `c6cebe2`; every commit since is `.doctrine` markdown or a memory record,
+confirmed by `git diff --name-only c6cebe2..HEAD`. `PHASE-01`..`PHASE-05` all landed green and
+reviewed/verified (`c3385c2`, `8503b93`, `1ced7c8`, `e692735`, `c6cebe2`); PHASE-02..04 were
+reviewed (RV-030, RV-032, RV-033), PHASE-01 and PHASE-05 verified by their seats, and the
+whole slice audited (RV-035, five findings, none blocking). `just check` exit 0 re-measured at
+`9e5083e` — 451 default and 464 `--features fault-injection` lib tests, zero warnings; all 16
+VT rows PASS. PHASE-05's delta is `e54f7aa..c6cebe2` (one commit, the two owned files).
+Design run `dr-01a19b61` locked at revision 36. **The next action is `/reconcile` against
+RV-035's `## Reconciliation Brief`; `/close` follows and SL-010 is waiting on it.**
 
 ### Produced
 
+- **The slice audited — RV-035 `done · await=none`**, a `reconciliation`-facet ledger on
+  `SL-008` with five findings, every one terminal: three `design-wrong` routed to `design.md`
+  §2/§6 for reconcile's direct edit (§2's user-root source vs `home_dir()`; the `.config/smut`
+  segment built twice, where the two plan literals are lodged with a write surface that cannot
+  hold them; obligation 6's quote of a §6 sentence that does not exist), two `follow-up`
+  captured as **CHR-006** (`user_root`'s empty-`home` guard and its missing pin;
+  `load`'s "three places" doc arithmetic). Conformance algebra: undeclared 55 all attributed
+  to SL-010 or doctrine bookkeeping, undelivered 0, conformant 8 — no SL-008 commit touches a
+  path outside its design-target set. Design §7's 26 rows each mapped to the test that
+  reddens them, in RV-035's `## Synthesis`. The brief also carries the eight inherited
+  obligations, the two upheld plan items the list omitted (3 and 4), item 9's §5 clause, and
+  the three RV-030 design questions.
+- **minted: CHR-006** — `load`'s filesystem-count doc sentence, and `user_root`'s empty-`home`
+  guard plus the absent `fn an_empty_home_is_an_absent_layer` row; both residuals recorded with
+  their replacement text and the reversal path.
 - **`PHASE-05` implemented, verified and concluded at `c6cebe2`** — `seed` gains `source` (the
   literal `conventions/<name>.md`, identical at every layer), the version rule is pinned in all
   three shapes without re-deriving the crate's, and the declaration's key list moves from five
@@ -332,12 +373,22 @@ holding on this slice's completion**.
   moment a doc comment uses X; report the classification and the load-bearing absence.
 - `mem.fact.smut.store-follows-cwd` — the store follows the cwd while the layers follow the
   environment, so a hand transcript must `cd`, not just export.
+- `mem.fact.rust.home-dir-falls-back-to-passwd` — `std::env::home_dir()` answers for an unset
+  *or empty* `$HOME` from the passwd entry, so a "no home" fixture must set `HOME` and a design
+  that names `$HOME` is not the same rule as the binary's (RV-035 F-1's evidence).
+- `mem.pattern.doctrine.doc-comment-hides-contradiction` — amended: a doc sentence *introduced
+  to discharge a finding* is the highest-risk prose in a review, and a count in it ("in three
+  places", "the only place") is a fact with a falsifier. Four false doc sentences in this
+  slice, two of them written by the fixes for earlier ones.
 
 ### Open
 
-- **Nothing in implementation is open.** The next action is audit (`/audit`), which this run's
-  charter excludes; the eight obligations in § Obligations owed at reconcile and
-  `plan.md`'s adjudicated design questions are the audit's input, none of them repaired here.
+- **Nothing in the implementation is open, and the audit left nothing blocking.** The next
+  action is `/reconcile` against RV-035's `## Reconciliation Brief` (five findings plus the
+  eight obligations, two plan items and three design questions), then `/close`, which resolves
+  **IMP-013** — the implementation brief this slice delivers — and unblocks **SL-006**.
+  **CHR-006** carries the two code residuals (RV-035 F-4, F-5); **IMP-020** the invisible
+  mode-000 skip; **IMP-019** the missing `NoFreshBasename` row.
 
 - **Two design sentences are owed to reconcile and are *not* fixed here** — §6's missing
   tie-break among unreadable names and §3's silence on a candidate whose metadata cannot be
@@ -370,17 +421,17 @@ holding on this slice's completion**.
   "a file plus a match arm".
 - **RV-029 coverage residue** — the two hedge paragraphs (§5, §6 at revisions 30–31) are
   attested but no pass ran over them.
-- **PHASE-01 residual — an empty `home` yields a relative layer root.**
-  `user_root(Some(""), Some(Path::new("")))` returns `Some(".config/smut")`, because EX-2
-  rules only that the *config* home be non-empty and says nothing about `home`. Unreachable
-  from the binary — `main` passes `home_dir()`, which is absolute or `None` — so nothing is red
-  today. But a relative path as a layer root would resolve against the cwd and read the wrong
-  layer without a symptom: the PHASE-03 failure class in miniature. **Seat ruling:** the
-  non-emptiness EX-2 already applies to `config_home` reads onto `home`, since an empty `home`
-  resolves no config home either — that is what "neither resolves" already means, not a new
-  rule. Pinned by one row in PHASE-04's owned `src/conventions.rs` (charter 4 brief), not by
-  reopening PHASE-01. If audit reads it the other way, this paragraph is the record of what
-  was decided and why.
+- **PHASE-01 residual — an empty `home` yields a relative layer root.** *Corrected by the
+  audit (RV-035 F-4): the ruling below was never implemented and the pin it promises was never
+  written.* `user_root(None, Some(Path::new("")))` still returns `Some(".config/smut")` — the
+  non-emptiness test is applied to `config_home` only (`src/conventions.rs:110-115`) — and no
+  row exercises an empty `home`: `an_empty_config_home_falls_through_to_home` passes the empty
+  path as *`config_home`*. Unreachable from the binary (`home_dir()` is absolute or `None`),
+  reachable from the crate's `pub` API, and the "relative root reads the wrong layer without a
+  symptom" class the function's own doc argues against. The guard plus the absent row are
+  **CHR-006** now, not a pin in a closed phase. The original ruling, kept as the record of
+  what was decided: the non-emptiness EX-2 applies to `config_home` reads onto `home` too,
+  since an empty `home` resolves no config home either.
 - **SL-006** is unblocked by this slice landing: `epistemic-records` returns to `plan`.
 
 ## Plan stage (2026-11-02)

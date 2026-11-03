@@ -1,0 +1,42 @@
+memory_uid = "mem_01a19f4d242874d291b29d95cb7dbc3d"
+memory_key = "mem.fact.rust.home-dir-falls-back-to-passwd"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "`std::env::home_dir()` answers for an unset *or empty* HOME, so a fixture must set HOME rather than unset it"
+summary = """Rust's `std::env::home_dir()` returns $HOME when set and non-empty, else the passwd entry, else None — so `env -u HOME` and `HOME=` both still resolve a home, and any test or design that treats "no $HOME" as "no home" is wrong."""
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = ["src/**", "tests/**"]
+commands = []
+tags = ["rust", "environment", "testing"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "55e43f3d971cfe524733d40a18312891db8e254b"
+ref_name = "refs/heads/main"
+checkout_state_id = "16b6feb1bf616434e2b74f6ec9c1312c034a27a7f3a629d7f9ce84d8d2dec81b"
+base_commit = "a8b9a3f03c0325d96ee392b68c7fdb2fe093917c"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
