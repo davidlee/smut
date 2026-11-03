@@ -21,7 +21,9 @@
 //! `the_guide_teaches_exactly_the_ten_keys` reads rather than restates.
 //!
 //! The examples the recipe prints are [`EXAMPLE_TRAVERSE`], [`EXAMPLE_FOLLOW`]
-//! and [`EXAMPLE_FILTER`], held as constants so `tests/fixture.rs` can execute
+//! and [`EXAMPLE_FILTER`], their short-form spellings `EXAMPLE_*_Q`, and the
+//! Workflows render call as [`EXAMPLE_RENDER`] with its words
+//! [`EXAMPLE_RENDER_R`], held as constants so `tests/fixture.rs` can execute
 //! the very bytes the guide shows against the committed fixture (§13.1 Guide
 //! row); a hand-written example therefore cannot drift from the store's
 //! direction. The guide ends with exactly one newline, like every other thing
@@ -43,7 +45,9 @@ Commands
   smut get <ID>...                           fetch entities by identity, in your order
   smut delete <ID>...                        remove entities, never their references
   smut query [JSON]                          select entities with a query spec
-  smut q <TOKEN>...                          query as words: roots, filters, flags
+  smut q <TOKEN>... [-j|--json JSON]         query as words: roots, filters, flags
+  smut r <TOKEN>... [display flags]          render as words
+              [-j|--json JSON]
   smut render [JSON] [-f|--format markdown]  print a selection as Markdown
               [-t|--heading-field NAME] [-l|--heading-level 1-6]
               [-i|--show-ids] [-s|--show-fields]
@@ -55,8 +59,10 @@ declare, query and render each take one JSON argument, or one complete JSON
 value on stdin when the argument is absent or is '-'. Nothing is read from an
 interactive terminal: with no argument and a terminal attached you get usage
 instead. Trailing input after the JSON value is refused, and so is a duplicate
-key inside one object. Help, version, learn and conventions need no store; the
-others, q included, do.
+key inside one object. q and r take the same JSON after -j, '-' included, in
+place of their words. q or r with no words answers every entity, capped at 100,
+rather than waiting or refusing. Help, version, learn and conventions need no
+store; the others, q and r included, do.
 
 Exit codes
   0  success, including reported missing ids and a truncated result
@@ -108,10 +114,13 @@ Batch responses
   \"missing\" lists the references still unresolved after the batch; that is a
   report, not a failure, and the batch succeeded.
 
-The short form: smut q
+The short form: smut q and smut r
   One rule carries the whole short form: a bare word is a thing, field=value is
   a filter, and --word is structure. The tokens need no flags, and nothing the
   grammar invents needs a shell quote.
+  smut r takes the same line, with render's display flags, and prints it as
+  smut render does. smut query and smut render are the machine verbs and are
+  unchanged; they take JSON as an argument and no -j.
   A token is classified by its spelling, never by looking at the store:
     session                a root id, answered in the order written
     status=open            the field equals the value
@@ -132,6 +141,8 @@ The short form: smut q
     --has F[,F]            the field exists, the shell-safe $exists true
     --missing F[,F]        the field does not exist, the shell-safe $exists false
     --from=ID              append one root; --from is the escape for a hostile id
+  -j JSON replaces the words with the whole specification, and is refused beside
+  a token or a selection flag.
   Three character consequences are deliberate. The wildcard is the word any and
   never *: * would glob before smut saw it. Existence is --has and --missing and
   never field?: ? would glob. There is no : infix operator, because session:1
@@ -140,15 +151,19 @@ The short form: smut q
   Two warts bite here, and they are stated rather than hidden. A value that is a
   JSON literal is that literal, so done=true is a boolean and priority=3 is a
   number, and a numeric-looking smut_id compared with = compares a number; --ids,
-  --from=ID and smut query are the escapes. On a string ~ is a substring test, on
+  --from=ID and -j are the escapes. On a string ~ is a substring test, on
   an array it is exact member equality, and the answer does not say which ran.
   There is one silence: a field name no entity carries answers empty at exit 0
   rather than an error, so a typo reads as an answer.
+  Two more bite on r. On r, --ids and --select choose what is selected;
+  --show-ids and --show-fields (-i, -s) choose what is displayed. On r, a
+  hyphen-led id always goes after --, because a word such as -title is read as
+  -t itle without an error.
   What the short form cannot say is not a gap in the store: grouping, $or of
   groups, $not, regular expressions, nested paths, a field name or a value holding
-  =, ~ or a comma, and an unlimited result are all smut query's: smut query takes
-  the full specification and is the complete surface. smut q adds a short spelling
-  of the hot paths and does not replace it.
+  =, ~ or a comma, and an unlimited result are all for -j, or smut query: smut
+  query takes the full specification and is the complete surface. smut q adds a
+  short spelling of the hot paths and does not replace it.
   These are the five queries the short form exists for, each shorter than the
   JSON it replaces:
     smut q title~graph
@@ -318,6 +333,8 @@ Rendering
   other fields only with --show-fields, and identity only with --show-ids or when
   nothing else would be visible. An incomplete result opens the document with a
   notice, so no stored text can hide it.
+  r takes q's line and prints the same Markdown render prints for the
+  specification that line denotes.
   Markdown is the only render format. A Mermaid diagram arrives in 1.0.
 
 Opaque ids
@@ -334,6 +351,7 @@ Workflows
     smut declare '{\"smut_id\":\"q-query\",\"status\":\"resolved\",\"body\":\"Bounded.\"}'
     smut declare '{\"smut_id\":\"q-query\",\"status\":\"DROP\"}'
   Read them back as Markdown:
+    smut r q-query --select title,body
     smut render '{\"from\":\"q-query\",\"select\":[\"title\",\"body\"]}'
   Then query rather than a richer request: the two-call recipe above is the shape
   to prefer over one query that tries to do both.
@@ -720,6 +738,8 @@ mod tests {
             format!("smut q {EXAMPLE_TRAVERSE_Q}"),
             format!("smut q {EXAMPLE_FOLLOW_Q}"),
             format!("smut q {EXAMPLE_FILTER_Q}"),
+            EXAMPLE_RENDER.to_owned(),
+            format!("smut r {EXAMPLE_RENDER_R}"),
         ] {
             assert!(
                 guide().contains(&example),
@@ -773,7 +793,7 @@ mod tests {
 
     /// The heading that opens the short-form section, and the heading that ends
     /// it: the specification chapter's.
-    const SHORT_FORM_HEADING: &str = "The short form: smut q";
+    const SHORT_FORM_HEADING: &str = "The short form: smut q and smut r";
     const QUERYING_HEADING: &str = "\nQuerying\n";
 
     /// The short-form section's text, flattened: its heading up to the
@@ -940,7 +960,7 @@ mod tests {
             sentence_carries(&section, value_typing),
             "the section states the value-typing wart: {value_typing}"
         );
-        for escape in ["--ids", "--from=ID", "smut query"] {
+        for escape in ["--ids", "--from=ID", "-j"] {
             assert!(
                 sentence_carries(&section, escape),
                 "the section names `{escape}` as an escape from value typing"
@@ -974,13 +994,14 @@ mod tests {
             .unwrap_or_else(|| panic!("the guide has a `The two-call recipe` section"));
         let lines: Vec<&str> = GUIDE[recipe..].lines().collect();
 
-        for (short, json) in [
-            (EXAMPLE_TRAVERSE_Q, EXAMPLE_TRAVERSE),
-            (EXAMPLE_FOLLOW_Q, EXAMPLE_FOLLOW),
-            (EXAMPLE_FILTER_Q, EXAMPLE_FILTER),
+        for (verb, twin_verb, short, json) in [
+            ("q", "query", EXAMPLE_TRAVERSE_Q, EXAMPLE_TRAVERSE),
+            ("q", "query", EXAMPLE_FOLLOW_Q, EXAMPLE_FOLLOW),
+            ("q", "query", EXAMPLE_FILTER_Q, EXAMPLE_FILTER),
+            ("r", "render", EXAMPLE_RENDER_R, EXAMPLE_RENDER),
         ] {
-            let twin = format!("smut q {short}");
-            let below = format!("smut query '{json}'");
+            let twin = format!("smut {verb} {short}");
+            let below = format!("smut {twin_verb} '{json}'");
 
             let at = lines
                 .iter()
@@ -1022,15 +1043,62 @@ mod tests {
             listed,
             "the Commands block lists `smut q <TOKEN>...` as a command of its own"
         );
+        let listed_r = GUIDE
+            .lines()
+            .any(|line| line.trim().starts_with("smut r <TOKEN>..."));
+        assert!(
+            listed_r,
+            "the Commands block lists `smut r <TOKEN>...` as a command of its own"
+        );
 
         // And the store sentence counts `q` in: a verb that needs a store and is
         // not in that list is a reader's first failure.
         let needs_store =
-            "Help, version, learn and conventions need no store; the others, q included, do.";
+            "Help, version, learn and conventions need no store; the others, q and r included, do.";
         assert!(
             guide().contains(needs_store),
-            "the guide's store sentence names `q`: {needs_store}"
+            "the guide's store sentence names `q` and `r`: {needs_store}"
         );
+    }
+
+    /// EX-2: the operand paragraph teaches `-j` and the empty line. Reddens when
+    /// either whole sentence leaves the Commands block's paragraph.
+    #[test]
+    fn the_operand_paragraph_teaches_j_and_the_empty_short_form() {
+        let operands = flattened_section("\nCommands\n", "\nExit codes\n");
+        for claim in [
+            "q and r take the same JSON after -j, '-' included, in place of their words.",
+            "q or r with no words answers every entity, capped at 100, rather than waiting or refusing.",
+        ] {
+            assert!(
+                operands.contains(claim),
+                "the operand paragraph omits: {claim}"
+            );
+        }
+    }
+
+    /// EX-3: the short-form section's three `r` claims. Reddens when a whole
+    /// sentence goes: the hyphen rule (a `-title` word is read as `-t itle`), the
+    /// flag-name proximity warning, or the machine verbs left unchanged.
+    #[test]
+    fn the_short_form_teaches_r_its_hyphen_rule_and_the_unchanged_machine_verbs() {
+        let section = short_form();
+        for claim in [
+            "On r, a hyphen-led id always goes after --, because a word such as -title is read as -t itle without an error.",
+            "On r, --ids and --select choose what is selected; --show-ids and --show-fields (-i, -s) choose what is displayed.",
+            "smut query and smut render are the machine verbs and are unchanged; they take JSON as an argument and no -j.",
+        ] {
+            assert!(section.contains(claim), "the short form omits: {claim}");
+        }
+    }
+
+    /// EX-4: the Rendering section says `r` takes `q`'s line. Reddens when the
+    /// sentence leaves that section.
+    #[test]
+    fn rendering_says_r_takes_the_short_forms_line() {
+        let rendering = flattened_section("\nRendering\n", "\nOpaque ids\n");
+        let claim = "r takes q's line and prints the same Markdown render prints for the specification that line denotes.";
+        assert!(rendering.contains(claim), "Rendering omits: {claim}");
     }
 
     #[test]

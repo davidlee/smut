@@ -645,7 +645,12 @@ fn the_guide_prints_the_example_this_suite_executes() {
     let declared = Declared::new();
     let printed = smut(&declared.scratch, &["learn"]).stdout;
 
-    for printed_example in [EXAMPLE_TRAVERSE, EXAMPLE_FOLLOW, EXAMPLE_FILTER] {
+    for printed_example in [
+        EXAMPLE_TRAVERSE,
+        EXAMPLE_FOLLOW,
+        EXAMPLE_FILTER,
+        EXAMPLE_RENDER,
+    ] {
         assert!(
             printed.contains(printed_example),
             "smut learn prints the example verbatim, so the shipped recipe is the tested one: {printed_example}"
@@ -671,6 +676,12 @@ fn the_guide_prints_the_token_lines_this_suite_executes() {
         // the proof the split is enough and not a query anyone would ask.
         declared.q(constant);
     }
+
+    let render_line = format!("smut r {EXAMPLE_RENDER_R}");
+    assert!(
+        printed.lines().any(|twin| twin.trim() == render_line),
+        "smut learn prints `{render_line}` as a line of its own, so the shipped recipe is the tested one"
+    );
 }
 
 #[test]
