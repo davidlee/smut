@@ -106,6 +106,24 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
   - one spelling per field — subject "the short form", true of both verbs; escape `-j` ≡ the former
     `smut query` escape in power, so truth is unchanged from SL-010's accepted sentence.
 
+### PHASE-03 (sub-orchestrator, 2026-11-03)
+
+- Commit `1fc3c24`; `just check` exit 0 (before and after the final fmt). Delta recorded `--commit 1fc3c24`.
+- `Sub::R` sits after `Render` in `Sub` so `--help` lists `query, q, render, r`. Doc: "Render a line of words as
+  Markdown: `q`'s line, `render`'s display flags."
+- VA-1: `git diff --stat 046b360 -- src/spec.rs src/predicate.rs src/select.rs src/render_markdown.rs src/input.rs
+  docs/store-format.md tests/compatibility.rs` prints nothing. The `R` arm calls only `display.options()` and
+  `selection.specification(..)` inside `cli::parse`; no `Store` exists before `parse` returns (main dispatches after).
+- Negative control: swapping the arm (selection before display flags) reddens `r_refuses_without_creating_a_store`
+  (the `r -l 7 --ids --select a` row); restored.
+- pi pass (implement, deepseek-flash): red tests $0.058, 34 req, red-first evidence (all r rows failed on
+  `unknown command: r`; `query_and_render_do_not_take_dash_j` green as a characterisation). Misses: wrote
+  `r -l -j` without the criterion's trailing `3` (fixed by me). Departures it reported, accepted: traversal twin
+  drops `EXAMPLE_TRAVERSE`'s `select` so headings are visible; `r -title` asserts the identity fallback, since no
+  entity carries `itle`. Green (the arm, ~10 lines) written by me. No Sonnet/Opus spawn.
+
 ## Autonomy log
 - PHASE-01 · wrote the EX-1 pin commit (two assertions) myself rather than via pi · brief would cost more than the edit · decided
 - PHASE-01 · EX-6 rows added as parse-level spec comparisons in `src/cli.rs` (`q a --follow x b`, `q -- -weird`, `q a -- --follow`, `q -- -junk`); none existed there · criterion says "where absent, added at the parse level" · decided
+- PHASE-03 · wrote the `R` arm myself (green), pi wrote the tests · brief would cost more than ~10 lines; tests and code still by different hands · decided
+- PHASE-03 · placed `r` after `render` in the verb list (doc text "…: `q`'s line, `render`'s display flags") · mirrors `query`/`q`; criterion allows "or equivalent" · decided
