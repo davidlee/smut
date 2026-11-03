@@ -126,7 +126,7 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-03 · reconcile (RV-034 paid) · head ce7fd82
+fresh-as-of: 2026-11-03 · done · head ce7fd82
 
 Every phase `completed` — PHASE-01 `1fb66de`, PHASE-04 `bb6a9d2`, PHASE-02 `d20a84f`,
 PHASE-03 `cd69acd`; VH-1 a pass; RV-034 concluded with every finding terminal. The
@@ -874,3 +874,18 @@ proposal used were dropped and the envelopes are shown whole.
 IMP-014's census gap and IMP-016's third site, both now annotated rather than fixed — and the
 `mem.pattern.smut.refusal-pins-hold-shape-not-truth` lesson, which is the one worth carrying into
 the next surface that pins messages.
+
+## Closure (2026-11-03)
+
+`reconcile → done`, 4/4 phases, the rollup agrees and the ⚠ divergence marker is gone. IDE-006 —
+the idea this slice descends from — closed `resolved · done`. RV-034 concluded with every finding
+terminal; REV-003 abandoned empty, because a DEC is not a `revises` target. The gate is green at
+the final tree.
+
+What shipped: `smut q`, the twelve flags, the six-variant refusal catalogue, the guide's short form
+with both recipe spellings executed, and a README section the harness runs. What cost more than the
+four phases did: one audit's worth of refusal sentences and the instructions they live in — the
+class `mem.pattern.smut.refusal-pins-hold-shape-not-truth` names, found twice in one surface.
+
+Successor: SL-011 (`render` from a `q` line) is already scoped and waiting, which is the honest
+measure of this slice — it made the next one small enough to want.
