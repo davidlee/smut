@@ -86,6 +86,26 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
   27 req (mis-cited EX-4/EX-5 and DEC-008 in two test comments; corrected before commit); green $0.018,
   19 req, clean. No Sonnet/Opus spawn.
 
+### PHASE-02 (sub-orchestrator, 2026-11-03)
+
+- Commit `f0240d3`; `just check` exit 0. `src/learn.rs` and `tests/compatibility.rs` untouched (EX-4, EX-5);
+  `grep -n 'use smut query' src/dsl.rs src/error.rs tests/dsl.rs` prints nothing.
+- pi pass (implement, deepseek-flash): $0.018, 20 req, red-first evidence given; clean. It hoisted the
+  JsonOperand sentence into a `JSON_OPERAND_SENTENCE` const in `tests/dsl.rs` (still a whole-line pin).
+- VA-1 truth reading (inputs that reach each sentence; `r` will reach the same `compile`, so "both verbs"
+  holds once PHASE-03 lands, and `-j` exists on both):
+  - `JsonOperand` — any token whose first character is `{`, on either verb, including after `--`
+    (`q -- {weird}`). A JSON word: "goes after -j" is true. A `{`-led id (`{weird}`, `{a,b}`): `--from=`
+    takes one id with its commas as text, so "an id after --from=" is true. The subject ("a word beginning
+    with {") is the observable fact, not a guessed cause. `--from={x}` never reaches it (flag, not token).
+  - two of one operator (`a=b=c`, `url=a=b`) — subject is the short form, true of both verbs; `-j` can
+    spell either split as a `where` key/value. True.
+  - two operators (`status~a=b`) — `-j` spells the predicate as JSON. True.
+  - comma list on `!=`/`~` — "write two conditions or use -j": unchanged clause plus `-j`, which has the
+    same power as `smut query` (same `spec::parse`). True.
+  - one spelling per field — subject "the short form", true of both verbs; escape `-j` ≡ the former
+    `smut query` escape in power, so truth is unchanged from SL-010's accepted sentence.
+
 ## Autonomy log
 - PHASE-01 · wrote the EX-1 pin commit (two assertions) myself rather than via pi · brief would cost more than the edit · decided
 - PHASE-01 · EX-6 rows added as parse-level spec comparisons in `src/cli.rs` (`q a --follow x b`, `q -- -weird`, `q a -- --follow`, `q -- -junk`); none existed there · criterion says "where absent, added at the parse level" · decided
