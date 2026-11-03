@@ -85,3 +85,16 @@ The equivalence spine is split by where its evidence lives: CLI-level rows
 As design § Reconcile obligations: amend DEC-034, DEC-008, DEC-039, DEC-040 via
 `doctrine knowledge edit decision`, comma-free arrays; plus the spine correction
 above.
+
+### Risks and mitigations (critical pass, 2026-11-03)
+
+| risk | evidence / inference | mitigation |
+| --- | --- | --- |
+| A doc comment on a flattened `clap::Args` struct leaks into the parent command's help | inference: a known clap-derive behaviour class; the design's probe checked parsing and the `q` usage line, not the `about` text | PHASE-01/EX-1: three help captures byte-identical across the refactor |
+| The refactor hides a behaviour change | inference | refactor is its own commit, suite unedited, read alone (PHASE-01/VA-1) |
+| A concurrent change (uncommitted 0.3.0 bump, observed at plan time) reddens the gate | evidence: `git status` | PHASE-01/EN-3: never commit or revert it; stop and ask if it reddens the gate |
+| `r` reads stdin when it has no words | inference: `render`'s arm does exactly that | PHASE-03/EX-2's empty row pipes a spec that must be ignored |
+| A help or store assertion passes vacuously | evidence: existing `contains(named)` list; IMP-015 | PHASE-03/EX-6 line-anchored; EX-3 paired `declare` |
+
+Checked and clear: no `alias` or `-j` letter exists in `src/cli.rs`; clap is
+4.6.7 in `Cargo.lock`, the version the design's probe used.
