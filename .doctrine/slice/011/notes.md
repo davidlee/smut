@@ -51,3 +51,25 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
 - Amend DEC-034, DEC-008, DEC-039, DEC-040 via `doctrine knowledge edit decision`, comma-free arrays.
 - Amend design.md for C1–C6 — the single list is plan.md § Where this plan supersedes design.md
   during execution; until reconcile, those rows govern.
+
+## Implementation run
+
+### Preflight (2026-11-03, seat: super-orchestrator, PHASE-01 → PHASE-04)
+
+- **Plan.** Design locked; `plan.md` § Where this plan supersedes design.md (C1–C6) governs
+  execution where a row applies. PHASE-01/EN-3 (version pin) settled at `046b360`.
+- **Host gate.** `just check` from `/home/david/dev/smut` (PATH already has the dev tools; no
+  `nix develop` wrapper needed). Exit 0 at `c3d244a`, both feature configurations, tree clean.
+  The host gate is authoritative.
+- **quotient `write` form.** cargo/rustc/just/git present, root writable; `just build`, `just lint`,
+  `just fmt` ran; `cargo test` (default) passed. The probe timed out during the remaining test runs,
+  likely waiting on the cargo `target/` lock while the host gate ran concurrently. No sandbox-only
+  failures known. Workers: run targeted tests (`cargo test --test <name>`), and do not run cargo
+  concurrently with another cargo process on the same `target/` if avoidable.
+- **Dirty paths at start.** None (`git status --porcelain` empty).
+- **Harness.** Background tasks enabled (spawns run in background; parent woken by notification).
+  Spawn depth unset (≥ 2): Sonnet/Opus children available.
+- **Operator rulings.** None beyond the plan. No operator-supplied inputs needed.
+- **Charters.** PHASE-01+02, PHASE-03, PHASE-04.
+
+## Autonomy log
