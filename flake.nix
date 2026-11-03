@@ -274,15 +274,18 @@
       in {
         _module.args.pkgs = pkgs;
 
-        packages = jailPkgs // quotientForms // {
-          default = smut;
-          inherit smut;
+        packages =
+          jailPkgs
+          // quotientForms
+          // {
+            default = smut;
+            inherit smut;
 
-          dev-tools = pkgs.buildEnv {
-            name = "smut-dev-tools";
-            paths = devToolPkgs;
+            dev-tools = pkgs.buildEnv {
+              name = "smut-dev-tools";
+              paths = devToolPkgs;
+            };
           };
-        };
 
         # `nix flake check` builds the package on every declared system.
         checks = {inherit smut;};
