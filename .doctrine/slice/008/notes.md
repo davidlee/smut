@@ -224,18 +224,22 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `reconcile`, **reconciled (RV-035)** ·
-last source change `c6cebe2`; every commit since is `.doctrine` markdown or a memory record,
-confirmed by `git diff --name-only c6cebe2..HEAD`. `PHASE-01`..`PHASE-05` all landed green and
-reviewed/verified (`c3385c2`, `8503b93`, `1ced7c8`, `e692735`, `c6cebe2`); PHASE-02..04 were
-reviewed (RV-030, RV-032, RV-033), PHASE-01 and PHASE-05 verified by their seats, and the
-whole slice audited (RV-035, five findings, none blocking). `just check` exit 0 re-measured at
-`9e5083e` — 451 default and 464 `--features fault-injection` lib tests, zero warnings; all 16
-VT rows PASS. **Reconcile landed ten `design.md` edits and three knowledge amendments;
-`/close` is the next action and SL-010 is waiting on it.**
+**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle **`done`**, closed · last source change `c6cebe2`
+(everything since is `.doctrine` markdown, a knowledge amendment or a memory record).
+`PHASE-01`..`PHASE-05` landed green and reviewed (`c3385c2`, `8503b93`, `1ced7c8`, `e692735`,
+`c6cebe2`); PHASE-02..04 reviewed (RV-030, RV-032, RV-033), PHASE-01 and PHASE-05 verified by
+their seats; audited (RV-035, five findings, none blocking) and reconciled (ten `design.md`
+edits, three decision amendments, no REV). `just check` exit 0 at closure with SL-010's work in
+the same tree — 451 default and 464 `--features fault-injection` lib tests, zero warnings; all
+16 VT rows PASS. **The slice is closed; `IMP-013` is resolved and `SL-006` is unblocked.**
 
 ### Produced
 
+- **The slice closed.** `reconcile → done`; the `⚠` divergence marker is gone and the rollup
+  reads 5/5. `IMP-013` resolved `fixed` (it is the implementation brief this slice delivered);
+  `SL-006`'s blocker cleared. `just check` re-run green at closure with SL-010's committed work
+  in the same tree (451/464 lib tests, zero warnings), so the guide edits SL-008 owns still
+  hold under SL-010's later changes to `src/learn.rs`.
 - **Reconciled — RV-035's brief landed on both surfaces.** Ten `design.md` edits (§2 ×2, §3 ×3,
   §4, §5 ×3, §6): the user-root source; the compound `.config/smut` segment built twice; the
   stat-failed candidate; duplicate keys and the exact fence; the asymmetric body trim; one
