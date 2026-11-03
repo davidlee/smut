@@ -781,21 +781,28 @@ pub fn answer(roots: &Roots, kind: &str, ask: Ask) -> Result<String, Error> {
     }
 }
 
-/// One set's seed: an ordinary entity declaration. The fields are supplied with
-/// the structural key `smut_id` first, then `type`, `title`, `body`, but
-/// `smut_id` is hoisted and the rest print lexically (§4.2's entity-node rule),
-/// so the bytes read `smut_id`, `body`, `title`, `type`, and `version`.
+/// One set's seed: an ordinary entity declaration of six fields — `smut_id`,
+/// `type`, `version`, `source`, `title` and `body` — supplied as a map whose
+/// insertion order is immaterial, because `smut_id` is hoisted and the rest print
+/// lexically (§4.2's entity-node rule), so the bytes read `smut_id`, `body`,
+/// `source`, `title`, `type`, `version`.
 ///
 /// The id is fixed — `conventions-<name>` — so the pipe is an upsert and never a
-/// duplicate. The title and body are the set's own words, verbatim, so the
-/// declaration and the prose cannot disagree. `version` is inserted only when the
-/// set carries one, because a file that declares no version makes no claim about
-/// a release.
+/// duplicate. `source` is the literal `<kind>/<name>.md` this module declares
+/// (`conventions/<name>.md`), identical at every layer: the seed is handed a set
+/// and never a kind or an [`Origin`], so it cannot name the path the file was
+/// found at, and the listing — not the record — is what names the layer. The
+/// title and body are the set's own words, verbatim, so the declaration and the
+/// prose cannot disagree. `version` is the set's own — the author's frontmatter
+/// value for a file, the crate's release for the binary layer, which [`load`]
+/// applied — and is inserted only when the set carries one, because a file that
+/// declares no version makes no claim about a release.
 pub fn seed(set: &Set) -> Value {
     let mut declaration = Map::new();
     let fields = [
         (ENTITY_ID, id_of(set)),
         ("type", "convention".to_owned()),
+        ("source", format!("conventions/{}.md", set.name)),
         ("title", set.title.clone()),
         ("body", set.body.clone()),
     ];
@@ -1093,7 +1100,17 @@ mod tests {
             Value::String("Conventions: general hygiene".to_owned())
         );
         assert_eq!(seed["body"], Value::String(set.body.clone()));
-        assert_eq!(seed.as_object().expect("one object").len(), 5);
+        assert_eq!(
+            seed["source"],
+            Value::String("conventions/hygiene.md".to_owned()),
+            "the declaration names its file relative to its layer root, the same string the \
+             listing prints for the embedded bytes"
+        );
+        assert_eq!(
+            seed.as_object().expect("one object").len(),
+            6,
+            "smut_id, type, version, title, body and source: {seed}"
+        );
     }
 
     #[test]
@@ -1113,6 +1130,105 @@ mod tests {
         assert_eq!(printed.lines().count(), 1, "{printed}");
         assert!(printed.ends_with('\n'), "{printed}");
         assert_eq!(printed.matches('\n').count(), 1, "{printed}");
+    }
+
+    // Reddens if `source` is the path the fixture was read from instead of the
+    // file's name under its layer root, if the leaf loses its `.md`, or if the
+    // name is lower-cased on the way into the leaf.
+    #[test]
+    fn the_source_is_the_conventions_leaf_path() {
+        let bytes = "---\nsummary: one\n---\n# Mine\n\nAdvice.\n";
+        let project_path = "/scratch/checkout/.config/smut/conventions/Mine.md";
+        let user_path = "/scratch/config/smut/conventions/Mine.md";
+
+        let project = loaded(bytes, project_path);
+        let user = match parse(
+            bytes,
+            Origin {
+                layer: Layer::User,
+                path: PathBuf::from(user_path),
+            },
+        ) {
+            Outcome::Loaded(set) => set,
+            Outcome::Failed(cause) => panic!("{user_path} loads, and it failed: {cause:?}"),
+        };
+
+        let leaf = Value::String("conventions/Mine.md".to_owned());
+
+        assert_eq!(
+            seed(&project)["source"],
+            leaf,
+            "`source` is `conventions/<name>.md`, not the absolute {project_path} the file was \
+             found at"
+        );
+        assert_eq!(
+            seed(&user)["source"],
+            leaf,
+            "`source` is the same literal for a user-layer file, not {user_path}: the seed is \
+             handed a set and never a layer"
+        );
+    }
+
+    // Reddens if `seed` re-derives `env!("CARGO_PKG_VERSION")`, or ignores a
+    // `Set` built by the reader and falls back to some default release.
+    #[test]
+    fn a_file_sets_version_is_the_authors() {
+        let set = loaded(
+            "---\nversion: 9.9.9-hopeful\n---\n# Mine\n\nAdvice.\n",
+            "Mine.md",
+        );
+
+        assert_eq!(
+            seed(&set)["version"],
+            Value::String("9.9.9-hopeful".to_owned()),
+            "a file set's version is the author's frontmatter value, never the crate's {}",
+            env!("CARGO_PKG_VERSION")
+        );
+    }
+
+    // Reddens if `version` becomes an always-present field: a file that declares
+    // none would then claim the crate's release as its own (DEC-031 rule 3).
+    #[test]
+    fn the_seed_omits_a_version_a_file_does_not_declare() {
+        let set = loaded("# Mine\n\nAdvice.\n", "Mine.md");
+        let declaration = seed(&set);
+
+        assert!(
+            declaration.get("version").is_none(),
+            "a file that declares no version makes no claim about a release: {declaration}"
+        );
+
+        let fields: Vec<&str> = declaration
+            .as_object()
+            .expect("one object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+
+        assert_eq!(
+            fields,
+            ["body", "smut_id", "source", "title", "type"],
+            "the map is lexical and holds the five names a versionless file supplies, with no \
+             sixth for a version it never wrote: {declaration}"
+        );
+    }
+
+    // Reddens if a set with no heading is titled by anything but its filename —
+    // an empty title, the whole body, or a synthesised prefix.
+    #[test]
+    fn a_file_with_no_heading_falls_back_to_its_filename() {
+        let set = loaded("Some advice, with no heading at all.\n", "mine-notes.md");
+
+        assert_eq!(
+            set.title, "mine-notes",
+            "a file with no `# ` heading is titled by its own filename stem"
+        );
+        assert_eq!(
+            seed(&set)["title"],
+            Value::String("mine-notes".to_owned()),
+            "and the seed carries that fallback verbatim, synthesising no prefix and no \
+             capital"
+        );
     }
 
     use std::fs;
@@ -1740,6 +1856,15 @@ mod tests {
         assert_eq!(
             untitled.title, "Mine",
             "a set with no heading is titled by its name"
+        );
+
+        // Verbatim cuts both ways: a `Conventions: ` prefix synthesised in code,
+        // or a first letter capitalised on the reader's own initiative, reddens
+        // here rather than only on the shipped set's mixed-case heading.
+        let lower_case = loaded("# mine rules\n\nAdvice.\n", "Mine.md");
+        assert_eq!(
+            lower_case.title, "mine rules",
+            "a lower-case heading keeps its case: the title is the file's own words"
         );
     }
 

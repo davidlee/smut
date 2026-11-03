@@ -564,7 +564,7 @@ fn an_unknown_format_is_still_refused_before_the_operand() {
 }
 
 #[test]
-fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
+fn the_seed_key_set_is_six_names() {
     let scratch = Scratch::new();
 
     let printed = smut(&scratch, &["conventions", "hygiene", "--format", "json"]);
@@ -603,7 +603,7 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
     );
     // Structural identity is the `smut_id` member — so an ordinary `id` field
     // here would be data the seed does not carry, not a second spelling of the
-    // same identity. The key list pins both: five names, and `id` is not one.
+    // same identity. The key list pins both: six names, and `id` is not one.
     let fields: Vec<&str> = seed
         .as_object()
         .expect("one object")
@@ -613,8 +613,9 @@ fn the_seed_is_one_declaration_with_a_fixed_id_and_the_crates_version() {
 
     assert_eq!(
         fields,
-        ["body", "smut_id", "title", "type", "version"],
-        "the seed supplies exactly smut_id, type, version, title and body: {seed}"
+        ["body", "smut_id", "source", "title", "type", "version"],
+        "the seed supplies exactly smut_id, type, version, source, title and body — six names, \
+         and no second spelling of identity: {seed}"
     );
 }
 
@@ -639,6 +640,35 @@ fn the_seed_is_one_compact_line() {
     assert!(
         declaration.is_object(),
         "the seed is one JSON object: {}",
+        printed.stdout
+    );
+
+    // Exactly one newline in the whole output: `ends_with` above tolerates a
+    // second one before it, and a pretty printer re-introduced anywhere adds one
+    // per field.
+    assert_eq!(
+        printed.stdout.matches('\n').count(),
+        1,
+        "the whole declaration is one line, ending in one newline: {:?}",
+        printed.stdout
+    );
+
+    // The whole line, field order included: `smut_id` is hoisted and the rest
+    // print lexically, so the printer's documented order for a seed is
+    // `smut_id, body, source, title, type, version`. One equality pins the
+    // order, the compactness and the single newline together, so a reordering
+    // that leaves the JSON valid reddens here.
+    let quoted = |text: &str| Value::String(text.to_owned()).to_string();
+
+    assert_eq!(
+        printed.stdout,
+        format!(
+            "{{\"smut_id\":\"conventions-hygiene\",\"body\":{},\"source\":\"conventions/hygiene.md\",\"title\":{},\"type\":\"convention\",\"version\":{}}}\n",
+            quoted(&body()),
+            quoted(&heading()),
+            quoted(env!("CARGO_PKG_VERSION")),
+        ),
+        "the declaration prints its six fields in the documented order: {:?}",
         printed.stdout
     );
 }
@@ -815,7 +845,7 @@ fn the_seed_declares_once_and_a_second_install_updates_the_same_entity() {
 }
 
 #[test]
-fn a_re_install_replaces_an_amended_body_keeps_a_user_field_and_reports_the_previous() {
+fn a_second_install_reports_the_body_it_replaced() {
     let scratch = Scratch::new();
     let seed = seed(&scratch);
 
@@ -946,6 +976,45 @@ const USER_HYGIENE: &str = "\
 user advice: this copy sits behind the checkout's.
 ";
 
+/// The checkout's copy of the shipped name, declaring a version of its own: the
+/// seed's `version` is the author's, never the crate's release.
+const PROJECT_VERSIONED_HYGIENE: &str = "\
+---
+summary: the checkout's own structure rules
+version: 2.5.0
+---
+# Project hygiene
+
+project advice: this checkout says which release of the rules it follows.
+";
+
+/// What [`PROJECT_VERSIONED_HYGIENE`] declares as its body: the text below its
+/// frontmatter, trailing newlines trimmed. That is the value the seed carries;
+/// the prose prints it with the one newline the binary writes added back.
+const PROJECT_VERSIONED_HYGIENE_BODY: &str = "\
+# Project hygiene
+
+project advice: this checkout says which release of the rules it follows.";
+
+/// The config home's copy of the same name, with its own version and its own
+/// body, so two declarations of one name differ in everything but their
+/// identity.
+const USER_VERSIONED_HYGIENE: &str = "\
+---
+version: 3.1.0
+---
+# User hygiene
+
+user advice: this copy is a later release of the same advice.
+";
+
+/// What [`USER_VERSIONED_HYGIENE`] declares as its body, trailing newlines
+/// trimmed, like every body a set file declares.
+const USER_VERSIONED_HYGIENE_BODY: &str = "\
+# User hygiene
+
+user advice: this copy is a later release of the same advice.";
+
 /// A set in a home's `.config/smut`, which is no layer while
 /// `$XDG_CONFIG_HOME` points elsewhere.
 const HOME_HYGIENE: &str = "\
@@ -971,6 +1040,188 @@ const PARENT: &str = "\
 
 parent advice: an ancestor's copy, which the walk must not find.
 ";
+
+// ── EX-1..EX-3: the declaration names its file and its author's version ─────
+
+// Reddens if the declaration's `version` falls back to the crate's release, or
+// if `source` is the absolute path the file was found at: the author's version
+// and the layer-relative leaf are both what the file itself says.
+#[test]
+fn the_seed_names_its_source_and_the_authors_version() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    let project = scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_VERSIONED_HYGIENE,
+    );
+
+    let printed = scratch.smut_in(&repository, &["conventions", "hygiene", "--format", "json"]);
+
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(printed.stderr, "", "a seed is no diagnostic");
+
+    let declaration = printed.json();
+
+    assert_eq!(
+        declaration["smut_id"],
+        json!("conventions-hygiene"),
+        "the id is fixed and layer-blind: {}",
+        printed.stdout
+    );
+    assert_eq!(
+        declaration["type"],
+        json!("convention"),
+        "the declared type does not depend on the layer: {}",
+        printed.stdout
+    );
+    // The author's version, and only the author's: a `seed` that fell back to
+    // the crate's release would print `env!("CARGO_PKG_VERSION")` here.
+    assert_eq!(
+        declaration["version"],
+        json!("2.5.0"),
+        "the version is the file's own frontmatter value (2.5.0), not the crate's {}: {}",
+        env!("CARGO_PKG_VERSION"),
+        printed.stdout
+    );
+    // The leaf, and only the leaf: an `origin.path` would name the absolute file
+    // this scratch made, which is the value the message prints.
+    assert_eq!(
+        declaration["source"],
+        json!("conventions/hygiene.md"),
+        "the source is the file's name under its layer root, not {} — the absolute path it \
+         was found at: {}",
+        project.display(),
+        printed.stdout
+    );
+    assert_eq!(
+        declaration["title"],
+        json!("Project hygiene"),
+        "the title is the file's own heading, verbatim: {}",
+        printed.stdout
+    );
+    assert_eq!(
+        declaration["body"],
+        json!(PROJECT_VERSIONED_HYGIENE_BODY),
+        "the body is the file's text below its frontmatter, unchanged: {}",
+        printed.stdout
+    );
+}
+
+// Reddens if `source` or the id is read off the layer a file was found at: the
+// two declarations differ in their bodies and in their versions, so the two
+// identical strings asserted last are the rule and not a coincidence.
+#[test]
+fn the_source_is_the_same_at_every_layer() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_VERSIONED_HYGIENE,
+    );
+    scratch.set(&scratch.user_sets(), "hygiene", USER_VERSIONED_HYGIENE);
+    let inside = scratch.sub(&repository, "sub");
+    let work = scratch.dir("work");
+    // Asserted first: no ancestor of this directory is a repository, so the
+    // user layer is the only file layer this declaration can come from.
+    scratch.assert_no_repository_above(&work);
+
+    let from_project = scratch.smut_in(&inside, &["conventions", "hygiene", "--format", "json"]);
+    assert_eq!(from_project.code, 0, "{}", from_project.stderr);
+    let from_user = scratch.smut_in(&work, &["conventions", "hygiene", "--format", "json"]);
+    assert_eq!(from_user.code, 0, "{}", from_user.stderr);
+
+    let project_seed = from_project.json();
+    let user_seed = from_user.json();
+
+    // The two files really are two different files, so nothing below can pass by
+    // the two replies being one reply.
+    assert_eq!(
+        project_seed["body"],
+        json!(PROJECT_VERSIONED_HYGIENE_BODY),
+        "the project layer's body is the checkout's text: {}",
+        from_project.stdout
+    );
+    assert_eq!(
+        user_seed["body"],
+        json!(USER_VERSIONED_HYGIENE_BODY),
+        "the user layer's body is the config home's text: {}",
+        from_user.stdout
+    );
+    assert_eq!(
+        project_seed["version"],
+        json!("2.5.0"),
+        "the checkout declares its own version: {}",
+        from_project.stdout
+    );
+    assert_eq!(
+        user_seed["version"],
+        json!("3.1.0"),
+        "the config home declares its own version: {}",
+        from_user.stdout
+    );
+    // The two exact bodies and the two exact versions above are what make the
+    // identical strings below a rule rather than a coincidence: the two replies
+    // provably read two different files, so a shared `source` and `smut_id`
+    // cannot come from a shared file.
+
+    // … and one id and one source for both, because neither names a layer.
+    assert_eq!(
+        project_seed["smut_id"],
+        json!("conventions-hygiene"),
+        "the fixed id does not name the project layer: {}",
+        from_project.stdout
+    );
+    assert_eq!(
+        user_seed["smut_id"],
+        json!("conventions-hygiene"),
+        "the user layer declares under the same fixed id: {}",
+        from_user.stdout
+    );
+    for (layer, seed) in [("project", &project_seed), ("user", &user_seed)] {
+        assert_eq!(
+            seed["source"],
+            json!("conventions/hygiene.md"),
+            "the {layer} layer's source is the literal leaf, the same at every layer — a path \
+             taken from that layer would name its own file: {seed}"
+        );
+    }
+}
+
+// EX-3, RV-029 F-19: both halves in one test, so the prose and the declaration
+// cannot drift apart while each is checked somewhere else.
+#[test]
+fn the_prose_and_the_seed_agree_on_the_body() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_VERSIONED_HYGIENE,
+    );
+
+    let prose = scratch.smut_in(&repository, &["conventions", "hygiene"]);
+    assert_eq!(prose.code, 0, "{}", prose.stderr);
+    let seed = scratch.smut_in(&repository, &["conventions", "hygiene", "--format", "json"]);
+    assert_eq!(seed.code, 0, "{}", seed.stderr);
+
+    // A re-introduced heading or an appended footer would make these two bodies
+    // disagree with the file, and each other.
+    assert_eq!(
+        seed.json()["body"],
+        json!(PROJECT_VERSIONED_HYGIENE_BODY),
+        "the seed's body is the file's text below its frontmatter: {}",
+        seed.stdout
+    );
+    assert_eq!(
+        prose.stdout,
+        format!("{}\n", PROJECT_VERSIONED_HYGIENE_BODY),
+        "the prose is that same body plus exactly one newline, so a lost trailing newline \
+         reddens here: {:?}",
+        prose.stdout
+    );
+}
 
 // Reddens if a farther layer wins the name — the prose would be the user's or
 // the shipped body, not the checkout's — if the listing prints a summary where a
