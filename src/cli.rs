@@ -234,7 +234,7 @@ struct Cli {
     command: Option<Sub>,
 }
 
-// The selection line q shares: tokens and q's flags (DEC-043).
+// The selection line q shares: tokens, q's flags, and `-j` (DEC-043, DEC-044).
 #[derive(Debug, clap::Args)]
 pub struct SelectionArgs {
     // The positional carries no attribute, on purpose: `trailing_var_arg` and
@@ -280,6 +280,9 @@ pub struct SelectionArgs {
     /// The root escape for an id the grammar cannot carry bare.
     #[arg(long)]
     from: Option<String>,
+    /// One JSON specification in place of the line; `-` reads stdin.
+    #[arg(long, short = 'j')]
+    json: Option<String>,
 }
 
 // The display flags render shares (DEC-009, IMP-007).
@@ -396,7 +399,7 @@ pub fn parse(
             })))
         }
         Sub::Q { selection } => Ok(Invocation::Request(Request::Query(Query {
-            spec: selection.specification()?,
+            spec: selection.specification(stdin_is_terminal, stdin)?,
         }))),
         Sub::Render { json, display } => {
             // The flags are validated before the operand is read, so a refusal
@@ -418,27 +421,37 @@ pub fn parse(
 }
 
 impl SelectionArgs {
-    /// The selection line, compiled and parsed: q's contribution to step 1.
-    fn specification(self) -> Result<Spec, Error> {
-        let compiled = dsl::compile(&Line {
-            tokens: &self.tokens,
-            flags: Flags {
-                follow: self.follow,
-                backlinks: self.backlinks,
-                depth: self.depth,
-                budget: self.budget,
-                select: self.select,
-                ids: self.ids,
-                order: self.order,
-                limit: self.limit,
-                edges: self.edges,
-                has: self.has,
-                missing: self.missing,
-                from: self.from,
-            },
-        })?;
+    /// The line compiled and parsed, or `-j`'s specification: q's contribution to
+    /// step 1. `-j` is the whole specification, so anything beside it is refused
+    /// before an operand is read (DEC-044).
+    fn specification(self, stdin_is_terminal: bool, stdin: &mut dyn Read) -> Result<Spec, Error> {
+        let flags = Flags {
+            follow: self.follow,
+            backlinks: self.backlinks,
+            depth: self.depth,
+            budget: self.budget,
+            select: self.select,
+            ids: self.ids,
+            order: self.order,
+            limit: self.limit,
+            edges: self.edges,
+            has: self.has,
+            missing: self.missing,
+            from: self.from,
+        };
 
-        Ok(spec::parse(&compiled)?)
+        let value = match self.json {
+            Some(_) if !self.tokens.is_empty() || flags != Flags::default() => {
+                return Err(Reject::JsonBesideSelection.into());
+            }
+            Some(json) => operand(Some(&json), stdin_is_terminal, stdin)?,
+            None => dsl::compile(&Line {
+                tokens: &self.tokens,
+                flags,
+            })?,
+        };
+
+        Ok(spec::parse(&value)?)
     }
 }
 
@@ -830,6 +843,57 @@ mod tests {
         assert_eq!(
             rejection(parse_of(&["query", "[]"])),
             Reject::NotASpecification
+        );
+    }
+
+    /// The specification one line compiles to, so a `q` line can be compared with
+    /// the JSON spelling of the same request (EX-6).
+    fn line_spec(arguments: &[&str]) -> Spec {
+        let Request::Query(command) = request(parse_of(arguments).expect("the line is valid"))
+        else {
+            panic!("the fixture is a selection");
+        };
+
+        command.spec
+    }
+
+    #[test]
+    fn q_flags_interleave_with_its_tokens() {
+        // DEC-037: flags parse on either side of a token, and the bare positional
+        // keeps the order the caller typed.
+        assert_eq!(
+            line_spec(&["q", "a", "--follow", "x", "b"]),
+            line_spec(&["query", r#"{"from":["a","b"],"follow":["x"]}"#]),
+            "a flag between two roots keeps both, in order"
+        );
+    }
+
+    #[test]
+    fn a_double_dash_delivers_a_hyphen_leading_root_to_q() {
+        // DEC-037: `--` ends flags, so an id the grammar cannot carry bare reaches
+        // `q` as a root.
+        assert_eq!(
+            line_spec(&["q", "--", "-weird"]),
+            line_spec(&["query", r#"{"from":["-weird"]}"#])
+        );
+    }
+
+    #[test]
+    fn a_double_dash_ends_qs_flags() {
+        // DEC-037: after `--` nothing is a flag, so `--follow` is a root here.
+        assert_eq!(
+            line_spec(&["q", "a", "--", "--follow"]),
+            line_spec(&["query", r#"{"from":["a","--follow"]}"#])
+        );
+    }
+
+    #[test]
+    fn a_double_dash_reaches_a_j_led_root() {
+        // `-j` narrows DEC-037's `-weird-id` error to `-j`-led words, so `--`
+        // remains the rescue and keeps its own row.
+        assert_eq!(
+            line_spec(&["q", "--", "-junk"]),
+            line_spec(&["query", r#"{"from":["-junk"]}"#])
         );
     }
 

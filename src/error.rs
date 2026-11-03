@@ -132,6 +132,9 @@ pub enum Reject {
     /// `--ids` and `--select` were given together, and they are the same
     /// projection, so one of them can only repeat what the other already says.
     ConflictingSelection,
+    /// `-j` beside a token or a selection flag: `-j` carries the whole
+    /// specification (DEC-044).
+    JsonBesideSelection,
     /// One JSON object in the input gives the same key twice, which would lose
     /// the earlier assignment. Refused as the key is read, before a `Value`
     /// exists (§3.1, DEC-006).
@@ -407,6 +410,10 @@ impl fmt::Display for Reject {
                 formatter,
                 "--ids is select smut_id; it cannot also be given --select"
             ),
+            Reject::JsonBesideSelection => write!(
+                formatter,
+                "-j takes the whole specification; drop the tokens and selection flags beside it"
+            ),
             Reject::DuplicateKey { key } => write!(
                 formatter,
                 "duplicate JSON key: {key}, and one object cannot give a key twice"
@@ -620,7 +627,7 @@ mod tests {
 
     #[test]
     fn the_boundary_maps_each_failure_class_to_its_exit_code() {
-        let cases: [(Error, u8); 33] = [
+        let cases: [(Error, u8); 34] = [
             (Reject::MissingCommand.into(), INVALID_INPUT),
             (
                 Reject::UnknownCommand("frobnicate".to_owned()).into(),
@@ -794,6 +801,7 @@ mod tests {
             ),
             (Reject::UnreachableLimit.into(), INVALID_INPUT),
             (Reject::ConflictingSelection.into(), INVALID_INPUT),
+            (Reject::JsonBesideSelection.into(), INVALID_INPUT),
             (sample_store_failure().into(), STORE_FAILURE),
             (sample_artefact_not_loaded().into(), STORE_FAILURE),
         ];
@@ -1075,6 +1083,18 @@ mod tests {
         assert_eq!(
             refusal.to_string(),
             "q takes field=value tokens, not a JSON specification; use smut query for a JSON spec"
+        );
+    }
+
+    // Asserted whole (DEC-030): the sentence names the one flag the caller typed,
+    // and no token or selection flag they did not.
+    #[test]
+    fn json_beside_a_selection_names_only_dash_j() {
+        let refusal = Reject::JsonBesideSelection;
+
+        assert_eq!(
+            refusal.to_string(),
+            "-j takes the whole specification; drop the tokens and selection flags beside it"
         );
     }
 

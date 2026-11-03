@@ -36,7 +36,7 @@ pub struct Line<'a> {
 /// The numeric and enumeration flags arrive as text, so that no numeric refusal is
 /// clap's: with a direction present, `--depth abc` and `--depth=-1` reach the same
 /// specification message, and `--limit all` reaches the front-end's own.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Flags {
     /// `--follow`: the outgoing fields to traverse.
     pub follow: Option<String>,

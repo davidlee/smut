@@ -2122,3 +2122,103 @@ fn a_double_dash_reaches_a_hyphen_leading_root() {
         ran.json()
     );
 }
+
+/// Two invocations are indistinguishable from outside: same exit code, same
+/// bytes on stdout, and the same stderr line for line.
+fn same_streams(one: Ran, other: Ran, description: &str) -> Ran {
+    assert_eq!(one.code, other.code, "{description}: {}", one.stderr);
+    assert_eq!(one.stdout, other.stdout, "{description}");
+    assert_eq!(one.stderr, other.stderr, "{description}");
+
+    one
+}
+
+#[test]
+fn q_dash_j_answers_what_query_answers() {
+    // `-j` carries the whole specification, so `q -j` is `query` in every
+    // respect — the same code, the same envelope, the same refusal, byte for byte.
+    let scratch = Scratch::new();
+    store_of_three(&scratch);
+
+    let specification = r#"{"from":"a","select":["title"]}"#;
+    let answered = same_streams(
+        smut(&scratch, &["q", "-j", specification]),
+        smut(&scratch, &["query", specification]),
+        "-j and query answer one specification",
+    );
+    assert_eq!(answered.code, 0, "{}", answered.stderr);
+    assert_eq!(
+        selected_ids(&answered.json()),
+        ["a"].map(String::from),
+        "a non-empty answer, so the equality above is not two empty envelopes: {}",
+        answered.json()
+    );
+
+    // The same specification on stdin, reached by `-` on both spellings.
+    let from_stdin = same_streams(
+        run(&scratch, &["q", "-j", "-"], Some(specification)),
+        run(&scratch, &["query", "-"], Some(specification)),
+        "a specification on stdin reaches the same answer either way",
+    );
+    assert_eq!(from_stdin.code, 0, "{}", from_stdin.stderr);
+    assert_eq!(
+        selected_ids(&from_stdin.json()),
+        ["a"].map(String::from),
+        "{}",
+        from_stdin.json()
+    );
+
+    // The specification's own refusals, not clap's: `-j` hands the operand to the
+    // same parser `query` does, so the sentence is the same one, whole.
+    for (operand, description) in [
+        ("[1]", "not a JSON object"),
+        ("nope", "not JSON at all"),
+        ("{} {}", "a second value after the first"),
+        (r#"{"limit":1,"limit":2}"#, "a duplicated key"),
+    ] {
+        let refused = same_streams(
+            smut(&scratch, &["q", "-j", operand]),
+            smut(&scratch, &["query", operand]),
+            description,
+        );
+
+        assert_eq!(refused.code, 2, "{operand}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{operand} prints no envelope");
+        assert!(!refused.stderr.is_empty(), "{operand} says why");
+    }
+}
+
+#[test]
+fn json_beside_a_selection_is_refused_by_name() {
+    // `-j` is the whole specification, so any token or selection flag beside
+    // it is a conflict — refused by the one sentence that says how to resolve it.
+    let scratch = Scratch::new();
+
+    for arguments in [
+        &["q", "a", "-j", "{}"][..],
+        &["q", "--ids", "-j", "{}"][..],
+        &["q", "--depth", "2", "-j", "{}"][..],
+        // `--select=` carries an empty list, and the conflict is checked before the
+        // empty-list check, so this is the conflict's sentence and not the
+        // empty-select refusal.
+        &["q", "--select=", "-j", "{}"][..],
+    ] {
+        let refused = smut(&scratch, arguments);
+
+        assert_eq!(refused.code, 2, "{arguments:?}: {}", refused.stderr);
+        assert_eq!(refused.stdout, "", "{arguments:?}");
+        assert_eq!(
+            refused.stderr,
+            "smut: -j takes the whole specification; drop the tokens and selection flags beside it\n",
+            "{arguments:?}"
+        );
+        assert!(!scratch.has_store(), "{arguments:?} creates nothing");
+    }
+
+    // Paired in the same directory, so the assertions above discriminate: a bare
+    // "no `.smut` here" check would pass for a command that never ran.
+    let declared = smut(&scratch, &["declare", r#"{"smut_id":"a","title":"A"}"#]);
+
+    assert_eq!(declared.code, 0, "{}", declared.stderr);
+    assert!(scratch.has_store(), "declare creates the store q did not");
+}
