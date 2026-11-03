@@ -100,8 +100,10 @@ pub enum Reject {
         /// Which conditions conflict, for the message.
         contradiction: String,
     },
-    /// A `smut q` operand is a JSON specification. Only `smut query` takes one, so
-    /// the token is refused rather than split (DEC-034, DEC-039).
+    /// A short-form word beginning with `{` is refused rather than split. The
+    /// check is the first character alone, so it cannot tell the two escapes apart:
+    /// a JSON specification goes after `-j` (or to `smut query`), and a `{`-led id
+    /// after `--from=` (DEC-036, DEC-039, DEC-045).
     JsonOperand,
     /// A `smut q` token carries structure the short form cannot read: two
     /// operators, a field name holding one, a comma where the operator takes a
@@ -387,8 +389,8 @@ impl fmt::Display for Reject {
             ),
             Reject::JsonOperand => write!(
                 formatter,
-                "q takes field=value tokens, not a JSON specification; use smut query \
-                 for a JSON spec"
+                "a word beginning with {{ is not read as a token: a JSON specification goes \
+                 after -j, and an id after --from="
             ),
             Reject::UnreadableToken { token, reason } => {
                 write!(formatter, "cannot read \"{token}\": {reason}")
@@ -1082,7 +1084,7 @@ mod tests {
 
         assert_eq!(
             refusal.to_string(),
-            "q takes field=value tokens, not a JSON specification; use smut query for a JSON spec"
+            "a word beginning with { is not read as a token: a JSON specification goes after -j, and an id after --from="
         );
     }
 
@@ -1104,13 +1106,12 @@ mod tests {
     fn an_unreadable_token_is_quoted_with_its_reason() {
         let refusal = Reject::UnreadableToken {
             token: "status~a=b".to_owned(),
-            reason: "it carries both ~ and =; use smut query for the same predicate as JSON"
-                .to_owned(),
+            reason: "it carries both ~ and =; use -j for the same predicate as JSON".to_owned(),
         };
 
         assert_eq!(
             refusal.to_string(),
-            r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#
+            r#"cannot read "status~a=b": it carries both ~ and =; use -j for the same predicate as JSON"#
         );
     }
 

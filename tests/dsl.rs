@@ -18,6 +18,11 @@ use smut::learn::{
 };
 use smut::spec::{self, Spec};
 
+/// The one sentence a `{`-led word earns, whichever escape it meant: the check is
+/// the first character alone, so a JSON specification and a `{`-led id are refused
+/// alike (DEC-036, DEC-039, DEC-045).
+const JSON_OPERAND_SENTENCE: &str = "a word beginning with { is not read as a token: a JSON specification goes after -j, and an id after --from=";
+
 /// The `(tokens, flags)` a printed `smut q` line denotes.
 ///
 /// The guide prints one argument line per recipe, so a whitespace split plus the
@@ -289,15 +294,15 @@ fn a_repeat_the_object_cannot_hold_is_refused_in_the_callers_tokens() {
     for (line, reason) in [
         (
             "status!=a status!=b",
-            "q carries one != per field; use smut query",
+            "the short form carries one != per field; use -j",
         ),
         (
             "title~a title~b",
-            "q carries one ~ per field; use smut query",
+            "the short form carries one ~ per field; use -j",
         ),
         (
             "status=a,b status=c,d",
-            "q carries one = per field; use smut query",
+            "the short form carries one = per field; use -j",
         ),
     ] {
         let refusal = refused(line);
@@ -358,17 +363,29 @@ fn the_existence_flags_join_the_same_predicate() {
     );
 }
 
-// Reddens if the `{` test moves below the operator scan: `"status":"open"` would
+// Reddens if the check moves below the operator scan: `"status":"open"` would
 // split at `=` and the refusal would become unreachable (RV-031 F-1's class).
+// Reddens here too if the sentence stops naming both escapes, since the first
+// character alone decides it (DEC-036, DEC-039, DEC-045).
 #[test]
 fn a_json_operand_is_refused_by_name() {
     let refusal = refused(r#"{"where":{"status":"open"}}"#);
 
     assert_eq!(refusal, Reject::JsonOperand);
-    assert_eq!(
-        refusal.to_string(),
-        "q takes field=value tokens, not a JSON specification; use smut query for a JSON spec"
-    );
+    assert_eq!(refusal.to_string(), JSON_OPERAND_SENTENCE);
+}
+
+// Reddens if a `{`-led free-form id stops reaching the same `Reject::JsonOperand`
+// as a JSON word, or earns a sentence of its own: the check is the first character
+// alone (DEC-036, DEC-039, DEC-045), so the sentence must be true of both, which is
+// why it names both escapes — the specification after `-j` and the id after
+// `--from=` (VT-2).
+#[test]
+fn a_brace_led_id_is_refused_by_the_same_sentence_as_a_json_word() {
+    let refusal = refused("{weird}");
+
+    assert_eq!(refusal, Reject::JsonOperand);
+    assert_eq!(refusal.to_string(), JSON_OPERAND_SENTENCE);
 }
 
 // Reddens if the two rows collapse into one sentence: they name different repairs,
@@ -379,7 +396,7 @@ fn a_token_with_two_operators_is_refused_with_both_named() {
 
     assert_eq!(
         both.to_string(),
-        r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#
+        r#"cannot read "status~a=b": it carries both ~ and =; use -j for the same predicate as JSON"#
     );
 
     // The same operator twice is one token the front-end cannot split, because the
@@ -389,14 +406,14 @@ fn a_token_with_two_operators_is_refused_with_both_named() {
 
     assert_eq!(
         field.to_string(),
-        r#"cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query"#
+        r#"cannot read "a=b=c": it carries two =, so the short form cannot tell the field from the value; use -j"#
     );
 
     // The value half, which the field-name sentence used to misdiagnose: a URL's own
     // query string is the plausible way to type this by accident (RV-034 F-1).
     assert_eq!(
         refused("url=a=b").to_string(),
-        r#"cannot read "url=a=b": it carries two =, so q cannot tell the field from the value; use smut query"#
+        r#"cannot read "url=a=b": it carries two =, so the short form cannot tell the field from the value; use -j"#
     );
 }
 
@@ -530,7 +547,7 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
     for (line, sentence) in [
         (
             "status~a=b",
-            r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#,
+            r#"cannot read "status~a=b": it carries both ~ and =; use -j for the same predicate as JSON"#,
         ),
         (
             "=open",
@@ -542,16 +559,13 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
         ),
         (
             "status!=a,b",
-            r#"cannot read "status!=a,b": a comma list means one of them, which != cannot express; write two conditions or use smut query"#,
+            r#"cannot read "status!=a,b": a comma list means one of them, which != cannot express; write two conditions or use -j"#,
         ),
         (
             "status=open status=resolved",
             "field status cannot be satisfied: $eq is given two different values",
         ),
-        (
-            r#"{"where":{"status":"open"}}"#,
-            "q takes field=value tokens, not a JSON specification; use smut query for a JSON spec",
-        ),
+        (r#"{"where":{"status":"open"}}"#, JSON_OPERAND_SENTENCE),
         (
             "--limit all",
             "the limit is a positive number and has no unlimited spelling; use smut get to read everything",
@@ -570,11 +584,11 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
         ),
         (
             "status!=a status!=b",
-            r#"cannot read "status!=a status!=b": q carries one != per field; use smut query"#,
+            r#"cannot read "status!=a status!=b": the short form carries one != per field; use -j"#,
         ),
         (
             "title~a title~b",
-            r#"cannot read "title~a title~b": q carries one ~ per field; use smut query"#,
+            r#"cannot read "title~a title~b": the short form carries one ~ per field; use -j"#,
         ),
         (
             "--has status --missing status",
@@ -594,11 +608,11 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
         ),
         (
             "a=b=c",
-            r#"cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query"#,
+            r#"cannot read "a=b=c": it carries two =, so the short form cannot tell the field from the value; use -j"#,
         ),
         (
             "title~a,b",
-            r#"cannot read "title~a,b": a comma list means one of them, which ~ cannot express; write two conditions or use smut query"#,
+            r#"cannot read "title~a,b": a comma list means one of them, which ~ cannot express; write two conditions or use -j"#,
         ),
         (
             "--follow=",

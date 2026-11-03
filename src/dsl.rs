@@ -1,5 +1,5 @@
-//! `smut q`'s compiler: one argument line of words, and the specification object
-//! it denotes.
+//! The short form's compiler: one argument line of words, and the specification
+//! object it denotes. The human verbs share it.
 //!
 //! This is a front-end, not a second engine. It emits the object [`crate::spec`]
 //! already reads and lets that read it, so "the short form adds no semantics" is
@@ -316,17 +316,14 @@ fn ambiguous(token: &str, found: &[(usize, &'static str, &'static str)]) -> Reje
         unreadable(
             token,
             format!(
-                "it carries two {first}, so q cannot tell the field from the value; \
-                 use smut query"
+                "it carries two {first}, so the short form cannot tell the field from \
+                 the value; use -j"
             ),
         )
     } else {
         unreadable(
             token,
-            format!(
-                "it carries both {first} and {second}; use smut query for the same predicate \
-                 as JSON"
-            ),
+            format!("it carries both {first} and {second}; use -j for the same predicate as JSON"),
         )
     }
 }
@@ -503,7 +500,7 @@ impl Where {
                     token,
                     format!(
                         "a comma list means one of them, which {spelling} cannot express; \
-                         write two conditions or use smut query"
+                         write two conditions or use -j"
                     ),
                 ));
             }
@@ -578,7 +575,7 @@ impl Where {
             }),
             None => Err(unreadable(
                 format!("{} {}", previous.spelled, condition.spelled),
-                format!("q carries one {spelling} per field; use smut query"),
+                format!("the short form carries one {spelling} per field; use -j"),
             )),
         }
     }
