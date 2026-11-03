@@ -1179,6 +1179,27 @@ reconcile. All verified by diff inspection, not by the handback.
   (owned by SL-010) and EX-5's "`.config/smut` is joined nowhere else" (`user_root`'s home
   fallback must join it). Both went to reconcile rather than being repaired in code.
 
+### Seat preflight — observed at `1b409c9` (PHASE-05 charter, 2026-11-02)
+
+- **Baseline gate is green.** `just check` exits 0 at `1b409c9` with zero warnings and 34
+  green result lines: 447 default lib tests and 460 under `--features fault-injection`, every
+  other target green. A red gate from here is a regression.
+- **The index is ours alone.** `git status --porcelain` carries two paths that are not this
+  slice's: `M .doctrine/backlog/improvement/021/backlog-021.md` and an untracked `_envrc`. The
+  earlier writer's staged `README.md` and IDE-006 backlog files are no longer staged. Commits
+  stay path-limited with a pathspec; no `add -A`, no amend, no reset.
+- **`verify-vt` at handover:** PHASE-01..04 PASS; PHASE-05's VT-1 and VT-2 FAIL only because
+  their pinned test names do not exist yet. Nothing unattributable.
+- **Lifecycle and sheets:** `started`, 4/5. `.doctrine/state/slice/008/phases/phase-05.toml`
+  reads `planned` and `phase-05.md` is the empty skeleton, so the charter's first act is
+  `/phase-plan` over it. The seat does not pre-flip the phase — the sub-orchestrator owns the
+  `in_progress` and `completed` transitions.
+- **Review cadence:** PHASE-05 is the discretionary one and it is skipped, per § Review cadence
+  and the handover: small, mechanical, its trap pinned by a named test, and the audit's
+  pre-close review covers the accumulated delta anyway.
+- **Model posture unchanged:** children inherit the seat's `llm-gateway/deepseek-flash`,
+  thinking high. No operator pin was requested for this phase.
+
 ## Autonomy log
 
 - **PHASE-03 attempt 2 — the gap attempt 1 died carrying, stated in full and ruled.** Two
