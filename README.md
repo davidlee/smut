@@ -210,7 +210,15 @@ $ smut q title~design --select smut_id,title
 {"dangling":[],"missing":[],"objects":[{"smut_id":"q-query","title":"Query design"}],"truncated":false,"truncation_reasons":[]}
 $ smut q type=question,decision --select smut_id,type
 {"dangling":[],"missing":[],"objects":[{"smut_id":"d-escape","type":"decision"},{"smut_id":"q-limit","type":"question"},{"smut_id":"q-query","type":"question"}],"truncated":false,"truncation_reasons":[]}
+$ smut r q-query --select title,body
+## Query design
+
+Keep selection small.
 ```
+
+`smut r` takes the same line, with render's display flags beside it when you want
+them, and prints the Markdown `smut render` would print for the specification
+that line denotes.
 
 The direction is the token you read first, and it is the footgun the guide warns
 about. Same root, same field, opposite direction:
@@ -260,7 +268,7 @@ Worth knowing, once each:
   typo is silent; a filter that matches nothing is a legal way to probe a store.
 - The rest of the short surface — `--select`, `--order`, `--limit`, `--has`,
   `--missing`, `--edges`, `--from=ID` — and every refusal it can raise are in
-  `smut learn`, which prints all twelve flags and the five token shapes in one
+  `smut learn`, which prints every flag and the five token shapes in one
   place.
 
 ## Commands
@@ -271,15 +279,18 @@ Worth knowing, once each:
 | `smut get <ID>...` | fetch entities by `smut_id`, in the order given, with no limit |
 | `smut delete <ID>...` | remove entities in one batch; incoming references are left untouched |
 | `smut query [JSON]` | select entities with a query specification |
-| `smut q [TOKEN]...` | the same selection as a line of words: bare roots and `field=value` filters, with `--flags` for everything else |
+| `smut q [TOKEN]... [-j\|--json JSON]` | the same selection as a line of words: bare roots and `field=value` filters, with `--flags` for everything else |
 | `smut render [JSON]` | the same selection, printed as Markdown |
+| `smut r [TOKEN]...` | the same line of words, printed as Markdown (with render's display flags) |
 | `smut conventions [NAME] [-f\|--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
 
 `declare`, `query` and `render` take one JSON argument or one complete JSON value
 on stdin, when the argument is absent or is `-`. With no argument and a terminal
 attached you get usage instead of a silent wait. Trailing input after the JSON
-value is refused, and so is a duplicate key inside one object.
+value is refused, and so is a duplicate key inside one object. `q` and `r` take
+the same JSON after `-j`, `-` included, in place of their words. `q` or `r` with
+no words answers every entity, capped at 100, rather than waiting or refusing.
 
 The specification keys are `from`, `where`, `select`, `order`, `limit`,
 `follow`, `backlinks`, `depth`, `budget` and `edges`. `smut q` compiles its
