@@ -20,8 +20,9 @@ PHASE-04  guide + README           ── every printed line is a command that w
 **PHASE-01 — two shared structs, and `-j` on `q`.** The refactor and the new
 flag are one phase because `-j` lives on `SelectionArgs` and has nowhere to go
 until the struct exists — but they are two commits. The refactor lands first,
-under the existing suite unedited, so a behaviour change cannot hide inside a
-field move (VA-1 reads that commit alone). `-j` is then proved on `q` against
+under the existing suite unedited (after a preparatory commit that adds the two
+durable help pins EX-1 names), so a behaviour change cannot hide inside a field
+move (VA-1 reads that commit alone). `-j` is then proved on `q` against
 `query`, the verb whose output is already pinned, before a second verb
 multiplies the cases. `JsonBesideSelection` is born here because `specification`
 cannot be written without it.
@@ -52,10 +53,10 @@ The equivalence spine is split by where its evidence lives: CLI-level rows
 
 | phase | what the work is like | model requirement |
 | --- | --- | --- |
-| PHASE-01 | clap struct move under green, then one flag and one refusal | careful adherence — the refactor must change nothing; DEC-037's positional must survive the flatten |
+| PHASE-01 | clap struct move under a green suite, then one flag and one refusal | sustained frontier reasoning for the refactor commit, plus strict adherence for the field move: the flattened-struct failure modes — the parent's `about` text, the positional's behaviour — are pinned only by the two assertions EX-1 adds, so a competent shortcut can go green and still ship changed help |
 | PHASE-02 | five sentences and their pins | sustained judgement — the truth reading (VA-1) is the work; the edits are trivial |
-| PHASE-03 | one arm, many end-to-end proofs | careful adherence — the proofs are tables; the discriminating help and store checks are where a hurried pass goes vacuous |
-| PHASE-04 | prose, constants, a render runner, README | careful adherence — many pins move together; the complete-surface clause must not |
+| PHASE-03 | one arm, many end-to-end proofs | careful adherence — the proofs are tables; the discriminating help and store checks are where a hurried pass goes vacuous; the two places a test passes for the wrong reason are the ordering (display flags validated before the selection) and the `-l` shadowing rows (`r -l --ids`, `r -l -j 3`) |
+| PHASE-04 | prose, constants, a render runner, README | careful adherence — many pins move together; the complete-surface clause must not — plus prose judgement (the VA-1 reading: nothing taught that the CLI refuses), landed as three commits (constants and fixture runners; guide prose; README) so a red pin cannot be mistaken for a red behaviour |
 
 ## Notes
 
@@ -72,29 +73,47 @@ The equivalence spine is split by where its evidence lives: CLI-level rows
 - **§ Verification, "the other two hot paths".** `src/learn.rs`'s five hot paths
   minus the two already twinned (`IDS status=open --ids`, the traverse line)
   leave three, not two. PHASE-04/EX-5 covers all three.
+- **§ Refusals, "two name `q` as the subject".** Three sentences do —
+  `src/dsl.rs:319` (`so q cannot tell the field from the value`),
+  `src/dsl.rs:581` (`q carries one {spelling} per field`) and `src/error.rs:387`
+  (`q takes field=value tokens…`). All five rows are already PHASE-02/EX-1, EX-2
+  and their pins, so no criterion changes; owed: correct the count in the design
+  at reconcile, since it is the sentence a reader would use to decide which rows
+  need a subject change.
+- **§ Verification, the stated divergences "both asserted".** The design does not
+  say where the terminal half can be asserted: the contract harness always pipes
+  stdin (`tests/cli_contract.rs:96-124`), so `MissingInput` is unreachable from a
+  spawned command and only `parse_with(…, terminal: true)` in `src/cli.rs` can
+  observe it. PHASE-03/EX-5 splits the two seams and VT-3/VT-5 name both files.
+  Owed: name the seam in the design.
 
 ### Test-design notes carried into the phases
 
 - The existing help-list tests assert `text.contains(named)`; for `r` that is
   vacuous. PHASE-03/EX-6 requires a line-anchored match.
 - `!has_store()` alone is non-discriminating (IMP-015); PHASE-03/EX-3 pairs it
-  with a `declare` in the same scratch directory, as SL-010 did.
+  with a `declare` in the same scratch directory, as SL-010 did — which shows the
+  scratch admits a store but leaves IMP-015 open, because the ordering claim
+  rests on the exit 2 each row asserts.
 
 ### Reconcile obligations
 
 As design § Reconcile obligations: amend DEC-034, DEC-008, DEC-039, DEC-040 via
-`doctrine knowledge edit decision`, comma-free arrays; plus the spine correction
+`doctrine knowledge edit decision`, comma-free arrays; plus the corrections
 above.
 
 ### Risks and mitigations (critical pass, 2026-11-03)
 
 | risk | evidence / inference | mitigation |
 | --- | --- | --- |
-| A doc comment on a flattened `clap::Args` struct leaks into the parent command's help | inference: a known clap-derive behaviour class; the design's probe checked parsing and the `q` usage line, not the `about` text | PHASE-01/EX-1: three help captures byte-identical across the refactor |
+| A doc comment on a flattened `clap::Args` struct leaks into the parent command's help | inference: a known clap-derive behaviour class; the design's probe checked parsing and the `q` usage line, not the `about` text | PHASE-01/EX-1: three help captures byte-identical across the refactor, plus durable pins — the `about` line in `src/cli.rs`'s help test, `render`'s usage line beside `q`'s |
 | The refactor hides a behaviour change | inference | refactor is its own commit, suite unedited, read alone (PHASE-01/VA-1) |
-| A concurrent change (uncommitted 0.3.0 bump, observed at plan time) reddens the gate | evidence: `git status` | PHASE-01/EN-3: never commit or revert it; stop and ask if it reddens the gate |
+| The gate is red before the slice starts, on the version pin | fact, not inference: `tests/cli_contract.rs:547` asserts `smut 0.2.2`, `Cargo.toml:3` reads `0.3.0`, and `Cargo.lock`'s `smut` entry moved with it, so `help_and_version_exit_zero_and_touch_no_store` fails now | PHASE-01/EN-3: the operator decides before PHASE-01 — move the pin with the bump as CHR-004 did, or record a known-red baseline for that one test — and it is settled before PHASE-03, which edits the same file |
+| Foreign work in the tree is disturbed | fact: `git status` shows `Cargo.toml`, `Cargo.lock` and `flake.nix` (a whitespace reformat of the `packages` attrset) already modified | PHASE-01/EN-3: all three neither committed nor reverted by this slice |
+| The render recipe's equivalence row proves nothing | fact: `tests/fixtures/interview/entities.json` carries no `q-query`, so both spellings render only the missing notice and match whatever `r` does | PHASE-04/EX-5: the test declares `q-query` into a fresh scratch first and asserts the output contains `## Query design` |
+| The terminal divergence cannot be asserted where the plan first put it | fact: `run` always pipes the child's stdin (`tests/cli_contract.rs:96-124`), so `MissingInput` is unreachable from a spawned command | PHASE-03/EX-5 and VT-5: the terminal half moves in-process to `src/cli.rs`; the pipe-reachable rows stay in `tests/cli_contract.rs` |
 | `r` reads stdin when it has no words | inference: `render`'s arm does exactly that | PHASE-03/EX-2's empty row pipes a spec that must be ignored |
-| A help or store assertion passes vacuously | evidence: existing `contains(named)` list; IMP-015 | PHASE-03/EX-6 line-anchored; EX-3 paired `declare` |
+| A help or store assertion passes vacuously | evidence: existing `contains(named)` list; IMP-015 | PHASE-03/EX-6 line-anchored; EX-3's paired `declare` shows the scratch admits a store, and the ordering claim rests on the exit 2 |
 
 Checked and clear: no `alias` or `-j` letter exists in `src/cli.rs`; clap is
 4.6.7 in `Cargo.lock`, the version the design's probe used.
