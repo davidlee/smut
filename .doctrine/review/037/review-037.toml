@@ -1,0 +1,365 @@
+id    = 37
+slug  = "audit-of-sl-011-the-verb-r-j-on-q-and-r-the-j-refusal-pointers-and-the-guidereadme-conformance-and"
+title = "Audit of SL-011 — the verb r, -j on q and r, the -j refusal pointers, and the guide/README, conformance and reconciliation against the locked design and plan C1–C6"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "auditor"
+responder = "author"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = """
+Examined SL-011 at ef76f19 against design.md (locked), plan.toml PHASE-01..04 criteria, plan.md C1-C6, and the decisions it cites (DEC-008/034/035/036/037/039/040/042-045). Evidence: the source-delta registry span by span with git log; slice conformance 11 (9/0/0); git diff 046b360 over tests/compatibility.rs and design's unchanged list (empty); just check exit 0; doctrine check gate exit 0; slice verify-vt 11 14/14 PASS; the full src/ and README diffs read; the new tests read for vacuity; ~25 probes of the built binary (r/q/-j/hyphen-led words/JsonOperand/display-flag ordering/query and render -j); the guide and README read for sentences false of r or -j; every knowledge record quoting smut query as an escape; the autonomy log's decided lines; a scratch clap 4.6.7 probe of the doc-comment leak.
+"""
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-011"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "nit"
+title = "The source-delta registry spans exactly the slice's commits, and conformance reads 9/0/0"
+detail = """
+Expected: each recorded phase boundary spans only that phase's commits (RV-034 F-7's class: a boundary that imports foreign commits makes the undeclared cell lie), and conformance is read against a registry checked first.
+
+Observed (`.doctrine/state/slice/011/boundaries.toml`, each range listed with `git log`):
+- PHASE-01 `1ddf284..0c37d52` = `9a54c97`, `7c255e2`, `0c37d52`.
+- PHASE-02 `2603891..f0240d3` = `f0240d3`.
+- PHASE-03 `8076140..1fc3c24` = `1fc3c24` (`8076140` is `1fc3c24^`, so this is `--commit 1fc3c24`, as notes say).
+- PHASE-04 `bb8a05b..5aae61c` = `738fec3`, `9c5a2dc`, `5aae61c`.
+Foreign commits in `046b360..HEAD` sit outside every span: `a894e5c` (tests/conventions.rs, STD-003 portability), `9d888fe` (STD-003), `c30398d` (operator's observation record), `ef76f19` (operator's skills install, .gitignore/.mcp.json/CLAUDE.md). The notes-only commits (`c3d244a`, `1ddf284`, `2603891`, `8076140`, `bb8a05b`, `be1c2d1`) touch only `.doctrine/`.
+
+`doctrine slice conformance 11`: undeclared 0, undelivered 0, conformant 9 — every design-target selector (`src/cli.rs`, `src/dsl.rs`, `src/error.rs`, `src/learn.rs`, `src/main.rs`, `README.md`, `tests/cli_contract.rs`, `tests/dsl.rs`, `tests/fixture.rs`) matched, and nothing outside them was touched inside a span. Design § Code impact's unchanged list (`src/spec.rs`, `src/predicate.rs`, `src/select.rs`, `src/render_markdown.rs`, `src/input.rs`, `docs/store-format.md`, `tests/compatibility.rs`) has no diff since `046b360`.
+"""
+disposition = "aligned"
+response = """
+Confirmed. The registry was recorded as the phases landed and each span is exact; the foreign and notes-only commits are outside every span, so the 9/0/0 reading is a reading of the slice and nothing else. RV-034 F-7's failure did not recur. No selector change is owed: the nine design-target selectors are exactly the touched set.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = """
+Confirmed. The registry was recorded as the phases landed and each span is exact; the foreign and notes-only commits are outside every span, so the 9/0/0 reading is a reading of the slice and nothing else. RV-034 F-7's failure did not recur. No selector change is owed: the nine design-target selectors are exactly the touched set.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted; spans re-read with git log, conformance re-run.
+"""
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "major"
+title = "README says a hyphen-led id without -- is a usage error; on r it is a silent different query, on q a JSON refusal"
+detail = """
+Expected: every sentence the README prints is true of the verbs it now teaches (PHASE-04/VA-1: "none it refuses is shown"; the RV-031 F-2 / RV-034 class — a sentence true of the case it was written for, generalised to cases where it is false).
+
+Observed: README.md:476-478, "**`--` reaches an opaque id.** Ids are opaque, case-sensitive strings and may begin with a hyphen, so `smut get -- -weird-id` names that id. Without `--` it is a usage error."
+
+On the built binary (store holding `-title`, `-jane`, `q-query`):
+- `smut r -title` → exit 0, three entities rendered by identity: clap reads `-t itle`, the heading field `itle`, no tokens, so the line is `{}` (plan C6, pinned by `r_reaches_ids_the_short_form_cannot_carry_bare`).
+- `smut r -site` → exit 0, every entity with fields shown: `-s -i -t e`.
+- `smut q -jane` / `smut r -jane` → exit 2, `smut: malformed JSON: expected value at line 1 column 1` — `-j ane`; not a usage error and no `--` tip.
+- `smut q -weird` → still clap's usage error with `tip: ... use '-- -w'` (the sentence's original case).
+
+`r` is the first verb whose positional *is* an id, so the README now teaches a verb for which its own opaque-id sentence leads a reader to a silent wrong answer — the exact failure DEC-037's rationale calls the danger ("not failure but silence"). The guide is right (src/learn.rs:159-161 "On r, a hyphen-led id always goes after --"; Opaque ids "nothing else does"); the README is not.
+
+The autonomy log's PHASE-04 line "README omits the `r` hyphen rule · EX-6 permits one step and does not list the rule; guide carries it · decided" rests on the omission being harmless. It is not an omission: the README states the opposite. EX-6 is satisfied as written; design § The guide and the README scoped the README edit to the commands table and operand paragraph and did not see this bullet.
+"""
+disposition = "design-wrong"
+response = """
+Confirmed, and the design owns the gap: design § The guide and the README scoped the README to the commands table and the operand paragraph, and nobody re-read README's opaque-id bullet against a verb whose positional is an id. The autonomy log's "omits the r hyphen rule" decision is withdrawn by this finding — the README does not omit the rule, it states its opposite.
+
+Reconcile pays, in this order (one wording, authored once):
+1. design § The guide and the README gains a README bullet: the opaque-id sentence ("Without `--` it is a usage error") is narrowed — `--` is how a hyphen-led id is reached on every verb; on `r` a word such as `-title` is read as display flags without an error, and on `q`/`r` a `-j…` word is read as `-j`'s value.
+2. README.md:476-478 mirrors that sentence (the guide's src/learn.rs:159-161 wording is the model; do not invent a third voice).
+
+Constraint on the replacement: true of `get`, `delete`, `q` and `r` alike; it may not say "usage error" of a case that exits 0 or answers with a JSON refusal. No test pins README:476-478 (README harness runs only console blocks), so no pin moves; `just check` must stay green.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed, and the design owns the gap: design § The guide and the README scoped the README to the commands table and the operand paragraph, and nobody re-read README's opaque-id bullet against a verb whose positional is an id. The autonomy log's "omits the r hyphen rule" decision is withdrawn by this finding — the README does not omit the rule, it states its opposite.
+
+Reconcile pays, in this order (one wording, authored once):
+1. design § The guide and the README gains a README bullet: the opaque-id sentence ("Without `--` it is a usage error") is narrowed — `--` is how a hyphen-led id is reached on every verb; on `r` a word such as `-title` is read as display flags without an error, and on `q`/`r` a `-j…` word is read as `-j`'s value.
+2. README.md:476-478 mirrors that sentence (the guide's src/learn.rs:159-161 wording is the model; do not invent a third voice).
+
+Constraint on the replacement: true of `get`, `delete`, `q` and `r` alike; it may not say "usage error" of a case that exits 0 or answers with a JSON refusal. No test pins README:476-478 (README harness runs only console blocks), so no pin moves; `just check` must stay green.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted. Brief carries the design § The guide and the README bullet and the README.md:476-478 mirror, design first; the constraint (true of get, delete, q and r) is what reconcile is held to.
+"""
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "Plan C6 understates the hyphen-led-word behaviour on both verbs, and no decision record owns the silent misparse it accepts"
+detail = """
+Expected: C6, the correction design.md owes for hyphen-led words, describes every shape a reader can hit, and an accepted silent misparse has a decision record (DEC-037's rationale names silence as the danger this corner must avoid).
+
+Observed (built binary):
+1. C6 says "a hyphen-led word starting with a display letter is silently a flag: `-title` is `-t itle`". The silent set is wider: any word clap reads as a cluster of `-s`/`-i` ending optionally in `-t<value>`, e.g. `smut r -site` = `-s -i -t e`, exit 0. Words led by `-f`/`-l` are refused loudly (unknown format / invalid level), so the silent letters are exactly `-s`, `-i`, `-t`.
+2. C6 says on `q` "-j… words are read as -j's value, refused loudly unless valid JSON". The refusal is `smut: malformed JSON: expected value at line 1 column 1` (same on `r`): it names neither the word the caller typed, nor `-j`, nor `--` — not DEC-030's voice. Before this slice `q -jane` was clap's error with the `-- -j` tip (DEC-037's "-weird-id stays the error that teaches --", src/cli.rs:243-244 comment).
+
+Neither is a code defect to fix here: PHASE-01/EX-5 requires a bad `-j` value to get `query`'s own message for the same operand, and recognising the word would need argv inspection, which DEC-037 rejects; DEC-008/IMP-007 keep the display letters. The guide covers both (short form: "On r, a hyphen-led id always goes after --"; Opaque ids: "-- ... reaches that id and nothing else does").
+
+Governance gap: C6 lives only in plan.md. DEC-037 records that the bare positional keeps `-weird-id` an error that teaches `--` (its alternatives table: `allow_hyphen_values` "makes -weird-id legal, deleting the guard -- exists for"); that guard is now narrowed on `q` (`-j…`) and on `r` (`-j…`, and silently `-s`/`-i`/`-t…`). DEC-043 (the flatten that put the display letters beside the positional) lists its consequences without this one. Design § Reconcile obligations does not name either record.
+"""
+disposition = "design-wrong"
+response = """
+Confirmed on both counts. Behaviour is accepted as built — EX-5 binds a bad `-j` value to `query`'s message, DEC-037 rejects argv inspection, DEC-008/IMP-007 keep the letters — and the guide's two rules cover every shape. What is wrong is the record of it.
+
+Reconcile pays:
+1. design.md C6 (the § The command line / R2 amendment) states the whole behaviour: on `r`, a hyphen-led word that clap reads as a cluster of `-s`/`-i` optionally ending in `-t<value>` (`-title`, `-site`) is silently display flags, exit 0, and `-f…`/`-l…` words are refused as a format or level; on `q` and `r`, a `-j…` word is `-j`'s value and, unless it is JSON, is refused with the JSON reader's message (`malformed JSON: …`), which names neither the word nor `--`. The rescue on every verb is `--`.
+2. DEC-037 amended (REV / knowledge edit): the bare positional's `-weird-id` guard is clap's, and holds only for words led by a letter the verb does not own — narrowed on `q` by `-j` and on `r` by `-j` and the display letters (SL-011, plan C6).
+3. DEC-043 consequences gain the same clause (the flatten put the display letters beside the id positional; a silent `-t`/`-s`/`-i` read is the accepted cost, taught by the guide).
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed on both counts. Behaviour is accepted as built — EX-5 binds a bad `-j` value to `query`'s message, DEC-037 rejects argv inspection, DEC-008/IMP-007 keep the letters — and the guide's two rules cover every shape. What is wrong is the record of it.
+
+Reconcile pays:
+1. design.md C6 (the § The command line / R2 amendment) states the whole behaviour: on `r`, a hyphen-led word that clap reads as a cluster of `-s`/`-i` optionally ending in `-t<value>` (`-title`, `-site`) is silently display flags, exit 0, and `-f…`/`-l…` words are refused as a format or level; on `q` and `r`, a `-j…` word is `-j`'s value and, unless it is JSON, is refused with the JSON reader's message (`malformed JSON: …`), which names neither the word nor `--`. The rescue on every verb is `--`.
+2. DEC-037 amended (REV / knowledge edit): the bare positional's `-weird-id` guard is clap's, and holds only for words led by a letter the verb does not own — narrowed on `q` by `-j` and on `r` by `-j` and the display letters (SL-011, plan C6).
+3. DEC-043 consequences gain the same clause (the flatten put the display letters beside the id positional; a silent `-t`/`-s`/`-i` read is the accepted cost, taught by the guide).
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted. Brief carries C6 extended, DEC-037 and DEC-043; behaviour stays as built.
+"""
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = "The reconcile obligations list four records; DEC-035, DEC-036 and DEC-040's escape sentence also became false"
+detail = """
+Expected: design § Reconcile obligations (and notes § Reconcile obligations, which copies it) names every governance record a sentence of which this slice made false — DEC-045's consequence "re-read each changed sentence for a cause it cannot establish" applies to the records as much as to the code.
+
+Observed — the four listed are real (verified against `doctrine knowledge show`):
+- DEC-034 choice: "`q` is the only human front-end and has no alias" — false, `r` exists.
+- DEC-008 choice: "one JSON operand with - for stdin" — `-j` on `q`/`r` is a second carrier.
+- DEC-039 choice: "points at `smut query` where the DSL cannot express the request" — the refusals now point at `-j` (src/dsl.rs:319,326,503,578; src/error.rs:392).
+- DEC-040: the division of labour names `q` and `query` only.
+
+Not listed, and equally false now:
+- DEC-035 choice: "`--ids` for the identity projection, `--from=ID` for a root, `smut query` for exactness"; body (record-035.md:26) "`--ids`, `--from=ID` and `smut query` are the three ways out". The guide now names `-j` as the third escape (src/learn.rs:154 "--ids, --from=ID and -j are the escapes"; pin src/learn.rs:963).
+- DEC-036 consequence: a field name containing `=`/`~`/`,` and a value containing a comma "refuse toward `smut query`"; body (record-036.md:19) "They refuse, naming `smut query`". They now name `-j`.
+- DEC-040 body (record-040.md:16): value typing "names its three escapes: `--ids`, `--from=ID`, `smut query`" — the listed DEC-040 amendment ("adds `r` and `-j`") does not say this sentence changes.
+
+Plus DEC-037/DEC-043 (F-3). Nothing here routes to the backlog: each is a governance record that no longer tells the truth.
+"""
+disposition = "design-wrong"
+response = """
+Confirmed. The obligations table checked the records its own design named and did not sweep the records that quote the escape it changed. Each unlisted sentence names `smut query` as the place a refusal or wart sends the reader; the guide and the refusals now say `-j`. `smut query` is still a valid escape — the amendments add `-j` (the escape on the human verb), they do not make `smut query` wrong.
+
+Reconcile carries seven governance amendments, not four, by `doctrine knowledge edit decision` with comma-free arrays (`mem.fact.doctrine.knowledge-facet-array-comma-splitting`):
+- DEC-034, DEC-008, DEC-039, DEC-040 — as design § Reconcile obligations lists; DEC-040's amendment also rewrites the body's "three escapes: --ids, --from=ID, smut query".
+- DEC-035 — choice and body: the exactness escape is `-j` (or `smut query`).
+- DEC-036 — consequence and body: refusals name `-j`.
+- DEC-037 and DEC-043 — per F-3.
+The design's § Reconcile obligations table is amended to list all of them, so canon records what reconcile wrote.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed. The obligations table checked the records its own design named and did not sweep the records that quote the escape it changed. Each unlisted sentence names `smut query` as the place a refusal or wart sends the reader; the guide and the refusals now say `-j`. `smut query` is still a valid escape — the amendments add `-j` (the escape on the human verb), they do not make `smut query` wrong.
+
+Reconcile carries seven governance amendments, not four, by `doctrine knowledge edit decision` with comma-free arrays (`mem.fact.doctrine.knowledge-facet-array-comma-splitting`):
+- DEC-034, DEC-008, DEC-039, DEC-040 — as design § Reconcile obligations lists; DEC-040's amendment also rewrites the body's "three escapes: --ids, --from=ID, smut query".
+- DEC-035 — choice and body: the exactness escape is `-j` (or `smut query`).
+- DEC-036 — consequence and body: refusals name `-j`.
+- DEC-037 and DEC-043 — per F-3.
+The design's § Reconcile obligations table is amended to list all of them, so canon records what reconcile wrote.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted. Brief lists eight DEC amendments and the design table update.
+"""
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "Code prose written before r landed still describes one verb, and one comment is now false"
+detail = """
+Expected: doc and code comments true at HEAD (design § Code impact: `src/dsl.rs` "module doc mentions `r`"). PHASE-01/02 wrote these before `r` existed — correctly, for their phase (PHASE-02/EX-1 forbade naming `r` early) — and PHASE-03 did not revisit them.
+
+Observed at HEAD:
+- src/cli.rs:237 `// The selection line q shares: tokens, q's flags, and -j` — `r` shares it.
+- src/cli.rs:288 `// The display flags render shares` — `r` shares them.
+- src/cli.rs:441-442 `SelectionArgs::specification` doc: "q's contribution to step 1" — it is `r`'s too.
+- src/cli.rs:244-245, the positional's comment: "`-weird-id` stays the error that teaches `--` (DEC-037)" — now false for `-j…` words on both verbs and for `-s`/`-i`/`-t…` words on `r` (F-3).
+- src/error.rs:108 `UnreadableToken` "A `smut q` token …" and :119 "A `smut q` flag that takes a number …" — both variants reach `r` through the same `compile`.
+- src/dsl.rs:1-2 module doc says "The human verbs share it" and does not name `r`, which design § Code impact asks for and PHASE-03 made true.
+
+No behaviour is affected; every one is a comment or doc comment (none reaches `--help`: the variant doc comments do, and they are correct).
+"""
+disposition = "fix-now"
+response = """
+Confirmed: six comment/doc sites, no behaviour. Fix-now, not follow-up — they are this slice's own prose, small, and one (src/cli.rs:244-245) is false.
+
+Not paid in the audit: the audit seat was instructed not to edit source. Owed in the reconcile pass beside F-2's README mirror, after F-3's C6 design sentence exists, because the :244-245 comment must copy that sentence rather than invent a second voice:
+- src/cli.rs:237 and :288 — "q and r share" / "render and r share".
+- src/cli.rs:441-442 — "q's and r's contribution to step 1" (or verb-blind).
+- src/cli.rs:244-245 — the `-weird-id` clause narrowed per F-3.
+- src/error.rs:108, :119 — "A short-form token/flag".
+- src/dsl.rs:1-2 — the module doc names `q` and `r`.
+Then `just check`. The operator rules whether reconcile pays code-comment mirrors (RV-034's precedent: it did).
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed: six comment/doc sites, no behaviour. Fix-now, not follow-up — they are this slice's own prose, small, and one (src/cli.rs:244-245) is false.
+
+Not paid in the audit: the audit seat was instructed not to edit source. Owed in the reconcile pass beside F-2's README mirror, after F-3's C6 design sentence exists, because the :244-245 comment must copy that sentence rather than invent a second voice:
+- src/cli.rs:237 and :288 — "q and r share" / "render and r share".
+- src/cli.rs:441-442 — "q's and r's contribution to step 1" (or verb-blind).
+- src/cli.rs:244-245 — the `-weird-id` clause narrowed per F-3.
+- src/error.rs:108, :119 — "A short-form token/flag".
+- src/dsl.rs:1-2 — the module doc names `q` and `r`.
+Then `just check`. The operator rules whether reconcile pays code-comment mirrors (RV-034's precedent: it did).
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted as fix-now owed to the reconcile pass (Mirrors section of the brief), pending the operator's ruling that reconcile pays code-comment mirrors; unpaid at audit by instruction.
+"""
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "nit"
+title = "README's commands table shows -j on q's row and not on r's; the guide shows it on both"
+detail = '''
+Expected: the README's commands table and the guide's commands block agree on which verbs take `-j` (the guide is normative, DEC-010; the README mirrors it, design § The guide and the README).
+
+Observed: README.md:282 `smut q [TOKEN]... [-j\|--json JSON]`; README.md:284 `smut r [TOKEN]...` with no `-j`. The guide (src/learn.rs:48-50) shows `[-j|--json JSON]` on both the `q` and `r` rows. The operand paragraph two lines below (README.md:291-292) does say `q` and `r` take `-j`, so nothing is false — a table-only reader would infer `r` has no `-j`.
+
+The implementation follows design § README ("the `q` row notes `-j`") and PHASE-04/EX-6 literally; the asymmetry is the design's.
+'''
+disposition = "design-wrong"
+response = '''
+Confirmed as a design-prose asymmetry; nothing false. Reconcile pays design § The guide and the README ("the `q` and `r` rows note `-j`") and its README mirror: README.md:284 becomes `smut r [TOKEN]... [-j\|--json JSON]`. No README harness pin covers the table. Optional in effect, but cheap and done in the same pass as F-2.
+'''
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = '''
+Confirmed as a design-prose asymmetry; nothing false. Reconcile pays design § The guide and the README ("the `q` and `r` rows note `-j`") and its README mirror: README.md:284 becomes `smut r [TOKEN]... [-j\|--json JSON]`. No README harness pin covers the table. Optional in effect, but cheap and done in the same pass as F-2.
+'''
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted; brief entry exists (design § The guide and the README + README.md:284).
+"""
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "nit"
+title = "The autonomy log's decided claims and plan corrections C1-C5 hold against the tree"
+detail = """
+Expected: each "decided" line in notes § Autonomy log, and each of plan.md C1–C5, is true of the code (C6 is F-3; the README decision is F-2).
+
+Observed:
+- Sonnet's added guide sentence (src/learn.rs:144-145) "-j JSON replaces the words with the whole specification, and is refused beside a token or a selection flag." Probed: `q a -j '{}'`, `r -j '{}' --ids`, `r -s -j '{}' a`, `q --select= -j '{}'` → exit 2 with `JsonBesideSelection`'s sentence; `r -j '{}' -s` → exit 0. True; the next guide paragraph separates selection flags from display flags (`--show-ids`, `--show-fields`), so "selection flag" is defined in place. Pinned only by the guide's own presence — no test asserts it; acceptable, as the behaviour is pinned by `json_beside_a_selection_is_refused_by_name` / `_on_r`.
+- The traversal twin that drops `select` (PHASE-03, tests/cli_contract.rs:2287-2311): both the `r` line and its `render` twin drop it, so the pair still denotes one request; the recipe-level row with `EXAMPLE_TRAVERSE` as printed (with `select:["smut_id"]` / `--ids`) is in tests/fixture.rs `the_traversal_recipes_render_the_same_both_ways`. Design § Verification's spine is met by the two together.
+- `r` after `render` in the verb list, the `R` arm written by the seat, the EX-1 pin commit, the EX-6 parse-level rows: each as recorded (`smut --help` order query, q, render, r; `q_flags_interleave_with_its_tokens` and siblings in src/cli.rs).
+- C1: at `046b360` three sentences named `q` as subject (src/dsl.rs "so q cannot tell…", "q carries one {spelling}…", src/error.rs "q takes field=value tokens…") — real. C2: tests/fixture.rs `the_filter_recipe_renders_the_same_set_both_ways` compares sets and pins the eight open questions — real. C3: three hot-path rows in `the_other_hot_paths_render_the_same_as_their_json_twins` — real. C4: `r_with_no_words_on_a_terminal_is_the_empty_specification` in src/cli.rs — real. C5: `smut query -j '{}'` / `smut render -j '{}'` → clap `unexpected argument '-j' found`, exit 2 — real.
+- `doctrine slice verify-vt 11`: all 14 VT criteria PASS.
+"""
+disposition = "aligned"
+response = """
+Confirmed: every decided line except the README one (F-2) and every correction C1–C5 stands as recorded. The Sonnet sentence is in scope (design § The guide asks for `-j` to be taught on both verbs) and true; the traversal twin is a consistent pair, and the printed recipe is executed elsewhere. C1–C6 remain owed to design.md at reconcile as plan.md says; this finding confirms C1–C5 need no change of substance, and F-3 extends C6.
+"""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = """
+Confirmed: every decided line except the README one (F-2) and every correction C1–C5 stands as recorded. The Sonnet sentence is in scope (design § The guide asks for `-j` to be taught on both verbs) and true; the traversal twin is a consistent pair, and the printed recipe is executed elsewhere. C1–C6 remain owed to design.md at reconcile as plan.md says; this finding confirms C1–C5 need no change of substance, and F-3 extends C6.
+"""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = """
+Accepted.
+"""
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

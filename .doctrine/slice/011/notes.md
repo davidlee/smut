@@ -6,13 +6,22 @@ disposable phase sheet (`.doctrine/state/.../phase-NN.md`) that must survive
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
+fresh-as-of: 2026-11-03 · audit (RV-037 concluded) · ef76f19
 
 ### Produced
 
+- PHASE-01..04 — `-j` on `q`, `JsonBesideSelection`, the `-j` escape pointers, the verb `r`, guide and README (commits `9a54c97`..`5aae61c`; registry exact, RV-037 F-1)
+- RV-037 — audit ledger: seven findings, synthesis, reconciliation brief
+
 ### Learned
 
+- mem.fact.clap.flatten-doc-comment-fills-undocumented-variant — a flattened struct's `///` leaks only into a variant without its own doc
+- mem.pattern.smut.refusal-pins-hold-shape-not-truth — re-confirmed one layer out (README, records, comments: RV-037 F-2..F-5)
+
 ### Open
+
+- RV-037 brief — eight DEC amendments (DEC-034, 008, 039, 040, 035, 036, 037, 043), design C1–C6 with C6 extended, README and comment mirrors
+- IMP-014, IMP-015, IMP-016 — touched and named, not paid
 
 ## Design review passes
 
@@ -146,3 +155,31 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
 - PHASE-04 · guide prose and pins delegated to Sonnet (general-purpose, model override) rather than pi · criteria-literal prose with moving and frozen pins; provider 503s on pi · decided
 - PHASE-04 · Sonnet added one guide sentence beyond the brief ("-j JSON replaces the words with the whole specification, and is refused beside a token or a selection flag") · true by probe, keeps scope · decided
 - PHASE-04 · README `smut r` step placed in the `~`/comma-list block of "Querying, quickly"; README omits the `r` hyphen rule · EX-6 permits one step and does not list the rule; guide carries it · decided
+
+## Audit — RV-037 (2026-11-03)
+
+Ledger `.doctrine/review/037/`: seven findings, all verified; `## Synthesis` and
+`## Reconciliation Brief` in `review-037.md`. Surface: main worktree at `ef76f19`.
+
+**Verdict.** Behaviour matches design.md as corrected by plan C1–C6; no finding is against
+behaviour. `just check` exit 0, `doctrine check gate` exit 0, `verify-vt 11` 14/14 PASS,
+conformance 9/0/0 over an exact registry, `tests/compatibility.rs` no diff since `046b360`.
+
+| id | sev | disposition | one line |
+| --- | --- | --- | --- |
+| F-1 | nit | aligned | registry spans exact; conformance 9/0/0 |
+| F-2 | major | design-wrong | README:476-478 "without `--` it is a usage error" — false on `r` (`-title` silent) and for `-j…` words |
+| F-3 | minor | design-wrong | C6 understates: `-site` also silent on `r`; `-j…` words get the JSON reader's voice; DEC-037/043 own nothing of it |
+| F-4 | major | design-wrong | obligations miss DEC-035, DEC-036 and DEC-040's escape sentence |
+| F-5 | minor | fix-now | six comments/docs still describe one verb; `src/cli.rs:244-245` now false |
+| F-6 | nit | design-wrong | README table shows `-j` on `q`'s row, not `r`'s |
+| F-7 | nit | aligned | autonomy log's decided lines (bar the README one) and C1–C5 hold |
+
+**Autonomy log, read against the tree.** The Sonnet guide sentence is true by probe; the
+traversal twin is a consistent pair; the "README omits the `r` hyphen rule" decision is
+overturned by F-2 — the README states the opposite.
+
+**For reconcile.** Design prose first, then mirrors copied from it, then records (brief order).
+F-5 and the README mirrors are code/README edits: the operator rules whether reconcile pays
+them, as RV-034's were. `plan.toml` is off-surface.
+

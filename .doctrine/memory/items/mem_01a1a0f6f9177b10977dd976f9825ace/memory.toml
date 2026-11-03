@@ -1,0 +1,46 @@
+memory_uid = "mem_01a1a0f6f9177b10977dd976f9825ace"
+memory_key = "mem.fact.clap.flatten-doc-comment-fills-undocumented-variant"
+schema_version = 1
+memory_type = "fact"
+status = "active"
+title = "A flattened clap::Args struct's doc comment becomes the about of a variant that has none"
+summary = "clap 4.6.7: a /// on a #[command(flatten)] Args struct surfaces as the subcommand's about only when the variant carries no doc comment of its own"
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = ["src/cli.rs"]
+globs = []
+commands = []
+tags = ["clap", "cli", "help"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "ff5fcea9b1ccf9209654042cfc4d01f80aab255b"
+ref_name = "refs/heads/main"
+checkout_state_id = "0f2cf3c9f1a3e56b9d78d61beba959fc974e9a0148fc64040dc76b2f1ed9dd7c"
+base_commit = "ef76f19c20203c19cbcb3925529cc430c2a8d360"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "none"
+weight = 0
+
+[[source]]
+kind = "review"
+ref = "RV-037"
+
