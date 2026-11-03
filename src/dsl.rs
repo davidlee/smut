@@ -34,8 +34,8 @@ pub struct Line<'a> {
 /// shorthands.
 ///
 /// The numeric and enumeration flags arrive as text, so that no numeric refusal is
-/// clap's: `--depth abc` and `--depth=-1` reach the same specification message, and
-/// `--limit all` reaches the front-end's own.
+/// clap's: with a direction present, `--depth abc` and `--depth=-1` reach the same
+/// specification message, and `--limit all` reaches the front-end's own.
 #[derive(Clone, Debug, Default)]
 pub struct Flags {
     /// `--follow`: the outgoing fields to traverse.
@@ -204,7 +204,10 @@ pub fn compile(line: &Line<'_>) -> Result<Value, Reject> {
     // and it appends to the roots in write order, after the bare ones.
     if let Some(raw) = &flags.from {
         if raw.is_empty() {
-            return Err(empty_member("--from=", ListKind::Names));
+            return Err(unreadable(
+                "--from=",
+                "--from carries one id, and none was given",
+            ));
         }
 
         roots.push(Value::String(raw.clone()));
@@ -300,10 +303,11 @@ fn spelled_operators(token: &str) -> Vec<(usize, &'static str, &'static str)> {
 
 /// The refusal for a token carrying more than one operator.
 ///
-/// The same operator twice is a field name holding it, which the grammar cannot
-/// address; two different operators are a token nobody can split without guessing.
-/// Naming either repair in the token's own characters is the whole migration story
-/// (DEC-039).
+/// The same operator twice is one token the front-end cannot split into field and
+/// value, because the second operator may sit in either half; two different
+/// operators are a token nobody can split without guessing. Naming either repair in
+/// the token's own characters is the whole migration story (DEC-039), and the
+/// same-operator sentence names neither half, so it stays true of both.
 fn ambiguous(token: &str, found: &[(usize, &'static str, &'static str)]) -> Reject {
     let (_, first, _) = found[0];
     let (_, second, _) = found[1];
@@ -311,7 +315,10 @@ fn ambiguous(token: &str, found: &[(usize, &'static str, &'static str)]) -> Reje
     if found.iter().all(|(_, spelling, _)| *spelling == first) {
         unreadable(
             token,
-            format!("a field name holding {first} is outside q's grammar; use smut query"),
+            format!(
+                "it carries two {first}, so q cannot tell the field from the value; \
+                 use smut query"
+            ),
         )
     } else {
         unreadable(

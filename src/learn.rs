@@ -110,8 +110,8 @@ Batch responses
 
 The short form: smut q
   One rule carries the whole short form: a bare word is a thing, field=value is
-  a filter, and --word is structure. The hot path therefore has no flags, and
-  the grammar itself invents nothing a shell would eat.
+  a filter, and --word is structure. The tokens need no flags, and nothing the
+  grammar invents needs a shell quote.
   A token is classified by its spelling, never by looking at the store:
     session                a root id, answered in the order written
     status=open            the field equals the value
@@ -145,10 +145,10 @@ The short form: smut q
   There is one silence: a field name no entity carries answers empty at exit 0
   rather than an error, so a typo reads as an answer.
   What the short form cannot say is not a gap in the store: grouping, $or of
-  groups, $not, regular expressions, nested paths, a field name holding =, ~ or
-  , and an unlimited result are all smut query's: smut query takes the full
-  specification and is the complete surface. smut q adds a short spelling of the
-  hot paths and does not replace it.
+  groups, $not, regular expressions, nested paths, a field name or a value holding
+  =, ~ or a comma, and an unlimited result are all smut query's: smut query takes
+  the full specification and is the complete surface. smut q adds a short spelling
+  of the hot paths and does not replace it.
   These are the five queries the short form exists for, each shorter than the
   JSON it replaces:
     smut q title~graph
@@ -866,6 +866,17 @@ mod tests {
                 "the section lists `{flag}` as a flag of its own"
             );
         }
+
+        // The claim the twelve-flag table cannot be read as contradicting: the
+        // tokens are what needs no flags, and nothing the grammar invents needs a
+        // quote. Pinned whole, because "the hot path has no flags" is refuted by
+        // the four flag-carrying hot paths this same section prints (RV-034 F-4).
+        let claim =
+            "The tokens need no flags, and nothing the grammar invents needs a shell quote.";
+        assert!(
+            section.contains(claim),
+            "the section claims the flagless half is the tokens: {claim}"
+        );
 
         // The three character consequences, each pinned as the whole sentence
         // that gives its reason: the reason is the part a reader remembers.

@@ -382,13 +382,21 @@ fn a_token_with_two_operators_is_refused_with_both_named() {
         r#"cannot read "status~a=b": it carries both ~ and =; use smut query for the same predicate as JSON"#
     );
 
-    // The same operator twice is a field name holding it, which the grammar cannot
-    // address: the field-name row.
+    // The same operator twice is one token the front-end cannot split, because the
+    // second operator may sit in either half: the same-operator row names neither, so
+    // it stays true of a field name holding `=` and of a value holding one.
     let field = refused("a=b=c");
 
     assert_eq!(
         field.to_string(),
-        r#"cannot read "a=b=c": a field name holding = is outside q's grammar; use smut query"#
+        r#"cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query"#
+    );
+
+    // The value half, which the field-name sentence used to misdiagnose: a URL's own
+    // query string is the plausible way to type this by accident (RV-034 F-1).
+    assert_eq!(
+        refused("url=a=b").to_string(),
+        r#"cannot read "url=a=b": it carries two =, so q cannot tell the field from the value; use smut query"#
     );
 }
 
@@ -502,7 +510,6 @@ fn a_list_flag_is_a_list_and_an_empty_one_is_refused() {
         ("--order title,,status", "title,,status"),
         ("--follow=", "--follow="),
         ("--select=", "--select="),
-        ("--from=", "--from="),
     ] {
         assert_eq!(
             refused(line).to_string(),
@@ -587,7 +594,7 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
         ),
         (
             "a=b=c",
-            r#"cannot read "a=b=c": a field name holding = is outside q's grammar; use smut query"#,
+            r#"cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query"#,
         ),
         (
             "title~a,b",
@@ -599,7 +606,7 @@ fn every_refusal_names_what_was_typed_and_never_a_field_it_invented() {
         ),
         (
             "--from=",
-            r#"cannot read "--from=": a comma list is a list of names, and one is empty"#,
+            r#"cannot read "--from=": --from carries one id, and none was given"#,
         ),
     ] {
         assert_eq!(refused(line).to_string(), sentence, "{line}");
