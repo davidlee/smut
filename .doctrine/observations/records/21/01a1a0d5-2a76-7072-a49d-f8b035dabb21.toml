@@ -1,0 +1,18 @@
+schema = "doctrine.observation"
+schema_version = 1
+uid = "01a1a0d5-2a76-7072-a49d-f8b035dabb21"
+recorded_at = "2026-11-03T09:54:47.03020052Z"
+kind = "friction"
+summary = "pi deepseek-flash 503s stalled a PHASE-04 run"
+detail = "SL-011 PHASE-04 fixture brief: 10 requests in 15 min wall clock, provider 'Service is too busy' 503 retries; run ended timeout with no edits ($0.006). Continued the session."
+
+[facets.execution]
+schema_version = 1
+interface = "cli"
+interface_origin = "automatic"
+product_surface = "doctrine"
+product_surface_origin = "automatic"
+command = "observation record"
+command_origin = "automatic"
+repository_context = "primary"
+repository_context_origin = "automatic"
