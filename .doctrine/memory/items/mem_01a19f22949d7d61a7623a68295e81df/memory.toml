@@ -1,0 +1,59 @@
+memory_uid = "mem_01a19f22949d7d61a7623a68295e81df"
+memory_key = "mem.pattern.doctrine.cross-slice-patch-review"
+schema_version = 1
+lifespan = "procedural"
+memory_type = "pattern"
+status = "active"
+title = "When two slices interleave in one file, review a patch per commit, not a range"
+summary = "A commit range that attributes correctly can still contain a co-tenant slice's code; hand the reviewer one path-filtered patch per commit and declare the rest of the tree out of scope."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = []
+commands = ["git show"]
+tags = ["doctrine", "review", "concurrency"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "1b7d4ab6b8439d46ee37e74ca21781336ed0ce55"
+ref_name = "refs/heads/main"
+checkout_state_id = "303330e630fe614729a7bbd5d52ad62ef8803bd278d96a1fbea7815015545fec"
+base_commit = "04b8a2e6406819117ca2e8ee2a9a31428775a20f"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
+[[source]]
+kind = "slice"
+ref = "SL-008"
+
+[[source]]
+kind = "review"
+ref = "RV-033"
+
+[[relation]]
+label = "related"
+target = "mem_01a19acfa6e770c29199b3d9df13b184"
+
+[[relation]]
+label = "related"
+target = "mem_01a19aaa6ed873039bb924a83f19e3a6"
+

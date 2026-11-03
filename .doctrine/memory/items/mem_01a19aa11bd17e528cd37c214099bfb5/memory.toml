@@ -6,7 +6,7 @@ status = "active"
 title = "A verify-vt keyword that already exists in the file is an inert gate"
 summary = "VT rows are raw substring presence checks, so a keyword the file already contains passes before the phase lands"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 
 [scope]
 paths = []

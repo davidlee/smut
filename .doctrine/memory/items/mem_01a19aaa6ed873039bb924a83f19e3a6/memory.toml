@@ -7,7 +7,7 @@ status = "active"
 title = "verify-vt attributes through the phase delta row, which only lands at completion"
 summary = "A pre-completion `doctrine slice verify-vt` reports every VT UNATTRIBUTABLE; record the phase delta with `record-delta --commit <S>` first."
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 
 [scope]
 paths = []

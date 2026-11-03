@@ -33,3 +33,21 @@ changes it. Otherwise pin something the change *introduces* rather than somethin
 *edits*: the variant name, a whole pinned line, a test function name. When the gate goes
 red after the final phase with every test green, check the plan's own cross-phase
 keywords before suspecting the code.
+
+## The co-tenant variant — a neighbour's number is never yours to pin
+
+SL-008 PHASE-02 pinned `[(Error, u8); 27]` on `src/error.rs`. Nothing in that plan moved the
+length; SL-010, a **different slice** sharing the same file, added six variants. The row went
+red on a fully green, fully complete slice, and the red said nothing about the code PHASE-02
+owned.
+
+Rule: a VT keyword must be a presence check on a **fact the phase owns**, never on a **number a
+neighbour owns**. Pin the fragment — `[(Error, u8);`, the variant name, the test function name, a
+whole pinned line — rather than a count or literal another writer's plan can move. When two
+slices interleave in one file, assume every count in it belongs to someone else.
+
+The same defect one level up is a **criterion** whose literal is stricter than its truth:
+SL-008 PHASE-01/EX-5 said the `.config/smut` segment is joined by `Roots::under` "and nowhere
+else", while EX-2's own text mandates a second join in `user_root`'s home fallback. The
+criterion sentence was the defect, not the code — and a reviewer following the sentence literally
+would have "fixed" correct code.

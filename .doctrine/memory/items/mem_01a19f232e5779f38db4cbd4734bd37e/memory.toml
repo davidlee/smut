@@ -1,0 +1,51 @@
+memory_uid = "mem_01a19f232e5779f38db4cbd4734bd37e"
+memory_key = "mem.pattern.doctrine.doc-comment-hides-contradiction"
+schema_version = 1
+lifespan = "procedural"
+memory_type = "pattern"
+status = "active"
+title = "A doc comment that resolves a contradiction is a decision nobody made"
+summary = "When a criterion and the code disagree, the disagreement is hidden in the doc comment; read doc comments first, and treat a persuasive sentence there as a decision to verify, not a note."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = ["src/**"]
+commands = ["git diff"]
+tags = ["review", "doctrine", "verification"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "1b7d4ab6b8439d46ee37e74ca21781336ed0ce55"
+ref_name = "refs/heads/main"
+checkout_state_id = "2c77dd689a1e81843cfcec966447b9c16d36d0ba3c4c8535f9891a92d822858b"
+base_commit = "04b8a2e6406819117ca2e8ee2a9a31428775a20f"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "high"
+weight = 0
+
+[[source]]
+kind = "slice"
+ref = "SL-008"
+
+[[relation]]
+label = "related"
+target = "mem_01a1959995dc7611882307746b4495fd"
+

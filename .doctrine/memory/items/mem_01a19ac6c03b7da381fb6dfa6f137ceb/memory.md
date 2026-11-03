@@ -27,3 +27,13 @@ claim narrative (design table, plan criterion, phase sheet) is attached to that 
 Related: it is the same failure as `mem.fact.doctrine.vt-inert-keywords` one level up — a
 check whose signal is nil, recorded in a narrative that assumes signal. Substring presence
 versus behaviour, and unfalsifiable assertion versus behaviour, are the same defect class.
+
+## Strength ordering hollows out the weaker assertions
+
+A listing test that asserts the exact row first, then `starts_with(…)`, then `contains(…)`, reads
+well and leaves two assertions with no input that could redden them: once the exact row is pinned,
+the weaker ones are implied. Put the strongest assertion **last**, so each weaker row still has a
+world where it fails and the strong one would not.
+
+The same arithmetic across a test file: an assertion is only worth its line if some *other*
+assertion in the same test would not already have caught the defect.

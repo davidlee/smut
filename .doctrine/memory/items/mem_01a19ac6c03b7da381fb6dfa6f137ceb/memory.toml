@@ -6,7 +6,7 @@ status = "active"
 title = "A negative assertion that cannot fail is worse than none — it occupies the evidence slot"
 summary = "`!has_store()` cannot fail for `query` because Query::creates_store() is false; the ordering was proved by exit 2, not the absent directory"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-03"
 
 [scope]
 paths = []

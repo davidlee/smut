@@ -188,10 +188,10 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `SL-008` lifecycle `started`, **5 of 5 phases complete**. `PHASE-01`, `-02`,
+**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `started`, **5 of 5 phases complete**. `PHASE-01`, `-02`,
 `-03`, `-04` and `-05` all landed green and reviewed/verified (`c3385c2`, `8503b93`, `cfae50f`,
-`e692735`, `c6cebe2`); the first three were reviewed by RV-030, RV-032 and RV-033, the last two
-verified by their seats. `just check` exit 0 at `c6cebe2` — 451 default and 464
+`e692735`, `c6cebe2`); PHASE-02, -03 and -04 were reviewed (RV-030, RV-032, RV-033),
+PHASE-01 and PHASE-05 were verified by their seats. `just check` exit 0 at `c6cebe2` — 451 default and 464
 `--features fault-injection` lib tests, 34 green result lines, zero warnings; all 16 VT rows
 PASS, `verify-vt` exit 0. PHASE-05's delta is `e54f7aa..c6cebe2` (one commit, the two owned
 files). Design run `dr-01a19b61` locked at revision 36. **Implementation is complete: the next
@@ -210,6 +210,15 @@ holding on this slice's completion**.
   No new design question — `source`'s literal is plan.md item 5's recorded reading.
 - **The slice's implementation is complete** — five phases, one commit apiece at the end, all
   owned paths, another writer's backlog file and `_envrc` untouched throughout.
+- **The slice's learned leg is in the memory corpus** — five new records
+  (`mem.pattern.doctrine.mutation-probe-per-property`,
+  `mem.pattern.doctrine.cross-slice-patch-review`,
+  `mem.pattern.doctrine.doc-comment-hides-contradiction`,
+  `mem.fact.doctrine.grep-va-row-is-a-classification`,
+  `mem.fact.smut.store-follows-cwd`) and three amendments to existing ones
+  (`vt-inert-keywords`, `verify-vt-needs-delta-row`, `vacuous-negative-assertions`), each linked
+  to its neighbours. The `## Harvest` section now carries ids rather than the prose that seeded
+  them; the review-era `in_progress` lines are pruned and git holds them.
 
 - **`PHASE-04` closed on its criteria at `cd5c0dc`, with evidence for work it did not write.**
   The tail is one commit (two guide sentences, two whole-sentence tests, one store-format
@@ -288,123 +297,31 @@ holding on this slice's completion**.
 
 ### Learned
 
-- **A "the same at every layer" rule needs a row that compares two layers, and a control that
-  is right at one of them.** PHASE-05's five obvious probes all reddened five rows at once, so
-  none of them showed the two-layer test had force of its own. The control that did was
-  contrived on purpose — a `source` keyed to the user fixture's version, correct at the project
-  layer and wrong at the user layer — and it reddened exactly one row. When a rule is about
-  *sameness across contexts*, the falsifying input is a value that is right in one context and
-  wrong in the other; anything uniformly wrong proves only that the value is checked at all.
-- **A hand transcript run from the repository root writes a store into it.** `smut declare`
-  keeps its store at the cwd (DEC-004), so a VA-2 transcript taken "from a scratch directory"
-  means `cd` into the scratch, not just exporting `HOME` and `$XDG_CONFIG_HOME` — the layers
-  follow the environment, the store follows the cwd. `.smut` is gitignored, so neither the gate
-  nor `git status` would have caught it; the cwd has to be part of the fixture.
-
-- **A criterion that names a test is satisfied by the test's name, not by the property.**
-  `an_unknown_format_is_still_refused_before_the_operand` passes with the operand validated
-  *first*, because it feeds a name that resolves: the format is still the only thing refused and
-  the message is identical. The property holds (a real run with an unknown operand proves it),
-  but the pin would not go red if the order swapped — the same class as an assertion occupying
-  an evidence slot. When a test's name claims an ordering, its fixture must be one where the two
-  orders disagree.
-- **A concurrent run's green is not coverage.** The six inherited commits arrived with VT-1..VT-3
-  passing and zero VA evidence, and both VA rows found something the green suite could not: a
-  design clause with no test behind it (the relative root), and a preserved-behaviour row weaker
-  than its name. The VT gate is a presence check on symbols; it cannot see either.
-- **A grep criterion is only evidence once its hits are classified.** VA-2 asks that `std::env::`
-  appear in `src/main.rs` "only inside `roots()`". It appears six times: two layer reads in
-  `roots()` (the property), `args_os()` in `main`, `current_dir()` in `current_directory`,
-  `temp_dir()` in a test helper, and a doc comment. The right report is the classification and
-  the fact that `dispatch`/`execute` hold none — not the literal absence, which is false.
-- **A doc comment that decides a question is a decision nobody made.** Attempt 1's `load` doc
-  said "this phase makes 'absent' and 'unreadable' the same thing, so nothing here errs yet" and
-  its `read_layer` doc said "Nothing is sorted or deduplicated here" — and those two sentences
-  were the whole of its response to two criteria that say the opposite. A contradiction written
-  into prose reads as an implementation note, so it survived a whole run; the same contradiction
-  in code (a bare `Vec<Entry>` return, a `continue` on every error) is what the tests caught.
-  The lesson for the next charter: when a criterion and the code disagree, the doc comment is
-  where the disagreement gets hidden, so it is the first thing to read.
-- **A test that is green on arrival is a pin, not evidence, until a mutation reddens it.**
-  `a_broken_set_still_wins_its_name` passed the moment it was written, because `set_in_force`
-  already returned failed entries. It only became evidence when `set_in_force` was filtered to
-  `Loaded` entries and the row went red — so a pinned name in VT-1 that is satisfiable before
-  the phase starts is a name the phase has to *prove* bites.
-- **A negative control's blast radius can be honest without being narrow.** The double-join
-  mutant reddens 14 rows, because deleting the project layer is a bigger change than the
-  duplicate segment: `the_kind_is_joined_once` names the defect precisely, and the other 13
-  catch it as collateral. Reporting the breadth is the honest move; engineering the mutant so
-  that only one row reddens would have proved less.
-- **`record-delta --commit <S>` records exactly `[S^, S]`, and its guard fires when the
-  phase sheet's stamp predates a foreign commit.** PHASE-02's stamp was `43ca052`, a
-  `doc(sl-010)` commit (`4015f6a`, two `.doctrine/slice/010/` files, proven doc-only with
-  `git show --stat`) landed between the stamp and the phase's code, so the safe default
-  refused to narrow until `--force`. The narrow is the honest range: widening it to the
-  stamp would hand the reviewer a range containing another slice's commit and make the
-  review lie. Narrow only after proving the dropped commit carries none of this phase's
-  code, and say so in the handback.
-- **A mutation that does not compile is not a negative control.** The first version of the
-  "version applied inside `parse`" mutant inserted a duplicate struct field, so the result
-  was a compile error and the "no test failed" reading proved nothing; rewritten to replace
-  the existing field, it reddened `the_shipped_set_parses` and four neighbours. Check that a
-  mutant reddens a *test*, not the compiler.
-- **A worker's clippy claim needs the gate behind it.** The session-B handback reported
-  `cargo clippy --all-targets -- -D warnings` clean while the gate failed on
-  `clippy::cmp_owned` in the new inventory test — a comparison against a freshly built
-  `PathBuf`. One-line fix (`Path::new`); the lesson is that the gate, not the handback, is
-  the evidence.
-- **An exact-value assertion placed first makes every weaker assertion after it
-  unfalsifiable.** A strength-ordered listing test (exact row, then `starts_with`, then
-  `contains`) reads well and hollows out three assertions; the exact row belongs last, where
-  each weaker row still has an input that reddens it.
-- **The compile-forced coupling is exactly what EN-2 predicted.** `HYGIENE`'s retirement
-  broke `src/main.rs:179` and four unit tests; nothing else in the crate referenced the old
-  shape. A type replacement phase is one compile unit, so its "two sessions" are sessions of
-  reasoning, not two independently green commits.
-
-- **Origin printing and byte-identity cannot both hold.** DEC-026 promised a header naming the
-  file; DEC-028 made a set's bytes load-bearing. Keeping the bytes and moving the origin to
-  the listing was the whole hinge of the design.
-- **Validity is not a tie-breaker.** A broken nearer set makes that name *unaskable*. Accepted
-  on the operator's word ("fails loud and clearly") after being stated as a consequence.
-- **A pure resolver needs its roots passed in**, and the leak it prevents is in the *unit*
-  tests, not the CLI — `main`'s in-process `dispatch_of` reads real cwd and `$HOME`.
-- Attestation is not coverage: a pass opened before late edits still reports `STALE` after the
-  edits are re-attested.
-- **`verify-vt` attributes by recorded delta, not by the file being on disk.** Before
-  PHASE-01's delta was recorded, both its rows read `UNATTRIBUTABLE — keyword present but
-  src/conventions.rs not modified by this slice`; the `completed` transition recorded a span
-  covering three foreign `doc(sl-010)` commits and warned, so the range was tightened to
-  `--start 289d179^ --end c3385c2` via `slice record-delta`. Both rows then read `PASS`. The
-  command still exits 1 at this boundary because PHASE-02..05's keywords are legitimately
-  absent.
-- **A negative assertion the preceding assertion already guarantees is not evidence.** A
-  worker's `assert_ne!(found, scratch.path)` after `assert_eq!(found, child)` could not fail
-  once the fixture existed; it was reverted and the property was carried instead by a
-  fixture that makes it falsifiable (`a_home_above_a_repository_is_not_the_project_root`).
+- `mem.pattern.doctrine.mutation-probe-per-property` — one mutation per claimed property, reverted
+  byte-identically; a row with no probe has no evidence, and a "same at every layer" rule needs
+  layers that differ elsewhere.
+- `mem.fact.smut.vacuous-negative-assertions` — amended: strength ordering hollows out the weaker
+  assertions, so the strongest assertion goes last.
+- `mem.fact.doctrine.vt-inert-keywords` — amended: a VT keyword is a presence check on a fact the
+  phase owns, never a number a co-tenant slice moves; a criterion stricter than its truth is the
+  same defect one level up.
+- `mem.fact.doctrine.verify-vt-needs-delta-row` — amended: the `completed` transition recomputes
+  and overwrites the delta, so correct the row after the flip, not before.
+- `mem.pattern.doctrine.cross-slice-patch-review` — hand a reviewer `git show <oid> -- <owned
+  paths>` per commit, and declare the other slice tree out of scope.
+- `mem.pattern.doctrine.doc-comment-hides-contradiction` — when a criterion and the code disagree,
+  the doc comment is where the disagreement hides; read it first.
+- `mem.fact.doctrine.grep-va-row-is-a-classification` — a "X appears only in Y" row is false the
+  moment a doc comment uses X; report the classification and the load-bearing absence.
+- `mem.fact.smut.store-follows-cwd` — the store follows the cwd while the layers follow the
+  environment, so a hand transcript must `cd`, not just export.
 
 ### Open
 
 - **Nothing in implementation is open.** The next action is audit (`/audit`), which this run's
   charter excludes; the seven obligations in § Obligations owed at reconcile and
   `plan.md`'s adjudicated design questions are the audit's input, none of them repaired here.
-- **`PHASE-04`'s "in_progress, awaiting its review" line below is discharged** — the seat
-  concluded it at 4/5 in `1b409c9` after RV-033's seven fixes landed in `e692735`; it is kept
-  for the record of what that review had in hand.
 
-- **`PHASE-04` is `in_progress`, awaiting its independent review** — and needs one more than most,
-  because six of its seven commits arrived from a run that left no account of itself. Hand the
-  reviewer the range `6007a0d..cd5c0dc`, not the files: eighteen foreign commits sit inside it
-  (`slice conformance`'s undeclared cell), and `src/conventions.rs`, `src/cli.rs`, `src/error.rs`,
-  `src/main.rs` and `tests/conventions.rs` also carry PHASE-01..03 and SL-010's work. The seat
-  re-tightens the range after concluding. F1-F3 above are the findings it should start from;
-  F1's fix and F2's row are three lines each and belong to whoever owns those files next.
-- **`PHASE-03` is `in_progress`, awaiting its independent code/correctness review** (standing
-  cadence). Green and committed at `cfae50f`, `just check` exit 0, delta `9829de0..cfae50f`
-  recorded, and the seat concludes after the review lands and any `fix-now` finding is corrected.
-  The reviewer is handed the range, not the file: `src/conventions.rs` also carries PHASE-01 and
-  PHASE-02, and reviewing the whole file would re-raise their findings as if they were new.
-  Baseline for the range is the phase sheet's `code_start_oid` (`bfe98e2`).
 - **Two design sentences are owed to reconcile and are *not* fixed here** — §6's missing
   tie-break among unreadable names and §3's silence on a candidate whose metadata cannot be
   read (items 6 and 7 of § Obligations owed at reconcile, with PHASE-03's rulings).
@@ -413,8 +330,7 @@ holding on this slice's completion**.
   `StoreError::FileSystem.step` is `&'static str` and EX-2 authorises only a doc comment in
   `src/error.rs`. If a later phase widens that field (a `Cow`, or a `String` carrying the step),
   the leak should be retired with it. Recorded, not scheduled.
-- **`PHASE-02`'s `in_progress`-awaiting-review note is discharged**: RV-030 was raised, disposed
-  all-`fix-now` and corrected in `8503b93`; the phase is `completed` in the registry.
+
 - **`every_store_refusal()` omits `NoFreshBasename`** — pre-existing, and PHASE-02 added only
   its own row. The list's length is now pinned at 13 with a comment naming the gap, so the pin
   is honest rather than complete. Flagged, not fixed: repairing another phase's inventory is

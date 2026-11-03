@@ -1,0 +1,47 @@
+memory_uid = "mem_01a19f2340d87643b02b496db1e7a375"
+memory_key = "mem.fact.smut.store-follows-cwd"
+schema_version = 1
+lifespan = "identity"
+memory_type = "fact"
+status = "active"
+title = "A hand transcript's store follows the cwd, not the environment"
+summary = "smut's store is created at the process cwd; HOME and XDG_CONFIG_HOME only move the conventions layers — so a 'from a scratch directory' transcript must cd, not just export."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = []
+commands = ["smut declare", "cargo test"]
+tags = ["smut", "cli", "fixtures"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "1b7d4ab6b8439d46ee37e74ca21781336ed0ce55"
+ref_name = "refs/heads/main"
+checkout_state_id = "5e5d3f92628ad5a6a44eebfe7a796af8a5be5546207957eac909167c46abb1e3"
+base_commit = "04b8a2e6406819117ca2e8ee2a9a31428775a20f"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "high"
+weight = 0
+
+[[source]]
+kind = "slice"
+ref = "SL-008"
+
