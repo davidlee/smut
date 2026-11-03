@@ -543,8 +543,9 @@ fn help_and_version_exit_zero_and_touch_no_store() {
     // and no 0.1 caller sends it, so the bump is a patch. Moved to 0.2.2 for a
     // release that changes no `src/` at all — the README was rewritten and
     // `tests/readme_example.rs` grew the harness that executes its transcripts, so
-    // the binary is 0.2.1's binary and the bump is again a patch.
-    assert_eq!(version.stdout, "smut 0.2.2\n");
+    // the binary is 0.2.1's binary and the bump is again a patch. Moved to 0.3.0
+    // with the version bump in 04cce16.
+    assert_eq!(version.stdout, "smut 0.3.0\n");
 
     assert!(
         !scratch.has_store(),
