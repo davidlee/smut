@@ -60,32 +60,27 @@ The equivalence spine is split by where its evidence lives: CLI-level rows
 
 ## Notes
 
-### Corrections owed to the design
+### Where this plan supersedes design.md during execution
 
-- **§ Verification, equivalence spine, filter row.** The design lists
-  `EXAMPLE_FILTER_Q` among the recipes whose `r` and `render` output is
-  byte-identical. It cannot be: the line asks for the ids as roots, answered in
-  the order written; `EXAMPLE_FILTER` asks for them through `$in`, answered in
-  `smut_id` order. SL-010 established this (RV-031 F-6) and
-  `tests/fixture.rs` `the_two_call_recipe_runs_in_both_spellings` compares only
-  the set. PHASE-04/EX-5 claims set equality for that pair and byte identity for
-  the rest. Owed: amend design § Verification's spine row at reconcile.
-- **§ Verification, "the other two hot paths".** `src/learn.rs`'s five hot paths
-  minus the two already twinned (`IDS status=open --ids`, the traverse line)
-  leave three, not two. PHASE-04/EX-5 covers all three.
-- **§ Refusals, "two name `q` as the subject".** Three sentences do —
-  `src/dsl.rs:319` (`so q cannot tell the field from the value`),
-  `src/dsl.rs:581` (`q carries one {spelling} per field`) and `src/error.rs:387`
-  (`q takes field=value tokens…`). All five rows are already PHASE-02/EX-1, EX-2
-  and their pins, so no criterion changes; owed: correct the count in the design
-  at reconcile, since it is the sentence a reader would use to decide which rows
-  need a subject change.
-- **§ Verification, the stated divergences "both asserted".** The design does not
-  say where the terminal half can be asserted: the contract harness always pipes
-  stdin (`tests/cli_contract.rs:96-124`), so `MissingInput` is unreachable from a
-  spawned command and only `parse_with(…, terminal: true)` in `src/cli.rs` can
-  observe it. PHASE-03/EX-5 splits the two seams and VT-3/VT-5 name both files.
-  Owed: name the seam in the design.
+design.md is locked and is not amended until reconcile (user direction,
+2026-11-03: carry design changes to reconcile, provided the correct design is
+clear during execution). Until then, **where a row below applies, the plan's
+criterion is the design**; everywhere else design.md governs.
+
+| # | design.md says | correct design (governs execution) | plan home |
+| --- | --- | --- | --- |
+| C1 | § Refusals: "two name `q` as the subject" | three: `src/dsl.rs` ~319 (`so q cannot tell…`), ~581 (`q carries one {spelling}…`), `src/error.rs` ~387 (`q takes field=value tokens…`); all five rows change anyway | PHASE-02/EX-1, EX-2 |
+| C2 | § Verification spine: the filter recipe is byte-identical across spellings | set-equal only: roots answer in the order written, `$in` in `smut_id` order (SL-010, RV-031 F-6) | PHASE-04/EX-5 |
+| C3 | § Verification: "the other two hot paths" | three: `title~graph`, `type=question status=open --select smut_id,title`, `--has body --order title:desc` | PHASE-04/EX-5 |
+| C4 | § Verification divergences: "both asserted", no seam | the terminal half (`MissingInput` vs `{}`) is reachable only in-process (`parse_with(…, true)` in `src/cli.rs`); the contract harness always pipes stdin | PHASE-03/EX-5, VT-3, VT-5 |
+| C5 | Non-goal "`render` and `query` do not gain `-j`" — no verification | asserted: both still exit 2 with clap's `error: unexpected argument '-j' found` (observed 2026-11-03) | PHASE-03/EX-7, VT-2 |
+| C6 | § Command line / R2: hyphen-leading ids are `--`'s; DEC-037's `-weird-id` stays an error that teaches `--` | on `r`, a hyphen-led word starting with a display letter is silently a flag: `-title` is `-t itle`, exit 0 (observed on `render` today). Letters stay (DEC-008, IMP-007); the behaviour is pinned and the guide teaches `--` for hyphen-led ids on `r`. On `q`, `-j…` words are read as `-j`'s value, refused loudly unless valid JSON | PHASE-01/EX-6, PHASE-03/EX-3, PHASE-04/EX-3 |
+
+Not a correction (contested in the hardening pass): "an empty `r` line never
+waits on stdin rests on an unstated `dsl::compile` property". `compile` takes no
+stdin; the property is `SelectionArgs::specification` reading stdin only in its
+`-j` branch, which design § The command line prints, and PHASE-03/EX-2's piped,
+ignored spec tests it.
 
 ### Test-design notes carried into the phases
 
@@ -99,8 +94,7 @@ The equivalence spine is split by where its evidence lives: CLI-level rows
 ### Reconcile obligations
 
 As design § Reconcile obligations: amend DEC-034, DEC-008, DEC-039, DEC-040 via
-`doctrine knowledge edit decision`, comma-free arrays; plus the corrections
-above.
+`doctrine knowledge edit decision`, comma-free arrays; and amend design.md for C1–C6 above.
 
 ### Risks and mitigations (critical pass, 2026-11-03)
 

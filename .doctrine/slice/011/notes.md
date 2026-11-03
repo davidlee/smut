@@ -45,9 +45,5 @@ fresh-as-of: <yyyy-mm-dd> · <PHASE-NN | stage> · <head-commit>
 ## Reconcile obligations (from design § Reconcile obligations)
 
 - Amend DEC-034, DEC-008, DEC-039, DEC-040 via `doctrine knowledge edit decision`, comma-free arrays.
-- Design corrections owed (locked design is wrong, plan is right) — see plan.md
-  § Corrections owed to the design: § Verification's filter row cannot be byte-identical (set
-  only); "the other two hot paths" is three; § Refusals' "two name `q` as the subject" is three
-  (`src/dsl.rs:319`, `src/dsl.rs:581`, `src/error.rs:387`); § Verification's stated divergences
-  name no seam (`MissingInput` is in-process only); `render`/`query` not gaining `-j` has no
-  verification in the design.
+- Amend design.md for C1–C6 — the single list is plan.md § Where this plan supersedes design.md
+  during execution; until reconcile, those rows govern.
