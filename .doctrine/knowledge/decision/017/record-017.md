@@ -34,3 +34,17 @@ descriptions.
 
 `learn` keeps its one pointer line and its separate epistemology: descriptive
 and version-bound, where conventions are advisory and domain-bound.
+
+
+## Amendment (SL-008 reconcile, RV-035)
+
+"Adding a later set is a file plus a match arm" described a binary-only world: the
+only way a set could arrive was a file plus a compile-time arm. Since SL-008 a set
+arrives from a project's `.config/smut/<kind>/`, from the user's config home, or from
+the binary's shipped table — and the arm is now a table read by kind
+(`shipped(kind)` in `src/conventions.rs`). `choice` and `consequences` say so.
+
+Nothing else in this record moves: the fixed id, the upsert, the `previous` report
+and "the binary never reads its copy back" are exactly what SL-008 implemented
+(`seed`, and `tests/conventions.rs::a_second_install_reports_the_body_it_replaced`),
+and `doctrine show DEC-031` is what layer precedence added on top.

@@ -41,8 +41,9 @@ dotfiles repositories, container home mounts, the thing that gets symlinked into
 `~/.config`. XDG scopes the config home to the user, so the mirror borrows a name
 whose established meaning is the opposite of project scope, and a reader meeting
 `.config/smut/` in a fresh checkout may assume it is meant to be copied home. That
-is a documentation problem with a one-line cure — origin printing plus a set header
-naming its own file — rather than a structural one. The alternative was a permanent
+is a documentation problem with a one-line cure — origin printing plus a listing row
+that names the file in force, which is what DEC-031 kept when it declined a header in
+printed prose — rather than a structural one. The alternative was a permanent
 second dot-directory to avoid writing that line.
 
 ## Not decided here

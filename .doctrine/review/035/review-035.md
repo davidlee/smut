@@ -296,3 +296,87 @@ and a brief item naming them stalls.
   delivers) is still `open` and should be resolved at close, noting the slice that
   landed it; `SL-006` unblocks on this slice's terminal transition; `CHR-001`,
   `QUE-002` and `IMP-008` stay open by design.
+
+## Reconciliation Outcome
+
+Confirmed before writing: `doctrine review status RV-035` reads `done · await=none`, all five
+findings `verified`, pass concluded. Findings were **not** mutated; remediation is recorded
+here.
+
+### Direct edits applied — `design.md` (per-slice, direct edit)
+
+- **§2 *User root*** — the source rule now names `std::env::home_dir()` (`$HOME` when set and
+  non-empty, else the passwd entry), and "no home at all" means neither resolves. **F-1**,
+  obligation 9's finding.
+- **§2, after the declaration-kind sentence** — the compound `.config/smut` segment is stated
+  as deliberately built twice (`Roots::under`; `user_root`'s home fallback), so "one join per
+  layer root" is the rule and "one join for the segment" is not. **F-2**; gives the truth a
+  surface the plan criteria's "one place"/"nowhere else" literals can no longer contradict.
+- **§3 candidate paragraph** — a candidate whose metadata cannot be read is the failed row; a
+  directory with an undecodable name stays silent because the metadata test precedes the name
+  decode. **Obligation 7.**
+- **§3 frontmatter** — a repeated key is the second value; the exact fence test demotes
+  frontmatter to prose for `--- ` with a trailing space, CRLF, or a leading blank line. Both
+  named as limitations rather than repaired, because repairing either changes the on-disk
+  format. **Design questions A and B** (and the same two facts in DEC-028).
+- **§3 *Title and body*** — the trim's asymmetry is stated: trailing newlines go, a leading
+  blank line after the fence stays. **Design question C.**
+- **§4 refusal** — "one clause per resolved *file*" (the file is the unit of listing), an
+  undecodable filename contributes no clause, and the quoted diagnostic now reads
+  `is not a flat \`key: value\` line`. **Obligation 4 (§4 half), obligation 5.**
+- **§5 worked listing** — the binary `hygiene` row reads `shadowed`, with a paragraph saying
+  why the rule beats the example and the shipped set is not exempt. **Obligation 4 (§5 half).**
+- **§5 fourth field** — absolute exactly when its layer root is; nothing rewrites a path.
+  **Plan item 9**, which the plan had declined; the audit recommended the clause and the
+  operator agreed.
+- **§5 third field** — the disjointness *ruling*: the four states are the renderer's choice, a
+  summary interpolates verbatim, so `summary: shadowed` and a two-space summary can shape a
+  row; "no two states claim one row" is a guarantee about the renderer, not the bytes. Nothing
+  is escaped, because the listing is a report before it is a table (DEC-031 rule 3).
+  **Obligation 8**, and the choice named in the brief — the alternative (a delimiter the
+  helpers can trust) needs a code change and is not this pass.
+- **§6 `load` paragraph** — one rewrite carrying four items: "every filesystem read *of a
+  layer*" (so `project_root`'s walk and `parse`'s bytes are not claimed), the sort tie-break
+  (undecodable last, ties on the raw filename, order total), the unreadable-directory class
+  reusing `StoreError::FileSystem` with a layer-worded `step`, and `parse` taking no name
+  parameter because `origin` carries the stem. **F-3** (obligation 6's *real* clause is now
+  the sentence it describes), **plan items 3 and 4**, and the design-side half of F-5's
+  confusion.
+
+### Knowledge amendments (`doctrine knowledge edit`) — no REV
+
+The brief filed DEC-028/026/017 under "Governance/spec (REV)". **Corrected during this pass:**
+the REV target set is `SPEC | PRD | REQ | ADR | POL | STD`, and the engine refuses a DEC target
+(the precedent is REV-001, abandoned for exactly that reason; REV-002's narrative documents the
+same six-decision landing through `doctrine knowledge edit` in SL-004). Nothing in this slice
+targets a SPEC/PRD/REQ/ADR/POL/STD, so **no revision was created or needed** — a REV here would
+have failed at `revision change add`.
+
+- **DEC-028** (`choice` + dated body note) — the malformed-file sentence narrowed to *never
+  takes the process down, never stops another layer being listed, and does shadow a working
+  user copy of the same name*; plus the duplicate-key and exact-fence rules. **Obligation 1,
+  design questions A and B.**
+- **DEC-026** (body prose, `record-026.md` § *The cost we accepted*) — "a set header naming its
+  own file" replaced with the listing row that names the file in force, which is what DEC-031
+  kept when it declined the header. **Obligation 2.**
+- **DEC-017** (`choice` + `consequences` + dated body note) — "a file plus a match arm" replaced
+  with the three-layer arrival and, for the binary, a file plus one shipped-table entry.
+  **Obligation 3.**
+
+Each amendment carries a dated section naming the audit finding or reconcile obligation that
+drove it, and each leaves an id, a slug and unrelated rationale untouched.
+
+### Withdrawn / tolerated
+
+- **Nothing withdrawn.** Every finding held under evidence.
+- **F-4 and F-5 are `follow-up`** — `CHR-006`, minted by the audit, carries both code
+  residuals with their replacement text. Not landed here: a source edit at reconcile would
+  leave `src/conventions.rs` changed after PHASE-05's concluded delta with no phase that
+  concluded it.
+- **The design run stays at revision 36.** `doctrine design adopt` refuses on a locked run and
+  says so explicitly: "at reconcile, edit `design.md` directly and do not adopt". `design show`
+  therefore reports `design.md is behind its run (revision 36)` — expected, and the reason the
+  reconciled prose is the file rather than the run's baseline.
+- **Carried to `/close`, not reconcile's**: `IMP-013` is the implementation brief this slice
+  delivers and should be resolved with the slice named; `SL-006` unblocks on the terminal
+  transition. `CHR-001`, `QUE-002`, `IMP-008`, `IMP-019`, `IMP-020` stay open by design.

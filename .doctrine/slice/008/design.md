@@ -53,11 +53,13 @@ root without one, the project root is the current directory and there is no walk
 Nothing shells out to `git`: the binary has no subprocess in its shipped path today, and a
 PATH dependency plus a process spawn to answer a `stat`-shaped question is a poor trade.
 
-**User root.** `$XDG_CONFIG_HOME` when set and non-empty, else `$HOME/.config`. Either way the
-layer root is `<config-home>/smut`, and when neither variable resolves — a container with no
-home — there is no user root and the user layer is simply absent. Not an error: the project
-and binary layers still answer, and failing a read-only command for want of a home directory
-would be worse than a layer that is not there.
+**User root.** `$XDG_CONFIG_HOME` when set and non-empty, else the home `std::env::home_dir()`
+reports — `$HOME` when that is set and non-empty, otherwise the passwd entry. Either way the
+layer root is `<config-home>/smut`; when no home resolves at all — no `$HOME`, no passwd entry —
+there is no user root and the user layer is simply absent (DEC-032). Which variable answers is
+the *binary's* question, not this function's: `user_root` is handed the result and joins
+`smut` onto it. Not an error: the project and binary layers still answer, and failing a
+read-only command for want of a home directory would be worse than a layer that is not there.
 
     user_root(config_home: Option<&Path>, home: Option<&Path>) -> Option<PathBuf>
 
@@ -68,6 +70,12 @@ deeper:
 
 The declaration-kind segment is joined **exactly once**, inside `load` — `<root>/<kind>/` —
 so no caller can join it twice and no root carries a kind.
+
+The *compound* `.config/smut` segment, by contrast, is deliberately constructed twice, because
+a config home already names `.config`: `Roots::under` joins it onto the repository root for the
+project layer, and `user_root` builds it for the home fallback (`<home>/.config`, then `smut`).
+"One join per layer root" is the rule; "one join for the segment" is not — and no caller of
+`Roots::under` repeats it.
 
 Both functions are pure over values handed to them. **The binary is the only code that reads
 the environment**, and that is enforced by shape rather than by discipline: `execute` takes
@@ -87,9 +95,22 @@ does not begin with a dot. Directories, other extensions and dotfiles are not se
 listed, not reported, because a directory the user controls should not produce noise. A
 symlinked `.md` resolves through the link and is an ordinary set.
 
+A candidate whose metadata cannot be read — a dangling symlink ending in `.md` — is the *failed
+row* below rather than nothing at all: the filter asks what a file is, and the failure table's
+"cannot be opened or read" is the answer when the filesystem will not say. A directory whose
+name is not UTF-8 stays silent, because the metadata test runs before the name is decoded and
+a directory is not a set.
+
 **Frontmatter** exists only when the file's **first line is exactly `---`** and a later line is
 exactly `---`. Inside the fence, blank lines are skipped and every other line must be
-`key: value`; outside it, `---` is a Markdown horizontal rule and not a fence at all.
+`key: value`; outside it, `---` is a Markdown horizontal rule and not a fence at all. A key
+written twice is the second value, silently: the frontmatter is a flat map, so a repeated
+`summary` overwrites rather than refusing, and that is a named limitation rather than an
+oversight — refusing a duplicate would need a message class DEC-028 does not carry. The fence
+test is exact, so three shapes a Markdown author may reasonably write — `--- ` with a trailing
+space, CRLF line endings, a leading blank line — demote the whole frontmatter to prose: the
+file still loads, its `summary` is printed as advice, and nothing warns. Both limitations are
+stated here rather than repaired, because repairing either changes the on-disk format.
 
 | key | class | behaviour |
 | --- | --- | --- |
@@ -101,7 +122,12 @@ exactly `---`. Inside the fence, blank lines are skipped and every other line mu
 Frontmatter is never printed as prose, never addressable and never seeded into a body.
 
 **Title and body.** The first line beginning `# ` is the title, verbatim, falling back to the
-name. The body is everything after the frontmatter with trailing newlines trimmed. Nothing
+name. The body is everything after the frontmatter with trailing newlines trimmed. The trim is
+deliberately asymmetric: trailing newlines go and a leading blank line after the fence stays,
+so a set written the conventional way — the fence, a blank line, then the heading — prints and
+seeds a body that opens with an empty line. Nothing
+absorbs it, and §7's byte-for-byte row is what makes that deliberate rather than tolerated.
+Nothing
 transforms an author's title — the shipped set's own heading reads
 `# Conventions: general hygiene`, so the prefix a reader sees in a store is the file's choice,
 not a rewrite in code.
@@ -151,13 +177,16 @@ workaround is the listing's path: read the file. Layer-qualified names would hav
 the fixed id and are their own decision.
 
 **An unknown name** is a name no entry carries. Its refusal renders in the listing's order, one
-clause per resolved name, joined by `; `:
+clause per resolved *file* — the file is the unit of listing, so a name held at three layers
+contributes three clauses — joined by `; `:
 
-    unknown conventions set <name>; the sets are: hygiene (project); hygiene (user); mine (user, did not load: frontmatter line 2 is not `key: value`)
+    unknown conventions set <name>; the sets are: hygiene (project); hygiene (user); mine (user, did not load: frontmatter line 2 is not a flat `key: value` line)
 
 `name (layer)` for a loaded or shadowed set, `name (layer, did not load: <reason>)` for a
 failed one — the same information as the listing, in the same order, so a caller can retry
-from the message alone. Exit 2, because the caller typed a name that resolves to nothing.
+from the message alone. An entry whose filename is not UTF-8 contributes no clause: the refusal
+is a list of names to try, and the listing is where an undecodable file appears. Exit 2,
+because the caller typed a name that resolves to nothing.
 
 **A name whose winner failed** is not unknown: it is broken. Refused by name at exit 1 with the
 path and reason. The line between the two is DEC-033's — what the caller typed is theirs to
@@ -172,7 +201,11 @@ a layer:
     hygiene  project  general structure and relations  /repo/.config/smut/conventions/hygiene.md
     hygiene  user     shadowed                        /home/d/.config/smut/conventions/hygiene.md
     mine     user     -                               /home/d/.config/smut/conventions/mine.md
-    hygiene  binary   general structure and relations  conventions/hygiene.md
+    hygiene  binary   shadowed                        conventions/hygiene.md
+
+The binary row says `shadowed` here rather than printing its summary, because the third-field
+rule below shadows *any* row whose name a nearer layer already holds, and the shipped set is
+not exempt: the rule is about position, not about which layer supplied the bytes.
 
 Four fields, two spaces between them, one row per line. The third field is:
 
@@ -184,9 +217,18 @@ Four fields, two spaces between them, one row per line. The third field is:
   user file behind a working project file still prints its reason rather than only its
   demotion (DEC-031 rule 5).
 
-The fourth field is the file's own path: absolute for a file layer, because a row's job is to
-let a reader open it, and `conventions/<name>.md` for the binary, because that is what "its own
-path" means for embedded bytes.
+Those four states are the renderer's choice; the bytes are an author's. A summary is
+interpolated verbatim, so a file declaring `summary: shadowed` renders a row shaped exactly
+like a demotion, and a summary holding two spaces yields a five-field row. "No two states can
+claim one row" is therefore a guarantee about the renderer, not about every line the listing
+can print, and it stays a guarantee about the renderer: nothing is escaped or re-quoted,
+because this is a report before it is a table, and an author's words reach the reader as
+written (DEC-031 rule 3).
+
+The fourth field is the file's own path: absolute for a file layer whose root is absolute —
+the field is that root's join, and nothing rewrites a path to look absolute, so a relative
+`$XDG_CONFIG_HOME` yields a relative row — and `conventions/<name>.md` for the binary, because
+that is what "its own path" means for embedded bytes.
 
 Layer-major ordering is the precedence story written down: the first row for any name is the
 advice in force. The listing **exits 0** even when it reports a broken file — a report whose
@@ -242,13 +284,21 @@ The split, with the signatures the plan will be held to:
     listing(entries: &[Entry]) -> String
     seed(set: &Set) -> Value
 
-`load` owns every filesystem read and everything the reader cannot know: it joins `<kind>` once,
-skips an absent layer silently, sorts each layer's entries by name (a directory's order is
-arbitrary, and the listing is the diagnostic), applies the crate's version to the binary layer
-after `parse`, and concatenates the layers in precedence order. It returns a `Result` because
-an existing-but-unreadable directory is exit 1, and a failure class with no channel is a
-failure class that becomes silence. `parse` stays a reader of bytes; a byte reader that knows
-release numbers is not a reader.
+`load` owns every filesystem read *of a layer*, and everything the reader cannot know: the two
+roots' `<kind>` directories are all it reads (`project_root`'s `.git` walk above is the binary's
+root discovery, and `parse` reads bytes rather than files). It joins `<kind>` once, skips an
+absent layer silently, sorts each layer's entries by name (a directory's order is arbitrary,
+and the listing is the diagnostic) — an entry whose filename is not UTF-8 sorts last, and two
+such entries order by their raw filename, so the order is total whatever `read_dir` returns —
+applies the crate's version to the binary layer after `parse`, and concatenates the layers in
+precedence order. It returns a `Result` because an existing-but-unreadable directory is exit 1,
+and a failure class with no channel is a failure class that becomes silence. That class has no
+`Origin`, because there is no file: it reuses `StoreError::FileSystem` with a `step` naming the
+layer read (`reading the <kind> layer`), which keeps this section's promise that no diagnostic
+about a set claims a store. `parse` stays a reader of bytes; a byte reader that knows release
+numbers is not a reader. It takes no name parameter: the name is the file's stem, which
+`origin` already carries, and a filename that is not UTF-8 never reaches it because §3 reports
+that row before any read.
 
 `Ask` becomes the *question*, owned and answerable without I/O: `List`, `Prose { name }`,
 `Seed { name }`. `answer(roots, kind, ask) -> Result<String, Error>` is the single entry point

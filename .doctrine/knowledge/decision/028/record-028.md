@@ -99,3 +99,29 @@ gains file I/O, and `answer` stays pure — the split survives, the lifetime doe
 The unknown-name refusal stops being a static list and becomes the main diagnostic
 for a mis-placed file, so it must print origins (DEC-026 already requires that in the
 listing).
+
+
+## Amendment (SL-008 audit, RV-035)
+
+Three format facts this record left open, settled by the SL-008 design and now stated
+above rather than discovered later:
+
+- **A repeated key is the second value.** The frontmatter is a flat map, so a duplicate
+  `summary:` overwrites silently. Refusing it would need a message class this record does
+  not carry, and the on-disk format is unchanged either way; named here so a later reader
+  does not think the reader deduplicates. (PHASE-02 review question A.)
+- **The fence test is exact, and exact has a cost.** `--- ` with a trailing space, CRLF
+  line endings and a leading blank line each demote the whole frontmatter to prose. The
+  file still loads and its `summary:` prints as advice. This is the reader's one remaining
+  silent-loss path that is not a refusal; it is stated, not repaired, because repairing it
+  changes the on-disk format. (Question B.)
+- **A malformed file never breaks *the process* or another layer's *listing* — but it does
+  break another layer's *answer* for that name.** The earlier wording ("never breaks the
+  other layers") read as a cross-layer guarantee the binary deliberately does not give:
+  precedence is by layer, never by validity (DEC-031 rule 1), so a corrupt project set
+  shadows a working user copy and asking for that name refuses. Narrowed in `choice`.
+  (Obligation 1 of the SL-008 reconcile.)
+
+`doctrine show DEC-031` is the precedence rule this record defers to; the implementation
+that carries it is `src/conventions.rs` (`load`, `set_in_force`, `clauses`), pinned by
+`a_broken_project_set_shadows_a_good_user_set`.

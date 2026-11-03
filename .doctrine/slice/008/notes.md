@@ -224,19 +224,28 @@ audit should treat the two hedge paragraphs as reviewed-by-attestation only.
 
 ## Harvest
 
-**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `reconcile`, **audit complete (RV-035)** ·
+**fresh-as-of:** `2026-11-03` · `SL-008` lifecycle `reconcile`, **reconciled (RV-035)** ·
 last source change `c6cebe2`; every commit since is `.doctrine` markdown or a memory record,
 confirmed by `git diff --name-only c6cebe2..HEAD`. `PHASE-01`..`PHASE-05` all landed green and
 reviewed/verified (`c3385c2`, `8503b93`, `1ced7c8`, `e692735`, `c6cebe2`); PHASE-02..04 were
 reviewed (RV-030, RV-032, RV-033), PHASE-01 and PHASE-05 verified by their seats, and the
 whole slice audited (RV-035, five findings, none blocking). `just check` exit 0 re-measured at
 `9e5083e` — 451 default and 464 `--features fault-injection` lib tests, zero warnings; all 16
-VT rows PASS. PHASE-05's delta is `e54f7aa..c6cebe2` (one commit, the two owned files).
-Design run `dr-01a19b61` locked at revision 36. **The next action is `/reconcile` against
-RV-035's `## Reconciliation Brief`; `/close` follows and SL-010 is waiting on it.**
+VT rows PASS. **Reconcile landed ten `design.md` edits and three knowledge amendments;
+`/close` is the next action and SL-010 is waiting on it.**
 
 ### Produced
 
+- **Reconciled — RV-035's brief landed on both surfaces.** Ten `design.md` edits (§2 ×2, §3 ×3,
+  §4, §5 ×3, §6): the user-root source; the compound `.config/smut` segment built twice; the
+  stat-failed candidate; duplicate keys and the exact fence; the asymmetric body trim; one
+  clause per resolved *file* plus the corrected diagnostic quote; the binary row `shadowed`;
+  the fourth field's absoluteness; the third-field disjointness ruling; and the §6 `load`
+  paragraph carrying the sort tie-break, the unreadable-directory class and `parse`'s missing
+  name parameter. Three knowledge amendments — **DEC-028** (`choice` narrowed, plus the
+  duplicate-key and exact-fence rules), **DEC-026** (the cost paragraph's cure), **DEC-017**
+  (`choice` + `consequences`: three-layer arrival). **No REV**: the target set refuses a DEC,
+  so the brief's REV routing was corrected to `doctrine knowledge edit` (precedent REV-002).
 - **The slice audited — RV-035 `done · await=none`**, a `reconciliation`-facet ledger on
   `SL-008` with five findings, every one terminal: three `design-wrong` routed to `design.md`
   §2/§6 for reconcile's direct edit (§2's user-root source vs `home_dir()`; the `.config/smut`
@@ -380,15 +389,18 @@ RV-035's `## Reconciliation Brief`; `/close` follows and SL-010 is waiting on it
   to discharge a finding* is the highest-risk prose in a review, and a count in it ("in three
   places", "the only place") is a fact with a falsifier. Four false doc sentences in this
   slice, two of them written by the fixes for earlier ones.
+- `mem.fact.doctrine.rev-target-set-refuses-a-dec` — a reconcile brief that files a decision
+  under "Governance/spec (REV)" is unroutable: REV targets are SPEC/PRD/REQ/ADR/POL/STD, and
+  DECs land through `doctrine knowledge edit` (REV-001 abandoned; REV-002's narrative).
 
 ### Open
 
-- **Nothing in the implementation is open, and the audit left nothing blocking.** The next
-  action is `/reconcile` against RV-035's `## Reconciliation Brief` (five findings plus the
-  eight obligations, two plan items and three design questions), then `/close`, which resolves
-  **IMP-013** — the implementation brief this slice delivers — and unblocks **SL-006**.
-  **CHR-006** carries the two code residuals (RV-035 F-4, F-5); **IMP-020** the invisible
-  mode-000 skip; **IMP-019** the missing `NoFreshBasename` row.
+- **Nothing in the implementation is open, and both reconcile surfaces are written.** The next
+  action is `/close`, which resolves **IMP-013** — the implementation brief this slice delivers
+  — and unblocks **SL-006**. **CHR-006** carries the two code residuals (RV-035 F-4, F-5);
+  **IMP-020** the invisible mode-000 skip; **IMP-019** the missing `NoFreshBasename` row.
+  The design run stays locked at revision 36 while `design.md` carries the reconciled prose:
+  `design adopt` refuses at reconcile by design ("edit design.md directly and do not adopt").
 
 - **Two design sentences are owed to reconcile and are *not* fixed here** — §6's missing
   tie-break among unreadable names and §3's silence on a candidate whose metadata cannot be

@@ -7,15 +7,15 @@ title = "Conventions: one set in 0.2, fixed-id seeds the store owns; the epistem
 record_kind = "decision"
 status = "accepted"
 created = "2026-11-01"
-updated = "2026-11-01"
+updated = "2026-11-03"
 tags = []
 
 [facet]                         # every field typed; seeded empty (captured later)
 context = "prop-conventions-library: shape endorsed (separate command, print never write, never checkable, no auto-selection). Contents were drafts. The epistemic-records set was the only domain with evidence, and review showed its open questions were content decisions rather than mechanism, so it was deferred to IMP-004 on 2026-11-01."
-choice = "Ship `hygiene` only in 0.2. Each set is embedded prose, printed; `--format json` emits one entity with a fixed id and version so re-install upserts the supplied fields, body included; the store owns its copy as an ordinary entity. Never validated, never auto-selected. Adding a later set is a file plus a match arm."
+choice = "Ship `hygiene` only in 0.2. Each set is embedded prose, printed; `--format json` emits one entity with a fixed id and version so re-install upserts the supplied fields, body included; the store owns its copy as an ordinary entity. Never validated, never auto-selected. A later set arrives from any one of three layers: a file in the project's `.config/smut/<kind>/`, a file in the user's, or one added to the binary's shipped table — for the binary layer, a file plus one table entry rather than the match arm this record originally named (SL-008 reconcile, RV-035)."
 alternatives = ["Ship six domain sets now", "Generate a fresh id per install", "Ship a checkable convention format"]
 rationale = "Only epistemic records has evidence; fixed ids make re-install an update rather than a duplicate; the pipe is the whole mechanism, preserving the tool's permissiveness."
-consequences = ["The epistemic-records set is deferred to IMP-004 with its draft and evidence", " No social-graph or dependency set in 0.2", " Adding a set later costs 0.2 nothing: a file plus a match arm", " The store may amend its copy but the seeded body is replaced on re-install; the binary never reads it back"]
+consequences = ["The epistemic-records set is deferred to IMP-004 with its draft and evidence", " No social-graph or dependency set in 0.2", " Adding a set later costs nothing: a file for a project or user layer — or a file plus one entry in the binary's shipped table", " The store may amend its copy but the seeded body is replaced on re-install; the binary never reads it back"]
 decided_by = "operator and agent"
 decided_on = "2026-11-01"
 
