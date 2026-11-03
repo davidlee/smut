@@ -1,0 +1,354 @@
+id    = 34
+slug  = "audit-of-sl-010-the-humane-query-surface-conformance-and-reconciliation-against-design-r35"
+title = "Audit of SL-010 — the humane query surface, conformance and reconciliation against design r35"
+# no status — a review's status is DERIVED from its findings, so
+# it is never stored (the storage rule forbids derived data in authored files).
+
+[review]
+facet     = "reconciliation"     # scope|design|plan|phase-plan|implementation|code-review|reconciliation
+raiser    = "auditor"
+responder = "author"
+rounds_base = 0
+contests_base = 0
+concluded = true
+
+[[review.turn]]
+act = "conclude"
+role = "raiser"
+note = "Audited SL-010 at 8386aeb against design r35, the four phase criteria, and the governance the slice named for itself. Examined: the code the slice added (`src/dsl.rs` compile/value/Where/members, `src/cli.rs`'s Sub::Q arm, the six Reject variants in `src/error.rs`), the guide's short form and both recipe spellings in `src/learn.rs`, the three suites, `plan.md`'s corrections, notes.md § Autonomy log and § Open, the four runtime phase sheets, and `boundaries.toml`. Ran the gate (`just check` exit 0, `doctrine check gate` exit 0), `slice verify-vt 10` (every VT PASS), `slice conformance 10`, and VA-1's single base-diff over design §6's unchanged list plus README.md (prints nothing). Reproduced every refusal sentence by hand against target/debug/smut rather than reading it out of the suites. Nine findings, all terminal: six design-wrong, one design-wrong carrying the six governance obligations, one fix-now paid in place (PHASE-03's recorded boundary re-recorded and the outcome measured: conformance 8/0/4, verify-vt still green), two aligned. No blocker: nothing here is behaviour, every item is paid by the reconciliation brief before close, and the gate would have gated nothing. Synthesis and the twelve-item reconciliation brief written to review-034.md."
+
+[target]                   # the outbound `reviews` edge: RV-NNN ──reviews──▶ <ref>
+ref   = "SL-010"
+
+[[finding]]
+id = "F-1"
+status = "verified"
+severity = "major"
+title = "A token whose value carries the operator is refused as a field name holding it"
+detail = """
+Expected: a refusal true of the line the caller typed. `url=https://example.com/?a=b` is inexpressible on this surface, so exit 2 is right — the sentence should say the token carries two operators, not diagnose which half does.
+
+Observed: `smut q 'url=a=b'` -> `smut: cannot read "url=a=b": a field name holding = is outside q's grammar; use smut query` (exit 2). The field is `url`; the value holds the `=`. Same at `smut q 'title~a~b'` -> "a field name holding ~". Reproduced against target/debug/smut.
+
+Cause: dsl::ambiguous maps "every operator found is the same spelling" onto the field-name reason (src/dsl.rs:299-306), generalising design §3's row, which was written for `a=b=c` alone. The guide narrows the same way — "a field name holding =, ~ or ," (src/learn.rs:141-143) — so a reader with an `=` in a URL is told their field name is at fault, and the class of inexpressible lines is really "a token carrying two operators, whichever half holds the second".
+
+Pinned deliberately: a_token_with_two_operators_is_refused_with_both_named (tests/dsl.rs:377-396) and the §3 census row `a=b=c` (tests/dsl.rs:603-606). The repair therefore moves the sentence in design §3, in the module and in both pins together.
+
+Class: DEC-030 — a refusal names what the caller typed. RV-031 F-2 is the same failure at another altitude: a sentence true of the case it was written for, generalised to cases where it is false."""
+disposition = "design-wrong"
+response = """
+Confirmed, and the design owns it: §3's field-name row was authored for `a=b=c` and the code generalises it to every repeated-operator token, so the sentence asserts a cause it has not established. Expected vs observed is exactly as raised.
+
+Reconcile pays three sites in one wording, in this order: design §3's row first (it is the authoring surface), then the two mirrors — `dsl::ambiguous`'s same-spelling reason (src/dsl.rs:299-306) and the whole-line pins at tests/dsl.rs:377-396 and :603-606 — and the guide sentence at src/learn.rs:141-143, whose list of unsayable things ("a field name holding =, ~ or ,") needs the value case beside it.
+
+Constraint on the replacement, so reconcile is not authoring a second guess: it must be true whether the second operator sits in the field or in the value, so it may not name either half as the culprit; it stays one line, quotes the token, and points at `smut query` (DEC-030). Suggested shape, not decided text: `cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query`."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed, and the design owns it: §3's field-name row was authored for `a=b=c` and the code generalises it to every repeated-operator token, so the sentence asserts a cause it has not established. Expected vs observed is exactly as raised.
+
+Reconcile pays three sites in one wording, in this order: design §3's row first (it is the authoring surface), then the two mirrors — `dsl::ambiguous`'s same-spelling reason (src/dsl.rs:299-306) and the whole-line pins at tests/dsl.rs:377-396 and :603-606 — and the guide sentence at src/learn.rs:141-143, whose list of unsayable things ("a field name holding =, ~ or ,") needs the value case beside it.
+
+Constraint on the replacement, so reconcile is not authoring a second guess: it must be true whether the second operator sits in the field or in the value, so it may not name either half as the culprit; it stays one line, quotes the token, and points at `smut query` (DEC-030). Suggested shape, not decided text: `cannot read "a=b=c": it carries two =, so q cannot tell the field from the value; use smut query`."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. The disposition routes to design §3 and the two mirrors in the order that prevents a second wording; the constraint (must be true whether the second operator sits in field or value) is the part that makes the repair real, so reconcile is held to it and not to the suggested text."
+
+[[finding]]
+id = "F-2"
+status = "verified"
+severity = "minor"
+title = "Design §2 claims two = on one field are always unsatisfiable; a list beside a single value is satisfiable"
+detail = """
+Expected: design §2's two-`=` rule agrees with what the merge can express. Observed: the code refuses `status=a,b status=c` in the caller's words — `cannot read "status=a,b status=c": q carries one = per field; use smut query` (exit 2) — which is the truthful voice, because `c` may be a member of `{a,b}`; while §2 says "Two `=` with different values are unsatisfiable for every store and unspellable here, so they are refused in DEC-027/DEC-030's family".
+
+The fourth design correction covered list-vs-list (`status=a,b status=c,d`); list-vs-single is the case §2's sentence still over-claims. Nothing in the code is wrong: `Where::insert`'s guard (src/dsl.rs:531-536, `EQUALS if previous.key == condition.key && condition.key != IN`) is exactly what keeps the contradiction voice off satisfiable cases. The design owes the wording, not the behaviour."""
+disposition = "design-wrong"
+response = """
+Confirmed as a design-prose defect only. The code's behaviour is right in both directions — the contradiction voice for two differing single values, the caller's own tokens for every satisfiable repeat — and `Where::insert`'s `key != IN` guard is what keeps them apart.
+
+Reconcile owes §2 bullet 1 the qualifier: two `=` are unsatisfiable when both sides are single values; a comma list beside a single value (or beside another list) is satisfiable and is refused because the emitted condition object carries one `$eq` per field, not because no entity could satisfy it. §2 bullet 2 already names "two comma lists"; the list-vs-single case belongs with it, and the fifth correction's count is unaffected — this is a wording repair inside §2, not a sixth correction."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed as a design-prose defect only. The code's behaviour is right in both directions — the contradiction voice for two differing single values, the caller's own tokens for every satisfiable repeat — and `Where::insert`'s `key != IN` guard is what keeps them apart.
+
+Reconcile owes §2 bullet 1 the qualifier: two `=` are unsatisfiable when both sides are single values; a comma list beside a single value (or beside another list) is satisfiable and is refused because the emitted condition object carries one `$eq` per field, not because no entity could satisfy it. §2 bullet 2 already names "two comma lists"; the list-vs-single case belongs with it, and the fifth correction's count is unaffected — this is a wording repair inside §2, not a sixth correction."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. Behaviour verified correct in both directions before the finding was raised; only §2 bullet 1's qualifier moves, and the correction count stays at six."
+
+[[finding]]
+id = "F-3"
+status = "verified"
+severity = "minor"
+title = "--from= is refused as an empty member of a comma list it does not have"
+detail = """
+Expected: an empty escape is refused naming the flag (plan EX-6), and design's own table makes `--from` one id — "the escape for a hostile id", appended after the bare roots — so it has no comma list to hold an empty member; a comma is part of the id it carries (sheet decision D7).
+
+Observed: `smut q --from=` -> `smut: cannot read "--from=": a comma list is a list of names, and one is empty` (exit 2). Design §3 has no row for the empty escape; EX-6 added `--from=` to the list-flag row, and `empty_member` supplies that row's sentence for a flag that is not a list (src/dsl.rs:207-215 with 428-436). Pinned whole-line at tests/dsl.rs:596-599.
+
+This is the first residual the seat deferred to audit (notes.md § Autonomy log, PHASE-04). Confirmed rather than tolerated: the sentence asserts the caller wrote a comma list, when they wrote no value at all. Repair is small — a reason naming the flag and its one-id nature — and design §3 owes the row."""
+disposition = "design-wrong"
+response = """
+Confirmed — the first deferred residual was real, and the seat was right to withhold judgement on it rather than pay it in a phase.
+
+Design §3's message census has no row for an empty escape, so the code borrowed the list sentence. Reconcile pays: a §3 row for `--from=` (it is one id; an empty one is an empty id, not an empty list member), a distinct reason in src/dsl.rs's `--from` arm, and the pin at tests/dsl.rs:596-599. EX-6 needs nothing — it asks only that the empty flag value be refused naming the flag, which it is, and it is an immutable criterion.
+
+Same constraint as F-1: one line, quotes `--from=`, names the flag it is about, points at nothing it invented. The prohibition on handling `--from` as a list also stands (sheet D7) — a comma in that flag is part of the id."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed — the first deferred residual was real, and the seat was right to withhold judgement on it rather than pay it in a phase.
+
+Design §3's message census has no row for an empty escape, so the code borrowed the list sentence. Reconcile pays: a §3 row for `--from=` (it is one id; an empty one is an empty id, not an empty list member), a distinct reason in src/dsl.rs's `--from` arm, and the pin at tests/dsl.rs:596-599. EX-6 needs nothing — it asks only that the empty flag value be refused naming the flag, which it is, and it is an immutable criterion.
+
+Same constraint as F-1: one line, quotes `--from=`, names the flag it is about, points at nothing it invented. The prohibition on handling `--from` as a list also stands (sheet D7) — a comma in that flag is part of the id."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. EX-6 is satisfied as written and is not an edit surface; the row that is missing is §3's, and the pin at tests/dsl.rs:596-599 moves with the sentence."
+
+[[finding]]
+id = "F-4"
+status = "verified"
+severity = "major"
+title = """The guide's "The hot path therefore has no flags" is refuted by the hot paths it prints"""
+detail = """
+Expected: a headline rule a reader can hold while reading the section under it.
+
+Observed: GUIDE:110-113 reads "a bare word is a thing, field=value is a filter, and --word is structure. The hot path therefore has no flags, and the grammar itself invents nothing a shell would eat." Four of the five lines the same section prints as "the five queries the short form exists for" carry flags — `IDS status=open --ids`, `session --backlinks part-of --depth 2 --ids`, `type=question status=open --select smut_id,title`, `--has body --order title:desc` — and the twelve-flag table sits two paragraphs below. Design §1's own two example lines, printed directly under the same sentence there, carry `--backlinks`/`--follow`/`--depth`/`--ids` as well.
+
+Read as "the bare filter query needs no flags" the sentence is true and the following sentence ("The structural half is spelled out where a reader can see it") supports it; printed where it is, the literal reading is the one a reader takes, and the section contradicts itself four times within a screen.
+
+No test pins the sentence (grep "no flags" reaches only GUIDE:112 and design §1), so the correction is prose on both surfaces. This is the candidate sixth correction the seat deferred (notes.md § Autonomy log, Seat)."""
+disposition = "design-wrong"
+response = """
+Confirmed on the literal reading, which is the one a reader takes: the sentence is followed within a screen by a flag table and by four of the five hot-path lines it is supposed to describe, so the section refutes itself.
+
+Reconcile pays design §1's sentence and its GUIDE mirror (src/learn.rs:110-113) together, in that order. The claim worth keeping is the one the following sentence already carries — that nothing the grammar invents needs a shell quote — so the repair is to stop claiming the hot path is flagless and say which half is: the tokens. Suggested shape, not decided text: "The tokens need no flags and nothing the grammar invents needs a quote; everything structural is spelled out where a reader can see it."
+
+No pin moves: nothing asserts the sentence today. If reconcile wants one, the shape is a whole-sentence pin inside the short-form span like the rest of EX-1's, not a substring. The seat's reason for deferring (design owns the wording, not provably false) is spent — it is provably false of the five lines printed under it. This is the sixth design correction."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed on the literal reading, which is the one a reader takes: the sentence is followed within a screen by a flag table and by four of the five hot-path lines it is supposed to describe, so the section refutes itself.
+
+Reconcile pays design §1's sentence and its GUIDE mirror (src/learn.rs:110-113) together, in that order. The claim worth keeping is the one the following sentence already carries — that nothing the grammar invents needs a shell quote — so the repair is to stop claiming the hot path is flagless and say which half is: the tokens. Suggested shape, not decided text: "The tokens need no flags and nothing the grammar invents needs a quote; everything structural is spelled out where a reader can see it."
+
+No pin moves: nothing asserts the sentence today. If reconcile wants one, the shape is a whole-sentence pin inside the short-form span like the rest of EX-1's, not a substring. The seat's reason for deferring (design owns the wording, not provably false) is spent — it is provably false of the five lines printed under it. This is the sixth design correction."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. Verified against the section's own five hot-path lines and against the two example lines under design §1's copy of the sentence. No pin asserts it today, so the repair is prose on two surfaces and the sixth correction is live."
+
+[[finding]]
+id = "F-5"
+status = "verified"
+severity = "minor"
+title = "Design §3/§7 promise the specification's sentence for a directionless --depth abc; MissingDirection answers first"
+detail = """
+Expected: design §3's `--depth=-1` / `--depth abc` rows and §7's `--depth abc` row say the caller sees `depth must be a nonnegative integer`.
+
+Observed: `smut q --depth abc` -> `--depth needs a direction: add --follow, --backlinks, or drop it`; the specification's sentence is reached with a direction present (`--depth abc --follow any` -> `depth must be a nonnegative integer`). Both exits are 2 and both sentences are pinned (tests/dsl.rs `numeric_flags_are_read_by_the_same_value_rule_as_a_token`; tests/cli_contract.rs `the_specifications_own_messages_reach_the_human`), so the F1 ruling holds and no criterion is false — but §3's two rows and §7's row are unsound as printed.
+
+Already recorded as the fifth correction (plan.md § Corrections owed); audit confirms the ruling's reading rather than reopening it, and adds one thing the correction text leaves implicit: §7's verification row needs the direction too, not only §3's. The guide is already right — GUIDE:129 states "needs a direction" beside `--depth`."""
+disposition = "design-wrong"
+response = """
+Confirmed: the F1 ruling's reading is sound and needs no reopening — both sentences are reachable, both exits are 2, and both criteria hold with the direction present. What is unsound is the design's printed rows, which promise the specification's sentence on a line the front-end refuses first.
+
+Reconcile pays the fifth correction already recorded in plan.md § Corrections owed, with the addition this finding makes: §7's verification row needs the direction in it too, not only §3's two rows. No code change, no test change — the guide already teaches the precondition beside `--depth` (GUIDE:129), so design is the only surface behind the implementation here."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed: the F1 ruling's reading is sound and needs no reopening — both sentences are reachable, both exits are 2, and both criteria hold with the direction present. What is unsound is the design's printed rows, which promise the specification's sentence on a line the front-end refuses first.
+
+Reconcile pays the fifth correction already recorded in plan.md § Corrections owed, with the addition this finding makes: §7's verification row needs the direction in it too, not only §3's two rows. No code change, no test change — the guide already teaches the precondition beside `--depth` (GUIDE:129), so design is the only surface behind the implementation here."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. The ruling's reading is confirmed rather than reopened; the finding's only addition is §7's row, which the correction text carried by implication."
+
+[[finding]]
+id = "F-6"
+status = "verified"
+severity = "minor"
+title = "The six reconcile obligations are real, and none of them routes to the backlog"
+detail = """
+Verified one at a time against the artefact rather than taken from notes.md:
+
+- DEC-016 — the guide prints both recipe spellings and tests/fixture.rs executes both, so the decision's pinned JSON spelling must name the DSL one, or the guide's normative home is the only place the short form is absent.
+- DEC-035 — design §2 excludes JSON *string* literals from the value rule ("a JSON scalar" literally includes them), a narrowing the decision's wording does not carry.
+- DEC-037 — its consequence "the no-query refusal belongs to this layer" is superseded: design §3 decides not to have one, and `smut q` with no tokens exits 1 on the store, not 2.
+- IMP-014 — six new Reject variants land with no census to catch a variant that ships without its message test.
+- IMP-016 — OPERATORS (src/dsl.rs:216) is the third spelling of the five predicate operators.
+- DEC-039 — its `status=open status!=resolved` illustration is false: the pair is satisfiable and answered at exit 0, pinned in tests/dsl.rs:324-336. The decision's rule stands; only that sentence is wrong.
+
+All six are governance writes (REV) at reconcile. None is a backlog item, and none may be disposed `follow-up`. With plan.md's five design corrections and readme-examples.md's README section — operator-owned, CHR-001, paid not restaged — reconcile carries twelve items across three surfaces, not seven."""
+disposition = "design-wrong"
+response = """
+Confirmed — all six are governance records that no longer tell the truth, so they are reconcile's write surface (REV) and none is a backlog item. The audit line holds: no `follow-up` for any of them.
+
+Reconcile carries twelve items, not seven: the six REV amendments named here, the five design corrections in plan.md (now six — F-4 adds §1's sentence), and the README `q` section from readme-examples.md, which is operator-owned (CHR-001) and is paid rather than restaged. DEC-039's corrupted illustration is the sharpest of the six: the decision's rule is right and one sentence of its evidence is false, which is the shape a reader is least likely to catch."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "design-wrong"
+response = """
+Confirmed — all six are governance records that no longer tell the truth, so they are reconcile's write surface (REV) and none is a backlog item. The audit line holds: no `follow-up` for any of them.
+
+Reconcile carries twelve items, not seven: the six REV amendments named here, the five design corrections in plan.md (now six — F-4 adds §1's sentence), and the README `q` section from readme-examples.md, which is operator-owned (CHR-001) and is paid rather than restaged. DEC-039's corrupted illustration is the sharpest of the six: the decision's rule is right and one sentence of its evidence is false, which is the shape a reader is least likely to catch."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. Each of the six was checked against the artefact, not against the notes, and none belongs on the backlog. Reconcile's tally is twelve items across three surfaces."
+
+[[finding]]
+id = "F-7"
+status = "verified"
+severity = "major"
+title = "PHASE-03's recorded boundary ended at 108d1c2, not cd69acd, importing the foreign commit into the slice span"
+detail = """
+Expected: `record-delta --commit <S>` records exactly `[S^, S]` (the verb's own contract), so PHASE-03's row is `f26f923..cd69acd` — which is what phase-03.md:146-147, notes.md:561-563 and handover.md:15 all state.
+
+Observed: `code_end_oid = 108d1c2` ("docs(backlog): IDE-007 slug alias"). The recorded span is six commits — cd69acd, fabc633, 53cbf8c, c8c2e7b ("quotient", the operator), 72590a4, 108d1c2 — so it imports the operator's foreign commit and both IDE-007 backlog commits into the phase's span even though `f26f923` is `cd69acd^`.
+
+Consequences measured, not predicted: `slice conformance 10` read 14 undeclared — `.quotient/{forms/read,forms/write,result-read,result-write}`, `backlog/improvement/021/*`, `backlog/idea/007*` plus the four slice-metadata paths — instead of the 4 the seat recorded at 53cbf8c. Re-recorded as `--start f26f923 --end cd69acd`, conformance returns 8 conformant / 0 undelivered / 4 undeclared and `slice verify-vt 10` stays all PASS.
+
+No slice drift is implied by those 10 paths: not one is a design-target selector, and the handover's premise ("no phase delta spans it") is true of the intent and was false of the record. Registry corrected in place during this audit; the finding stands as the reason the audit's own starting evidence had to be re-derived."""
+disposition = "fix-now"
+response = """
+Confirmed, remediated, and re-measured in this unit.
+
+The registry row now reads `f26f923..cd69acd`, recorded with the verb's escape-hatch form because the safe `--commit` form is what failed to produce it. After the correction: conformance 8 conformant / 0 undelivered / 4 undeclared (the four slice-metadata paths), and `slice verify-vt 10` still reports every VT PASS. The ten foreign/metadata paths left the slice span entirely, which also retires the handover's reason for asking audit to read the undeclared cell defensively.
+
+Nothing else is payable: the code, the phases and the notes are unaffected, and no phase delta needs re-deriving. Worth carrying into close: a recorded boundary is evidence, and `record-delta --commit`'s whole point is that it cannot quietly become a range — so the fact that this row was a range is itself the signal to look for at the next audit."""
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "fix-now"
+response = """
+Confirmed, remediated, and re-measured in this unit.
+
+The registry row now reads `f26f923..cd69acd`, recorded with the verb's escape-hatch form because the safe `--commit` form is what failed to produce it. After the correction: conformance 8 conformant / 0 undelivered / 4 undeclared (the four slice-metadata paths), and `slice verify-vt 10` still reports every VT PASS. The ten foreign/metadata paths left the slice span entirely, which also retires the handover's reason for asking audit to read the undeclared cell defensively.
+
+Nothing else is payable: the code, the phases and the notes are unaffected, and no phase delta needs re-deriving. Worth carrying into close: a recorded boundary is evidence, and `record-delta --commit`'s whole point is that it cannot quietly become a range — so the fact that this row was a range is itself the signal to look for at the next audit."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted, and the remediated state re-checked after the write: conformance 8/0/4, verify-vt every VT PASS. The observation stands in the ledger as the reason the audit's starting evidence had to be re-derived."
+
+[[finding]]
+id = "F-8"
+status = "verified"
+severity = "nit"
+title = "--edges --depth 2: the deferred residual closes as covered, not as a gap"
+detail = """
+Residual #2 handed to audit (notes.md § Autonomy log, PHASE-04). `smut q --edges --depth 2` -> `--depth needs a direction: add --follow, --backlinks, or drop it` (exit 2).
+
+Design §3's row already covers it: the directions that satisfy the rule are `--follow` and `--backlinks`, `--edges` supplies a traversal that follows nothing (design §2; the guide's "carry the induced edge set without walking anything"), and the repair text is true and actionable — a reader who took `--edges` for a direction is corrected by the sentence itself.
+
+No §3 row is owed and nothing is payable. Recorded so closure does not re-open it as an open residual."""
+disposition = "aligned"
+response = "Agreed — aligned, and the residual closes here rather than being carried. `--edges` supplies a traversal that follows nothing; §3's row names `--follow` and `--backlinks` as the directions, and the sentence's repair text is true. No row owed, nothing payable."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = "Agreed — aligned, and the residual closes here rather than being carried. `--edges` supplies a traversal that follows nothing; §3's row names `--follow` and `--backlinks` as the directions, and the sentence's repair text is true. No row owed, nothing payable."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. The residual closes as covered; no row, no work."
+
+[[finding]]
+id = "F-9"
+status = "verified"
+severity = "nit"
+title = "Conformance's declared/undeclared algebra is clean once the registry is corrected"
+detail = """
+After F-7's registry correction: 8 conformant (each src file against its own design-target selector), 0 undelivered, 4 undeclared — `notes.md`, `plan.md`, `research/baseline.toml`, `slice-010.toml`, all slice metadata that design §6 deliberately excludes ("the eight paths above, and no others").
+
+VA-1's single base-diff at 4bfd8ea over design §6's unchanged list plus README.md prints nothing, so no phase touched `src/spec.rs`, `src/predicate.rs`, `src/main.rs`, `src/render_markdown.rs`, `src/select.rs`, `src/walk.rs`, `src/order.rs`, `docs/store-format.md` or `tests/compatibility.rs`, and `README.md` was not restaged (CHR-001).
+
+Recorded as an alignment so closure does not have to re-derive it, and so the four remaining paths are on the ledger as deliberately out of scope rather than as unexamined residue."""
+disposition = "aligned"
+response = "Agreed — aligned. The four remaining undeclared paths are slice metadata that design §6 excludes by construction, and the eight conformant paths each match their own selector. VA-1's single base-diff is the census that keeps design §6's unchanged list honest, and it prints nothing at the slice base."
+
+[[finding.turn]]
+act = "raise"
+role = "raiser"
+
+[[finding.turn]]
+act = "dispose"
+role = "responder"
+disposition = "aligned"
+response = "Agreed — aligned. The four remaining undeclared paths are slice metadata that design §6 excludes by construction, and the eight conformant paths each match their own selector. VA-1's single base-diff is the census that keeps design §6's unchanged list honest, and it prints nothing at the slice base."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted. Alignment recorded so closure inherits the reading instead of re-deriving it."
+
+# Findings are append-only `[[finding]]` tables, added by `review raise`.
+# Empty here at creation — a fresh review is Active, awaiting the raiser.

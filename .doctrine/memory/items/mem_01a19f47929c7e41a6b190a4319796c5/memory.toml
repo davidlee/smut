@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19f47929c7e41a6b190a4319796c5"
+memory_key = "mem.fact.doctrine.recorded-boundary-drives-conformance-attribution"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "fact"
+status = "active"
+title = "Conformance attribution follows the recorded boundary, so a wide range silently credits a foreign commit to the slice"
+summary = "`slice conformance` reads the recorded delta registry, not git intent; a phase boundary whose end is not the phase's own commit moves undeclared paths into the slice span with nothing reddening."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = []
+globs = []
+commands = ["slice conformance", "slice record-delta", "slice verify-vt"]
+tags = ["conformance", "deltas", "audit"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "5bb508b0a89316b99a6469f5cfbc0691c84da5cb"
+ref_name = "refs/heads/main"
+checkout_state_id = "670d6f459e0ceafdab37f9fd436a903a0491f8f6118399455203ec8f007f6219"
+base_commit = "9e5083eeaa5362401aefeeb257c8d514be6aed8b"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+

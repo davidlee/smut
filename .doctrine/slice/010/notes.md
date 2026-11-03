@@ -126,9 +126,11 @@ named direction) needs no decision: the spec's own rule is inherited.
 
 ## Harvest
 <!-- single-copy: updated in place each harvest; ids only, never restated content -->
-fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 completed
-· bb6a9d2 · PHASE-02 completed · d20a84f · PHASE-03 completed · cd69acd · VH-1 pass
-· head e09a18b · audit **not opened**
+fresh-as-of: 2026-11-03 · audit (RV-034 concluded) · head 9e5083e
+
+Every phase `completed` — PHASE-01 `1fb66de`, PHASE-04 `bb6a9d2`, PHASE-02 `d20a84f`,
+PHASE-03 `cd69acd`; VH-1 a pass; RV-034 concluded with every finding terminal. The
+detail lives in § Audit — RV-034; this section stays the manifest.
 
 ### Produced
 
@@ -189,6 +191,13 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   six-entity fixture, eight examples with exact verified transcripts, and the two
   limits (a structural operand on an array; cross-field `$or`) each shown with its
   JSON escape.
+- **RV-034** — the audit: nine findings, all terminal (six `design-wrong`, one
+  `design-wrong` carrying the six governance obligations, one `fix-now` paid in place,
+  two `aligned`), plus a `## Synthesis` and a twelve-item `## Reconciliation Brief`
+  across four surfaces. Ledger: `.doctrine/review/034/`.
+- **PHASE-03's recorded boundary corrected** — `f26f923..cd69acd`, not `..108d1c2`;
+  conformance now reads 8 conformant / 0 undelivered / 4 undeclared and `verify-vt` is
+  still all PASS (RV-034 F-7).
 
 ### Learned
 
@@ -276,6 +285,17 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
   although the scope non-goals it, and clap's errors are five lines while the design
   called every refusal one.
 
+### Learned (audit)
+
+- `mem.pattern.smut.refusal-pins-hold-shape-not-truth` — a whole-line pin holds a
+  sentence's shape, never its truth; the class is "a rule true of one case,
+  generalised", and it recurred at the refusal-catalogue and guide altitudes after
+  RV-031 found it in the design's merge rules.
+- `mem.fact.doctrine.recorded-boundary-drives-conformance-attribution` — conformance
+  reads the recorded registry, so a boundary whose end is not the phase's own commit
+  moves foreign paths into the slice span with nothing reddening. `record-delta
+  --commit`'s `[S^, S]` contract is what makes a range noticeable.
+
 ### Open
 
 - **The plan is hardened.** Two audits (obligations; surface, sequencing, risk) ran against
@@ -332,6 +352,10 @@ fresh-as-of: 2026-11-03 · started · PHASE-01 completed · 1fb66de · PHASE-04 
 - **Next:** the seat decides on audit. Nothing in SL-010's implementation is open; the
   five design corrections and the six reconcile obligations above are audit/reconcile's,
   and the README section is the seventh reconcile item.
+- **Audit ran** (2026-11-03, RV-034), opened by the operator after this handover and
+  concluded with every finding terminal. What this section lists as open is now the
+  reconciliation brief's inventory — see § Audit — RV-034. The correction count grew to
+  six: the guide's "no flags" sentence was promoted from candidate to owed.
 
 ## Implementation run
 
@@ -747,3 +771,74 @@ PHASE-02 → PHASE-03, and the `Seat` block closes the run.
   judgements audit should interrogate without deference. The durable records are
   current as of `e09a18b`, so the packet only frames the next stage and points at
   them.
+
+## Audit — RV-034 (2026-11-03)
+
+The audit stage, run in a fresh context by design (the previous seat's own handover asked
+for it: audit's value is the eyes that did not author the rationalisations it must judge).
+Ledger: `.doctrine/review/034/` — nine findings, every one terminal, a `## Synthesis` and a
+`## Reconciliation Brief` naming twelve items across four surfaces.
+
+### Verdict
+
+The implementation is what the design asked for. `compile` is a pure function that emits
+the specification object and lets `spec::parse` read it, so "adds no semantics" is a fact
+about the call graph; `Sub::Q` opens no store before validation; byte identity is pinned
+where it holds and selected-set agreement where it does not; design §6's unchanged list is
+untouched at the slice base (VA-1); nothing landed in `.smut/`. `just check` exit 0,
+`doctrine check gate` exit 0, `verify-vt 10` every PASS, conformance 8/0/4 after the
+repair below.
+
+**None of the nine findings is against behaviour.** Eight are one class: a sentence true of
+the case it was written for, generalised to cases where it is false — RV-031 F-2's class,
+recurring one layer down in the refusal catalogue and in the guide.
+
+### Findings
+
+| id | sev | disposition | one line |
+| --- | --- | --- | --- |
+| F-1 | major | design-wrong | `url=a=b`-class: a token whose *value* holds the operator is refused as "a field name holding =" (design §3, `dsl::ambiguous`, the guide's unsayable list, two pins) |
+| F-2 | minor | design-wrong | design §2 over-claims: a comma list beside a single value is satisfiable; the code is right, the prose is not |
+| F-3 | minor | design-wrong | `--from=` refused as an empty member of "a comma list" it does not have (residual #1, confirmed) |
+| F-4 | major | design-wrong | the guide's "The hot path therefore has no flags" — four of the five hot-path lines under it carry flags; **sixth correction**, promoted from candidate |
+| F-5 | minor | design-wrong | §3/§7 promise the specification's sentence for a directionless `--depth abc`; the F1 ruling is confirmed, and §7's row needs the direction too |
+| F-6 | minor | design-wrong | the six reconcile obligations verified real, none routed to the backlog |
+| F-7 | major | fix-now | PHASE-03's recorded boundary ended at `108d1c2`; re-recorded, measured, and paid in place |
+| F-8 | nit | aligned | `--edges --depth 2` — residual #2 closes as covered, no row owed |
+| F-9 | nit | aligned | conformance's algebra clean once the registry was corrected |
+
+No blocker was raised, deliberately: every item is prose-and-pins (paid at reconcile in one
+pass) or already remediated, so a blocker would have gated nothing while the brief is what
+actually stops a false sentence shipping.
+
+### F-7 — the recorded boundary, and why it mattered
+
+`boundaries.toml` said PHASE-03 ended at `108d1c2`. `record-delta --commit <S>` records
+exactly `[S^, S]`, and `f26f923` *is* `cd69acd^`, so the row could not have come from the
+command the notes recorded: it spanned six commits and imported the operator's foreign
+`c8c2e7b` ("quotient") and both IDE-007 backlog commits into the slice's span. Nothing
+reddened — conformance reads the registry, so its undeclared cell read 14 instead of 4 —
+which is why the handover's "no phase delta spans it" was true of the intent and false of
+the record. Re-recorded as `--start f26f923 --end cd69acd`: conformance 8 conformant / 0
+undelivered / 4 undeclared (slice metadata only), `verify-vt` still all PASS. The operator's
+commit is foreign; the drift was in the row.
+
+### What reconcile carries
+
+Four surfaces, ordered so nothing is written before the thing that authors it: **design
+prose** (six corrections: §3's field-name row, a §3 row for `--from=`, §2 bullet 1, §1's
+"no flags", §3/§7's numeric precondition, plus corrections 2 and 3 as already recorded) →
+**code mirrors** (the operator's `fix-now` ruling: `src/dsl.rs`'s two reasons, `src/learn.rs`
+110-113 and 141-143, three pins in `tests/dsl.rs`, then `just check`) → **governance/REV**
+(DEC-016, DEC-035, DEC-037, DEC-039, IMP-014, IMP-016) → **operator-owned README**
+(`readme-examples.md`, CHR-001, paid not restaged).
+
+### Traps for whoever runs reconcile
+
+- **Do not `doctrine design resume 10`.** The run is locked at r35; the corrections are prose
+  owed to it, paid by direct edit.
+- **`plan.toml` is off-surface.** `EN-/EX-/VT-` and `PHASE-NN` are immutable-append; F-3
+  leaves EX-6 satisfied as written.
+- **One wording, authored once.** Write the design sentence first, then copy it into the
+  code mirror. Reversed, the mirror invents a second voice for the same refusal.
+- **Path-scoped `git add` only.** Another slice's session shares this worktree.

@@ -1,0 +1,43 @@
+memory_uid = "mem_01a19f47927d7e73b6f110205c83cc4e"
+memory_key = "mem.pattern.smut.refusal-pins-hold-shape-not-truth"
+schema_version = 1
+lifespan = "semantic"
+memory_type = "pattern"
+status = "active"
+title = "A whole-line refusal pin holds the sentence's shape, never its truth"
+summary = "Pinning a refusal whole-line stops drift but not falsehood; the class recurs wherever a sentence true of one case is generalised to others."
+created = "2026-11-03"
+updated = "2026-11-03"
+
+[scope]
+paths = ["src/dsl.rs", "tests/dsl.rs", "src/learn.rs"]
+globs = []
+commands = []
+tags = ["refusals", "testing", "dec-030"]
+workspace = "default"
+repo = "github.com/davidlee/smut"
+repo_id_kind = "remote"
+repo_id_confidence = "high"
+
+[git]
+anchor_kind = "checkout_state"
+commit = ""
+tree = "5bb508b0a89316b99a6469f5cfbc0691c84da5cb"
+ref_name = "refs/heads/main"
+checkout_state_id = "c62f6de0dcac080b6b7f2fdcd14b84ae5aa017f33e4933f43873482470b0bbdc"
+base_commit = "9e5083eeaa5362401aefeeb257c8d514be6aed8b"
+verified_sha = ""
+normalizer = "forget.checkout.v1"
+
+[review]
+verification_state = "unverified"
+reviewed = ""
+review_by = ""
+
+[trust]
+trust_level = "high"
+
+[ranking]
+severity = "medium"
+weight = 0
+
