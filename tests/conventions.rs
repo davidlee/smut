@@ -113,6 +113,9 @@ impl Scratch {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir_all(&path).expect("a scratch directory");
+        // The binary reports the resolved cwd; macOS's temp dir sits behind a
+        // symlink (`/var` -> `/private/var`), so expect the resolved path.
+        let path = path.canonicalize().expect("a resolvable scratch directory");
 
         // Children of the scratch path, so they are removed with it and neither
         // can be an ancestor of the working directory the binary starts in.
