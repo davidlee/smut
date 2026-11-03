@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 43
+slug = "shared-selection-and-display-args"
+title = "The selection flags and the display flags are each one flattened clap struct shared by every verb that takes them"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-03"
+updated = "2026-11-03"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "q's twelve flags are inline in Sub::Q and render's five in Sub::Render; r needs both. Probe at clap 4.6.7 in the scratchpad confirmed flattening."
+choice = "A `Selection` args struct (the attribute-free tokens positional plus q's twelve flags plus -j) is flattened into q and r and converts into dsl::Flags in cli.rs. A `Display` args struct (-f -t -l -i -s) is flattened into render and r and builds render_markdown::Options. dsl.rs gains no clap import."
+alternatives = ["copy the flags into a third enum variant: parallel implementation", "make dsl::Flags itself derive clap Args: couples the pure compiler to clap"]
+rationale = "One definition per flag set. The probe showed the bare positional keeps DEC-037 behaviour under flatten and q's pinned usage line is unchanged."
+consequences = ["render's usage keeps [JSON] and q's keeps [TOKENS]", "-l with a flag-looking value binds it and refuses it loudly as an invalid level"]
+decided_by = "user (agreed, 2026-11-03) on agent proposal"
+decided_on = "2026-11-03"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-011"

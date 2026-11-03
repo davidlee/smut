@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 44
+slug = "json-flag-excludes-the-token-line"
+title = "-j beside any token or selection flag is one smut refusal; display flags stay legal"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-03"
+updated = "2026-11-03"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "-j replaces the whole selection line. Combining it with tokens or selection flags has no single meaning."
+choice = "A new Reject variant refused at exit 2 before any store: `-j takes the whole specification; drop the tokens and selection flags beside it`. Detected as non-empty tokens or Flags differing from Flags::default(). Display flags on r remain legal beside -j."
+alternatives = ["clap conflicts_with_all: a fourth spelling of every flag name and clap's multi-line voice", "silent precedence of -j: a guess"]
+rationale = "One line in DEC-030's voice naming only -j which the caller typed. No flag-name list to drift."
+consequences = ["the new variant joins the Reject inventory and its message test", "IMP-014 and IMP-015 debts are named rather than paid"]
+decided_by = "user (agreed, 2026-11-03) on agent proposal"
+decided_on = "2026-11-03"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-011"

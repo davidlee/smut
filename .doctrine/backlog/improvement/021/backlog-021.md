@@ -172,11 +172,16 @@ express engine rules JSON Schema cannot, and it should.
 5. **The schema kind's name and listing verb**, given the `learn` sentence above.
 6. **Whether a per-call override exists at all** (`--no-schema`), and if so what
    it reports on the way past.
-7. **Bulk read stays out.** Full-store reading needs no new verb for the gate (the
-   `Snapshot` is already in memory), and `query` still caps at 100
-   (`src/spec.rs:38`) with no `offset`/`cursor`/`$gt` (`src/spec.rs:571`). If a
-   `check` verb arrives later it reads the snapshot directly and inherits none of
-   that.
+7. **Bulk read stays out.** The gate reads the `Snapshot`, which is already in
+   memory, so no result cap or paging is involved at all. Note for the record that
+   `query`'s 100 is a **default, not a ceiling**: `DEFAULT_LIMIT` (`src/spec.rs:38`)
+   applies only when `limit` is absent, and both the spec key and the DSL's
+   `--limit` flag raise it arbitrarily (up to `u64::MAX`, still a finite cap —
+   `a_parsed_specification_never_asks_for_an_unlimited_result`). A whole-store read
+   from outside is therefore already possible in one call; what is genuinely absent
+   is *narrow* paging — no `offset`/`cursor` (`src/spec.rs:571`), no `$gt` — so a
+   large store costs one envelope in memory rather than a stream. That is a scale
+   observation, not a blocker, and it is not this item's to fix.
 
 ## Suggested order of work
 

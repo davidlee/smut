@@ -1,0 +1,33 @@
+schema = "doctrine.knowledge"
+version = 1
+
+id = 42
+slug = "render-front-end-is-r-and-j-carries-json"
+title = "Markdown from a token line is a new verb `smut r`; `-j/--json` carries the machine spec on both q and r"
+record_kind = "decision"
+status = "accepted"
+created = "2026-11-03"
+updated = "2026-11-03"
+tags = []
+
+[facet]                         # every field typed; seeded empty (captured later)
+context = "SL-011 makes render reachable through q's grammar. DEC-034's argument (a bare positional cannot be told from a JSON operand) applies to render's positional too."
+choice = "`smut r` takes q's tokens and flags and prints render's Markdown. `-j/--json JSON` (`-` reads stdin) on q and r takes one JSON specification in place of the tokens. An empty r line is `{}` as for q. `smut query` and `smut render` keep their exact bytes."
+alternatives = ["tokens on render with a first-character dispatch rule: leaks on quote and bracket spellings and guesses", "a --markdown mode on q: imports five display flags into q", "r without -j: drops the one-verb machine escape"]
+rationale = "Brevity (user), no back-compat trap (render unchanged), and one verb per output for humans with the machine syntax a flag away rather than a verb away."
+consequences = ["DEC-034 sentence that q is the only human front-end is amended at reconcile", "DEC-008 one-JSON-operand wording is narrowed at reconcile", "the guide and README teach r and -j"]
+decided_by = "user (agreed, 2026-11-03) on agent proposal"
+decided_on = "2026-11-03"
+
+[evidence]                      # free-text citations (supports / contradicts / notes)
+supports    = []
+contradicts = []
+notes       = []
+
+[relationships]                 # verb-written edges (set by doctrine supersede)
+supersedes    = []   # record ids this one replaces (set by doctrine supersede)
+superseded_by = []   # set on superseded predecessor (verb-written)
+
+[[relation]]
+label = "shapes"
+target = "SL-011"
