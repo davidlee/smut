@@ -185,7 +185,7 @@ note = """Discharged in `1ced7c8`. The false reassurance ("in a process about to
 
 [[finding]]
 id = "F-6"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The mode-000 row's skip announcement is invisible at the gate"
 detail = """
@@ -210,6 +210,11 @@ response = """
 Accepted as a real visibility defect and deliberately not fixed here. EN-3's purpose was that a skipped unreadable-layer row never silently counts as passing; `eprintln!` under a capturing harness defeats that purpose while satisfying its letter, and the class is only carried today by the sibling row.
 
 Out of this phase's charter (the remedy is the gate's test recipe, not `src/conventions.rs`), so it goes to the backlog rather than being absorbed. Fixing it means either a gate flag or an assertion that fails when the row is skipped for a reason other than running as root — the latter is the honest form, since a skip should be evidence rather than an absence."""
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted: the class is carried by the sibling row, and the remedy is the gate's test recipe — captured as IMP-020. Not this phase's file to fix."
 
 [[finding]]
 id = "F-7"

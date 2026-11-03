@@ -133,6 +133,16 @@ having no global options, and the learn exit table being one line.
    fixture for that class; a directory whose name is undecodable stays silent because the
    metadata test runs first. Owed: one sentence in §3.
 
+8. **`design.md` §5's third field has no disjointness rule (RV-033 F-7).** `listing` interpolates
+   `set.summary` verbatim, so a file declaring `summary: shadowed` (or `-`, or `did not load: …`)
+   renders a row shaped exactly like the demoted or failed state, and a summary containing two
+   spaces yields a five-field row — which breaks the suite's own `split("  ")` reading. Not an
+   EX-2 violation: the criterion says the field *is* the summary and no escaping is specified. The
+   "no two states can claim one row" guarantee holds for the renderer's choice, not the bytes.
+   Owed: declare the third field's vocabulary disjoint from author-supplied summaries, or give
+   the listing a delimiter its helpers can trust. Raised by the PHASE-04 review and deliberately
+   not patched in the phase.
+
 ### Design questions the PHASE-02 review raised (RV-030, judgement calls)
 
 Not defects — the design or the operator owns them — but they are owed a ruling, and none of
@@ -210,6 +220,12 @@ holding on this slice's completion**.
   No new design question — `source`'s literal is plan.md item 5's recorded reading.
 - **The slice's implementation is complete** — five phases, one commit apiece at the end, all
   owned paths, another writer's backlog file and `_envrc` untouched throughout.
+- **The implementation review ledger is resolved.** RV-030, RV-032 and RV-033 are `done` with
+  `await=none` and no open findings on `SL-008`; the two nits that still awaited the raiser were
+  verified: RV-032 F-6 (a skipped mode-000 row is invisible at the gate) is IMP-020, RV-033 F-7
+  (the third field's vocabulary is not disjoint) is obligation 8 below. RV-029 remains a design
+  review `done`, its `review_pass` stale against revision 36 — advisory, recorded in
+  § Implementation run.
 - **The slice's learned leg is in the memory corpus** — five new records
   (`mem.pattern.doctrine.mutation-probe-per-property`,
   `mem.pattern.doctrine.cross-slice-patch-review`,
@@ -319,7 +335,7 @@ holding on this slice's completion**.
 ### Open
 
 - **Nothing in implementation is open.** The next action is audit (`/audit`), which this run's
-  charter excludes; the seven obligations in § Obligations owed at reconcile and
+  charter excludes; the eight obligations in § Obligations owed at reconcile and
   `plan.md`'s adjudicated design questions are the audit's input, none of them repaired here.
 
 - **Two design sentences are owed to reconcile and are *not* fixed here** — §6's missing
@@ -1091,11 +1107,11 @@ failed**. No warnings, no ignores, no skips.
 
 #### For reconcile (already on the list, not touched)
 
-All seven obligations stand as the earlier sections write them: DEC-028's malformed-file clause,
+All eight obligations stand as the earlier sections write them: DEC-028's malformed-file clause,
 DEC-026's cost sentence, DEC-017's "a file plus a match arm", §5's worked listing (its binary row
 must read `shadowed` — this phase's rule and this phase's real run both say so), §4's "one clause
-per resolved name", `design.md:156`'s stale quoted diagnostic, and items 6-7 (§6's tie-break and
-§3's unsettled candidate). None was edited here.
+per resolved name", `design.md:156`'s stale quoted diagnostic, and items 6-8 (§6's tie-break, §3's
+unsettled candidate, §5's third-field vocabulary). None was edited here.
 
 ### PHASE-04 review — RV-033, and how the interleave was contained
 
@@ -1243,7 +1259,7 @@ reconcile. All verified by diff inspection, not by the handback.
   declared, every file timestamped at that run). It was removed, the tree re-checked against
   `git status --porcelain`, and the transcript above is from a re-run whose cwd is the scratch.
   No tracked path was affected.
-- **Out of scope, untouched:** the seven reconcile obligations, `plan.md`'s design questions
+- **Out of scope, untouched:** the eight reconcile obligations, `plan.md`'s design questions
   and the design text. This phase raised no new design question: `source`'s literal is
   plan.md item 5's recorded reading, and nothing in the diff needs a different one.
 

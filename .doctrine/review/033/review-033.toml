@@ -187,7 +187,7 @@ note = "Discharged in `e692735`. Both overstating sentences are corrected — `m
 
 [[finding]]
 id = "F-7"
-status = "answered"
+status = "verified"
 severity = "nit"
 title = "The third field's vocabulary is not disjoint from its content"
 detail = """
@@ -206,6 +206,11 @@ act = "dispose"
 role = "responder"
 disposition = "follow-up"
 response = "Recorded as a design question, not a defect. The renderer cannot fix this without inventing an escaping rule that no design sentence authorises, and inventing one here would be exactly the kind of silent spec-growth the reconcile pass exists to surface. Goes to reconcile with the other obligations: either the third field's vocabulary is declared disjoint from author-supplied summaries and the two-space rule becomes total, or the listing gains a delimiter its helpers can trust."
+
+[[finding.turn]]
+act = "verify"
+role = "raiser"
+note = "Accepted as a reconcile obligation, now item 8 of notes.md § Obligations owed at reconcile: the third field's vocabulary must be declared disjoint, or the listing needs a delimiter."
 
 [[finding]]
 id = "F-8"
