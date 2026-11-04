@@ -9,11 +9,11 @@
       },
       "locked": {
         "dir": "flakes/agents",
-        "lastModified": 1793404112,
-        "narHash": "sha256-EaCpmiv+WmJ2rPPSQ6EOoAzmJ1Ne+4k3FWFIrMLzMNs=",
+        "lastModified": 1793762665,
+        "narHash": "sha256-pSRY1Z9Gh3/d4opW1wqvfaURodeqxt/w8kA2PdpjZ6o=",
         "owner": "davidlee",
         "repo": "nix-config",
-        "rev": "ff4ece17857b33f7df2fe4a29d1ed9b52f4a445f",
+        "rev": "b46556453db43f5747b7257860bdb1ba3e88c589",
         "type": "github"
       },
       "original": {
