@@ -30,6 +30,7 @@
     # nothing to `follows`, and adding one earns "override for a non-existent input
     # 'nixpkgs'".
     crane.url = "github:ipetkov/crane";
+    doctrine.url = "github:davidlee/doctrine";
 
     agents = {
       url = "github:davidlee/nix-config?dir=flakes/agents";
@@ -269,6 +270,13 @@
             dev-tools = pkgs.buildEnv {
               name = "smut-dev-tools";
               paths = devToolPkgs;
+            };
+            # What the room takes: `dev-tools` plus Doctrine, as a room has no host install
+            # (flakes:DEC-130).
+            capsule-tools = pkgs.buildEnv {
+              name = "smut-capsule-tools";
+              paths = devToolPkgs ++ [inputs.doctrine.packages.${system}.default];
+              ignoreCollisions = true;
             };
           };
 
