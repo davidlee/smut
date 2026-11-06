@@ -1,24 +1,7 @@
-# Template: jailed LLM agents
-#
-# Copy into project, then:
-#   1. Adjust projectPkgs for the language/toolchain
-#   2. Set workspaceDeps (read-only) and workspaceDepsRw (read-write) to
-#      sibling repos the agents need to see
-#   3. Tune jailEnvOptions: forward host env vars into the jail
-#   4. Trim jailPkgs to the agents actually wanted
-#   5. Jails use the LLM gateway; see `gateway` below to opt out
-#   6. quotient forms: `quotient-forms` links them, then `quotient allow`
-#
-# Jails reach models through the local LLM gateway (`gateway` below).
-#
-# Usage:
-#   mv _envrc .envrc && direnv allow   # live agents: agent bumps need no lock update
-#   nix build                          # the binary, assembled by crane
-#   nix develop
-#   jailed-claude   # or jailed-pi, jailed-pi-research, jailed-codex
-#   jcl             # shorthand: jailed-claude --dangerously-skip-permissions
+# smut: dev shell and the crane-built binary. Agents and quotient forms come
+# from the dev-envs consumer (`use_dev_envs` in .envrc).
 {
-  description = "Dev shell with jailed LLM agents";
+  description = "smut: dev shell and package";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -31,16 +14,6 @@
     # 'nixpkgs'".
     crane.url = "github:ipetkov/crane";
     doctrine.url = "github:davidlee/doctrine";
-
-    agents = {
-      url = "github:davidlee/nix-config?dir=flakes/agents";
-      #inputs.nixpkgs.follows = "nixpkgs";
-    };
-    # quotient's form-family builder, for quotientForms below.
-    quotient = {
-      url = "github:davidlee/quotient/v0.6.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs @ {
@@ -65,10 +38,7 @@
           overlays = [rust-overlay.overlays.default];
         };
 
-        inherit (pkgs) lib stdenv;
-        # `stdenv.isLinux` is deprecated; the platform attribute is the same question
-        # asked of the thing that actually knows.
-        inherit (stdenv.hostPlatform) isLinux;
+        inherit (pkgs) lib;
 
         # One statement of the channel: `beta.latest`, the same channel
         # `rust-toolchain.toml` names for rustup and for CI. It is a function so
@@ -85,21 +55,6 @@
           ];
         };
 
-        # jail.nix is Linux-only (bubblewrap). Darwin gets a plain devshell.
-        jailLib =
-          if isLinux
-          then inputs.agents.lib.${system}.mkJailedAgents {}
-          else {};
-
-        # Unjailed agent CLIs (llm-agents builds) under short names. Linux
-        # only; on Darwin fall back to nixpkgs. To get them on `pkgs`
-        # directly instead, apply the overlay at the top of perSystem:
-        #   _module.args.pkgs = import inputs.nixpkgs {
-        #     inherit system; config.allowUnfree = true;
-        #     overlays = [ (inputs.agents.lib.${system}.agentsOverlay {}) ];
-        #   };
-        agents = lib.optionalAttrs isLinux jailLib.agentsByName;
-
         # -- Customise these for the project --
 
         devToolPkgs = with pkgs; [
@@ -112,12 +67,6 @@
           stdenv.cc.cc.lib
           sccache
         ];
-
-        projectPkgs =
-          devToolPkgs
-          ++ (with pkgs; [
-            (agents.codex or codex) # mcp server slave — llm-agents build on linux
-          ]);
 
         # -- The package --
         #
@@ -150,162 +99,31 @@
           src = crateSrc;
           strictDeps = true;
         };
-
-        # Sibling repos to bind-mount (for editable deps / source inspection).
-        # Each path appears at /workspace/<basename> inside the jail; a host
-        # symlink like ./some-lib -> ../some-lib resolves correctly.
-        # workspaceDeps bind read-only; list a dep the agents must write in
-        # workspaceDepsRw instead. Machine-local additions: the .envrc's
-        # JAIL_WORKSPACE_DEPS and JAIL_WORKSPACE_DEPS_RW.
-        workspaceDeps = [
-          # "/home/you/dev/some-lib"
-        ];
-        workspaceDepsRw = [
-          # "/home/you/notes"
-        ];
-
-        # Interactive jails (`jailed-claude`, ...): the cwd at
-        # /workspace/deck_of_dwarf, a persisted home, network on, SSH push
-        # blocked.
-        # bwrap starts with a clean env. Forward / set what agents need.
-        # Combinators: set-env, fwd-env (error if unset), try-fwd-env (skip if unset),
-        # try-readwrite (bind a host path rw if it exists).
-        jailEnvOptions =
-          lib.optionals isLinux (with jailLib.combinators; [
-            # pulse # opt-in host audio; uses $XDG_RUNTIME_DIR
-            # (try-readonly "/path/on-this-host/notification.wav")
-            # (try-fwd-env "DATABASE_URL")
-            # (try-fwd-env "DOCKER_HOST")
-            # (try-readwrite "/path/to/docker.sock")
-            # (set-env "CGO_ENABLED" "0")
-          ]);
-
-        # Every jail reaches models through the local LLM gateway with the shared
-        # `pi` key (~/.config/llm-gateway/keys/pi); no provider key enters a jail.
-        # It is the only model access (agents/README.md § Model access).
-        gateway = jailLib.gatewayClient "pi";
-
-        # -- Agents --
-        #
-        # Profiles:
-        #   specDev   — shared persistent home, network on, SSH push blocked, sandboxed identity
-        #   research  — separate persistent home, network on, SSH push blocked, host identity
-        #   offline   — separate persistent home, no network
-        #
-        # Extra per-agent knobs (all optional):
-        #   exposePostgres       = true;   # bind /run/postgresql into the jail
-        #   blockSshGitPush      = false;  # SSH only; HTTPS remains available
-        #   allowSelfAsSubagent  = true;   # let agent recursively spawn itself
-        #   maxSubagentDepth     = 2;      # cap recursion depth (default 1)
-        #   gateway              = null;   # no model, unless the agent signs in itself
-
-        jailPkgs = lib.optionalAttrs isLinux {
-          jailed-pi = jailLib.makeJailedPi {
-            profile = "specDev";
-            allowSelfAsSubagent = true;
-            maxSubagentDepth = 2;
-            extraPkgs = projectPkgs;
-            extraOptions = jailEnvOptions;
-            inherit gateway workspaceDeps workspaceDepsRw;
-          };
-
-          jailed-pi-research = jailLib.makeJailedPi {
-            name = "pi-research";
-            profile = "research";
-            extraPkgs = projectPkgs;
-            extraOptions = jailEnvOptions;
-            inherit gateway workspaceDeps workspaceDepsRw;
-          };
-
-          jailed-claude = jailLib.makeJailedClaude {
-            profile = "specDev";
-            extraPkgs = projectPkgs;
-            extraOptions = jailEnvOptions;
-            inherit gateway workspaceDeps workspaceDepsRw;
-          };
-
-          jailed-shell = jailLib.makeJailedAgent {
-            name = "shell";
-            agent = pkgs.zsh;
-            extraPkgs = projectPkgs;
-            subagents = ["pi" "claude"];
-          };
-
-          inherit (pkgs) bubblewrap;
-        };
-
-        # quotient's per-call forms for this root (`quotient help form`): the
-        # jails quotient's `pi_agent` runs a delegate in, on the gateway's pi
-        # key, with the project's toolchain.
-        quotientForms = lib.optionalAttrs isLinux (let
-          family = jailLib.quotientFormFamily {
-            inherit (inputs) quotient;
-            packages =
-              projectPkgs
-              ++ (with pkgs; [
-                bash
-                findutils
-                gnugrep
-                gnused
-                gawk
-                ripgrep
-                fd
-                git
-              ]);
-          };
-        in {
-          quotient-read = family.read;
-          quotient-write = family.write;
-        });
       in {
         _module.args.pkgs = pkgs;
 
-        packages =
-          jailPkgs
-          // quotientForms
-          // {
-            default = smut;
-            inherit smut;
+        packages = {
+          default = smut;
+          inherit smut;
 
-            dev-tools = pkgs.buildEnv {
-              name = "smut-dev-tools";
-              paths = devToolPkgs;
-            };
-            # What the room takes: `dev-tools` plus Doctrine, as a room has no host install
-            # (flakes:DEC-130).
-            capsule-tools = pkgs.buildEnv {
-              name = "smut-capsule-tools";
-              paths = devToolPkgs ++ [inputs.doctrine.packages.${system}.default];
-              ignoreCollisions = true;
-            };
+          dev-tools = pkgs.buildEnv {
+            name = "smut-dev-tools";
+            paths = devToolPkgs;
           };
+          # What the room takes: `dev-tools` plus Doctrine, as a room has no host install
+          # (flakes:DEC-130).
+          capsule-tools = pkgs.buildEnv {
+            name = "smut-capsule-tools";
+            paths = devToolPkgs ++ [inputs.doctrine.packages.${system}.default];
+            ignoreCollisions = true;
+          };
+        };
 
         # `nix flake check` builds the package on every declared system.
         checks = {inherit smut;};
 
         devshells.default = {
-          packages =
-            projectPkgs
-            ++ lib.optionals isLinux (lib.attrValues jailPkgs);
-
-          commands = [
-            {
-              name = "jcl";
-              help = "jailed-claude --dangerously-skip-permissions";
-              command = "jailed-claude --dangerously-skip-permissions $@";
-            }
-            {
-              name = "quotient-forms";
-              help = "link .quotient/forms/{read,write}; then `quotient allow`";
-              command = ''
-                mkdir -p .quotient/forms
-                for c in read write; do
-                  nix build -o ".quotient/result-$c" ".#quotient-$c"
-                  ln -sfn "$(readlink -f ".quotient/result-$c")/bin/quotient-$c" ".quotient/forms/$c"
-                done
-              '';
-            }
-          ];
+          packages = devToolPkgs;
         };
       };
     };
