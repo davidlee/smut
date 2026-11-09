@@ -50,3 +50,11 @@ reversed instead, correct `notes.md`; the audit's harvest has already amended th
 
 RV-035 F-4 and F-5 (`doctrine review show 35 -f 4,5`). Neither is a design or
 governance item, so neither is reconcile's; both are owned code work.
+
+## Resolution (2026-11-10)
+
+1. `load`'s doc now says the module touches the filesystem in two places
+   (`project_root`, `read_layer`) and that `load` touches none.
+2. `user_root` now treats an empty path as absent for both inputs through one local
+   `present` predicate. The ruling is now implemented, and pinned by
+   `an_empty_home_is_an_absent_layer`: red at first (`Some(".config/smut")`), then green.

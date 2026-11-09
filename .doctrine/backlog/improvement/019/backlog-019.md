@@ -41,3 +41,20 @@ variant is added without a row. Left in place because the disposition scoped F-1
 assertion message and a one-line doc comment was not worth a second worker round-trip — but it
 belongs with this item, since both sites are wrong for the same reason and both are fixed by
 whichever of the two approaches above is taken.
+
+## Resolution (2026-11-10)
+
+Option 2, without a dependency. In `src/error.rs` tests:
+
+- `ordinal(&StoreError) -> usize` is an exhaustive match with no wildcard, and
+  `const STORE_VARIANTS: usize = 14` sits beside it. A new variant fails to compile
+  next to the inventory.
+- `the_store_inventory_holds_each_variant_once` asserts that the sorted ordinals of
+  `every_store_refusal()` equal `0..STORE_VARIANTS`, so a missing or repeated row is red.
+  It was first run red with `NoFreshBasename` missing (ordinal 12).
+- Added the `NoFreshBasename { attempts: 64 }` row. Removed the hand-pinned
+  `len() == 13` and the overclaiming doc comment that went with it (both sites).
+
+Remaining gap: `ordinal` and `STORE_VARIANTS` are still edited by hand. A variant given
+an ordinal without a bumped count and without a row would pass. The compile error puts
+all three edits on one screen, which is as far as std alone goes.

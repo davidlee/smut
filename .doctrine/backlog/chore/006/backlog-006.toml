@@ -5,10 +5,10 @@ id = 6
 slug = "srcconventionsrs-residuals-from-sl-008s-audit-loads-filesystem-arithmetic-and-user-roots-empty-home"
 title = "src/conventions.rs residuals from SL-008's audit — load's filesystem arithmetic, and user_root's empty-home guard and its missing pin"
 kind = "chore"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "resolved"
+resolution = "fixed"
 created = "2026-11-03"
-updated = "2026-11-03"
+updated = "2026-11-09"
 tags = []
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role

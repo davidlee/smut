@@ -103,15 +103,18 @@ pub fn project_root(start: &Path) -> PathBuf {
 ///
 /// Everything is a parameter: the binary is the only code that reads
 /// `XDG_CONFIG_HOME` and `HOME`, and it passes what it found, so this stays
-/// infallible and testable without an environment. An empty config home is no
-/// config home, because an empty path is what an unset variable looks like once
-/// it has been joined onto anything; and no home at all means the process has
-/// no user layer, which is `None` rather than an invented path.
+/// infallible and testable without an environment. An empty path is treated as
+/// absent, for either input, because an empty path is what an unset variable
+/// looks like once it has been joined onto anything — and joined, it would be a
+/// relative root read against the working directory. No home at all means the
+/// process has no user layer, which is `None` rather than an invented path.
 pub fn user_root(config_home: Option<&Path>, home: Option<&Path>) -> Option<PathBuf> {
-    match config_home {
-        Some(config_home) if !config_home.as_os_str().is_empty() => Some(config_home.join("smut")),
-        _ => home.map(|home| home.join(".config").join("smut")),
+    fn present(path: Option<&Path>) -> Option<&Path> {
+        path.filter(|path| !path.as_os_str().is_empty())
     }
+    present(config_home)
+        .map(|config_home| config_home.join("smut"))
+        .or_else(|| present(home).map(|home| home.join(".config").join("smut")))
 }
 
 /// Which layer a set was read from, in the order a resolution prefers them.
@@ -404,10 +407,11 @@ fn binary_layer(kind: &str) -> Vec<Entry> {
 
 /// Read one kind's sets from every layer, nearest layer first.
 ///
-/// This module reaches a filesystem in three places, and this is the middle one:
-/// [`project_root`] above walks the ancestors looking for a `.git` entry, this
-/// function turns each root into that layer's one `<root>/<kind>` directory, and
-/// [`read_layer`] below reads the directory's entries. [`parse`] is pure, and the
+/// This module reaches a filesystem in two places: [`project_root`] above walks
+/// the ancestors looking for a `.git` entry, and [`read_layer`] below reads a
+/// layer directory's entries. This function touches no filesystem — it turns
+/// each root into that layer's one `<root>/<kind>` directory and orders what
+/// [`read_layer`] returns. [`parse`] is pure, and the
 /// binary layer reads the bytes the build embedded. `<kind>` is joined exactly
 /// once onto each root, which is why a root carries no kind of
 /// its own and no caller can join it twice — a caller who handed in
@@ -1254,6 +1258,15 @@ mod tests {
             Self { path }
         }
 
+        /// Whether this process runs as root: the scratch root is the process's own
+        /// creation, so its owner is the effective uid, with no dependency to ask.
+        #[cfg(unix)]
+        fn created_by_root(&self) -> bool {
+            use std::os::unix::fs::MetadataExt;
+
+            fs::metadata(&self.path).expect("the scratch root").uid() == 0
+        }
+
         /// A directory under the scratch root.
         fn directory(&self, name: &str) -> PathBuf {
             let path = self.path.join(name);
@@ -1527,6 +1540,17 @@ mod tests {
             found,
             Some(home.join(".config").join("smut")),
             "an empty config home is no config home, so the home directory answers"
+        );
+    }
+
+    #[test]
+    fn an_empty_home_is_an_absent_layer() {
+        let found = user_root(None, Some(Path::new("")));
+
+        assert_eq!(
+            found, None,
+            "an empty home resolves no config home either, so there is no user layer — \
+             not a relative `.config/smut` read against the working directory"
         );
     }
 
@@ -2398,9 +2422,9 @@ mod tests {
     }
 
     // The second row the plan allows for this class: a mode-000 directory cannot
-    // fail as root, so where the process can still read it this row reports that
-    // it could not produce the class — the exists-but-not-a-directory row above
-    // carries it — rather than passing silently.
+    // fail as root, so a root process skips it — the exists-but-not-a-directory row
+    // above carries the class. Any other process that reads the layer is red: a skip
+    // has to be explained by the uid, not announced on a stream the harness hides.
     #[cfg(unix)]
     #[test]
     fn a_layer_that_cannot_be_opened_is_an_error() {
@@ -2433,10 +2457,10 @@ mod tests {
                     "the refusal names the layer read and its path: {error}"
                 );
             }
-            Ok(entries) => eprintln!(
-                "skipped: this process can read a mode-000 directory (running as root?), so \
-                 `an_unreadable_layer_is_an_error` carries the unreadable-layer class; 0 entries \
-                 read here means the class was not exercised: {}",
+            Ok(entries) => assert!(
+                scratch.created_by_root(),
+                "a process that is not root read a mode-000 layer ({} entries), so this row \
+                 exercised nothing",
                 entries.len()
             ),
         }

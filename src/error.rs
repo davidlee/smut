@@ -139,7 +139,7 @@ pub enum Reject {
     JsonBesideSelection,
     /// One JSON object in the input gives the same key twice, which would lose
     /// the earlier assignment. Refused as the key is read, before a `Value`
-    /// exists (§3.1, DEC-006).
+    /// exists (DEC-001 rule 1).
     DuplicateKey {
         /// The key that appears twice.
         key: String,
@@ -569,12 +569,36 @@ mod tests {
         }
     }
 
+    /// How many variants `StoreError` has. Moves with [`ordinal`], which the
+    /// compiler keeps exhaustive.
+    const STORE_VARIANTS: usize = 14;
+
+    /// A variant's position in `StoreError`. The match has no wildcard, so a new
+    /// variant fails to compile here — the moment to give it an ordinal, bump
+    /// [`STORE_VARIANTS`] and add its row to [`every_store_refusal`].
+    fn ordinal(refusal: &StoreError) -> usize {
+        match refusal {
+            StoreError::FileSystem { .. } => 0,
+            StoreError::Absent { .. } => 1,
+            StoreError::Corrupt { .. } => 2,
+            StoreError::UnknownFormatVersion { .. } => 3,
+            StoreError::UnsafeBasename { .. } => 4,
+            StoreError::DuplicatePathMapping { .. } => 5,
+            StoreError::IdDisagreement { .. } => 6,
+            StoreError::UnexplainedEntry { .. } => 7,
+            StoreError::SymlinkedEntry { .. } => 8,
+            StoreError::Locked { .. } => 9,
+            StoreError::AmbiguousJournalState { .. } => 10,
+            StoreError::InvalidWriteSet { .. } => 11,
+            StoreError::NoFreshBasename { .. } => 12,
+            StoreError::ArtefactNotLoaded { .. } => 13,
+        }
+    }
+
     /// Every refusal the store can raise, one of each variant.
     ///
-    /// The count is pinned to 13 by [`the_new_refusal_joins_every_inventory`], so
-    /// it moves when a variant is added — and adding one means adding a row here.
-    /// `NoFreshBasename` predates this phase and is still absent from this list,
-    /// which is why the pinned count is one short of the variants the enum holds.
+    /// [`the_store_inventory_holds_each_variant_once`] holds it to exactly one row
+    /// per variant, so a variant without a row is a red test, not a silent gap.
     fn every_store_refusal() -> Vec<StoreError> {
         vec![
             sample_store_failure(),
@@ -618,6 +642,7 @@ mod tests {
             StoreError::InvalidWriteSet {
                 reason: "alpha is both put and removed".to_owned(),
             },
+            StoreError::NoFreshBasename { attempts: 64 },
             sample_artefact_not_loaded(),
         ]
     }
@@ -856,11 +881,18 @@ mod tests {
         });
 
         assert!(held, "the new refusal is in the inventory, cause and all");
+    }
+
+    #[test]
+    fn the_store_inventory_holds_each_variant_once() {
+        let mut ordinals: Vec<usize> = every_store_refusal().iter().map(ordinal).collect();
+        ordinals.sort_unstable();
+
         assert_eq!(
-            inventory.len(),
-            13,
-            "the count is pinned so a row added without moving it cannot pass: one row per \
-             variant this list carries, which is NoFreshBasename short of the enum"
+            ordinals,
+            (0..STORE_VARIANTS).collect::<Vec<_>>(),
+            "every_store_refusal holds one row per StoreError variant: a gap is a variant \
+             with no row, a repeat is a variant with two"
         );
     }
 

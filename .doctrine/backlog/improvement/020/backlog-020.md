@@ -32,3 +32,15 @@ Two remedies, in preference order:
    but it only prints when someone reads the log, and it lengthens the gate's output.
 
 Do 1 if it can be done without a dependency; 2 otherwise.
+
+## Resolution (2026-11-10)
+
+Remedy 1, no dependency. In `a_layer_that_cannot_be_opened_is_an_error`, the `Ok` branch
+now asserts `scratch.created_by_root()` in place of the `eprintln!`. The new `Scratch`
+helper reads `MetadataExt::uid()` of the scratch root: the process created it, so its
+owner is the effective uid. That holds on Linux and macOS (STD-003).
+
+- Mutation probe: with the layer made readable (mode 0755), a non-root run goes red with
+  "a process that is not root read a mode-000 layer … exercised nothing". Reverted afterwards.
+- Not exercised: a root run, which should take the `Ok` branch and pass. Nothing here
+  runs the suite as root.

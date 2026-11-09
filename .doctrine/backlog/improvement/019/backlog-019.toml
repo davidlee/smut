@@ -5,10 +5,10 @@ id = 19
 slug = "every-store-refusal-omits-nofreshbasename-so-the-inventory-pin-cannot-notice-a-missing-row"
 title = "every_store_refusal() omits NoFreshBasename, so the inventory pin cannot notice a missing row"
 kind = "improvement"
-status = "open"
-resolution = ""                 # seeded empty so `backlog edit` sets it in place
+status = "resolved"
+resolution = "fixed"
 created = "2026-11-02"
-updated = "2026-11-02"
+updated = "2026-11-09"
 tags = []
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role

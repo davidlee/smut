@@ -27,3 +27,22 @@ spec still exits 2 with the predicate line — a store opened before validation 
 with a corruption message.
 
 Related: RV-027 F-3, which fixes the design §5 attribution for SL-005's own test.
+
+## Resolution (2026-11-10)
+
+Narrowed. The corrupt-store option was dropped as redundant: with no store present, a
+request that reaches the store already exits 1 with `no store`. So `code == 2` is the
+discriminating ordering evidence, and a corrupt `.smut` adds nothing.
+
+- Removed the 8 vacuous `!has_store()` assertions on `query`/`q` refusals:
+  `tests/predicates.rs`, ×4, in the malformed, contradictory, misplaced and unknown
+  cases; `tests/cli_contract.rs`, ×4, in bad depth, bad budget, unknown key and
+  `--depth` without a direction.
+- The comment in `a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened`
+  now names exit 2 as the evidence, and says why a no-store assertion would prove nothing.
+- Kept: the `declare` sites, where the assertion does discriminate, and the "a read /
+  `--help` creates nothing" sites, which are true statements and say no more.
+- Removed `predicates.rs`'s now-unused `Scratch::has_store` and `Scratch::store`.
+- Mutation probe: `src/main.rs::execute` was made to return `StoreError::Absent` for
+  `query`/`q` before parsing. All 6 tests that held the removed sites went red; the
+  2 `predicates` tests failed at their `code == 2` assertions. Probe reverted, gate green.

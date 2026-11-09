@@ -479,14 +479,6 @@ impl Scratch {
     fn path(&self) -> &Path {
         &self.path
     }
-
-    fn store(&self) -> PathBuf {
-        self.path.join(".smut")
-    }
-
-    fn has_store(&self) -> bool {
-        self.store().is_dir()
-    }
 }
 
 impl Drop for Scratch {
@@ -560,8 +552,9 @@ fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
 #[test]
 fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() {
     // EX-6: the whole request is validated before the store is opened, locked or
-    // created (DEC-004). The scratch directory is fresh, so a store appearing
-    // here would be the refusal's own doing.
+    // created (DEC-004). There is no store here, so a request that reached the
+    // store would exit 1 with `no store`: exit 2 is the ordering evidence. (A
+    // query never creates a store, so asserting none appeared would prove nothing.)
     //
     // Discharged by `a_where_query_through_the_cli_returns_the_filtered_objects`,
     // which runs a valid `where` through the same binary and asserts the
@@ -590,10 +583,6 @@ fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() 
             refused.stderr.contains(offending),
             "the refusal names `{offending}` for {specification}: {}",
             refused.stderr
-        );
-        assert!(
-            !scratch.has_store(),
-            "the request is validated before the store is opened, so no store exists: {specification}"
         );
     }
 
@@ -642,10 +631,6 @@ fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() 
             refused.stderr.contains(contradiction),
             "the refusal names `{contradiction}` for {specification}: {}",
             refused.stderr
-        );
-        assert!(
-            !scratch.has_store(),
-            "the contradiction is decided before the store is opened: {specification}"
         );
     }
 }
@@ -701,10 +686,6 @@ fn a_misplaced_operator_is_refused_naming_its_position_and_never_a_field() {
             "no concrete field name and no operand literal for {specification}: {}",
             refused.stderr
         );
-        assert!(
-            !scratch.has_store(),
-            "the request is validated before the store is opened, so no store exists: {specification}"
-        );
     }
 
     // The unknown-name sentence is unchanged at this level and pinned whole: the
@@ -727,10 +708,6 @@ fn a_misplaced_operator_is_refused_naming_its_position_and_never_a_field() {
         [r#"smut: unknown predicate operator: $foo"#],
         "the unknown-name line is unchanged: {:?}",
         unknown.stderr
-    );
-    assert!(
-        !scratch.has_store(),
-        "the unknown-name refusal also precedes the store"
     );
 }
 

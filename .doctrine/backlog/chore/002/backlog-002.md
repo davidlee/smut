@@ -51,3 +51,8 @@ change.
 is editing that file in the main worktree as this is written. Landing a comment change
 there from another slice would race a live writer for a nit. Take it with SL-004's
 PHASE-02, or immediately after it lands.
+
+## Resolution (2026-11-10)
+
+Fixed as specified: `src/error.rs` `DuplicateKey` doc comment now cites `(DEC-001 rule 1)`.
+Comment-only; no other `src/` site misattributes DEC-006.
