@@ -18,33 +18,12 @@
 //! store is opened" (EX-6), the refusal's exact stderr line, and "a valid `where`
 //! returns the filtered objects".
 
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use serde_json::{Value, json};
-use smut::declare::Entities;
-use smut::id::Id;
 use smut::select::{Selection, envelope, select};
 use smut::spec;
 
-fn store(entities: &[Value]) -> Entities {
-    entities
-        .iter()
-        .map(|entity| {
-            let id = entity["smut_id"]
-                .as_str()
-                .expect("every fixture names its id");
-            (Id::new(id), entity.clone())
-        })
-        .collect()
-}
-
-fn parse(input: Value) -> spec::Spec {
-    spec::parse(&input).expect("the fixture specification is valid")
-}
+mod common;
+use common::{Scratch, parse, smut, store};
 
 fn selected<'a>(selection: &'a Selection<'a>) -> Vec<&'a str> {
     selection.ids.iter().map(|id| id.as_str()).collect()
@@ -456,98 +435,6 @@ fn where_filters_roots_before_the_walk_and_the_limit() {
 }
 
 // ── EX-6 and the end-to-end success: the binary ─────────────────────────────
-
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-predicates-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation of the binary, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-
-    /// A successful machine command: one compact JSON line on stdout, exit 0,
-    /// nothing on stderr.
-    fn assert_one_json_line(&self, what: &str) {
-        assert_eq!(self.code, 0, "{what}: {}", self.stderr);
-        assert!(self.stderr.is_empty(), "{what}: {}", self.stderr);
-        assert!(self.stdout.ends_with('\n'), "{what}: {:?}", self.stdout);
-        assert_eq!(
-            self.stdout.matches('\n').count(),
-            1,
-            "{what} is one compact line: {:?}",
-            self.stdout
-        );
-        self.json();
-    }
-}
-
-fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    if let Some(text) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(text.as_bytes())
-            .expect("stdin accepts the fixture");
-    }
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
-/// Runs `smut` with no stdin fixture at all.
-fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    run(scratch, arguments, None)
-}
 
 #[test]
 fn a_malformed_predicate_rejects_the_whole_request_before_any_store_is_opened() {

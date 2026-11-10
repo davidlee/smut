@@ -10,28 +10,18 @@
 
 use serde_json::{Value, json};
 use smut::declare::Entities;
-use smut::id::Id;
 use smut::render_markdown::{Options, render};
 use smut::select::{Selection, select};
 use smut::spec;
+
+mod common;
+use common::store;
 
 const TRUNCATED: &str = "> truncated: result_limit; additional entities omitted";
 
 /// The dangling line's one spelling: a `> dangling: ` prefix, then three
 /// single-backtick spans with no spaces around the `.` or around the `->`.
 const DANGLING: &str = "> dangling: `root`.`link` -> `gone`";
-
-fn store(entities: &[Value]) -> Entities {
-    entities
-        .iter()
-        .map(|entity| {
-            let id = entity["smut_id"]
-                .as_str()
-                .expect("every fixture names its smut_id");
-            (Id::new(id), entity.clone())
-        })
-        .collect()
-}
 
 fn rendered(store: &Entities, specification: Value, options: &Options) -> String {
     let specification = spec::parse(&specification).expect("the fixture specification is valid");

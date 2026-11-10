@@ -22,12 +22,12 @@
 //! reproduce it.
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
+
+mod common;
+use common::{Ran, Scratch, run, smut};
 
 /// The shipped set's file, as this tree holds it: its frontmatter and its body.
 ///
@@ -88,106 +88,12 @@ fn summary() -> String {
         .to_owned()
 }
 
-/// A scratch working directory holding at most one store, removed when dropped.
-///
-/// Copied from `tests/cli_contract.rs` by the plan's decision: 0.2 does not add
-/// a shared `tests/common`.
-///
-/// It also holds the two directories the spawned binary reads its layers from, so
-/// a run never reaches the developer's own sets.
-struct Scratch {
-    path: PathBuf,
-    /// The fake `$HOME` this scratch's invocations see.
-    home: PathBuf,
-    /// The fake `$XDG_CONFIG_HOME` this scratch's invocations see.
-    config_home: PathBuf,
-}
-
+/// This file's layer fixtures. The scratch itself, its `$HOME` and
+/// `$XDG_CONFIG_HOME`, and the one spawn path are `tests/common`'s.
 impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-conventions-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-        // The binary reports the resolved cwd; macOS's temp dir sits behind a
-        // symlink (`/var` -> `/private/var`), so expect the resolved path.
-        let path = path.canonicalize().expect("a resolvable scratch directory");
-
-        // Children of the scratch path, so they are removed with it and neither
-        // can be an ancestor of the working directory the binary starts in.
-        let home = path.join("home");
-        fs::create_dir_all(&home).expect("a home directory");
-        let config_home = path.join("config-home");
-        fs::create_dir_all(&config_home).expect("a config home directory");
-
-        Self {
-            path,
-            home,
-            config_home,
-        }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn store(&self) -> PathBuf {
-        self.path.join(".smut")
-    }
-
-    /// Runs `smut` with `cwd` as its working directory, and `stdin` if a
-    /// fixture supplies one.
-    ///
-    /// Both layer roots are set explicitly and neither is removed: `HOME` and
-    /// `XDG_CONFIG_HOME` unset would not mean "no user layer", because
-    /// `std::env::home_dir()` falls back to the passwd entry and the binary
-    /// would then read the developer's own real home.
-    ///
-    /// This is the one spawn path: [`run`] below delegates here with the
-    /// scratch root, so a fixture that needs another working directory varies
-    /// that argument and nothing else.
-    fn run_in(&self, cwd: &Path, arguments: &[&str], stdin: Option<&str>) -> Ran {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-            .current_dir(cwd)
-            .env("HOME", &self.home)
-            .env("XDG_CONFIG_HOME", &self.config_home)
-            .args(arguments)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("the binary starts");
-
-        if let Some(text) = stdin {
-            child
-                .stdin
-                .as_mut()
-                .expect("piped stdin")
-                .write_all(text.as_bytes())
-                .expect("stdin accepts the fixture");
-        }
-
-        let output = child.wait_with_output().expect("the binary exits");
-
-        Ran {
-            code: output.status.code().expect("a normal exit"),
-            stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-            stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-        }
-    }
-
-    /// Runs `smut` in `cwd` with no stdin fixture at all.
-    fn smut_in(&self, cwd: &Path, arguments: &[&str]) -> Ran {
-        self.run_in(cwd, arguments, None)
-    }
-
     /// A directory under the scratch root, created.
     fn dir(&self, name: &str) -> PathBuf {
-        let path = self.path.join(name);
+        let path = self.path().join(name);
         fs::create_dir_all(&path).expect("a fixture directory");
 
         path
@@ -232,7 +138,7 @@ impl Scratch {
     /// The layer this scratch's `$XDG_CONFIG_HOME` names, created:
     /// `<config-home>/smut/conventions`.
     fn user_sets(&self) -> PathBuf {
-        let path = self.config_home.join("smut").join("conventions");
+        let path = self.config_home().join("smut").join("conventions");
         fs::create_dir_all(&path).expect("a user layer directory");
 
         path
@@ -241,7 +147,7 @@ impl Scratch {
     /// The layer a home read as a config home would name, created:
     /// `<home>/.config/smut/conventions`.
     fn home_sets(&self) -> PathBuf {
-        let path = self.home.join(".config").join("smut").join("conventions");
+        let path = self.home().join(".config").join("smut").join("conventions");
         fs::create_dir_all(&path).expect("a home's config layer directory");
 
         path
@@ -277,41 +183,6 @@ impl Scratch {
             );
         }
     }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation of the binary, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-}
-
-/// Runs `smut` in `scratch`'s root with `arguments`, and `stdin` if a fixture
-/// supplies one.
-///
-/// The environment a run sees is [`Scratch::run_in`]'s, which is the only
-/// place it is spelled: this is that call with the scratch root as the working
-/// directory.
-fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    scratch.run_in(scratch.path(), arguments, stdin)
-}
-
-/// Runs `smut` with no stdin fixture at all.
-fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    run(scratch, arguments, None)
 }
 
 /// The seed, as the binary prints it: the declaration a caller pipes on.
@@ -694,9 +565,9 @@ fn the_command_still_creates_no_store() {
 
         assert_eq!(ran.code, 0, "{arguments:?}: {}", ran.stderr);
         assert!(
-            !scratch.store().exists(),
+            !scratch.store_dir().exists(),
             "{arguments:?} created a store: {}",
-            scratch.store().display()
+            scratch.store_dir().display()
         );
     }
 
@@ -709,13 +580,13 @@ fn the_command_still_creates_no_store() {
     assert_eq!(refused.stdout, "", "a refusal prints no entity");
     assert_eq!(
         refused.stderr,
-        format!("smut: no store at {}\n", scratch.store().display()),
+        format!("smut: no store at {}\n", scratch.store_dir().display()),
         "the store no conventions run created is absent, not corrupt"
     );
 
     // A path where a store would be, holding something no snapshot can read.
     // Every command that opened it would exit 1; conventions answers anyway.
-    fs::write(scratch.store(), b"not a store\n").expect("a decoy path at .smut");
+    fs::write(scratch.store_dir(), b"not a store\n").expect("a decoy path at .smut");
 
     let printed = smut(&scratch, &["conventions", "hygiene"]);
     assert_eq!(
@@ -1407,7 +1278,7 @@ fn the_walk_stops_at_the_repository() {
     // A checkout inside the home, deliberately: the walk starts inside one, so
     // nothing above it is searched. `assert_no_repository_above` is not called
     // here — there is one, and the test is about stopping at it.
-    let repository = scratch.sub(&scratch.home, "work");
+    let repository = scratch.sub(&scratch.home(), "work");
     fs::create_dir_all(repository.join(".git")).expect("a repository's .git directory");
     let inside = scratch.sub(&repository, "sub");
 
@@ -1419,7 +1290,7 @@ fn the_walk_stops_at_the_repository() {
         .lines()
         .map(|row| row.split("  ").collect())
         .collect();
-    let home_config = scratch.home.join(".config");
+    let home_config = scratch.home().join(".config");
     for row in &rows {
         assert_eq!(
             row.len(),
@@ -1642,7 +1513,8 @@ fn an_unreadable_layer_exits_one() {
     // A regular file where the user layer's *root* belongs, so the `conventions`
     // directory below it cannot be read as one. Portable and root-proof: a
     // mode-000 directory still opens for a root process, and that row is IMP-020's.
-    let root = scratch.config_home.join("smut");
+    fs::create_dir_all(scratch.config_home()).expect("a config home");
+    let root = scratch.config_home().join("smut");
     fs::write(&root, b"not a directory\n").expect("a file where the user layer root belongs");
     let unreachable = root.join("conventions");
 

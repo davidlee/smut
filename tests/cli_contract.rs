@@ -9,10 +9,6 @@
 //! a pure function, unit-tested for both terminal states in `src/input.rs`.
 
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 use smut::learn::{
@@ -20,111 +16,8 @@ use smut::learn::{
     EXAMPLE_TRAVERSE_Q,
 };
 
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-cli-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn store(&self) -> PathBuf {
-        self.path.join(".smut")
-    }
-
-    fn has_store(&self) -> bool {
-        self.store().is_dir()
-    }
-
-    fn store_entries(&self) -> Vec<String> {
-        let mut names: Vec<String> = fs::read_dir(self.store())
-            .map(|entries| {
-                entries
-                    .map(|entry| {
-                        entry
-                            .expect("a directory entry")
-                            .file_name()
-                            .into_string()
-                            .unwrap()
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        names.sort();
-
-        names
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation of the binary, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-}
-
-/// Runs `smut` in `scratch` with `arguments`, and `stdin` if a fixture supplies
-/// one.
-fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    if let Some(text) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(text.as_bytes())
-            .expect("stdin accepts the fixture");
-    }
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
-/// Runs `smut` with no stdin fixture at all.
-fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    run(scratch, arguments, None)
-}
+mod common;
+use common::{Ran, Scratch, run, smut};
 
 fn store_of_three(scratch: &Scratch) {
     let declared = smut(
@@ -987,7 +880,7 @@ fn an_accepted_budget_bounds_the_walk_and_an_exact_fit_is_not_truncated() {
 /// breaks is a store the binary itself wrote; only the one file changes, and
 /// only inside the caller's scratch directory.
 fn corrupt_nested_identity(scratch: &Scratch, id: &str, raw: &str) -> String {
-    let index_path = scratch.store().join("index.json");
+    let index_path = scratch.store_dir().join("index.json");
     let index: Value = serde_json::from_slice(&fs::read(&index_path).expect("the store's index"))
         .expect("the index is JSON");
     let basename = index["objects"][id]
@@ -995,7 +888,7 @@ fn corrupt_nested_identity(scratch: &Scratch, id: &str, raw: &str) -> String {
         .unwrap_or_else(|| panic!("the index maps {id} to a basename: {index}"))
         .to_owned();
 
-    fs::write(scratch.store().join(&basename), raw).expect("the corrupted entity file");
+    fs::write(scratch.store_dir().join(&basename), raw).expect("the corrupted entity file");
 
     basename
 }

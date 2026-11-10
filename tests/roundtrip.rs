@@ -15,52 +15,24 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
-use std::fs;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
 use smut::cli::{self, Invocation};
 use smut::declare::Entities;
 use smut::id::Id;
-use smut::store::{Snapshot, Store};
+use smut::store::Snapshot;
 
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
+mod common;
+use common::Scratch;
 
 impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-roundtrip-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn store(&self) -> Store {
-        Store::in_directory(&self.path)
-    }
-
     /// The store as a *later* process would find it: read and validated from
     /// disk, sharing nothing with the command that wrote it.
     fn reload(&self) -> Snapshot {
         self.store()
             .load()
             .expect("the store reloads and validates")
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
     }
 }
 

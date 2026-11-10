@@ -25,22 +25,22 @@ use std::fs;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command as Process, ExitStatus};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
 use smut::declare::WriteSet;
-use smut::entity::{Form, serialise};
 use smut::error::Reject;
 use smut::id::Id;
 use smut::store::boundary::Boundary;
 use smut::store::fault;
-use smut::store::index::Index;
 use smut::store::journal::{COMMIT_STATE, DONE_STATE, MANIFEST_FORMAT_VERSION, PREPARE_STATE};
 use smut::store::{
     Command, Computed, INDEX_BASENAME, LOCK_BASENAME, MANIFEST_BASENAME, STORE_DIRECTORY, Snapshot,
     Store,
 };
+
+mod common;
+use common::{Scratch, entity, entity_bytes, index_bytes};
 
 /// The signal a real abort ends a process with.
 const SIGABRT: i32 = 6;
@@ -63,28 +63,6 @@ const STAGED_UID: &str = "Fresh.json";
 /// follow the constant under test.
 const OLD_FORMAT_VERSION: u64 = 1;
 
-/// One stored entity. The structural identity key is spelled literally so this
-/// file's fixtures state the wire contract a version-2 store owes.
-fn entity(id: &str, body: &str) -> Value {
-    json!({ "smut_id": id, "body": body })
-}
-
-fn entity_bytes(value: &Value) -> Vec<u8> {
-    serialise(value, Form::File).into_bytes()
-}
-
-fn index_bytes(objects: &[(&str, &str)]) -> Vec<u8> {
-    let mut index = Index::empty();
-
-    for (id, basename) in objects {
-        index
-            .insert(Id::new(*id), (*basename).to_owned())
-            .expect("a safe basename");
-    }
-
-    index.to_bytes().into_bytes()
-}
-
 /// The batch every interruption test drives: update `alpha`, add `gamma`, delete
 /// `beta` — one put on a mapped file, one on a fresh uid, one removal.
 fn the_batch() -> WriteSet {
@@ -94,50 +72,19 @@ fn the_batch() -> WriteSet {
     }
 }
 
-/// A scratch directory holding one store, removed when it is dropped.
-struct Scratch {
-    root: PathBuf,
-}
-
+/// This file's seeded fixture and tree; the scratch is `tests/common`'s.
 impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let root = std::env::temp_dir().join(format!(
-            "smut-durability-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&root).expect("a scratch directory");
-
-        Self { root }
-    }
-
     /// A store with two indexed entities, published and valid.
     fn seeded() -> Self {
         let scratch = Self::new();
-        seed(&scratch.root);
+        seed(scratch.path());
 
         scratch
     }
 
-    fn directory(&self) -> PathBuf {
-        self.root.join(STORE_DIRECTORY)
-    }
-
-    fn store(&self) -> Store {
-        Store::in_directory(&self.root)
-    }
-
     /// Every entry under `.smut/`, keyed by its relative path, with its bytes.
     fn tree(&self) -> BTreeMap<String, Vec<u8>> {
-        tree(&self.directory())
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
+        tree(&self.store_dir())
     }
 }
 
@@ -251,7 +198,7 @@ fn format_version(bytes: &[u8], document: &str) -> u64 {
 }
 
 fn write_state(scratch: &Scratch, state: &str, manifest: &[u8], files: &[(&str, Vec<u8>)]) {
-    let path = scratch.directory().join(state);
+    let path = scratch.store_dir().join(state);
     fs::create_dir_all(&path).expect("a journal state");
     fs::write(path.join(MANIFEST_BASENAME), manifest).expect("the manifest");
 
@@ -278,10 +225,10 @@ fn commit_the_batch_at_version(scratch: &Scratch, format_version: u64) {
 /// Publish the batch by hand: the state a store is in once apply has finished.
 fn publish_the_batch(scratch: &Scratch) {
     for (name, bytes) in staged_files() {
-        fs::write(scratch.directory().join(name), bytes).expect("a published file");
+        fs::write(scratch.store_dir().join(name), bytes).expect("a published file");
     }
 
-    fs::remove_file(scratch.directory().join(BETA_FILE)).expect("the removal");
+    fs::remove_file(scratch.store_dir().join(BETA_FILE)).expect("the removal");
 }
 
 /// A command whose recomputation is the canonical batch, so the pipeline can be
@@ -551,12 +498,12 @@ fn interrupted_at__initialisation_parent_synced() {
     abort_at(
         "interrupted_at__initialisation_parent_synced",
         Boundary::InitialisationParentSynced,
-        &scratch.root,
+        scratch.path(),
         "declare",
     );
 
     assert!(
-        scratch.directory().is_dir(),
+        scratch.store_dir().is_dir(),
         "the directory was created before its parent fsync"
     );
     assert_eq!(
@@ -601,7 +548,7 @@ fn interruption_before_the_decision(test: &str, boundary: Boundary) {
 
     let scratch = Scratch::seeded();
 
-    abort_at(test, boundary, &scratch.root, "declare");
+    abort_at(test, boundary, scratch.path(), "declare");
 
     assert_crash_state(&scratch, Crash::BeforeDecision);
     recover(&scratch);
@@ -616,7 +563,7 @@ fn interruption_after_the_decision(test: &str, boundary: Boundary) {
 
     let scratch = Scratch::seeded();
 
-    abort_at(test, boundary, &scratch.root, "declare");
+    abort_at(test, boundary, scratch.path(), "declare");
 
     assert_crash_state(&scratch, Crash::AfterDecision);
     recover(&scratch);
@@ -841,7 +788,7 @@ fn the_barrier_stages_every_put_and_the_manifest_before_the_decision() {
     abort_at(
         "the_barrier_stages_every_put_and_the_manifest_before_the_decision",
         Boundary::CommitRenamed,
-        &scratch.root,
+        scratch.path(),
         "declare",
     );
 
@@ -1048,7 +995,7 @@ fn a_failed_recovery_done_rename_leaves_the_commit_state_for_the_next_command() 
 #[test]
 fn a_failed_recovery_temporary_removal_leaves_the_store_recoverable() {
     let scratch = Scratch::seeded();
-    fs::write(scratch.directory().join("index.json.tmp"), b"{}").expect("a temporary");
+    fs::write(scratch.store_dir().join("index.json.tmp"), b"{}").expect("a temporary");
 
     {
         let _armed = Armed::failing(Boundary::RecoveryTemporariesRemoved);
@@ -1063,7 +1010,7 @@ fn a_failed_recovery_temporary_removal_leaves_the_store_recoverable() {
         );
     }
 
-    assert!(scratch.directory().join("index.json.tmp").exists());
+    assert!(scratch.store_dir().join("index.json.tmp").exists());
 
     recover(&scratch);
     assert_pre_commit(&scratch);
@@ -1076,20 +1023,20 @@ fn recovery_interrupted__recovery_temporaries_removed() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
-        fs::write(scratch.directory().join("index.json.tmp"), b"{}").expect("a temporary");
-        fs::write(scratch.directory().join("Ab3.json.tmp"), b"{}").expect("a temporary");
+        seed(scratch.path());
+        fs::write(scratch.store_dir().join("index.json.tmp"), b"{}").expect("a temporary");
+        fs::write(scratch.store_dir().join("Ab3.json.tmp"), b"{}").expect("a temporary");
     });
 
     let scratch = Scratch::new();
-    seed(&scratch.root);
-    fs::write(scratch.directory().join("index.json.tmp"), b"{}").expect("a temporary");
-    fs::write(scratch.directory().join("Ab3.json.tmp"), b"{}").expect("a temporary");
+    seed(scratch.path());
+    fs::write(scratch.store_dir().join("index.json.tmp"), b"{}").expect("a temporary");
+    fs::write(scratch.store_dir().join("Ab3.json.tmp"), b"{}").expect("a temporary");
 
     abort_at(
         "recovery_interrupted__recovery_temporaries_removed",
         Boundary::RecoveryTemporariesRemoved,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
@@ -1113,7 +1060,7 @@ fn recovery_interrupted__recovery_prepare_discarded() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         stage_the_batch(scratch, PREPARE_STATE);
     });
 
@@ -1123,12 +1070,12 @@ fn recovery_interrupted__recovery_prepare_discarded() {
     abort_at(
         "recovery_interrupted__recovery_prepare_discarded",
         Boundary::RecoveryPrepareDiscarded,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
     assert!(
-        scratch.directory().join(PREPARE_STATE).is_dir(),
+        scratch.store_dir().join(PREPARE_STATE).is_dir(),
         "the discard stopped part-way"
     );
 
@@ -1147,7 +1094,7 @@ fn recovery_interrupted__recovery_commit_validated() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         stage_the_batch(scratch, COMMIT_STATE);
     });
 
@@ -1157,7 +1104,7 @@ fn recovery_interrupted__recovery_commit_validated() {
     abort_at(
         "recovery_interrupted__recovery_commit_validated",
         Boundary::RecoveryCommitValidated,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
@@ -1178,7 +1125,7 @@ fn recovery_interrupted__recovery_put_replayed() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         stage_the_batch(scratch, COMMIT_STATE);
     });
 
@@ -1188,13 +1135,13 @@ fn recovery_interrupted__recovery_put_replayed() {
     abort_at(
         "recovery_interrupted__recovery_put_replayed",
         Boundary::RecoveryPutReplayed,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
     assert_crash_state(&scratch, Crash::AfterDecision);
     assert!(
-        scratch.directory().join(ALPHA_FILE).is_file(),
+        scratch.store_dir().join(ALPHA_FILE).is_file(),
         "the interruption landed after the first replayed put"
     );
 
@@ -1213,7 +1160,7 @@ fn recovery_interrupted__recovery_removal_replayed() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         stage_the_batch(scratch, COMMIT_STATE);
     });
 
@@ -1223,12 +1170,12 @@ fn recovery_interrupted__recovery_removal_replayed() {
     abort_at(
         "recovery_interrupted__recovery_removal_replayed",
         Boundary::RecoveryRemovalReplayed,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
     assert!(
-        !scratch.directory().join(BETA_FILE).exists(),
+        !scratch.store_dir().join(BETA_FILE).exists(),
         "the removal ran"
     );
 
@@ -1247,7 +1194,7 @@ fn recovery_interrupted__recovery_done_renamed() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         stage_the_batch(scratch, COMMIT_STATE);
     });
 
@@ -1257,7 +1204,7 @@ fn recovery_interrupted__recovery_done_renamed() {
     abort_at(
         "recovery_interrupted__recovery_done_renamed",
         Boundary::RecoveryDoneRenamed,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
@@ -1278,7 +1225,7 @@ fn recovery_interrupted__recovery_cleanup_removed() {
     }
 
     let expected = settled(|scratch| {
-        seed(&scratch.root);
+        seed(scratch.path());
         publish_the_batch(scratch);
         stage_the_batch(scratch, DONE_STATE);
     });
@@ -1290,12 +1237,12 @@ fn recovery_interrupted__recovery_cleanup_removed() {
     abort_at(
         "recovery_interrupted__recovery_cleanup_removed",
         Boundary::RecoveryCleanupRemoved,
-        &scratch.root,
+        scratch.path(),
         "read",
     );
 
     assert!(
-        scratch.directory().join(DONE_STATE).is_dir(),
+        scratch.store_dir().join(DONE_STATE).is_dir(),
         "the clear stopped part-way"
     );
 
@@ -1357,21 +1304,21 @@ fn old_manifest_not_replayed_by_version() {
     // No replay: neither put was published, the removal did not run, and the
     // index still maps the removed entity.
     assert_eq!(
-        fs::read(scratch.directory().join(ALPHA_FILE)).expect("alpha's file"),
+        fs::read(scratch.store_dir().join(ALPHA_FILE)).expect("alpha's file"),
         entity_bytes(&entity("alpha", "first")),
         "the replayed put did not overwrite alpha"
     );
     assert!(
-        !scratch.directory().join(STAGED_UID).exists(),
+        !scratch.store_dir().join(STAGED_UID).exists(),
         "the replayed put was not published under its fresh uid"
     );
     assert_eq!(
-        fs::read(scratch.directory().join(BETA_FILE)).expect("beta's file"),
+        fs::read(scratch.store_dir().join(BETA_FILE)).expect("beta's file"),
         entity_bytes(&entity("beta", "second")),
         "the replayed removal did not delete beta"
     );
     assert_eq!(
-        fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the index"),
+        fs::read(scratch.store_dir().join(INDEX_BASENAME)).expect("the index"),
         index_bytes(&[("alpha", ALPHA_FILE), ("beta", BETA_FILE)]),
         "the index the batch would have published was not applied"
     );
@@ -1384,7 +1331,7 @@ fn old_manifest_not_replayed_by_version() {
     // The decision is still on disk: recovery refused the manifest rather than
     // discarding the evidence of it.
     assert!(
-        scratch.directory().join(COMMIT_STATE).is_dir(),
+        scratch.store_dir().join(COMMIT_STATE).is_dir(),
         "the committed state survives the version refusal"
     );
 }
@@ -1429,7 +1376,7 @@ fn the_committed_manifest_and_the_published_index_carry_version_2() {
         format_version(
             &fs::read(
                 scratch
-                    .directory()
+                    .store_dir()
                     .join(COMMIT_STATE)
                     .join(MANIFEST_BASENAME)
             )
@@ -1444,7 +1391,7 @@ fn the_committed_manifest_and_the_published_index_carry_version_2() {
 
     assert_eq!(
         format_version(
-            &fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the published index"),
+            &fs::read(scratch.store_dir().join(INDEX_BASENAME)).expect("the published index"),
             INDEX_BASENAME,
         ),
         2,
@@ -1457,7 +1404,7 @@ fn the_committed_manifest_and_the_published_index_carry_version_2() {
 fn a_version_1_index_is_refused_by_version_before_anything_else() {
     let scratch = Scratch::seeded();
     fs::write(
-        scratch.directory().join(INDEX_BASENAME),
+        scratch.store_dir().join(INDEX_BASENAME),
         old_index_document(),
     )
     .expect("the old index");
@@ -1465,9 +1412,9 @@ fn a_version_1_index_is_refused_by_version_before_anything_else() {
     // Every later check fails too — an entry the index does not explain, and an
     // entity that disagrees with its mapping — so passing this test means the
     // version was the first thing refused.
-    fs::write(scratch.directory().join("stray.json"), b"{}").expect("an unexplained entry");
+    fs::write(scratch.store_dir().join("stray.json"), b"{}").expect("an unexplained entry");
     fs::write(
-        scratch.directory().join(ALPHA_FILE),
+        scratch.store_dir().join(ALPHA_FILE),
         entity_bytes(&entity("other", "first")),
     )
     .expect("alpha's file");
@@ -1502,7 +1449,7 @@ fn a_version_1_index_is_refused_by_version_before_anything_else() {
         "the version gate runs before the entity disagreement check: {message}"
     );
     assert_eq!(
-        fs::read(scratch.directory().join(INDEX_BASENAME)).expect("the index"),
+        fs::read(scratch.store_dir().join(INDEX_BASENAME)).expect("the index"),
         old_index_document(),
         "an old index is refused, never migrated or repaired"
     );

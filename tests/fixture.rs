@@ -17,10 +17,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::path::Path;
 
 use serde_json::{Value, json};
 
@@ -28,6 +25,9 @@ use smut::learn::{
     EXAMPLE_FILTER, EXAMPLE_FILTER_Q, EXAMPLE_FOLLOW, EXAMPLE_FOLLOW_Q, EXAMPLE_RENDER,
     EXAMPLE_RENDER_R, EXAMPLE_TRAVERSE, EXAMPLE_TRAVERSE_Q,
 };
+
+mod common;
+use common::{Scratch, run, smut};
 
 /// The committed array, relative to the crate root. It is the only data source
 /// these tests read: no store internals, no second copy.
@@ -41,87 +41,6 @@ const CLUSTERS: [&str; 5] = [
     "cluster-setup",
     "cluster-thesis",
 ];
-
-// ── the process harness, copied from `tests/cli_contract.rs` ─────────────────
-
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-fixture-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation of the binary, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-}
-
-/// Runs `smut` in `scratch` with `arguments`, and `stdin` if a fixture supplies
-/// one.
-fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    if let Some(text) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(text.as_bytes())
-            .expect("stdin accepts the fixture");
-    }
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
-/// Runs `smut` with no stdin fixture at all.
-fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    run(scratch, arguments, None)
-}
 
 // ── the fixture, declared ───────────────────────────────────────────────────
 

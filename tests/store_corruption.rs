@@ -23,14 +23,15 @@
 //! reviewed act, in the same change that moved the key and the format version.
 
 use std::fs;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
 use smut::error::{Error, StoreError};
 use smut::id::Id;
-use smut::store::{Snapshot, Store};
+use smut::store::Snapshot;
+
+mod common;
+use common::{Scratch, smut};
 
 /// A healthy index: one public id, mapped to one safe basename.
 const INDEX: &str =
@@ -45,58 +46,11 @@ const VERSION_1_INDEX: &str = "{\"format_version\":1,\"objects\":{\"alpha\":\"Ab
 /// defect a version-1 fixture carries is its version.
 const ENTITY_UNDER_EITHER_KEY: &str = r#"{"smut_id":"alpha","id":"alpha","body":"a thought"}"#;
 
-/// A scratch directory holding one store, removed when it is dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
+/// This file's store-writing fixture; the scratch is `tests/common`'s.
 impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-corruption-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn store(&self) -> Store {
-        Store::in_directory(&self.path)
-    }
-
-    fn directory(&self) -> PathBuf {
-        self.store().directory()
-    }
-
     fn write(&self, name: &str, contents: &str) {
-        fs::create_dir_all(self.directory()).expect("the store directory");
-        fs::write(self.directory().join(name), contents).expect("a store file");
-    }
-
-    fn listing(&self) -> Vec<String> {
-        let mut names: Vec<String> = fs::read_dir(self.directory())
-            .expect("the store directory")
-            .map(|entry| {
-                entry
-                    .expect("a directory entry")
-                    .file_name()
-                    .to_string_lossy()
-                    .into_owned()
-            })
-            .collect();
-        names.sort();
-
-        names
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
+        fs::create_dir_all(self.store_dir()).expect("the store directory");
+        fs::write(self.store_dir().join(name), contents).expect("a store file");
     }
 }
 
@@ -144,7 +98,7 @@ fn the_stores_own_names_and_journal_states_are_explained() {
     scratch.write("Ab3.json", ENTITY);
     scratch.write("lock", "");
     scratch.write("index.json.tmp", "{}");
-    fs::create_dir(scratch.directory().join("journal.done")).expect("a journal state");
+    fs::create_dir(scratch.store_dir().join("journal.done")).expect("a journal state");
 
     let snapshot = scratch
         .store()
@@ -208,22 +162,14 @@ fn a_version_1_index_is_refused_by_version_and_writes_no_envelope() {
     // The caller's half: the command fails, naming the version it found, and no
     // success envelope is written (§3, "no success envelope is emitted on
     // failure").
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_smut"))
-        .args(["get", "alpha"])
-        .current_dir(&scratch.path)
-        .output()
-        .expect("the binary runs");
+    let ran = smut(&scratch, &["get", "alpha"]);
 
-    assert_eq!(output.status.code(), Some(1), "the refusal is exit 1");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
-        "",
-        "no success envelope is written on failure"
-    );
+    assert_eq!(ran.code, 1, "the refusal is exit 1");
+    assert_eq!(ran.stdout, "", "no success envelope is written on failure");
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("format_version 1"),
+        ran.stderr.contains("format_version 1"),
         "the refusal names the version it found: {}",
-        String::from_utf8_lossy(&output.stderr)
+        ran.stderr
     );
 }
 
@@ -318,7 +264,7 @@ fn an_index_less_store_that_holds_entity_files_is_refused_not_initialised_over()
     );
     assert!(error.to_string().contains("Ab3.json"), "{error}");
     assert_eq!(
-        scratch.listing(),
+        scratch.store_entries(),
         ["Ab3.json", "lock"],
         "the refusal created no index and adopted nothing"
     );
@@ -330,9 +276,9 @@ fn an_index_less_store_that_holds_entity_files_is_refused_not_initialised_over()
 fn a_symlinked_entity_file_is_refused_rather_than_followed() {
     let scratch = Scratch::new();
     scratch.write("index.json", INDEX);
-    let outside = scratch.path.join("outside.json");
+    let outside = scratch.path().join("outside.json");
     fs::write(&outside, ENTITY).expect("an entity outside the store");
-    std::os::unix::fs::symlink(&outside, scratch.directory().join("Ab3.json"))
+    std::os::unix::fs::symlink(&outside, scratch.store_dir().join("Ab3.json"))
         .expect("a symlinked entity entry");
 
     let error = scratch
@@ -353,9 +299,9 @@ fn a_symlinked_entity_file_is_refused_rather_than_followed() {
 fn a_symlinked_index_is_refused_rather_than_followed() {
     let scratch = Scratch::new();
     scratch.write("Ab3.json", ENTITY);
-    let outside = scratch.path.join("outside-index.json");
+    let outside = scratch.path().join("outside-index.json");
     fs::write(&outside, INDEX).expect("an index outside the store");
-    std::os::unix::fs::symlink(&outside, scratch.directory().join("index.json"))
+    std::os::unix::fs::symlink(&outside, scratch.store_dir().join("index.json"))
         .expect("a symlinked index");
 
     let error = scratch
@@ -560,8 +506,8 @@ fn a_refusal_leaves_the_index_and_entity_bytes_untouched() {
         "Ab3.json",
         r#"{"smut_id":"alpha","payload":{"smut_id":null}}"#,
     );
-    let index_path = scratch.directory().join("index.json");
-    let entity_path = scratch.directory().join("Ab3.json");
+    let index_path = scratch.store_dir().join("index.json");
+    let entity_path = scratch.store_dir().join("Ab3.json");
     let index_before = fs::read(&index_path).expect("the index bytes");
     let entity_before = fs::read(&entity_path).expect("the entity bytes");
 
@@ -581,7 +527,7 @@ fn a_refusal_leaves_the_index_and_entity_bytes_untouched() {
         "the refusal repaired nothing in the entity"
     );
     assert_eq!(
-        scratch.listing(),
+        scratch.store_entries(),
         ["Ab3.json", "index.json"],
         "the refusal wrote nothing"
     );

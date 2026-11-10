@@ -12,10 +12,6 @@
 //! below assert §7's ordering rules directly rather than a refusal.
 
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 use smut::declare::Entities;
@@ -23,19 +19,8 @@ use smut::id::Id;
 use smut::select::{envelope, get, select};
 use smut::spec;
 
-// ── the in-memory harness, as `tests/selection.rs` keeps it ──────────────────
-
-fn store(entities: &[Value]) -> Entities {
-    entities
-        .iter()
-        .map(|entity| {
-            let id = entity["smut_id"]
-                .as_str()
-                .expect("every fixture names its id");
-            (Id::new(id), entity.clone())
-        })
-        .collect()
-}
+mod common;
+use common::{Scratch, smut, store};
 
 /// The envelope's `traversal` member for `input`.
 fn walked(entities: &Entities, input: Value) -> Value {
@@ -176,114 +161,6 @@ fn a_repeated_label_collapses_without_reordering() {
     );
 }
 
-// ── the CLI harness, as `tests/cli_contract.rs` keeps it ────────────────────
-
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-traversal-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn store(&self) -> PathBuf {
-        self.path.join(".smut")
-    }
-
-    fn has_store(&self) -> bool {
-        self.store().is_dir()
-    }
-
-    fn store_entries(&self) -> Vec<String> {
-        let mut names: Vec<String> = fs::read_dir(self.store())
-            .map(|entries| {
-                entries
-                    .map(|entry| {
-                        entry
-                            .expect("a directory entry")
-                            .file_name()
-                            .into_string()
-                            .unwrap()
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        names.sort();
-
-        names
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation of the binary, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-}
-
-/// Runs `smut` in `scratch` with `arguments`, and `stdin` if a fixture supplies
-/// one.
-fn run(scratch: &Scratch, arguments: &[&str], stdin: Option<&str>) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    if let Some(text) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(text.as_bytes())
-            .expect("stdin accepts the fixture");
-    }
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
-/// Runs `smut` with no stdin fixture at all.
-fn smut(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    run(scratch, arguments, None)
-}
-
 /// A JSON string literal, so hand-written index bytes escape as the format does.
 fn quoted(text: &str) -> String {
     serde_json::to_string(&Value::String(text.to_owned())).expect("a string serialises")
@@ -315,7 +192,7 @@ fn declare_four(scratch: &Scratch) {
 /// permutation of their basenames, and the index's bytes name the ids in reverse
 /// order as well.
 fn shuffle_store(scratch: &Scratch) {
-    let index_path = scratch.store().join("index.json");
+    let index_path = scratch.store_dir().join("index.json");
     let index: Value =
         serde_json::from_str(&fs::read_to_string(&index_path).expect("the committed index"))
             .expect("the index is one JSON value");
@@ -346,12 +223,18 @@ fn shuffle_store(scratch: &Scratch) {
         .map(|position| format!("parked-{position}.json"))
         .collect();
     for (old, park) in held.iter().zip(&parked) {
-        fs::rename(scratch.store().join(old), scratch.store().join(park))
-            .expect("an entity file takes a parking basename");
+        fs::rename(
+            scratch.store_dir().join(old),
+            scratch.store_dir().join(park),
+        )
+        .expect("an entity file takes a parking basename");
     }
     for (park, new) in parked.iter().zip(&shuffled) {
-        fs::rename(scratch.store().join(park), scratch.store().join(new))
-            .expect("an entity file takes its new basename");
+        fs::rename(
+            scratch.store_dir().join(park),
+            scratch.store_dir().join(new),
+        )
+        .expect("an entity file takes its new basename");
     }
 
     // The entity that held `held[i]` (`ids[i]`) now lives in `shuffled[i]`, which

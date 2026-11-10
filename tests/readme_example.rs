@@ -29,45 +29,15 @@
 //! its own paths, so a relative link is dead on the published page; one test here
 //! requires every link target to be absolute.
 
-use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
+mod common;
+use common::{Scratch, smut};
+
 const README: &str = include_str!("../README.md");
-
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-readme-example-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
 
 /// One command of the transcript and the output the README records for it.
 struct Step {
@@ -275,38 +245,6 @@ fn arguments(command: &str) -> Vec<String> {
     args
 }
 
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-fn run(scratch: &Scratch, args: &[String]) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    child
-        .stdin
-        .as_mut()
-        .expect("piped stdin")
-        .write_all(b"")
-        .expect("an empty stdin");
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
 /// A quoted operand may wrap across lines. `README.md` declares one graph that
 /// way — a shell accepts a quote that spans newlines, so the harness must too:
 /// the continuation lines belong to the command, never to its recorded output.
@@ -351,7 +289,7 @@ fn every_readme_transcript_runs_and_prints_what_it_records() {
         let scratch = Scratch::new();
 
         for step in &transcript.steps {
-            let ran = run(&scratch, &step.args);
+            let ran = smut(&scratch, &step.args);
             let shown = &step.output;
 
             if shown.starts_with("smut: ") {

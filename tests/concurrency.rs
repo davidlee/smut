@@ -12,22 +12,21 @@
 
 use std::fs;
 use std::os::unix::process::ExitStatusExt;
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command as Process, Output, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::process::{Child, Output, Stdio};
 
 use serde_json::{Value, json};
 
 use smut::declare::{Entities, WriteSet};
-use smut::entity::{Form, serialise};
 use smut::error::Reject;
 use smut::id::{Id, IdSource, Occupied};
-use smut::store::index::Index;
 use smut::store::journal::{COMMIT_STATE, MANIFEST_FORMAT_VERSION};
 use smut::store::{
     Command, Computed, INDEX_BASENAME, JOURNAL_STATES, LOCK_BASENAME, MANIFEST_BASENAME,
-    STORE_DIRECTORY, Snapshot, Store,
+    STORE_DIRECTORY, Snapshot,
 };
+
+mod common;
+use common::{Scratch, entity, entity_bytes, index_bytes, listing};
 
 /// How many times the first-declaration race is run. Each attempt is a fresh
 /// store and asserts the whole invariant set; an attempt that fails fails the
@@ -46,45 +45,16 @@ const COLLIDING: &str = "shared";
 /// refused.
 const FREE: &str = "parent-second";
 
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    root: PathBuf,
-}
-
+/// This file's listings and reload; the scratch is `tests/common`'s.
 impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let root = std::env::temp_dir().join(format!(
-            "smut-concurrency-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&root).expect("a scratch directory");
-
-        Self { root }
-    }
-
-    fn root(&self) -> &Path {
-        &self.root
-    }
-
-    fn store(&self) -> Store {
-        Store::in_directory(&self.root)
-    }
-
-    fn directory(&self) -> PathBuf {
-        self.store().directory()
-    }
-
     /// Every entry under `.smut/`, sorted.
     fn listing(&self) -> Vec<String> {
-        listing(&self.directory())
+        listing(&self.store_dir())
     }
 
     /// Every entry beside the store, sorted.
     fn root_listing(&self) -> Vec<String> {
-        listing(&self.root)
+        listing(self.path())
     }
 
     /// The store as a later process would find it: read and validated from disk.
@@ -93,46 +63,20 @@ impl Scratch {
     }
 }
 
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
-    }
-}
-
-fn listing(directory: &Path) -> Vec<String> {
-    let mut names: Vec<String> = fs::read_dir(directory)
-        .map(|entries| {
-            entries
-                .map(|entry| {
-                    entry
-                        .expect("a directory entry")
-                        .file_name()
-                        .to_string_lossy()
-                        .into_owned()
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    names.sort();
-
-    names
-}
-
-/// Spawns the real binary beside `root`, with its streams captured.
-fn spawn_in(root: &Path, arguments: &[&str]) -> Child {
-    Process::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(root)
+/// Spawns the real binary beside `scratch`'s store, with its streams captured
+/// and no stdin, so a killed child can never be waiting on one.
+fn spawn_in(scratch: &Scratch, arguments: &[&str]) -> Child {
+    scratch
+        .command(scratch.path())
         .args(arguments)
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .expect("the binary starts")
 }
 
-/// Runs the real binary beside `root` to completion.
-fn run_in(root: &Path, arguments: &[&str]) -> Output {
-    spawn_in(root, arguments)
+/// Runs the real binary beside `scratch`'s store to completion.
+fn run_in(scratch: &Scratch, arguments: &[&str]) -> Output {
+    spawn_in(scratch, arguments)
         .wait_with_output()
         .expect("the binary exits")
 }
@@ -178,7 +122,7 @@ fn race_attempt(attempt: usize) {
     // running while the first creates the store.
     let children: Vec<Child> = declarations
         .iter()
-        .map(|declaration| spawn_in(scratch.root(), &["declare", declaration]))
+        .map(|declaration| spawn_in(&scratch, &["declare", declaration]))
         .collect();
     let outputs: Vec<Output> = children
         .into_iter()
@@ -211,7 +155,7 @@ fn race_attempt(attempt: usize) {
         1,
         "attempt {attempt}: one index: {entries:?}"
     );
-    let lock = fs::symlink_metadata(scratch.directory().join(LOCK_BASENAME))
+    let lock = fs::symlink_metadata(scratch.store_dir().join(LOCK_BASENAME))
         .expect("attempt: the lock exists");
     assert!(
         lock.file_type().is_file(),
@@ -282,7 +226,7 @@ fn race_attempt(attempt: usize) {
         );
         files.push(basename.to_owned());
 
-        let bytes = fs::read(scratch.directory().join(basename)).expect("a mapped file");
+        let bytes = fs::read(scratch.store_dir().join(basename)).expect("a mapped file");
         let stored: Value = serde_json::from_slice(&bytes).expect("an entity file");
         assert_eq!(
             stored["smut_id"],
@@ -308,11 +252,11 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
 
     // The gate is deterministic: the parent takes the lock before the child is
     // spawned, so the child cannot have acquired it, however far it got.
-    fs::create_dir_all(scratch.directory()).expect("the store directory");
+    fs::create_dir_all(scratch.store_dir()).expect("the store directory");
     let lock = scratch.store().lock().expect("the parent's lock");
 
     let mut child = spawn_in(
-        scratch.root(),
+        &scratch,
         &[
             "declare",
             r#"[{"smut_id":"killed-one","body":"one"},{"smut_id":"killed-two","body":"two"}]"#,
@@ -356,7 +300,7 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
 
     // The store converged: the next declaration succeeds and publishes.
     let survivor = run_in(
-        scratch.root(),
+        &scratch,
         &["declare", r#"{"smut_id":"survivor","body":"survives"}"#],
     );
     assert_eq!(
@@ -381,27 +325,6 @@ fn termination_before_the_first_lock_acquisition_leaves_nothing_half_written() {
 const ALPHA_FILE: &str = "Ab3.json";
 const BETA_FILE: &str = "Zq7.json";
 const GAMMA_FILE: &str = "Fresh.json";
-
-fn entity(id: &str, body: &str) -> Value {
-    json!({ "smut_id": id, "body": body })
-}
-
-fn entity_bytes(value: &Value) -> Vec<u8> {
-    serialise(value, Form::File).into_bytes()
-}
-
-fn index_bytes(objects: &[(&str, &str)]) -> Vec<u8> {
-    let mut index = Index::empty();
-
-    for (id, basename) in objects {
-        index
-            .insert(Id::new(*id), (*basename).to_owned())
-            .expect("a safe basename");
-    }
-
-    index.to_bytes().into_bytes()
-}
-
 /// A store holding `alpha` and `beta`, with a *decided but unapplied* batch in
 /// `journal.commit/`: alpha amended, gamma added, beta removed.
 ///
@@ -411,7 +334,7 @@ fn index_bytes(objects: &[(&str, &str)]) -> Vec<u8> {
 /// are exactly what the commit path would have staged and made durable before
 /// taking the decision (§4.3).
 fn decided_but_unapplied(scratch: &Scratch) {
-    let directory = scratch.directory();
+    let directory = scratch.store_dir();
     fs::create_dir_all(&directory).expect("the store directory");
     fs::write(directory.join(LOCK_BASENAME), b"").expect("the lock");
     fs::write(
@@ -481,10 +404,7 @@ fn a_process_recovering_anothers_transaction_observes_one_coherent_state() {
 
     // A real process, not a test harness: `query` recovers before it validates
     // and before it serves anything (§4.4, DEC-004 step 4).
-    let first = run_in(
-        scratch.root(),
-        &["query", r#"{"from":["alpha","beta","gamma"]}"#],
-    );
+    let first = run_in(&scratch, &["query", r#"{"from":["alpha","beta","gamma"]}"#]);
     assert_eq!(code(&first), 0, "{}", stderr(&first));
     let observed = envelope(&first);
 
@@ -524,10 +444,7 @@ fn a_process_recovering_anothers_transaction_observes_one_coherent_state() {
 
     // A second process observes the same state: recovering a store that is
     // already recovered is idempotent, and it changes nothing.
-    let second = run_in(
-        scratch.root(),
-        &["query", r#"{"from":["alpha","beta","gamma"]}"#],
-    );
+    let second = run_in(&scratch, &["query", r#"{"from":["alpha","beta","gamma"]}"#]);
     assert_eq!(code(&second), 0, "{}", stderr(&second));
     assert_eq!(envelope(&second), observed, "the second spawn agrees");
     assert_eq!(scratch.load().entities(), recovered.entities());
@@ -559,13 +476,13 @@ impl IdSource for Script {
 /// against the loaded one (step 6, the authoritative pass) — so this command uses
 /// the first call to let a second process create the store and commit the
 /// colliding id, and the second call to generate past it.
-struct StalePrecheck {
-    root: PathBuf,
+struct StalePrecheck<'a> {
+    scratch: &'a Scratch,
     passes: Vec<&'static str>,
     generated: Vec<String>,
 }
 
-impl Command for StalePrecheck {
+impl Command for StalePrecheck<'_> {
     type Value = String;
 
     fn creates_store(&self) -> bool {
@@ -584,7 +501,7 @@ impl Command for StalePrecheck {
             // The child creates the store and commits the id this pass would
             // have been free to use — the precheck is now provably stale.
             let declaration = format!(r#"{{"smut_id":"{COLLIDING}","body":"the child's"}}"#);
-            let output = run_in(&self.root, &["declare", &declaration]);
+            let output = run_in(self.scratch, &["declare", &declaration]);
             assert_eq!(code(&output), 0, "{}", stderr(&output));
             assert_eq!(envelope(&output)["ids"], json!([COLLIDING]));
 
@@ -623,7 +540,7 @@ impl Command for StalePrecheck {
 fn stale_empty_snapshot_precheck() {
     let scratch = Scratch::new();
     let mut command = StalePrecheck {
-        root: scratch.root().to_path_buf(),
+        scratch: &scratch,
         passes: Vec::new(),
         generated: Vec::new(),
     };

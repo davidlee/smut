@@ -7,23 +7,14 @@
 
 use std::collections::BTreeSet;
 
-use serde_json::{Value, json};
+use serde_json::json;
 use smut::declare::Entities;
 use smut::id::Id;
 use smut::select::{Selection, envelope, get, project, select};
 use smut::spec;
 
-fn store(entities: &[Value]) -> Entities {
-    entities
-        .iter()
-        .map(|entity| {
-            let id = entity["smut_id"]
-                .as_str()
-                .expect("every fixture names its id");
-            (Id::new(id), entity.clone())
-        })
-        .collect()
-}
+mod common;
+use common::{keys, parse, store};
 
 /// `count` entities named `id-000`, `id-001`, …
 fn numbered(count: u32) -> Entities {
@@ -35,22 +26,8 @@ fn numbered(count: u32) -> Entities {
         .collect()
 }
 
-fn parse(input: Value) -> spec::Spec {
-    spec::parse(&input).expect("the fixture specification is valid")
-}
-
 fn selected<'a>(selection: &'a Selection<'a>) -> Vec<&'a str> {
     selection.ids.iter().map(|id| id.as_str()).collect()
-}
-
-/// An envelope's top-level key set, so a conditional member cannot hide.
-fn keys(document: &Value) -> BTreeSet<&str> {
-    document
-        .as_object()
-        .expect("an envelope is an object")
-        .keys()
-        .map(String::as_str)
-        .collect()
 }
 
 #[test]

@@ -19,115 +19,11 @@
 //! predicate filters and whose envelope is still the same five members.
 
 use std::collections::BTreeSet;
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
 
-/// A scratch working directory holding at most one store, removed when dropped.
-struct Scratch {
-    path: PathBuf,
-}
-
-impl Scratch {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-
-        let path = std::env::temp_dir().join(format!(
-            "smut-compatibility-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&path).expect("a scratch directory");
-
-        Self { path }
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn store(&self) -> PathBuf {
-        self.path.join(".smut")
-    }
-
-    fn has_store(&self) -> bool {
-        self.store().is_dir()
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.path);
-    }
-}
-
-/// One invocation, as a caller sees it.
-struct Ran {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-impl Ran {
-    fn json(&self) -> Value {
-        serde_json::from_str(&self.stdout)
-            .unwrap_or_else(|error| panic!("stdout is one JSON value ({error}): {:?}", self.stdout))
-    }
-
-    /// A successful machine command: one compact JSON line on stdout, exit 0,
-    /// nothing on stderr.
-    fn assert_one_json_line(&self, what: &str) {
-        assert_eq!(self.code, 0, "{what}: {}", self.stderr);
-        assert!(self.stderr.is_empty(), "{what}: {}", self.stderr);
-        assert!(self.stdout.ends_with('\n'), "{what}: {:?}", self.stdout);
-        assert_eq!(
-            self.stdout.matches('\n').count(),
-            1,
-            "{what} is one compact line: {:?}",
-            self.stdout
-        );
-        self.json();
-    }
-}
-
-fn run(scratch: &Scratch, arguments: &[&str]) -> Ran {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_smut"))
-        .current_dir(scratch.path())
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the binary starts");
-
-    child
-        .stdin
-        .as_mut()
-        .expect("piped stdin")
-        .write_all(b"")
-        .expect("an empty stdin");
-
-    let output = child.wait_with_output().expect("the binary exits");
-
-    Ran {
-        code: output.status.code().expect("a normal exit"),
-        stdout: String::from_utf8(output.stdout).expect("UTF-8 stdout"),
-        stderr: String::from_utf8(output.stderr).expect("UTF-8 stderr"),
-    }
-}
-
-fn keys(value: &Value) -> BTreeSet<&str> {
-    value
-        .as_object()
-        .expect("an object")
-        .keys()
-        .map(String::as_str)
-        .collect()
-}
+mod common;
+use common::{Scratch, keys, smut};
 
 /// The three-entity store every pin below reads: a plain entity, one with a
 /// reference to it, and a body-only one.
@@ -137,7 +33,7 @@ fn store_of_three(scratch: &Scratch) {
         r#"{"smut_id":"beta","title":"Beta","body":"Second.","points_at":{"smut_id":"alpha"}}"#,
         r#"{"smut_id":"gamma","body":"Third."}"#,
     ] {
-        let declared = run(scratch, &["declare", declaration]);
+        let declared = smut(scratch, &["declare", declaration]);
 
         declared.assert_one_json_line("a fixture declaration");
     }
@@ -165,7 +61,7 @@ fn default_query_pin() -> Value {
 fn declare_pins_its_full_and_compact_envelopes() {
     let scratch = Scratch::new();
 
-    let created = run(
+    let created = smut(
         &scratch,
         &[
             "declare",
@@ -190,7 +86,7 @@ fn declare_pins_its_full_and_compact_envelopes() {
         BTreeSet::from(["smut_id", "previous", "status"])
     );
 
-    let amended = run(
+    let amended = smut(
         &scratch,
         &[
             "declare",
@@ -219,7 +115,7 @@ fn query_pins_its_defaults() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let ran = run(&scratch, &["query", "{}"]);
+    let ran = smut(&scratch, &["query", "{}"]);
 
     ran.assert_one_json_line("a default query");
     assert_eq!(ran.json(), default_query_pin());
@@ -242,13 +138,13 @@ fn query_pins_the_default_limit_of_one_hundred() {
     let declarations: Vec<Value> = (1..=101)
         .map(|n| json!({"smut_id": format!("e{n:03}"), "body": format!("note {n}")}))
         .collect();
-    let declared = run(
+    let declared = smut(
         &scratch,
         &["declare", &Value::Array(declarations).to_string()],
     );
     declared.assert_one_json_line("a batch of 101 declarations");
 
-    let ran = run(&scratch, &["query", "{}"]);
+    let ran = smut(&scratch, &["query", "{}"]);
     ran.assert_one_json_line("a default query over 101 entities");
 
     let envelope = ran.json();
@@ -273,7 +169,7 @@ fn render_pins_its_markdown_text() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let ran = run(&scratch, &["render", r#"{"from":["alpha","beta"]}"#]);
+    let ran = smut(&scratch, &["render", r#"{"from":["alpha","beta"]}"#]);
 
     assert_eq!(ran.code, 0, "{}", ran.stderr);
     assert!(ran.stderr.is_empty(), "{}", ran.stderr);
@@ -293,7 +189,7 @@ fn get_pins_explicit_order_and_missing() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let ran = run(&scratch, &["get", "beta", "alpha", "ghost"]);
+    let ran = smut(&scratch, &["get", "beta", "alpha", "ghost"]);
 
     ran.assert_one_json_line("an explicit get");
     assert_eq!(
@@ -325,7 +221,7 @@ fn where_accepted_adds_a_predicate_without_disturbing_the_pinned_query() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let queried = run(&scratch, &["query", r#"{"where":{"type":"question"}}"#]);
+    let queried = smut(&scratch, &["query", r#"{"where":{"type":"question"}}"#]);
     queried.assert_one_json_line("a query with a predicate");
 
     let document = queried.json();
@@ -353,7 +249,7 @@ fn where_accepted_adds_a_predicate_without_disturbing_the_pinned_query() {
     // *compute*. `kind` is a field this store does hold, so the same request
     // shape selects exactly the one note — an implementation that accepted
     // `where` and ignored it would return all three.
-    let filtered = run(&scratch, &["query", r#"{"where":{"kind":"note"}}"#]);
+    let filtered = smut(&scratch, &["query", r#"{"where":{"kind":"note"}}"#]);
     filtered.assert_one_json_line("a predicate over a field the store holds");
     assert_eq!(
         keys(&filtered.json()),
@@ -369,7 +265,7 @@ fn where_accepted_adds_a_predicate_without_disturbing_the_pinned_query() {
 
     // The point of the pin: the wider surface did not disturb the 0.1
     // invocation beside it.
-    let after = run(&scratch, &["query", "{}"]);
+    let after = smut(&scratch, &["query", "{}"]);
     after.assert_one_json_line("the pinned 0.1 query, beside the accepted predicate");
     assert_eq!(after.json(), default_query_pin());
 }
@@ -379,7 +275,7 @@ fn an_unknown_key_is_refused_without_naming_0_2() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let refused = run(&scratch, &["query", r#"{"wibble":1}"#]);
+    let refused = smut(&scratch, &["query", r#"{"wibble":1}"#]);
 
     assert_eq!(refused.code, 2);
     assert_eq!(refused.stdout, "");
@@ -407,7 +303,7 @@ fn an_unknown_key_is_refused_without_naming_0_2() {
 fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
     let scratch = Scratch::new();
 
-    let declared = run(
+    let declared = smut(
         &scratch,
         &[
             "declare",
@@ -420,7 +316,7 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
 
     // The nested declaration became an entity of its own and an id-only
     // reference in its container — the brief's stated outcome.
-    let stored = run(&scratch, &["get", "smut", "q-query"]);
+    let stored = smut(&scratch, &["get", "smut", "q-query"]);
     stored.assert_one_json_line("both declared entities");
     assert_eq!(
         stored.json()["objects"],
@@ -432,7 +328,7 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
 
     // A patch preserves the fields it does not name; DROP removes only the field
     // it names.
-    run(
+    smut(
         &scratch,
         &[
             "declare",
@@ -440,13 +336,13 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
         ],
     )
     .assert_one_json_line("the brief's patch");
-    run(
+    smut(
         &scratch,
         &["declare", r#"{"smut_id":"q-query","status":"DROP"}"#],
     )
     .assert_one_json_line("the brief's DROP");
 
-    let after = run(&scratch, &["get", "q-query"]);
+    let after = smut(&scratch, &["get", "q-query"]);
     after.assert_one_json_line("q-query after the patch and DROP");
     assert_eq!(
         after.json()["objects"],
@@ -460,14 +356,14 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
 
     // One batch with its own envelope, and the reference in `smut` survives it:
     // querying `smut` after the delete does not recreate `q-query`.
-    let deleted = run(&scratch, &["delete", "q-query"]);
+    let deleted = smut(&scratch, &["delete", "q-query"]);
     deleted.assert_one_json_line("the brief's delete");
     assert_eq!(
         deleted.json(),
         json!({"deleted": ["q-query"], "missing": []})
     );
 
-    let survivors = run(
+    let survivors = smut(
         &scratch,
         &["query", r#"{"from":"smut","follow":["questions"]}"#],
     );
@@ -493,7 +389,7 @@ fn the_briefs_end_to_end_example_runs_every_step_0_2_can() {
 fn learn_writes_a_non_empty_guide_and_touches_no_store() {
     let scratch = Scratch::new();
 
-    let ran = run(&scratch, &["learn"]);
+    let ran = smut(&scratch, &["learn"]);
 
     // The guide's content is PHASE-06's, which wrote it; only its shape is pinned
     // here. (This comment named a PHASE-08 that was never planned — RV-020 F-7.)
@@ -514,7 +410,7 @@ fn a_traversal_query_adds_one_member_beside_the_pinned_0_1_envelope() {
     let scratch = Scratch::new();
     store_of_three(&scratch);
 
-    let walked = run(
+    let walked = smut(
         &scratch,
         &["query", r#"{"from":"beta","follow":["points_at"]}"#],
     );
@@ -572,7 +468,7 @@ fn a_traversal_query_adds_one_member_beside_the_pinned_0_1_envelope() {
 
     // The point of the pin: the 0.2 envelope appeared without touching the 0.1
     // one beside it.
-    let pinned = run(&scratch, &["query", "{}"]);
+    let pinned = smut(&scratch, &["query", "{}"]);
     pinned.assert_one_json_line("the pinned 0.1 query, after a traversal query");
     assert_eq!(pinned.json(), default_query_pin());
 }
