@@ -22,13 +22,14 @@
     nixpkgs,
     ...
   }:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+    flake-parts.lib.mkFlake {inherit inputs;} ({self, ...}: {
       imports = [
         inputs.devshell.flakeModule
       ];
 
       systems = [
         "x86_64-linux"
+        "aarch64-linux"
         "aarch64-darwin"
       ];
 
@@ -112,11 +113,19 @@
           };
           # What the room takes: `dev-tools` plus Doctrine, as a room has no host install
           # (flakes:DEC-130).
-          capsule-tools = pkgs.buildEnv {
-            name = "smut-capsule-tools";
-            paths = devToolPkgs ++ [inputs.doctrine.packages.${system}.default];
-            ignoreCollisions = true;
-          };
+          capsule-tools = let
+            # Doctrine's flake declares only x86_64-linux and aarch64-darwin, so a
+            # room on any other system has no Doctrine to carry. The throw names
+            # that, and goes when Doctrine declares aarch64-linux too.
+            doctrine =
+              inputs.doctrine.packages.${system}.default
+              or (throw "smut: capsule-tools needs a Doctrine package for ${system}, and Doctrine's flake publishes none");
+          in
+            pkgs.buildEnv {
+              name = "smut-capsule-tools";
+              paths = devToolPkgs ++ [doctrine];
+              ignoreCollisions = true;
+            };
         };
 
         # `nix flake check` builds the package on every declared system.
@@ -126,5 +135,19 @@
           packages = devToolPkgs;
         };
       };
-    };
+
+      # `pkgs.smut` for a nixpkgs instance someone else owns: a host, a home
+      # manager, a jail. A *binary* overlay — the value is this flake's own build
+      # at this flake's pins, so `final`'s stdenv and glibc are not the ones smut
+      # links, and no overlay can be cheaper than the package it names.
+      #
+      # `final.system` is read inside the value, so it is lazy: reading a system
+      # at attribute position would force the target fixpoint while the overlay is
+      # being applied (the recursion `~/flakes/overlays/agents.nix` documents).
+      flake.overlays.default = final: _prev: {
+        smut =
+          self.packages.${final.system}.default
+          or (throw "smut: this flake builds no package for ${final.system}");
+      };
+    });
 }
