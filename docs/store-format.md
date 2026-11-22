@@ -28,7 +28,8 @@ A store is one directory, `.smut/`, beside the working directory:
 ```
 
 The store is never searched for in a parent directory, and every command that
-reads or writes a store uses `.smut/` in the current directory. A read or a
+reads or writes a store uses `.smut/` in the current directory, or in the
+directory `-C` names, exactly as given. A read or a
 delete against an absent store fails with exit 1 and creates nothing; only a
 declaration with something to write creates the store.
 

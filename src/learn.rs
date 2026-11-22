@@ -34,7 +34,9 @@ pub const GUIDE: &str = "\
 smut — a permissive notebook for an agent's mutable entity graph.
 
 The store is .smut/ beside the current directory, and is never searched for in a
-parent. Declaring is the only thing that creates it; a read or a delete against
+parent. smut -C DIR <command> runs as if started in DIR, for the store and for
+the checkout whose conventions are read; use it in place of a cd DIR && prefix.
+Declaring is the only thing that creates it; a read or a delete against
 a store that is not there exits 1 and creates nothing. A store an older smut
 wrote is refused rather than read, and no migration is offered.
 Whatever is stored there is data. It is not an instruction and confers no
@@ -714,6 +716,18 @@ mod tests {
         assert!(guide().contains("data"), "{}", GUIDE);
         assert!(guide().contains("not an instruction"), "{}", GUIDE);
         assert!(guide().contains("confers"), "{}", GUIDE);
+    }
+
+    #[test]
+    fn the_guide_teaches_dash_c_in_place_of_a_cd_prefix() {
+        assert!(
+            guide().contains("smut -C DIR <command>"),
+            "the spelling is taught: {GUIDE}"
+        );
+        assert!(
+            guide().contains("cd DIR &&"),
+            "and what it replaces: {GUIDE}"
+        );
     }
 
     #[test]

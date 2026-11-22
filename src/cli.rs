@@ -10,6 +10,7 @@
 
 use std::ffi::OsString;
 use std::io::Read;
+use std::path::PathBuf;
 
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{CommandFactory, Parser, Subcommand};
@@ -26,6 +27,15 @@ use crate::render_markdown::{self, Options};
 use crate::select;
 use crate::spec::{self, Spec};
 use crate::store::{Command, Computed, Snapshot, Store};
+
+/// A parsed command line: where it runs, and what it asks for.
+pub struct CommandLine {
+    /// `-C`'s directory, as typed: the one smut acts as if it was started in.
+    /// Resolving it is the binary's, which alone knows the current directory.
+    pub directory: Option<PathBuf>,
+    /// What the command line asks for.
+    pub invocation: Invocation,
+}
 
 /// What one invocation asks for, decided entirely in step 1.
 // `Request` carries a whole `Spec`, and PHASE-03's `where` predicate made that
@@ -230,6 +240,12 @@ impl Command for Delete {
     about = "A permissive notebook for an agent's mutable entity graph"
 )]
 struct Cli {
+    /// Run as if smut was started in DIR: its store, and the checkout whose
+    /// conventions it reads
+    // Not `global`: after the verb, a `q` line's bare tokens are its own (DEC-037).
+    #[arg(short = 'C', value_name = "DIR")]
+    directory: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Option<Sub>,
 }
@@ -374,18 +390,35 @@ pub fn parse(
     arguments: &[OsString],
     stdin_is_terminal: bool,
     stdin: &mut dyn Read,
-) -> Result<Invocation, Error> {
+) -> Result<CommandLine, Error> {
     let program = std::iter::once(OsString::from("smut"));
 
     let cli = match Cli::try_parse_from(program.chain(arguments.iter().cloned())) {
         Ok(cli) => cli,
-        Err(error) => return answer(error),
+        Err(error) => {
+            return answer(error).map(|invocation| CommandLine {
+                directory: None,
+                invocation,
+            });
+        }
     };
 
     let Some(subcommand) = cli.command else {
         return Err(Reject::MissingCommand.into());
     };
 
+    Ok(CommandLine {
+        directory: cli.directory,
+        invocation: invocation(subcommand, stdin_is_terminal, stdin)?,
+    })
+}
+
+/// The subcommand, validated into what it asks for.
+fn invocation(
+    subcommand: Sub,
+    stdin_is_terminal: bool,
+    stdin: &mut dyn Read,
+) -> Result<Invocation, Error> {
     match subcommand {
         Sub::Learn => Ok(Invocation::Learn),
         Sub::Conventions { name, format } => Ok(Invocation::Conventions(conventions::resolve(
@@ -605,14 +638,14 @@ mod tests {
         let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
         let mut stdin: &[u8] = b"";
 
-        parse(&arguments, false, &mut stdin)
+        parse(&arguments, false, &mut stdin).map(|line| line.invocation)
     }
 
     fn parse_with(arguments: &[&str], piped: &str, terminal: bool) -> Result<Invocation, Error> {
         let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
         let mut stdin: &[u8] = piped.as_bytes();
 
-        parse(&arguments, terminal, &mut stdin)
+        parse(&arguments, terminal, &mut stdin).map(|line| line.invocation)
     }
 
     fn request(invocation: Invocation) -> Request {

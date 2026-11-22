@@ -110,7 +110,7 @@ reference the delete leaves behind. `smut learn` prints the rules.
 
 `smut` is a single binary. Everything — entities, their fields and
 the references between them — lives as JSON under `.smut/` in the directory
-you run it in, and reads come back as JSON or as Markdown.
+you run it in (or the one `smut -C <dir>` names), and reads come back as JSON or as Markdown.
 
 Smut aims very low - which makes it accessible, dirt cheap, and extremely unassuming.
 
@@ -284,6 +284,12 @@ Worth knowing, once each:
 | `smut r [TOKEN]... [-j\|--json JSON]` | the same line of words, printed as Markdown (with render's display flags) |
 | `smut conventions [NAME] [-f\|--format json]` | list the built-in conventions sets, print one, or print it as a declaration |
 | `smut learn` | print the embedded guide |
+
+`smut -C <dir> <command>` runs any command as if smut was started in `<dir>`:
+the store is `<dir>/.smut/`, and conventions come from the checkout `<dir>` is
+in. A relative `<dir>` is taken from the current directory, as with `git -C`. It
+saves an agent the `cd <dir> &&` prefix, which does not survive between a
+harness's shell calls and defeats a `smut`-prefixed permission rule.
 
 `declare`, `query` and `render` take one JSON argument or one complete JSON value
 on stdin, when the argument is absent or is `-`. With no argument and a terminal

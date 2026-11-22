@@ -44,7 +44,8 @@ fn run(scratch: &Scratch, arguments: &[&str]) -> String {
     let mut stdin: &[u8] = b"";
 
     let invocation = cli::parse(&arguments, false, &mut stdin)
-        .unwrap_or_else(|error| panic!("{arguments:?} is a valid request: {error}"));
+        .unwrap_or_else(|error| panic!("{arguments:?} is a valid request: {error}"))
+        .invocation;
 
     match invocation {
         Invocation::Request(request) => request

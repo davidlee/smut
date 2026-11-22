@@ -1638,3 +1638,37 @@ fn row_naming<'a>(listed: &'a Ran, path: &str) -> Vec<&'a str> {
         .find(|row| row.get(3) == Some(&path))
         .unwrap_or_else(|| panic!("a row names {path}: {}", listed.stdout))
 }
+
+// ── -C: the project layer follows the named directory (IMP-022) ──────────────
+
+// Reddens if -C moves only the store: the caller's directory holds no checkout,
+// so the project row can only come from the walk starting at the named one.
+#[test]
+fn dash_c_finds_the_project_layer_of_the_named_directory() {
+    let scratch = Scratch::new();
+    let repository = scratch.repository("repo");
+    scratch.set(
+        &scratch.project_sets(&repository),
+        "hygiene",
+        PROJECT_HYGIENE,
+    );
+    let inside = scratch.sub(&repository, "sub");
+    let outside = scratch.dir("outside");
+    scratch.assert_no_repository_above(&outside);
+
+    let printed = scratch.smut_in(
+        &outside,
+        &[
+            "-C",
+            inside.to_str().expect("a UTF-8 fixture path"),
+            "conventions",
+            "hygiene",
+        ],
+    );
+
+    assert_eq!(printed.code, 0, "{}", printed.stderr);
+    assert_eq!(
+        printed.stdout, PROJECT_HYGIENE_BODY,
+        "the named directory's checkout supplies the set"
+    );
+}

@@ -4,10 +4,10 @@
 
 use std::ffi::OsString;
 use std::io::{self, IsTerminal, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use smut::cli::{self, Invocation};
+use smut::cli::{self, CommandLine, Invocation};
 use smut::conventions::{self, Roots, project_root, user_root};
 use smut::error::{Error, Reject, STORE_FAILURE, SUCCESS, StoreError};
 use smut::learn;
@@ -17,7 +17,6 @@ fn main() -> ExitCode {
     let arguments: Vec<OsString> = std::env::args_os().skip(1).collect();
     let stdin_is_terminal = io::stdin().is_terminal();
     let mut stdin = io::stdin().lock();
-    let roots = roots();
     let rendered = dispatch(&arguments, stdin_is_terminal, &mut stdin, &roots);
 
     let mut stdout = io::stdout().lock();
@@ -64,14 +63,14 @@ struct Rendered {
 /// A failure never carries a partial success envelope: the rejection path fills
 /// `stderr` only, so "no success envelope on failure" is structural.
 ///
-/// The roots arrive as a parameter and are never computed here: this is the
-/// function every in-process test calls, so roots found here would be found in
-/// the developer's real `$HOME` (RV-029 F-3, DEC-032).
+/// How the roots are found arrives as a parameter and is never decided here:
+/// this is the function every in-process test calls, so roots found here would
+/// be found in the developer's real `$HOME` (RV-029 F-3, DEC-032).
 fn dispatch(
     arguments: &[OsString],
     stdin_is_terminal: bool,
     stdin: &mut dyn Read,
-    roots: &Roots,
+    roots: &dyn Fn(&Path) -> Roots,
 ) -> Rendered {
     match execute(arguments, stdin_is_terminal, stdin, roots) {
         Ok(stdout) => Rendered {
@@ -91,42 +90,49 @@ fn dispatch(
 ///
 /// Only the [`Request`] arm constructs a [`Store`]: `--help`, `--version`,
 /// `learn` and `conventions` are answered on a call chain that never creates,
-/// locks or recovers a store (DEC-004, VA-1).
+/// locks or recovers a store (DEC-004, VA-1). Only `conventions` finds roots.
+///
+/// A start directory the operating system will not report falls back to `.`
+/// for the conventions walk: it then starts at the process's own directory
+/// instead of failing, and the one place the start is genuinely needed — the
+/// store root (DEC-004) — still refuses with the filesystem's own reason.
 fn execute(
     arguments: &[OsString],
     stdin_is_terminal: bool,
     stdin: &mut dyn Read,
-    roots: &Roots,
+    roots: &dyn Fn(&Path) -> Roots,
 ) -> Result<String, Error> {
-    match cli::parse(arguments, stdin_is_terminal, stdin)? {
+    let CommandLine {
+        directory,
+        invocation,
+    } = cli::parse(arguments, stdin_is_terminal, stdin)?;
+    let start = start_directory(directory);
+
+    match invocation {
         Invocation::Help(text) | Invocation::Version(text) => Ok(text),
         Invocation::Learn => Ok(learn::GUIDE.to_owned()),
-        Invocation::Conventions(ask) => conventions::answer(roots, "conventions", ask),
-        Invocation::Request(request) => request.run(&Store::in_directory(current_directory()?)),
+        Invocation::Conventions(ask) => conventions::answer(
+            &roots(start.as_deref().unwrap_or(Path::new("."))),
+            "conventions",
+            ask,
+        ),
+        Invocation::Request(request) => request.run(&Store::in_directory(start?)),
     }
 }
 
-/// The layer roots this invocation reads its sets from.
+/// The layer roots an invocation started in `start` reads its sets from.
 ///
 /// This is the only place the binary reads the environment for the layers: the
-/// project root is searched for from the current directory, and the user root is
+/// project root is searched for from `start`, and the user root is
 /// `XDG_CONFIG_HOME` when the process has one, else the home
 /// `std::env::home_dir()` reports. Everything below takes the result as a
 /// parameter, so no function deeper in the call chain reads a developer's
 /// `~/.config/smut` and the in-process tests pass their own (DEC-032). No root is
 /// spelled here: [`Roots::under`] joins the project layer's segment, and
 /// [`user_root`] returns the user layer whole.
-///
-/// A current directory the operating system will not report falls back to `.`
-/// for the search and the project layer: the walk and the layer read then start
-/// at the process's own directory instead of failing, and the one place the
-/// current directory is genuinely needed — the store root, which is `<cwd>`
-/// alone (DEC-004) — still refuses in `execute` with the filesystem's own reason.
-fn roots() -> Roots {
-    let start = current_directory().unwrap_or_else(|_| PathBuf::from("."));
-
+fn roots(start: &Path) -> Roots {
     Roots::under(
-        project_root(&start),
+        project_root(start),
         user_root(
             std::env::var_os("XDG_CONFIG_HOME")
                 .map(PathBuf::from)
@@ -136,8 +142,21 @@ fn roots() -> Roots {
     )
 }
 
-/// The store lives beside the current directory, and is never searched for in a
-/// parent (DEC-004).
+/// The directory smut acts as if it was started in: `-C`'s, joined to the
+/// current directory when relative, else the current directory itself.
+///
+/// The store lives beside it, and is never searched for in a parent (DEC-004).
+/// It is absolute, so a refusal names a whole path and the conventions walk can
+/// climb above a relative `-C`.
+fn start_directory(directory: Option<PathBuf>) -> Result<PathBuf, StoreError> {
+    match directory {
+        Some(directory) if directory.is_absolute() => Ok(directory),
+        Some(directory) => Ok(current_directory()?.join(directory)),
+        None => current_directory(),
+    }
+}
+
+/// The process's own current directory.
 fn current_directory() -> Result<PathBuf, StoreError> {
     std::env::current_dir().map_err(|source| StoreError::FileSystem {
         step: "current_directory",
@@ -166,7 +185,7 @@ mod tests {
         let arguments: Vec<OsString> = arguments.iter().map(OsString::from).collect();
         let mut stdin: &[u8] = b"";
 
-        dispatch(&arguments, false, &mut stdin, &no_layer_roots())
+        dispatch(&arguments, false, &mut stdin, &no_layer_roots)
     }
 
     /// The roots every in-process test stands the binary in: a project layer under
@@ -175,7 +194,7 @@ mod tests {
     /// No in-process test may read `$HOME` or `$XDG_CONFIG_HOME`: roots computed
     /// from the environment would make these assertions depend on the machine
     /// running them, and would read a developer's own sets (DEC-032).
-    fn no_layer_roots() -> Roots {
+    fn no_layer_roots(_start: &Path) -> Roots {
         Roots::under(std::env::temp_dir().join("smut-in-process-no-layer"), None)
     }
 
@@ -260,7 +279,7 @@ mod tests {
         let arguments: Vec<OsString> = ["declare"].iter().map(OsString::from).collect();
         let mut stdin: &[u8] = b"{\"id\":\"a\"}";
 
-        let rendered = dispatch(&arguments, true, &mut stdin, &no_layer_roots());
+        let rendered = dispatch(&arguments, true, &mut stdin, &no_layer_roots);
 
         assert_eq!(rendered.exit, 2);
         assert_eq!(rendered.stdout, "");

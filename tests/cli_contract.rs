@@ -2666,3 +2666,84 @@ fn query_and_render_do_not_take_dash_j() {
         "declare creates the store neither verb did"
     );
 }
+
+// ── -C: run as if started in another directory (IMP-022) ─────────────────────
+
+#[test]
+fn dash_c_names_the_directory_whose_store_every_command_uses() {
+    let scratch = Scratch::new();
+    let notebook = scratch.path().join("notebook");
+    let elsewhere = scratch.path().join("elsewhere");
+    fs::create_dir_all(&notebook).expect("the notebook directory");
+    fs::create_dir_all(&elsewhere).expect("the caller's directory");
+    let notebook_arg = notebook.to_str().expect("a UTF-8 fixture path");
+
+    let declared = scratch.smut_in(
+        &elsewhere,
+        &[
+            "-C",
+            notebook_arg,
+            "declare",
+            r#"{"smut_id":"a","title":"A"}"#,
+        ],
+    );
+    declared.assert_one_json_line("declare -C <absolute>");
+    assert!(
+        notebook.join(".smut").is_dir(),
+        "the store is in the named directory"
+    );
+    assert!(!elsewhere.join(".smut").exists(), "and not in the caller's");
+
+    // Relative to the caller's directory, as `git -C` is.
+    let got = smut(&scratch, &["-C", "notebook", "get", "a"]);
+    got.assert_one_json_line("get -C <relative>");
+    assert_eq!(got.json()["objects"][0]["title"], "A", "{}", got.stdout);
+    assert!(
+        !scratch.has_store(),
+        "the caller's directory gains no store"
+    );
+}
+
+#[test]
+fn dash_c_at_a_missing_directory_creates_nothing_and_names_its_absolute_path() {
+    let scratch = Scratch::new();
+    let missing = scratch.path().join("missing");
+
+    let read = smut(&scratch, &["-C", "missing", "get", "a"]);
+    assert_eq!(read.code, 1, "{}", read.stderr);
+    assert_eq!(read.stdout, "");
+    assert!(
+        read.stderr
+            .contains(&format!("no store at {}", missing.join(".smut").display())),
+        "the refusal names the resolved path: {}",
+        read.stderr
+    );
+
+    let declared = smut(
+        &scratch,
+        &["-C", "missing", "declare", r#"{"smut_id":"a","title":"A"}"#],
+    );
+    assert_eq!(declared.code, 1, "{}", declared.stderr);
+    assert_eq!(declared.stdout, "");
+    assert!(
+        !missing.exists(),
+        "declare never creates the named directory"
+    );
+    assert!(!scratch.has_store(), "nor falls back to the caller's");
+}
+
+#[test]
+fn help_teaches_dash_c() {
+    let scratch = Scratch::new();
+
+    let help = smut(&scratch, &["--help"]);
+
+    assert_eq!(help.code, 0, "{}", help.stderr);
+    assert!(
+        help.stdout
+            .lines()
+            .any(|line| line.trim_start().starts_with("-C <DIR>")),
+        "{}",
+        help.stdout
+    );
+}
